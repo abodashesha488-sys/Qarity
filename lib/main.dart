@@ -61,5 +61,5 @@ class QarityApp extends StatelessWidget {
         );
       },
     );
-  }
+  }  // محمد العراقي
 }

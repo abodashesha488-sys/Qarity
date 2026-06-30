@@ -115,7 +115,7 @@ The app is deployed on Firebase Hosting:
 - URL: https://abudshisha.web.app
 
 ## Last Updated
-2026-06-30T10:24:35+03:00
+2026-06-30T10:50:39+03:00
 
 ## Recent Fixes (2026-06-30)
 - Fixed product detail screen showing red error - now loads product by ID from Firestore
