@@ -1,0 +1,62 @@
+name: qurity
+description: "تطبيق قرية أبوديشيشة - التطبيق المجتمعي لخدمة قرى المنطقة"
+publish_to: 'none'
+
+version: 1.1.1+3
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+  flutter: ">=3.19.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  flutter_localizations:
+    sdk: flutter
+  intl: ^0.20.2
+  
+  # Firebase
+  firebase_core: ^3.15.2
+  cloud_firestore: ^5.6.12
+  google_sign_in: ^6.2.1
+  firebase_auth: ^5.7.0
+  firebase_storage: ^12.4.10
+  firebase_messaging: ^15.2.10
+  
+  image_picker: ^1.2.2
+  http: ^1.2.2
+  url_launcher: ^6.2.0
+  share_plus: ^13.2.0
+  shared_preferences: ^2.3.0
+  
+  # UI & Animations
+  shimmer: ^3.0.0
+  cached_network_image: ^3.3.0
+  flutter_staggered_animations: ^1.1.1
+  lottie: ^3.0.0
+  smooth_page_indicator: ^1.2.1
+  flutter_animate: ^4.5.0
+  google_fonts: ^6.3.3
+  flutter_slidable: ^3.1.2
+  pull_to_refresh_flutter3: ^2.0.0
+  flutter_rating_bar: ^4.0.0
+  skeletonizer: ^1.4.3
+  fluttertoast: ^9.1.0
+  confetti: ^0.7.0
+  liquid_pull_to_refresh: ^3.0.0
+  animated_text_kit: ^4.2.0
+  flutter_carousel_widget: ^3.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/google_logo.png
+    - assets/market/
+    - assets/animations/
+    - assets/images/
