@@ -8,7 +8,7 @@ class ForumService {
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
 
   Stream<List<ForumPost>> getPostsStream() {
-    return _firestore.collection('forum_posts').where('isApproved', isEqualTo: true).orderBy('createdAt', descending: true).snapshots().map((snapshot) => snapshot.docs.map((doc) => ForumPost.fromJson(doc.data(), doc.id)).toList());
+    return _firestore.collection('forum_posts').where('isApproved', isEqualTo: true).snapshots().map((snapshot) => snapshot.docs.map((doc) => ForumPost.fromJson(doc.data(), doc.id)).toList()).handleError((error, stack) => <ForumPost>[]);
   }
 
   Future<void> addPost(ForumPost post) async {

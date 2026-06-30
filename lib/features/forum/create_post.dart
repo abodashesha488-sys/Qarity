@@ -68,9 +68,14 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     }
     setState(() => _isPosting = true);
     try {
+      final authUser = _userService.currentUser;
+      if (authUser == null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('يجب تسجيل الدخول أولاً'), backgroundColor: Colors.red));
+        return;
+      }
       final post = ForumPost(
         id: '',
-        userId: _userService.currentUserId ?? '',
+        userId: authUser.uid,
         userName: _userName,
         userPhotoUrl: _userPhoto,
         content: _contentController.text,

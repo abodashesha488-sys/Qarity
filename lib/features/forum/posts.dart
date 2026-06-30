@@ -75,6 +75,7 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> {
           if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
           if (snapshot.hasError) return const Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.error, color: Colors.grey), SizedBox(height: 8), Text('خطأ في التحميل')]));
           var posts = snapshot.data ?? [];
+          posts.sort((a, b) => b.createdAt.compareTo(a.createdAt));
           if (_searchQuery.isNotEmpty) posts = posts.where((p) => p.userName.contains(_searchQuery) || p.content.contains(_searchQuery)).toList();
           if (posts.isEmpty) return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.forum_rounded, size: 80, color: Colors.grey[300]), const SizedBox(height: 16), const Text('لا توجد مواضيع بعد', style: TextStyle(color: Colors.grey)), Text('كن أول من يبدأ موضوعاً', style: TextStyle(color: Colors.grey[600]))]));
           return ListView.builder(padding: const EdgeInsets.all(16), itemCount: posts.length, itemBuilder: (context, index) => _buildPostCard(context, posts[index]));

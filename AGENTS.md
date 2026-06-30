@@ -115,11 +115,14 @@ The app is deployed on Firebase Hosting:
 - URL: https://abudshisha.web.app
 
 ## Last Updated
-2026-06-30T09:49:05+03:00
+2026-06-30T10:24:35+03:00
 
 ## Recent Fixes (2026-06-30)
 - Fixed product detail screen showing red error - now loads product by ID from Firestore
 - Fixed buyer phone not showing in orders - now fetches from Firestore user model
 - Fixed tab counts: red for new orders, green for completed, larger font size
 - Removed back button from CompleteProfileScreen (first-time users shouldn't navigate back)
+- Fixed forum posts: current user ID fetched from Firebase Auth, comments show real user name
+- Fixed create post: now uses currentUser.uid instead of currentUserId
+- Fixed forum posts display - removed composite index requirement, sorting done in code
 - Build: 0 errors, 15 info-level warnings (pre-existing)
