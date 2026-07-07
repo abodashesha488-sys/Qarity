@@ -78,12 +78,12 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
                     final key = entry.key;
                     final value = entry.value;
                     if (key == 'id') return const <Widget>[];
-                     return [
-                       const Divider(height: 32),
-                       _buildDetailRow(theme, key, value),
-                     ];
-                   }),
-                 ],
+                    return [
+                      const Divider(height: 32),
+                      _buildDetailRow(theme, key, value),
+                    ];
+                  }),
+                ],
               ),
             ),
           ),

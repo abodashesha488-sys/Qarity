@@ -378,9 +378,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     try {
       await _interactionService.toggleLike(productId: _product!.id, userId: user.uid);
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ في الإعجاب: $e')));
-      }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ في الإعجاب: $e')));
     }
   }
 

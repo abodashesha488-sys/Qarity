@@ -4,13 +4,13 @@
 
 ## نظرة عامة
 
-`Qurity` هو تطبيق Flutter متعدد المنصات يُقدّم خدمات مجتمعية للقرية مثل:
+`Qarity` هو تطبيق Flutter متعدد المنصات يُقدّم خدمات مجتمعية للقرية مثل:
 - سوق محلي مع منتجات وبائعين
 - نظام تقييم وآراء
 - قائمة أخبار وسجل مناسبات وتعازي
 - طلب الخدمات والدليل الهاتفي
 - منتدى اجتماعي
-- شاشة إدارة المسؤول
+- شاشة إدارة المسؤول مع موافقة/رفض/تعديل المحتوى
 
 ## هيكل المشروع
 
@@ -28,26 +28,32 @@ lib/
 │       └── helpers.dart
 ├── features/
 │   ├── auth/
-│   │   └── login.dart
+│   │   ├── login.dart
+│   │   └── complete_profile.dart
 │   ├── home/
-│   │   └── home.dart
+│   │   ├── home.dart
+│   │   ├── splash.dart
+│   │   └── about_app.dart
 │   ├── village/
 │   │   └── about.dart
 │   ├── news/
 │   │   ├── list.dart
-│   │   └── detail.dart
+│   │   ├── detail.dart
+│   │   └── view.dart
 │   ├── obituaries/
 │   │   ├── list.dart
 │   │   └── detail.dart
 │   ├── occasions/
 │   │   ├── list.dart
-│   │   └── detail.dart
+│   │   ├── detail.dart
+│   │   └── add.dart
 │   ├── market/
 │   │   ├── products.dart
 │   │   ├── product_detail.dart
 │   │   ├── seller_detail.dart
 │   │   ├── seller_gallery.dart
 │   │   ├── seller_reviews.dart
+│   │   ├── seller_orders.dart
 │   │   ├── cart.dart
 │   │   ├── cart_screen.dart
 │   │   └── add_product.dart
@@ -56,6 +62,7 @@ lib/
 │   │   └── request.dart
 │   ├── forum/
 │   │   ├── posts.dart
+│   │   ├── post_detail.dart
 │   │   └── create_post.dart
 │   ├── emergency/
 │   │   └── contacts.dart
@@ -64,9 +71,12 @@ lib/
 │   ├── profile/
 │   │   └── main.dart
 │   ├── settings/
-│   │   └── index.dart
+│   │   ├── index.dart
+│   │   └── notifications.dart
 │   └── admin/
-│       └── admin_dashboard.dart
+│       ├── admin_dashboard.dart
+│       ├── admin_detail.dart
+│       └── admin_edit.dart
 ├── models/
 │   └── data_models.dart
 ├── routes/
@@ -77,9 +87,11 @@ lib/
     ├── market_service.dart
     ├── news_service.dart
     ├── order_service.dart
+    ├── service_request_service.dart
     ├── product_interaction_service.dart
     ├── image_upload_service.dart
     ├── theme_service.dart
+    ├── admin_service.dart
     └── cache_service.dart
 ```
 
@@ -107,7 +119,10 @@ EE:04:D2:B9:EB:84:01:02:34:53:49:C4:17:1E:09:7C:8D:2D:A8:DC
 - سلة مشتريات متكاملة
 - قسم أخبار وقسم مناسبات وتعازي
 - نظام خدمات وتعليمات طوارئ ودليل هاتف
-- شاشة إدارة للمستخدم المسؤول
+- لوحة تحكم للمسؤول تعرض الطلبات المعلقة وإمكانية:
+  - عرض تفاصيل الطلب كاملة
+  - تعديل المحتوى
+  - موافقة / رفض / حذف مع حالات تحميل
 
 ## التبعيات الأساسية
 
@@ -135,9 +150,13 @@ dependencies:
 
 ## مسارات التنقّل
 
+- `AppRoutes.home` -> `lib/features/home/home.dart`
 - `AppRoutes.market` -> `lib/features/market/products.dart`
 - `AppRoutes.marketProductDetail` -> `lib/features/market/product_detail.dart`
 - `AppRoutes.marketCart` -> `lib/features/market/cart_screen.dart`
+- `AppRoutes.admin` -> `lib/features/admin/admin_dashboard.dart`
+- `AppRoutes.adminDetail` -> `lib/features/admin/admin_detail.dart`
+- `AppRoutes.adminEdit` -> `lib/features/admin/admin_edit.dart`
 - `/market/seller` -> `lib/features/market/seller_detail.dart`
 - `/market/seller/gallery` -> `lib/features/market/seller_gallery.dart`
 - `/market/seller/reviews` -> `lib/features/market/seller_reviews.dart`
@@ -166,7 +185,7 @@ dependencies:
 | البناء | الحالة |
 |--------|--------|
 | الأخطاء | 0 |
-| التحذيرات | 2 |
+| التحذيرات | 0 |
 | النتيجة | ✅ جاهز للعرض |
 
 ## ملاحظات إضافية
@@ -177,3 +196,5 @@ dependencies:
 - البيانات تُخزن في Firestore مع دعم المصادقة عبر Google.
 - التحديثات الآن لحظية (real-time) في: السوق، الأخبار، المنتدى، الطلبات، والشاشة الرئيسية عبر Firestore Streams.
 - السلة استخدمت `ChangeNotifier` مع `ListenableBuilder` لضمان تحديث فوري عند الإضافة/الحذف/تعديل الكمية.
+- قواعد أمان Firestore منشورة على مشروع `abudshisha` مع صلاحيات أدمن للتعديل والحذف على جميع الأقسام.
+- جميع أزرار لوحة التحكم (موافقة/رفض/حذف/تعديل) تعمل مع حالة تحميل وتأكيدات مناسبة.

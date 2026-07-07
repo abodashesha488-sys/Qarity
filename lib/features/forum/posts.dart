@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -81,6 +81,11 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
       appBar: AppBar(
         title: const Text('المنتدى المجتمعي'),
         actions: CommonAppBarActions.actions(context),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => Navigator.pushNamed(context, AppRoutes.forumCreatePost),
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('موضوع جديد'),
       ),
       body: Column(
         children: [
@@ -504,11 +509,9 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
       });
     } catch (e) {
       if (mounted) {
-        // ignore: use_build_context_synchronously
         ScaffoldMessenger.of(themeContext).showSnackBar(
           SnackBar(
             content: Text('خطأ في الإعجاب: $e'),
-            // ignore: use_build_context_synchronously
             backgroundColor: Theme.of(themeContext).colorScheme.error,
           ),
         );
