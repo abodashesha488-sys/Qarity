@@ -1,4 +1,5 @@
 ﻿import 'package:flutter/material.dart';
+
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
 import '../../services/occasion_service.dart';
@@ -25,11 +26,13 @@ class _OccasionsListScreenState extends State<OccasionsListScreen> {
   Future<void> _loadOccasions() async {
     try {
       final occasions = await _service.getOccasionsList();
+      if (!mounted) return;
       setState(() {
         _occasions = occasions;
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isLoading = false);
     }
   }
@@ -41,102 +44,94 @@ class _OccasionsListScreenState extends State<OccasionsListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('سجل المناسبات'),
+        title: const Text('المناسبات'),
+        centerTitle: true,
+        elevation: 0,
+        shadowColor: Colors.transparent,
+        surfaceTintColor: theme.colorScheme.surface,
         actions: CommonAppBarActions.actions(context),
-      ),
-      floatingActionButton: FloatingActionButton(
-        child: const Icon(Icons.add),
-        onPressed: () {
-          Navigator.pushNamed(context, AppRoutes.occasionsAdd);
-        },
       ),
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
             : _occasions.isEmpty
-                ? _buildEmptyState()
-                : ListView.builder(
+                ? _buildEmptyState(theme)
+                : ListView.separated(
                     padding: const EdgeInsets.all(16),
                     itemCount: _occasions.length,
-                    itemBuilder: (context, index) {
-                      return _buildOccasionCard(context, _occasions[index]);
-                    },
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) => _buildOccasionCard(theme, _occasions[index]),
                   ),
       ),
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(ThemeData theme) {
     return Center(
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.card_giftcard, size: 80, color: Colors.grey[300]),
+          Icon(Icons.card_giftcard_rounded, size: 64, color: Colors.grey[400]),
           const SizedBox(height: 16),
-          Text('لا توجد مناسبات مسجلة', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 8),
-          Text('سجل المناسبات فارغ حالياً', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[600])),
+          Text('لا توجد مناسبات مسجلة', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
         ],
       ),
     );
   }
 
-  Widget _buildOccasionCard(BuildContext context, Occasion occasion) {
+  Widget _buildOccasionCard(ThemeData theme, Occasion occasion) {
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      elevation: 6,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
+      ),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () {
-          Navigator.pushNamed(
-            context,
-            AppRoutes.occasionsDetail,
-            arguments: occasion,
-          );
-        },
+        onTap: () => Navigator.pushNamed(context, AppRoutes.occasionsDetail, arguments: occasion),
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(16),
           child: Row(
             children: [
               Container(
-                width: 60,
-                height: 60,
+                width: 52,
+                height: 52,
                 decoration: BoxDecoration(
-                  color: Colors.orange.shade200,
-                  borderRadius: BorderRadius.circular(12),
+                  color: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(14),
                 ),
-                child: const Icon(Icons.card_giftcard, size: 40),
+                child: Icon(Icons.celebration_rounded, color: theme.colorScheme.primary, size: 26),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      occasion.title,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
+                    Text(occasion.title, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.calendar_today_rounded, size: 14, color: theme.colorScheme.primary),
+                        const SizedBox(width: 4),
+                        Text(occasion.date, style: theme.textTheme.bodySmall),
+                      ],
                     ),
-                    Text(
-                      occasion.date,
-                      style: const TextStyle(color: Colors.grey),
-                    ),
-                    Text(
-                      occasion.location,
-                      style: const TextStyle(color: Colors.orange),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    Row(
+                      children: [
+                        Icon(Icons.location_on_rounded, size: 14, color: theme.colorScheme.onSurfaceVariant),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(occasion.location, style: theme.textTheme.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
-              const Icon(Icons.arrow_forward_ios, size: 16),
+              Icon(Icons.chevron_left_rounded, color: theme.colorScheme.onSurfaceVariant, size: 20),
             ],
           ),
         ),

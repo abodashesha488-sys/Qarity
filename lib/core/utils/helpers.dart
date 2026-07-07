@@ -1,21 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+import 'navigator_key.dart';
 
 class AppHelpers {
   AppHelpers._();
 
   static void showToast(String message, {bool isError = false}) {
-    Fluttertoast.showToast(
-      msg: message,
-      toastLength: Toast.LENGTH_LONG,
-      gravity: ToastGravity.BOTTOM,
-      backgroundColor: isError ? const Color(0xFFE53935) : const Color(0xFF323232),
-      textColor: Colors.white,
-      fontSize: 14,
-    );
+    final ctx = navigatorKey.currentContext;
+    if (ctx != null && ctx.mounted) {
+      ScaffoldMessenger.of(ctx).showSnackBar(
+        SnackBar(
+          content: Text(message, style: const TextStyle(fontWeight: FontWeight.w600)),
+          backgroundColor: isError ? const Color(0xFFE53935) : const Color(0xFF323232),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          margin: const EdgeInsets.all(16),
+        ),
+      );
+    }
   }
 
   static void showSnackBar(BuildContext context, String message, {bool isError = false, bool isSuccess = false}) {
@@ -60,6 +65,15 @@ class AppHelpers {
   static Color darken(Color color, [double amount = 0.1]) {
     final hsl = HSLColor.fromColor(color);
     return hsl.withLightness((hsl.lightness - amount).clamp(0.0, 1.0)).toColor();
+  }
+
+  static String formatRelativeDate(DateTime date) {
+    final now = DateTime.now();
+    final diff = now.difference(date);
+    if (diff.inMinutes < 60) return '${diff.inMinutes} دقيقة';
+    if (diff.inHours < 24) return '${diff.inHours} ساعة';
+    if (diff.inDays < 7) return '${diff.inDays} يوم';
+    return '${date.day}/${date.month}/${date.year}';
   }
 }
 

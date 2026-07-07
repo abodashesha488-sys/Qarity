@@ -67,7 +67,7 @@ class _NewsViewScreenState extends State<NewsViewScreen> {
           if (news.imageUrls.isNotEmpty)
             Stack(alignment: Alignment.bottomCenter, children: [
               SizedBox(height: 220, child: PageView.builder(itemBuilder: (context, i) => CachedNetworkImage(imageUrl: news.imageUrls[i], fit: BoxFit.cover, width: double.infinity), itemCount: news.imageUrls.length)),
-              Padding(padding: const EdgeInsets.only(bottom: 12), child: Row(mainAxisAlignment: MainAxisAlignment.center, children: List.generate(news.imageUrls.length, (index) => Container(margin: const EdgeInsets.symmetric(horizontal: 4), width: 8, height: 8, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white)))))
+              Padding(padding: const EdgeInsets.only(bottom: 12), child: Row(mainAxisAlignment: MainAxisAlignment.center, children: List.generate(news.imageUrls.length, (index) => Container(margin: const EdgeInsets.symmetric(horizontal: 4), width: 8, height: 8, decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white)))))
             ])
           else if (news.imageUrl.isNotEmpty)
             CachedNetworkImage(imageUrl: news.imageUrl, height: 220, fit: BoxFit.cover, width: double.infinity),
@@ -104,7 +104,7 @@ class _NewsViewScreenState extends State<NewsViewScreen> {
               if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
               final comments = snapshot.data?.docs ?? [];
               if (comments.isEmpty) return const Center(child: Text('لا توجد تعليقات', style: TextStyle(color: Colors.grey)));
-              return ListView.builder(itemCount: comments.length, itemBuilder: (context, index) => ListTile(title: Text(comments[index]['userName'] as String, style: TextStyle(fontWeight: FontWeight.w600)), subtitle: Text(comments[index]['text'] as String)));
+              return ListView.builder(itemCount: comments.length, itemBuilder: (context, index) => ListTile(title: Text(comments[index]['userName'] as String, style: const TextStyle(fontWeight: FontWeight.w600)), subtitle: Text(comments[index]['text'] as String)));
             }),
           ),
           Padding(padding: const EdgeInsets.all(16), child: Row(children: [

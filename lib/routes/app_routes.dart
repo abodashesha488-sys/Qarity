@@ -1,6 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter/material.dart';
+
 import '../features/admin/admin_dashboard.dart';
+import '../features/admin/admin_detail.dart';
+import '../features/admin/admin_edit.dart';
+import '../features/auth/complete_profile.dart';
 import '../features/auth/login.dart';
 import '../features/emergency/contacts.dart';
 import '../features/forum/create_post.dart';
@@ -27,12 +31,12 @@ import '../features/occasions/detail.dart';
 import '../features/occasions/list.dart';
 import '../features/phone/directory.dart';
 import '../features/profile/main.dart';
-import '../features/auth/complete_profile.dart';
 import '../features/services/detail.dart';
 import '../features/services/request.dart';
 import '../features/settings/index.dart';
+import '../features/settings/notifications.dart';
 import '../features/village/about.dart';
-import '../services/user_service.dart';
+import '../services/admin_service.dart';
 
 /// 🛣️ Qarity App Routes
 /// 
@@ -54,6 +58,8 @@ class AppRoutes {
   static const String newsDetail = '/news/detail';
   static const String newsView = '/news/view';
   static const String admin = '/admin';
+  static const String adminEdit = '/admin/edit';
+  static const String adminDetail = '/admin/detail';
   static const String marketProducts = '/market';
   static const String marketAdd = '/market/add';
   static const String marketProductDetail = '/market/product';
@@ -72,6 +78,7 @@ class AppRoutes {
   static const String profileMain = '/profile';
   static const String completeProfile = '/complete-profile';
   static const String settingsIndex = '/settings';
+  static const String notificationsSettings = '/settings/notifications';
 
   static final routes = <String, Widget Function(BuildContext)>{
     splash: (_) => const SplashScreen(),
@@ -104,24 +111,45 @@ class AppRoutes {
     phoneDirectory: (_) => const PhoneDirectoryScreen(),
     profileMain: (_) => const ProfileScreen(),
     settingsIndex: (_) => const SettingsScreen(),
+    notificationsSettings: (_) => const NotificationsSettingsScreen(),
   };
 
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
+    if (settings.name == admin) {
+      return _buildFadeRoute(
+        (_) => const AdminScreenWrapper(),
+        settings,
+      );
+    }
+    if (settings.name == adminEdit) {
+      final args = settings.arguments as Map<String, dynamic>? ?? {};
+      final collection = args['collection'] as String? ?? '';
+      final docId = args['docId'] as String? ?? '';
+      final item = args['item'] as Map<String, dynamic>? ?? <String, dynamic>{};
+      return _buildSlideRoute(
+        (_) => AdminEditScreen(collection: collection, docId: docId, item: item),
+        settings,
+      );
+    }
+    if (settings.name == adminDetail) {
+      final args = settings.arguments as Map<String, dynamic>? ?? {};
+      final collection = args['collection'] as String? ?? '';
+      final docId = args['docId'] as String? ?? '';
+      final item = args['item'] as Map<String, dynamic>? ?? <String, dynamic>{};
+      return _buildSlideRoute(
+        (_) => AdminDetailScreen(collection: collection, docId: docId, item: item),
+        settings,
+      );
+    }
+    if (settings.name == completeProfile) {
+      final userId = settings.arguments as String? ?? '';
+      return _buildSlideRoute(
+        (_) => CompleteProfileScreen(userId: userId),
+        settings,
+      );
+    }
     final builder = routes[settings.name];
     if (builder != null) {
-      if (settings.name == admin) {
-        return _buildFadeRoute(
-          (_) => const AdminAuthWrapper(),
-          settings,
-        );
-      }
-      if (settings.name == completeProfile) {
-        final userId = settings.arguments as String? ?? '';
-        return _buildSlideRoute(
-          (_) => CompleteProfileScreen(userId: userId),
-          settings,
-        );
-      }
       return _buildSlideRoute(builder, settings);
     }
     return _buildSlideRoute((_) => const HomeScreen(), settings);
@@ -169,15 +197,15 @@ class AppRoutes {
 /// 🔐 Admin Authentication Wrapper
 /// 
 /// Protects admin routes with authentication and role verification.
-class AdminAuthWrapper extends StatelessWidget {
-  const AdminAuthWrapper({super.key});
+class AdminScreenWrapper extends StatelessWidget {
+  const AdminScreenWrapper({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final userService = UserService();
+    final adminService = AdminService();
 
     return StreamBuilder<firebase_auth.User?>(
-      stream: userService.authStateChanges(),
+      stream: adminService.authStateChanges,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
@@ -189,7 +217,7 @@ class AdminAuthWrapper extends StatelessWidget {
         if (user == null) return const LoginScreen();
 
         return FutureBuilder<bool>(
-          future: userService.isAdmin(user.uid),
+          future: adminService.isAdminUser(user.uid),
           builder: (context, adminSnapshot) {
             if (adminSnapshot.connectionState == ConnectionState.waiting) {
               return const Scaffold(
@@ -197,7 +225,13 @@ class AdminAuthWrapper extends StatelessWidget {
               );
             }
 
-            final isAdmin = adminSnapshot.data ?? false;
+            final isAdminByEmail = user.email != null &&
+                user.email!.toLowerCase().trim() == 'eleraki2040@gmail.com';
+
+            final isAdminByRole = adminSnapshot.data == true;
+
+            final isAdmin = isAdminByEmail || isAdminByRole;
+
             if (!isAdmin) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (context.mounted) {

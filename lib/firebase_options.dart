@@ -18,27 +18,27 @@ class DefaultFirebaseOptions {
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
         return const FirebaseOptions(
-          apiKey: 'AIzaSyDqDQjDjDjDjDjDjDjDjDjDjDjDjDjDjDj',
-          appId: '1:1234567890:android:abcdef1234567890',
-          messagingSenderId: '1234567890',
-          projectId: 'qurity',
-          storageBucket: 'qurity.appspot.com',
+          apiKey: 'AIzaSyCMeydEO6IX_YtiR-kynhCBc5YFqxLbo3A',
+          appId: '1:339029236820:android:b7a97499104509fdaba1c1',
+          messagingSenderId: '339029236820',
+          projectId: 'abudshisha',
+          storageBucket: 'abudshisha.firebasestorage.app',
         );
       case TargetPlatform.iOS:
         return const FirebaseOptions(
-          apiKey: 'YOUR_IOS_API_KEY',
-          appId: '1:1234567890:ios:abcdef1234567890',
-          messagingSenderId: '1234567890',
-          projectId: 'qurity',
-          storageBucket: 'qurity.appspot.com',
+          apiKey: 'AIzaSyB3jkKZNhv0Zv8HaaOVTVFTmfCjAt2N-GU',
+          appId: '1:339029236820:ios:336df0b29847ba54aba1c1',
+          messagingSenderId: '339029236820',
+          projectId: 'abudshisha',
+          storageBucket: 'abudshisha.firebasestorage.app',
         );
       case TargetPlatform.macOS:
         return const FirebaseOptions(
-          apiKey: 'YOUR_MACOS_API_KEY',
-          appId: '1:1234567890:macos:abcdef1234567890',
-          messagingSenderId: '1234567890',
-          projectId: 'qurity',
-          storageBucket: 'qurity.appspot.com',
+          apiKey: 'AIzaSyB3jkKZNhv0Zv8HaaOVTVFTmfCjAt2N-GU',
+          appId: '1:339029236820:macos:336df0b29847ba54aba1c1',
+          messagingSenderId: '339029236820',
+          projectId: 'abudshisha',
+          storageBucket: 'abudshisha.firebasestorage.app',
         );
       default:
         throw UnsupportedError(

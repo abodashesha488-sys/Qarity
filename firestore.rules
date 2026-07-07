@@ -1,0 +1,75 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    match /users/{userId} {
+      allow list, get: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if request.auth.uid == userId;
+      allow delete: if isAdmin();
+    }
+
+    match /news/{docId} {
+      allow list: if true;
+      allow get: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isAdmin();
+    }
+
+    match /market_products/{docId} {
+      allow list: if true;
+      allow get: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isAdmin();
+    }
+
+    match /obituaries/{docId} {
+      allow list: if true;
+      allow get: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isAdmin();
+    }
+
+    match /occasions/{docId} {
+      allow list: if true;
+      allow get: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isAdmin();
+    }
+
+    match /forum_posts/{docId} {
+      allow list: if true;
+      allow get: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isAdmin();
+    }
+
+    match /service_requests/{docId} {
+      allow list, get: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isAdmin();
+    }
+
+    match /orders/{docId} {
+      allow list, get: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isAdmin();
+    }
+
+    match /cart/{userId} {
+      allow read, write: if request.auth.uid == userId;
+    }
+
+    match /activity_log/{docId} {
+      allow read, create: if isAdmin();
+      allow update, delete: if isAdmin();
+    }
+  }
+}

@@ -22,14 +22,23 @@ class ProductInteractionService {
     }
   }
 
-  Future<int> getLikeCount(String productId) async {
-    final snapshot = await _firestore.collection('market_products').doc(productId).collection('likes').get();
-    return snapshot.docs.length;
+  Stream<bool> hasUserLikedStream({required String productId, required String userId}) {
+    return _firestore
+        .collection('market_products')
+        .doc(productId)
+        .collection('likes')
+        .doc(userId)
+        .snapshots()
+        .map((doc) => doc.exists);
   }
 
-  Future<bool> hasUserLiked({required String productId, required String userId}) async {
-    final doc = await _firestore.collection('market_products').doc(productId).collection('likes').doc(userId).get();
-    return doc.exists;
+  Stream<int> getLikeCountStream(String productId) {
+    return _firestore
+        .collection('market_products')
+        .doc(productId)
+        .collection('likes')
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
   }
 
   Future<void> addComment({required String productId, required String userName, required String text}) async {

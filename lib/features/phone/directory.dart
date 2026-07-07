@@ -1,5 +1,6 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+
 import '../../models/data_models.dart';
 import '../../services/phone_directory_service.dart';
 import '../../widgets/common_appbar_actions.dart';
@@ -28,29 +29,29 @@ class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
   Future<void> _loadEntries() async {
     try {
       final entries = await _service.getEntriesList();
+      if (!mounted) return;
       setState(() {
         _entries = entries;
         _filteredEntries = entries;
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isLoading = false);
     }
   }
 
   void _filterEntries() {
     final query = _searchController.text.trim().toLowerCase();
-    if (query.isEmpty) {
-      setState(() => _filteredEntries = _entries);
-    } else {
-      setState(() {
-        _filteredEntries = _entries.where((e) {
-          return e.name.toLowerCase().contains(query) ||
-              e.title.toLowerCase().contains(query) ||
-              e.phone.contains(query);
-        }).toList();
-      });
-    }
+    setState(() {
+      _filteredEntries = query.isEmpty
+          ? _entries
+          : _entries.where((e) {
+              return e.name.toLowerCase().contains(query) ||
+                  e.title.toLowerCase().contains(query) ||
+                  e.phone.contains(query);
+            }).toList();
+    });
   }
 
   Future<void> _refresh() async {
@@ -67,9 +68,14 @@ class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
         title: const Text('دليل الهاتف'),
+        centerTitle: true,
+        elevation: 0,
+        shadowColor: Colors.transparent,
+        surfaceTintColor: theme.colorScheme.surface,
         actions: CommonAppBarActions.actions(context),
       ),
       body: RefreshIndicator(
@@ -78,31 +84,51 @@ class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
           children: [
             Padding(
               padding: const EdgeInsets.all(16),
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'ابحث بالاسم أو الرقم...',
-                  prefixIcon: const Icon(Icons.search),
-                  filled: true,
-                  fillColor: Theme.of(context).colorScheme.surface.withValues(alpha: 1.0),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.colorScheme.shadow.withValues(alpha: 0.08),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'ابحث بالاسم أو الرقم...',
+                    hintStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
+                    prefixIcon: Icon(Icons.search_rounded, color: theme.colorScheme.primary),
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: Icon(Icons.clear_rounded, color: theme.colorScheme.primary, size: 18),
+                            onPressed: () {
+                              _searchController.clear();
+                              _filterEntries();
+                            },
+                          )
+                        : null,
+                    filled: true,
+                    fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.4), width: 1.5)),
                   ),
                 ),
               ),
             ),
             Expanded(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
                   : _filteredEntries.isEmpty
-                      ? _buildEmptyState()
-                      : ListView.builder(
+                      ? _buildEmptyState(theme)
+                      : ListView.separated(
                           padding: const EdgeInsets.all(16),
                           itemCount: _filteredEntries.length,
-                          itemBuilder: (context, index) {
-                            return _buildContactCard(context, _filteredEntries[index]);
-                          },
+                          separatorBuilder: (_, __) => const SizedBox(height: 10),
+                          itemBuilder: (context, index) => _buildContactCard(theme, _filteredEntries[index]),
                         ),
             ),
           ],
@@ -111,78 +137,77 @@ class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(ThemeData theme) {
     return Center(
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.phone, size: 80, color: Colors.grey[300]),
+          Icon(Icons.phone_rounded, size: 64, color: Colors.grey[400]),
           const SizedBox(height: 16),
-          Text('لا توجد جهات اتصال', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 8),
-          Text('دليل الهاتف فارغ حالياً', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[600])),
+          Text('لا توجد جهات اتصال', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
         ],
       ),
     );
   }
 
-  Widget _buildContactCard(BuildContext context, PhoneDirectoryEntry entry) {
+  Widget _buildContactCard(ThemeData theme, PhoneDirectoryEntry entry) {
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ExpansionTile(
-        leading: CircleAvatar(
-          backgroundColor: Theme.of(context).colorScheme.primary,
-          child: Text(
-            entry.name.isNotEmpty ? entry.name[0] : '',
-            style: const TextStyle(color: Colors.white),
-          ),
-        ),
-        title: Text(entry.name),
-        subtitle: Text(entry.title),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.call, color: Colors.green),
-              onPressed: () => _makeCall(entry.phone),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
+      ),
+      child: Theme(
+        data: theme.copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          leading: CircleAvatar(
+            backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
+            child: Text(
+              entry.name.isNotEmpty ? entry.name[0] : '',
+              style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.w800),
             ),
-            const Icon(Icons.expand_more),
+          ),
+          title: Text(entry.name, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
+          subtitle: Text(entry.title, style: theme.textTheme.bodySmall),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton.filled(
+                onPressed: () => _makeCall(entry.phone),
+                icon: const Icon(Icons.call_rounded, size: 18),
+                style: IconButton.styleFrom(backgroundColor: Colors.green.withValues(alpha: 0.15)),
+              ),
+            ],
+          ),
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildInfoRow(theme, 'الهاتف:', entry.phone),
+                  if (entry.secondaryPhone != null && entry.secondaryPhone!.isNotEmpty)
+                    _buildInfoRow(theme, 'هاتف إضافي:', entry.secondaryPhone!),
+                  if (entry.job != null && entry.job!.isNotEmpty)
+                    _buildInfoRow(theme, 'الوظيفة:', entry.job!),
+                  if (entry.address != null && entry.address!.isNotEmpty)
+                    _buildInfoRow(theme, 'العنوان:', entry.address!),
+                ],
+              ),
+            ),
           ],
         ),
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildInfoRow('الهاتف:', entry.phone),
-                if (entry.secondaryPhone != null && entry.secondaryPhone!.isNotEmpty)
-                  _buildInfoRow('هاتف إضافي:', entry.secondaryPhone!),
-                if (entry.job != null && entry.job!.isNotEmpty)
-                  _buildInfoRow('الوظيفة:', entry.job!),
-                if (entry.address != null && entry.address!.isNotEmpty)
-                  _buildInfoRow('العنوان:', entry.address!),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
+  Widget _buildInfoRow(ThemeData theme, String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Text(
-            label,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
+          Text(label, style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(width: 8),
-          Text(value),
+          Expanded(child: Text(value, style: theme.textTheme.bodySmall)),
         ],
       ),
     );

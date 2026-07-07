@@ -14,7 +14,7 @@ class CartActionButton extends StatelessWidget {
     return AnimatedBuilder(
       animation: Cart.instance,
       builder: (context, _) {
-        final count = Cart.instance.totalItems;
+         final count = Cart.instance.distinctItemCount;
         return Padding(
           padding: const EdgeInsets.only(right: 4),
           child: Stack(

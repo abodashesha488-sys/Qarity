@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../services/review_service.dart';
 import '../../widgets/common_appbar_actions.dart';
@@ -13,7 +12,6 @@ class SellerReviewsScreen extends StatefulWidget {
 
 class _SellerReviewsScreenState extends State<SellerReviewsScreen> {
   final ReviewService _reviewService = ReviewService();
-  final FirebaseAuth _auth = FirebaseAuth.instance;
   String? _sellerId;
   List<Map<String, dynamic>> _reviews = [];
   bool _isLoading = true;
@@ -35,65 +33,6 @@ class _SellerReviewsScreenState extends State<SellerReviewsScreen> {
       _reviews = reviews.map((r) => r.toJson()).toList();
       _isLoading = false;
     });
-  }
-
-  void _showAddReviewDialog() {
-    final commentController = TextEditingController();
-    int ratingValue = 5;
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('أضف مراجعة'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: commentController,
-              decoration: const InputDecoration(labelText: 'ملاحظاتك'),
-              maxLines: 3,
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: List.generate(5, (i) {
-                return IconButton(
-                  icon: Icon(
-                    i < ratingValue ? Icons.star : Icons.star_border,
-                    color: Colors.amber,
-                  ),
-                  onPressed: () => setState(() => ratingValue = i + 1),
-                );
-              }),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('إلغاء'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (commentController.text.trim().isEmpty || _sellerId == null) {
-                Navigator.pop(context);
-                return;
-              }
-              final user = _auth.currentUser;
-              await _reviewService.addReview(
-                sellerId: _sellerId!,
-                rating: ratingValue,
-                comment: commentController.text.trim(),
-                userId: user?.uid ?? '',
-              );
-              if (context.mounted) {
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('إضافة'),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
@@ -165,11 +104,6 @@ class _SellerReviewsScreenState extends State<SellerReviewsScreen> {
                     );
                   },
                 ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _auth.currentUser != null ? _showAddReviewDialog : null,
-        icon: const Icon(Icons.rate_review),
-        label: const Text('أضف مراجعة'),
-      ),
     );
   }
 }

@@ -26,11 +26,13 @@ class _ObituariesListScreenState extends State<ObituariesListScreen> {
   Future<void> _loadObituaries() async {
     try {
       final obituaries = await _service.getObituariesList();
+      if (!mounted) return;
       setState(() {
         _obituaries = obituaries;
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isLoading = false);
     }
   }
@@ -42,94 +44,88 @@ class _ObituariesListScreenState extends State<ObituariesListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
         title: const Text('سجل العزاء'),
+        centerTitle: true,
+        elevation: 0,
+        shadowColor: Colors.transparent,
+        surfaceTintColor: theme.colorScheme.surface,
         actions: CommonAppBarActions.actions(context),
       ),
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
             : _obituaries.isEmpty
-                ? _buildEmptyState()
-                : ListView.builder(
+                ? _buildEmptyState(theme)
+                : ListView.separated(
                     padding: const EdgeInsets.all(16),
                     itemCount: _obituaries.length,
-                    itemBuilder: (context, index) {
-                      return _buildObituaryCard(context, _obituaries[index]);
-                    },
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) => _buildObituaryCard(theme, _obituaries[index]),
                   ),
       ),
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(ThemeData theme) {
     return Center(
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.grade, size: 80, color: Colors.grey[300]),
+          Icon(Icons.grade_rounded, size: 64, color: Colors.grey[400]),
           const SizedBox(height: 16),
-          Text('لا توجد تعازي مسجلة', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 8),
-          Text('سجل العزاء فارغ حالياً', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[600])),
+          Text('لا توجد تعازي مسجلة', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
         ],
       ),
     );
   }
 
-  Widget _buildObituaryCard(BuildContext context, Obituary obituary) {
+  Widget _buildObituaryCard(ThemeData theme, Obituary obituary) {
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      elevation: 6,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
+      ),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () {
-          Navigator.pushNamed(
-            context,
-            AppRoutes.obituariesDetail,
-            arguments: obituary,
-          );
-        },
+        onTap: () => Navigator.pushNamed(context, AppRoutes.obituariesDetail, arguments: obituary),
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.person, size: 40),
+              CircleAvatar(
+                radius: 28,
+                backgroundColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                child: Icon(Icons.person_rounded, size: 28, color: theme.colorScheme.onSurfaceVariant),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      obituary.name,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
+                    Text(obituary.name, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.cake_rounded, size: 14, color: theme.colorScheme.onSurfaceVariant),
+                        const SizedBox(width: 4),
+                        Text('العمر: ${obituary.age}', style: theme.textTheme.bodySmall),
+                      ],
                     ),
-                    Text(
-                      'عمر: ${obituary.age}',
-                      style: const TextStyle(color: Colors.grey),
-                    ),
-                    Text(
-                      'توفي: ${obituary.date}',
-                      style: const TextStyle(color: Colors.red),
+                    Row(
+                      children: [
+                        Icon(Icons.calendar_today_rounded, size: 14, color: theme.colorScheme.error),
+                        const SizedBox(width: 4),
+                        Text(obituary.date, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error)),
+                      ],
                     ),
                   ],
                 ),
               ),
-              const Icon(Icons.arrow_forward_ios, size: 16),
+              Icon(Icons.chevron_left_rounded, color: theme.colorScheme.onSurfaceVariant, size: 20),
             ],
           ),
         ),

@@ -14,8 +14,7 @@ class OrderService {
         .collection('orders')
         .where('sellerId', isEqualTo: sellerId)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) => AppOrder.fromJson(doc.data(), doc.id)).toList())
-        .handleError((error, stack) => <AppOrder>[]);
+        .map((snapshot) => snapshot.docs.map((doc) => AppOrder.fromJson(doc.data(), doc.id)).toList());
   }
 
   Stream<List<AppOrder>> getBuyerOrdersStream(String buyerId) {
@@ -23,8 +22,7 @@ class OrderService {
         .collection('orders')
         .where('buyerId', isEqualTo: buyerId)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) => AppOrder.fromJson(doc.data(), doc.id)).toList())
-        .handleError((error, stack) => <AppOrder>[]);
+        .map((snapshot) => snapshot.docs.map((doc) => AppOrder.fromJson(doc.data(), doc.id)).toList());
   }
 
   Future<void> updateOrderStatus(String orderId, String status) async {

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -26,6 +27,8 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
 
   File? _profileImage;
   bool _isSaving = false;
+  bool _isLoading = true;
+  String? _errorMessage;
   UserModel? _user;
 
   @override
@@ -34,14 +37,61 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
     _loadUser();
   }
 
+  Future<UserModel?> _createFallbackUser() async {
+    final firebaseUser = FirebaseAuth.instance.currentUser;
+    if (firebaseUser != null && firebaseUser.uid == widget.userId) {
+      return UserModel(
+        id: firebaseUser.uid,
+        name: firebaseUser.displayName ?? '',
+        email: firebaseUser.email ?? '',
+        photoUrl: firebaseUser.photoURL,
+        joinDate: firebaseUser.metadata.creationTime ?? DateTime.now(),
+      );
+    }
+    return null;
+  }
+
   Future<void> _loadUser() async {
-    final user = await _userService.getUser(widget.userId);
-    if (user != null) {
+    if (!mounted) return;
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final user = await _userService.getUser(widget.userId);
+      if (!mounted) return;
+
+      if (user != null) {
+        setState(() {
+          _user = user;
+          _nameController.text = user.name;
+          _phoneController.text = user.phone ?? '';
+        });
+      } else {
+        final fallback = await _createFallbackUser();
+        if (!mounted) return;
+        if (fallback != null) {
+          setState(() {
+            _user = fallback;
+            _nameController.text = fallback.name;
+            _phoneController.text = fallback.phone ?? '';
+          });
+        } else {
+          setState(() {
+            _errorMessage = 'تعذر تحميل بيانات المستخدم';
+          });
+        }
+      }
+    } catch (e) {
+      if (!mounted) return;
       setState(() {
-        _user = user;
-        _nameController.text = user.name;
-        _phoneController.text = user.phone ?? '';
+        _errorMessage = 'خطأ في تحميل البيانات: $e';
       });
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -55,27 +105,47 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
   }
 
   Future<void> _saveProfile() async {
-    if (_nameController.text.isEmpty || _user == null) return;
+    final name = _nameController.text.trim();
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('الاسم مطلوب'), backgroundColor: Colors.orange),
+      );
+      return;
+    }
+
+    if (_isSaving) return;
+
     setState(() => _isSaving = true);
     try {
-      String? newPhotoUrl = _user!.photoUrl;
+      String? newPhotoUrl = _user?.photoUrl;
       if (_profileImage != null) {
         final bytes = await _profileImage!.readAsBytes();
         newPhotoUrl = await _imageUploadService.uploadImage(bytes);
       }
-      final updatedUser = _user!.copyWith(
-        name: _nameController.text,
+
+      final now = DateTime.now();
+      final updatedUser = UserModel(
+        id: widget.userId,
+        name: name,
+        email: _user?.email ?? '',
         photoUrl: newPhotoUrl,
-        phone: _phoneController.text.isEmpty ? null : _phoneController.text,
+        joinDate: _user?.joinDate ?? now,
+        phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
       );
+
       await _userService.updateUser(updatedUser);
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, AppRoutes.home);
-      }
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تم حفظ الملف الشخصي بنجاح'), backgroundColor: Colors.green),
+      );
+
+      Navigator.pushReplacementNamed(context, AppRoutes.home);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ في الحفظ: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('خطأ في الحفظ: ${e.toString()}'), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -99,8 +169,37 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('إكمال الملف الشخصي')),
+        body: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      );
+    }
+
+    if (_errorMessage != null || _user == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('إكمال الملف الشخصي')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline_rounded, size: 64, color: theme.colorScheme.error),
+                const SizedBox(height: 16),
+                Text(_errorMessage ?? 'تعذر تحميل الملف الشخصي', style: theme.textTheme.titleMedium, textAlign: TextAlign.center),
+                const SizedBox(height: 20),
+                ElevatedButton.icon(onPressed: _loadUser, icon: const Icon(Icons.refresh_rounded), label: const Text('إعادة المحاولة')),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
-      appBar: AppBar(title: const Text('إكمال الملف الشخصي')),
+      appBar: AppBar(title: const Text('إكمال الملف الشخصي'), centerTitle: true, elevation: 0, shadowColor: Colors.transparent, surfaceTintColor: theme.colorScheme.surface),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -110,9 +209,10 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
               children: [
                 CircleAvatar(
                   radius: 50,
+                  backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
                   backgroundImage: _getImageProvider(),
-                  child: _profileImage == null && (_user?.photoUrl?.isEmpty ?? true)
-                      ? const Icon(Icons.person, size: 50, color: Colors.white)
+                  child: _getImageProvider() == null
+                      ? Icon(Icons.person_rounded, size: 50, color: theme.colorScheme.onPrimaryContainer)
                       : null,
                 ),
                 GestureDetector(
@@ -120,8 +220,8 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                   child: Container(
                     width: 30,
                     height: 30,
-                    decoration: BoxDecoration(color: theme.colorScheme.secondary, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)),
-                    child: const Icon(Icons.camera_alt, size: 16, color: Colors.white),
+                    decoration: BoxDecoration(color: theme.colorScheme.secondary, shape: BoxShape.circle, border: Border.all(color: theme.colorScheme.surface, width: 2)),
+                    child: Icon(Icons.camera_alt_rounded, size: 16, color: theme.colorScheme.onSecondary),
                   ),
                 ),
               ],
@@ -132,7 +232,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
               decoration: InputDecoration(
                 labelText: 'الاسم',
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                prefixIcon: const Icon(Icons.person),
+                prefixIcon: Icon(Icons.person_rounded, color: theme.colorScheme.primary),
               ),
             ),
             const SizedBox(height: 12),
@@ -141,7 +241,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
               decoration: InputDecoration(
                 labelText: 'رقم الهاتف',
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                prefixIcon: const Icon(Icons.phone),
+                prefixIcon: Icon(Icons.phone_rounded, color: theme.colorScheme.primary),
               ),
               keyboardType: TextInputType.phone,
             ),
@@ -151,9 +251,14 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: _isSaving ? null : _saveProfile,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
                 child: _isSaving
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : Text('حفظ', style: TextStyle(color: theme.colorScheme.onPrimary, fontWeight: FontWeight.bold)),
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Text('حفظ', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
               ),
             ),
           ],

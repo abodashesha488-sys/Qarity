@@ -1,25 +1,44 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
 import '../models/data_models.dart';
+import 'cache_service.dart';
 
 class MarketService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  Future<List<MarketProduct>> getProductsList() async {
+  Future<List<MarketProduct>> getProductsList({bool forceRefresh = false}) async {
+    if (!forceRefresh) {
+      final cached = await CacheService.getProducts();
+      if (cached != null) {
+        return cached.map((json) => MarketProduct.fromJson(json, 'cache')).toList();
+      }
+    }
     final snapshot = await _firestore.collection('market_products').where('isApproved', isEqualTo: true).get();
-    return snapshot.docs.map((doc) => MarketProduct.fromJson(doc.data(), doc.id)).toList();
+    final products = snapshot.docs.map((doc) => MarketProduct.fromJson(doc.data(), doc.id)).toList();
+    await CacheService.saveProducts(products.map((p) => p.toJson()).toList());
+    return products;
   }
 
   Future<void> addProduct(MarketProduct product) async {
     await _firestore.collection('market_products').add({
       ...product.toJson(),
-      'isApproved': true,
+      'isApproved': false,
     });
+    await CacheService.invalidateProducts();
   }
 
   Future<void> deleteProduct(String productId, List<String> imageUrls) async {
     await _deleteImagesFromImgbb(imageUrls);
     await _firestore.collection('market_products').doc(productId).delete();
+    await CacheService.invalidateProducts();
+  }
+
+  Stream<List<MarketProduct>> getProductsStream() {
+    return _firestore
+        .collection('market_products')
+        .where('isApproved', isEqualTo: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map((doc) => MarketProduct.fromJson(doc.data(), doc.id)).toList());
   }
 
   Stream<List<MarketProduct>> getSellerProductsStream(String sellerId) {
@@ -27,8 +46,7 @@ class MarketService {
         .collection('market_products')
         .where('sellerId', isEqualTo: sellerId)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) => MarketProduct.fromJson(doc.data(), doc.id)).toList())
-        .handleError((error, stack) => <MarketProduct>[]);
+        .map((snapshot) => snapshot.docs.map((doc) => MarketProduct.fromJson(doc.data(), doc.id)).toList());
   }
 
   Future<bool> isUserSeller(String userId) async {

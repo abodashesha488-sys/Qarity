@@ -1,0 +1,9 @@
+flutter_icons:
+  image_path: "assets/images/Qurity.png"
+  android: true
+  ios: true
+  web:
+    generate: true
+  image_path_android: "assets/images/Qurity.png"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/images/Qurity.png"

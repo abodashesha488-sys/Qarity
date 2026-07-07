@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/data_models.dart';
@@ -14,29 +15,66 @@ class Cart extends ChangeNotifier {
   List<CartItem> get items => List.unmodifiable(_items);
 
   Future<void> init() async {
-    await _loadCart();
+    try {
+      await _loadCart();
+    } catch (e) {
+      debugPrint('Cart init failed: $e');
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_cartKey);
+    }
   }
 
   Future<void> _loadCart() async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonString = prefs.getString(_cartKey);
-    if (jsonString != null) {
-      final List<dynamic> jsonList = json.decode(jsonString);
-      for (final item in jsonList) {
-        final product = MarketProduct.fromJson(item['product'] as Map<String, dynamic>, '');
-        _items.add(CartItem(product: product, quantity: item['quantity'] as int));
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final jsonString = prefs.getString(_cartKey);
+      if (jsonString != null) {
+        final List<dynamic> jsonList = json.decode(jsonString);
+        for (final item in jsonList) {
+          try {
+            final product = MarketProduct.fromJson(item['product'] as Map<String, dynamic>, '');
+            _items.add(CartItem(product: product, quantity: item['quantity'] as int));
+          } catch (e) {
+            debugPrint('Failed to parse cart item: $e');
+          }
+        }
+        notifyListeners();
       }
-      notifyListeners();
+    } catch (e) {
+      debugPrint('Failed to load cart: $e');
     }
   }
 
   Future<void> _saveCart() async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonList = _items.map((item) => {
-      'product': item.product.toJson(),
-      'quantity': item.quantity,
-    }).toList();
-    await prefs.setString(_cartKey, json.encode(jsonList));
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final jsonList = _items.map((item) {
+        final productJson = _marketProductToJson(item.product);
+        return <String, dynamic>{
+          'product': productJson,
+          'quantity': item.quantity,
+        };
+      }).toList();
+      await prefs.setString(_cartKey, json.encode(jsonList));
+    } catch (e) {
+      debugPrint('Failed to save cart: $e');
+    }
+  }
+
+  static Map<String, dynamic> _marketProductToJson(MarketProduct product) {
+    final json = product.toJson();
+    final result = <String, dynamic>{};
+    for (final entry in json.entries) {
+      final value = entry.value;
+      if (value is DateTime) {
+        result[entry.key] = value.toIso8601String();
+      } else if (value is Timestamp) {
+        result[entry.key] = value.millisecondsSinceEpoch;
+      } else {
+        result[entry.key] = value;
+      }
+    }
+    return result;
   }
 
   void add(MarketProduct product) {
@@ -76,6 +114,8 @@ class Cart extends ChangeNotifier {
   }
 
   int get totalItems => _items.fold(0, (s, i) => s + i.quantity);
+
+  int get distinctItemCount => _items.length;
 
   double get totalPrice =>
       _items.fold(0.0, (s, i) => s + i.quantity * i.product.effectivePrice);

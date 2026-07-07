@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -157,7 +157,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: ElevatedButton.icon(
                 onPressed: _signOut,
                 icon: const Icon(Icons.logout, color: Colors.white),
-                label: Text('تسجيل الخروج', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                label: const Text('تسجيل الخروج', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.red, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
               ),
             ),
@@ -175,39 +175,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return null;
     }
 
-    return Stack(
-      alignment: Alignment.bottomCenter,
-      children: [
-        Container(
-          width: double.infinity,
-          height: 120,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(colors: [theme.colorScheme.primary, theme.colorScheme.secondary]),
-            borderRadius: BorderRadius.circular(20),
-          ),
-        ),
-        Stack(
-          alignment: Alignment.bottomRight,
-          children: [
-            CircleAvatar(
-              radius: 45,
-              backgroundImage: getBackground(),
-              child: _user?.photoUrl?.isEmpty == true && _profileImage == null && _uploadedImageUrl == null
-                  ? const Icon(Icons.person, size: 50, color: Colors.white)
-                  : null,
-            ),
-            GestureDetector(
-              onTap: _pickProfileImage,
-              child: Container(
-                width: 30,
-                height: 30,
-                decoration: BoxDecoration(color: theme.colorScheme.secondary, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)),
-                child: const Icon(Icons.camera_alt, size: 16, color: Colors.white),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(colors: [theme.colorScheme.primary, theme.colorScheme.secondary]),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        children: [
+          Stack(
+            alignment: Alignment.bottomRight,
+            children: [
+              CircleAvatar(
+                radius: 50,
+                backgroundColor: Colors.white.withValues(alpha: 0.2),
+                backgroundImage: getBackground(),
+                child: getBackground() == null ? Icon(Icons.person_rounded, size: 50, color: theme.colorScheme.onPrimary) : null,
               ),
-            ),
-          ],
-        ),
-      ],
+              GestureDetector(
+                onTap: _pickProfileImage,
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(color: theme.colorScheme.secondary, shape: BoxShape.circle, border: Border.all(color: theme.colorScheme.onPrimary, width: 2)),
+                  child: Icon(Icons.camera_alt_rounded, size: 16, color: theme.colorScheme.onSecondary),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+           Text(_user?.name ?? 'مستخدم', style: theme.textTheme.titleLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.w900)),
+           if (_user != null && _user!.email.isNotEmpty) ...[
+             const SizedBox(height: 4),
+             Text(_user!.email, style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70)),
+           ],
+        ],
+      ),
     );
   }
 
@@ -341,8 +345,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showCompleteDialog(AppOrder order) {
-    showDialog(context: context, builder: (context) => AlertDialog(title: const Text('إنهاء الطلب؟'), content: const Text('هل أنت متأكد أنك أنهيت هذا الطلب؟'), actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')), TextButton(onPressed: () => _orderService.updateOrderStatus(order.id, 'delivered').then((_) => Navigator.pop(context)), child: const Text('إنهاء'))]));
-}
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('إنهاء الطلب؟'),
+        content: const Text('هل أنت متأكد أنك أنهيت هذا الطلب؟'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
+          TextButton(
+            onPressed: () {
+              _orderService.updateOrderStatus(order.id, 'delivered').then((_) {
+                // ignore: use_build_context_synchronously
+                if (Navigator.canPop(context)) Navigator.pop(context);
+              });
+            },
+            child: const Text('إنهاء'),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildSellerOrdersSection(ThemeData theme) {
     if (!_isSeller) return const SizedBox.shrink();

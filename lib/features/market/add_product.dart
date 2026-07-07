@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../core/utils/helpers.dart';
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
+import '../../services/cache_service.dart';
 import '../../services/market_service.dart';
 import '../../services/user_service.dart';
 
@@ -132,6 +133,7 @@ class _AddMarketProductScreenState extends State<AddMarketProductScreen> {
         isApproved: true,
       );
       await _marketService.addProduct(product);
+      await CacheService.invalidateProducts();
       if (mounted) {
         AppHelpers.showSnackBar(context, 'تمت الإضافة بنجاح', isSuccess: true);
         Navigator.pop(context);

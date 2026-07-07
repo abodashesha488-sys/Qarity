@@ -1,7 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../../core/constants/app_colors.dart';
+
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
 import '../../services/news_service.dart';
@@ -14,261 +14,350 @@ class NewsScreen extends StatefulWidget {
   State<NewsScreen> createState() => _NewsScreenState();
 }
 
-class _NewsScreenState extends State<NewsScreen> {
+class _NewsScreenState extends State<NewsScreen> with AutomaticKeepAliveClientMixin {
   final TextEditingController _searchController = TextEditingController();
   String _selectedCategory = 'الكل';
-  List<NewsItem> _allNews = [];
-  List<NewsItem> _filteredNews = [];
-  bool _isLoading = true;
-  bool _hasError = false;
   final NewsService _newsService = NewsService();
 
   static const List<String> _categories = ['الكل', 'ثقافة', 'رياضة', 'مجتمع', 'تعليم', 'اقتصاد'];
 
   @override
+  bool get wantKeepAlive => true;
+
+  @override
   void initState() {
     super.initState();
-    _loadNews();
-    _searchController.addListener(_updateSearchResults);
-  }
-
-  Future<void> _loadNews() async {
-    setState(() {
-      _isLoading = true;
-      _hasError = false;
-    });
-    try {
-      final news = await _newsService.getNewsList();
-      setState(() {
-        _allNews = news;
-        _filteredNews = news;
-      });
-    } catch (e) {
-      setState(() {
-        _hasError = true;
-      });
-    } finally {
-      setState(() => _isLoading = false);
-    }
+    _searchController.addListener(_onSearchChanged);
   }
 
   @override
   void dispose() {
-    _searchController.removeListener(_updateSearchResults);
+    _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     super.dispose();
   }
 
-  void _updateSearchResults() {
-    final query = _searchController.text.trim().toLowerCase();
-    if (query.isEmpty) {
-      setState(() => _applyCategoryFilter());
-    } else {
-      final filtered = _allNews.where((item) {
-        return item.title.toLowerCase().contains(query) ||
-            item.subtitle.toLowerCase().contains(query) ||
-            item.category.toLowerCase().contains(query);
-      }).toList();
-      setState(() => _filteredNews = filtered);
-    }
-  }
-
-  void _applyCategoryFilter() {
-    _filteredNews = _selectedCategory == 'الكل'
-        ? _allNews
-        : _allNews.where((item) => item.category == _selectedCategory).toList();
+  void _onSearchChanged() {
+    setState(() {});
   }
 
   void _selectCategory(String category) {
-    setState(() {
-      _selectedCategory = category;
-      _applyCategoryFilter();
-    });
+    setState(() => _selectedCategory = category);
   }
 
   Future<void> _refreshNews() async {
-    await _loadNews();
+    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
+    final theme = Theme.of(context);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('أخبار القرية'), actions: CommonAppBarActions.actions(context)),
-      floatingActionButton: FloatingActionButton(
-        heroTag: 'news-add',
-        child: const Icon(Icons.add_rounded),
-        onPressed: () => Navigator.pushNamed(context, AppRoutes.newsDetail),
+      appBar: AppBar(
+        title: const Text('أخبار القرية'),
+        actions: CommonAppBarActions.actions(context),
       ),
       body: RefreshIndicator(
         onRefresh: _refreshNews,
-        child: _isLoading
-            ? _buildLoadingState()
-            : _hasError
-                ? _buildErrorState()
-                : _allNews.isEmpty
-                    ? _buildEmptyState()
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _filteredNews.length + 1,
-                        itemBuilder: (context, index) {
-                          if (index == 0) {
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildSearchField(context),
-                                const SizedBox(height: 20),
-                                _buildCategoryChips(context),
-                                const SizedBox(height: 24),
-                              ],
-                            );
-                          }
-                          final newsItem = _filteredNews[index - 1];
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 24),
-                            child: _buildNewsCard(context, newsItem, index - 1),
-                          );
-                        },
-                      ),
+        color: theme.colorScheme.primary,
+        backgroundColor: theme.colorScheme.surface,
+        strokeWidth: 3,
+        child: _buildBody(theme),
       ),
     );
   }
 
-  Widget _buildLoadingState() {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: 10,
-      itemBuilder: (context, index) {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 60),
-              Container(width: double.infinity, height: 180, color: Colors.grey[300], child: const Center(child: CircularProgressIndicator())),
-              const SizedBox(height: 12),
-              Container(width: double.infinity, height: 20, color: Colors.grey[300]),
-              const SizedBox(height: 8),
-              Container(width: double.infinity, height: 16, color: Colors.grey[200]),
-            ],
-          ),
+  Widget _buildBody(ThemeData theme) {
+    return StreamBuilder<List<NewsItem>>(
+      stream: _newsService.getNewsStream(),
+      builder: (context, snapshot) {
+        final news = snapshot.data ?? [];
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: news.length + 1,
+          itemBuilder: (context, index) {
+            if (index == 0) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSearchField(theme),
+                  const SizedBox(height: 20),
+                  _buildCategoryChips(theme),
+                  const SizedBox(height: 24),
+                ],
+              );
+            }
+            final item = news[index - 1];
+            final filtered = _selectedCategory == 'الكل' || item.category == _selectedCategory;
+            final query = _searchController.text.trim().toLowerCase();
+            final matchesSearch = query.isEmpty ||
+                item.title.toLowerCase().contains(query) ||
+                item.subtitle.toLowerCase().contains(query) ||
+                item.category.toLowerCase().contains(query);
+            if (!filtered || !matchesSearch) return const SizedBox.shrink();
+            return _buildNewsCard(theme, item, index - 1);
+          },
         );
       },
     );
   }
 
-  Widget _buildErrorState() {
-    return Center(
-      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Icon(Icons.error_outline, size: 80, color: Colors.grey[300]),
-        const SizedBox(height: 16),
-        Text('خطأ في تحميل الأخبار', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 8),
-        TextButton(onPressed: _refreshNews, child: const Text('حاول مرة أخرى')),
-      ]),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Icon(Icons.newspaper_rounded, size: 100, color: Colors.grey[300]),
-        const SizedBox(height: 20),
-        Text('لا توجد أخبار بعد', style: Theme.of(context).textTheme.headlineSmall),
-        const SizedBox(height: 10),
-        Text('كن أول من ينشر أخباراً عن قرية أبوديشيشة', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[600])),
-        const SizedBox(height: 24),
-        ElevatedButton.icon(onPressed: () => Navigator.pushNamed(context, AppRoutes.newsDetail), icon: const Icon(Icons.add_rounded), label: const Text('نشر خبر جديد')),
-      ]),
-    );
-  }
-
-  Widget _buildSearchField(BuildContext context) {
+  Widget _buildSearchField(ThemeData theme) {
     return TextField(
       controller: _searchController,
       decoration: InputDecoration(
         hintText: 'ابحث في الأخبار...',
-        prefixIcon: Icon(Icons.search, color: Theme.of(context).colorScheme.onSurfaceVariant),
+        hintStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
+        prefixIcon: Icon(Icons.search_rounded, color: theme.colorScheme.primary),
+        suffixIcon: _searchController.text.isNotEmpty
+            ? IconButton(
+                icon: const Icon(Icons.clear_rounded),
+                onPressed: () {
+                  _searchController.clear();
+                  setState(() {});
+                },
+              )
+            : null,
         filled: true,
-        fillColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+        fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.3)),
+        ),
       ),
     );
   }
 
-  Widget _buildCategoryChips(BuildContext context) {
+  Widget _buildCategoryChips(ThemeData theme) {
     return SizedBox(
       height: 44,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(),
         itemCount: _categories.length,
         separatorBuilder: (_, __) => const SizedBox(width: 10),
         itemBuilder: (context, index) {
           final category = _categories[index];
           final selected = category == _selectedCategory;
-          return ChoiceChip(
-            label: Text(category, style: const TextStyle(fontWeight: FontWeight.w600)),
-            selected: selected,
-            onSelected: (_) => _selectCategory(category),
-            selectedColor: Theme.of(context).colorScheme.primary,
-            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-            labelStyle: TextStyle(color: selected ? Colors.white : Theme.of(context).colorScheme.onSurface),
+          return GestureDetector(
+            onTap: () => _selectCategory(category),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeInOut,
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+              decoration: BoxDecoration(
+                gradient: selected
+                    ? LinearGradient(colors: [theme.colorScheme.primary, theme.colorScheme.primaryContainer])
+                    : null,
+                color: selected ? null : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: selected ? theme.colorScheme.primary : theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+                  width: 1.2,
+                ),
+                boxShadow: selected
+                    ? [
+                        BoxShadow(
+                          color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Text(
+                category,
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: selected ? Colors.white : theme.colorScheme.onSurface,
+                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ),
           );
         },
       ),
     );
   }
 
-  Widget _buildNewsCard(BuildContext context, NewsItem item, int index) {
+  Widget _buildNewsCard(ThemeData theme, NewsItem item, int index) {
     return Card(
-      elevation: 6,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
         onTap: () => Navigator.pushNamed(context, AppRoutes.newsView, arguments: item),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            child: SizedBox(
-              height: 180,
-              width: double.infinity,
-              child: Stack(children: [
-                if (item.imageUrls.isNotEmpty)
-                  PageView.builder(
-                    itemCount: item.imageUrls.length,
-                    itemBuilder: (context, i) => CachedNetworkImage(imageUrl: item.imageUrls[i], fit: BoxFit.cover, width: double.infinity),
-                  )
-                else
-                  CachedNetworkImage(imageUrl: item.imageUrl, fit: BoxFit.cover, width: double.infinity),
-                if (item.imageUrls.isNotEmpty)
-                  Positioned(bottom: 8, left: 8, right: 8, child: Row(mainAxisAlignment: MainAxisAlignment.center, children: List.generate(item.imageUrls.length, (i) => Container(width: 8, height: 8, margin: const EdgeInsets.symmetric(horizontal: 2), decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: 0.7)))))),
-              ]),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AspectRatio(
+              aspectRatio: 16 / 9,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (item.imageUrls.isNotEmpty)
+                    PageView.builder(
+                      itemCount: item.imageUrls.length,
+                      itemBuilder: (context, i) => CachedNetworkImage(
+                        imageUrl: item.imageUrls[i],
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        placeholder: (context, url) => ColoredBox(
+                          color: theme.colorScheme.surfaceContainerHighest,
+                          child: const Center(
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ),
+                        errorWidget: (context, url, error) => ColoredBox(
+                          color: theme.colorScheme.surfaceContainerHighest,
+                          child: Icon(Icons.broken_image_rounded, size: 48, color: theme.colorScheme.onSurfaceVariant),
+                        ),
+                      ),
+                    )
+                  else if (item.imageUrl.isNotEmpty)
+                    CachedNetworkImage(
+                      imageUrl: item.imageUrl,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      placeholder: (context, url) => ColoredBox(
+                        color: theme.colorScheme.surfaceContainerHighest,
+                        child: const Center(
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ),
+                      errorWidget: (context, url, error) => ColoredBox(
+                        color: theme.colorScheme.surfaceContainerHighest,
+                        child: Icon(Icons.broken_image_rounded, size: 48, color: theme.colorScheme.onSurfaceVariant),
+                      ),
+                    ),
+                  if (item.imageUrls.length > 1)
+                    Positioned(
+                      bottom: 12,
+                      left: 12,
+                      right: 12,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(
+                          item.imageUrls.length,
+                          (i) => Container(
+                            width: 8,
+                            height: 8,
+                            margin: const EdgeInsets.symmetric(horizontal: 3),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white.withValues(alpha: 0.7),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [theme.colorScheme.primary, theme.colorScheme.primaryContainer],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        item.category,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)), child: Text(item.category, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700))),
-              const Spacer(),
-              Text(item.date, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textTertiary)),
-            ]),
-            const SizedBox(height: 10),
-            Text(item.title, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800, height: 1.3), maxLines: 2, overflow: TextOverflow.ellipsis),
-            const SizedBox(height: 8),
-            if (item.authorName != null && item.authorName!.isNotEmpty) Text(item.authorName!, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.blueGrey)),
-            const SizedBox(height: 8),
-            Text(item.subtitle, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary), maxLines: 3, overflow: TextOverflow.ellipsis),
-            const SizedBox(height: 12),
-            Row(children: [
-              const Icon(Icons.favorite_border, size: 16, color: AppColors.textTertiary),
-              const SizedBox(width: 4),
-              Text('${item.likes}', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textTertiary)),
-              const SizedBox(width: 12),
-              const Icon(Icons.visibility_rounded, size: 16, color: AppColors.textTertiary),
-              const SizedBox(width: 4),
-              Text('${item.views} مشاهدة', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textTertiary)),
-            ]),
-          ])),
-        ]),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.title,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      height: 1.3,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    item.subtitle,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      height: 1.5,
+                    ),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      if (item.authorName != null && item.authorName!.isNotEmpty) ...[
+                        Icon(Icons.person_outline_rounded, size: 16, color: theme.colorScheme.onSurfaceVariant),
+                        const SizedBox(width: 4),
+                        Text(
+                          item.authorName!,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                      ],
+                      Icon(Icons.calendar_today_outlined, size: 14, color: theme.colorScheme.onSurfaceVariant),
+                      const SizedBox(width: 4),
+                      Text(
+                        item.date,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const Spacer(),
+                      Icon(Icons.favorite_border_rounded, size: 16, color: theme.colorScheme.onSurfaceVariant),
+                      const SizedBox(width: 4),
+                      Text('${item.likes}', style: theme.textTheme.bodySmall),
+                      const SizedBox(width: 12),
+                      Icon(Icons.visibility_outlined, size: 16, color: theme.colorScheme.onSurfaceVariant),
+                      const SizedBox(width: 4),
+                      Text('${item.views} مشاهدة', style: theme.textTheme.bodySmall),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
-    ).animate(delay: (index * 100).ms).fade(duration: 400.ms).slideY(begin: 0.2);
+    ).animate(delay: (index * 80).ms).fade(duration: 400.ms).slideY(begin: 0.15);
   }
+
+
+
+
 }

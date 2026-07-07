@@ -1,10 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../core/constants/app_colors.dart';
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
 import '../../services/market_service.dart';
@@ -33,7 +31,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _loadProduct();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadProduct());
   }
 
   Future<void> _loadProduct() async {
@@ -43,12 +41,21 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         _product = args;
         _loading = false;
       });
-    } else if (args is String) {
-      final product = await _marketService.getProductById(args);
-      setState(() {
-        _product = product;
-        _loading = false;
-      });
+      return;
+    }
+    if (args is String) {
+      try {
+        final product = await _marketService.getProductById(args);
+        if (!mounted) return;
+        setState(() {
+          _product = product;
+          _loading = false;
+        });
+      } catch (e) {
+        if (!mounted) return;
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ في تحميل المنتج: $e')));
+      }
     } else {
       setState(() => _loading = false);
     }
@@ -56,78 +63,312 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     if (_loading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return Scaffold(body: Center(child: CircularProgressIndicator(color: theme.colorScheme.primary)));
     }
-    if (_product == null) return const Scaffold(body: Center(child: Text('المنتج غير موجود')));
+    if (_product == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('المنتج')),
+        body: Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Icon(Icons.error_outline_rounded, size: 64, color: theme.colorScheme.error),
+          const SizedBox(height: 16),
+          Text('المنتج غير موجود أو غير متوفر', style: theme.textTheme.titleMedium),
+        ])),
+      );
+    }
+
+    final product = _product!;
 
     return Scaffold(
-      appBar: AppBar(title: Text(_product!.name), actions: CommonAppBarActions.actions(context)),
-      body: ListView(children: [
-        if (_product!.imageUrls.isNotEmpty) ...[
-          Stack(alignment: Alignment.bottomCenter, children: [
-            SizedBox(
-              height: 280,
-              child: PageView.builder(
-                controller: _pageController,
-                itemCount: _product!.imageUrls.length,
-                itemBuilder: (context, index) => CachedNetworkImage(
-                  imageUrl: _product!.imageUrls[index],
-                  fit: BoxFit.cover,
-                  width: double.infinity,
+      appBar: AppBar(
+        title: Text(product.name, style: const TextStyle(fontWeight: FontWeight.w800)),
+        centerTitle: true,
+        elevation: 0,
+        shadowColor: Colors.transparent,
+        surfaceTintColor: theme.colorScheme.surface,
+        actions: CommonAppBarActions.actions(context),
+      ),
+      body: ListView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        children: [
+          _buildImageCarousel(theme, product),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                Expanded(child: Text(product.name, style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w900))),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(color: theme.colorScheme.primaryContainer.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(12), border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.2))),
+                  child: Text(product.category, style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.w800)),
                 ),
-                onPageChanged: (index) => setState(() => _currentPage = index),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(
-                  _product!.imageUrls.length,
-                  (index) => Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: _currentPage == index ? AppColors.primary : Colors.grey[300],
-                    ),
+              ]),
+              const SizedBox(height: 12),
+              Row(children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.green.withValues(alpha: 0.25))),
+                  child: Text('${product.effectivePrice.toStringAsFixed(0)} ج.م', style: theme.textTheme.titleLarge?.copyWith(color: Colors.green, fontWeight: FontWeight.w900)),
+                ),
+                const SizedBox(width: 12),
+                const Icon(Icons.star_rounded, color: Colors.amber, size: 20),
+                const SizedBox(width: 4),
+                Text('4.5', style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
+                Text(' (120 مشتريات)', style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+              ]),
+              const SizedBox(height: 16),
+              _buildInfoRow(theme, Icons.store_rounded, product.sellerName),
+              const SizedBox(height: 8),
+              _buildInfoRow(theme, Icons.phone_rounded, product.sellerPhone, color: theme.colorScheme.primary),
+              const SizedBox(height: 16),
+              Text('الوصف', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+              const SizedBox(height: 6),
+              Text(product.description, style: theme.textTheme.bodyMedium?.copyWith(height: 1.6)),
+              const SizedBox(height: 20),
+              _buildQuantityCard(theme),
+              const SizedBox(height: 20),
+              Row(children: [_buildLikeButton(theme), const SizedBox(width: 12), _buildShareButton(theme), const SizedBox(width: 12), _buildReviewsBadge(theme)]),
+              const SizedBox(height: 20),
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('التعليقات', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)), Text('${product.reviewCount} تعليق', style: theme.textTheme.bodySmall)]),
+              const SizedBox(height: 12),
+              _buildCommentsSection(theme, product),
+            ]),
+          ),
+        ],
+      ),
+      bottomNavigationBar: _buildBottomBar(theme),
+    );
+  }
+
+  Widget _buildInfoRow(ThemeData theme, IconData icon, String text, {Color? color}) {
+    return Row(children: [
+      Icon(icon, size: 18, color: color ?? theme.colorScheme.onSurfaceVariant),
+      const SizedBox(width: 8),
+      Expanded(child: Text(text, style: theme.textTheme.bodyMedium)),
+    ]);
+  }
+
+  Widget _buildImageCarousel(ThemeData theme, MarketProduct product) {
+    final hasImages = product.imageUrls.isNotEmpty || product.imageUrl.isNotEmpty;
+    if (!hasImages) return const SizedBox.shrink();
+
+    return Stack(
+      alignment: Alignment.bottomCenter,
+      children: [
+        SizedBox(
+          height: 300,
+          child: PageView.builder(
+            controller: _pageController,
+            itemCount: product.imageUrls.isNotEmpty ? product.imageUrls.length : 1,
+            itemBuilder: (context, index) {
+              final imageUrl = product.imageUrls.isNotEmpty ? product.imageUrls[index] : product.imageUrl;
+              return CachedNetworkImage(imageUrl: imageUrl, fit: BoxFit.cover, width: double.infinity);
+            },
+            onPageChanged: (index) => setState(() => _currentPage = index),
+          ),
+        ),
+        if ((product.imageUrls.isNotEmpty ? product.imageUrls.length : 1) > 1)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 14),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(
+                product.imageUrls.isNotEmpty ? product.imageUrls.length : 1,
+                (index) => Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: _currentPage == index ? Colors.white : Colors.white.withValues(alpha: 0.5),
                   ),
                 ),
               ),
             ),
-          ]),
-        ] else if (_product!.imageUrl.isNotEmpty) ...[
-          CachedNetworkImage(imageUrl: _product!.imageUrl, height: 280, fit: BoxFit.cover, width: double.infinity),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildQuantityCard(ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text('الكمية', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                IconButton(onPressed: () { if (_quantity > 1) setState(() => _quantity--); }, icon: const Icon(Icons.remove_rounded), color: theme.colorScheme.primary),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(color: theme.colorScheme.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
+                  child: Text('$_quantity', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900, color: theme.colorScheme.primary)),
+                ),
+                IconButton(onPressed: () { setState(() => _quantity++); }, icon: const Icon(Icons.add_rounded), color: theme.colorScheme.primary),
+              ],
+            ),
+          ),
         ],
-        Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Expanded(child: Text(_product!.name, style: Theme.of(context).textTheme.headlineMedium)),
-            Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)), child: Text(_product!.category, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: AppColors.primary))),
-          ]),
-          const SizedBox(height: 8),
-          Text('${_product!.price.toStringAsFixed(0)} ج.م', style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.green, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 12),
-          Row(children: [const Icon(Icons.star, color: Colors.amber, size: 18), const SizedBox(width: 4), Text('4.5 (120 مشتريات', style: Theme.of(context).textTheme.bodyMedium)]),
-          const SizedBox(height: 8),
-          Row(children: [const Icon(Icons.store, size: 18), const SizedBox(width: 8), Text(_product!.sellerName, style: Theme.of(context).textTheme.bodyMedium)]),
-          const SizedBox(height: 4),
-          Row(children: [const Icon(Icons.phone, size: 16), const SizedBox(width: 8), Text(_product!.sellerPhone, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[600]))]),
-          const SizedBox(height: 12),
-          Text(_product!.description, style: Theme.of(context).textTheme.bodyMedium),
-          const SizedBox(height: 20),
-          Card(elevation: 2, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), child: Padding(padding: const EdgeInsets.all(12), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('الكمية', style: Theme.of(context).textTheme.titleMedium), Row(children: [IconButton(icon: const Icon(Icons.remove), onPressed: () { if (_quantity > 1) setState(() => _quantity--); }), Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)), child: Text('$_quantity', style: Theme.of(context).textTheme.titleMedium)), IconButton(icon: const Icon(Icons.add), onPressed: () { setState(() => _quantity++); })])]))),
-          const SizedBox(height: 20),
-          Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Row(children: [StreamBuilder<DocumentSnapshot>(stream: _auth.currentUser != null ? FirebaseFirestore.instance.collection('market_products').doc(_product!.id).snapshots() : null, builder: (context, snapshot) { final likedBy = snapshot.hasData ? List<String>.from((snapshot.data?.data() as Map<String, dynamic>?)?['likedBy'] as List<dynamic>? ?? []) : []; final isLiked = likedBy.contains(_auth.currentUser?.uid); return TextButton.icon(onPressed: _auth.currentUser != null ? _toggleLike : null, icon: Icon(isLiked ? Icons.favorite : Icons.favorite_border, color: Colors.red), label: Text('${_product!.likes + (isLiked ? 1 : 0)}')); }), TextButton.icon(onPressed: _shareProduct, icon: const Icon(Icons.share), label: const Text('مشاركة')), Text('${_product!.reviewCount} تقييم', style: Theme.of(context).textTheme.bodyMedium)])),
-          const SizedBox(height: 16),
-          Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Text('التعليقات', style: Theme.of(context).textTheme.titleMedium)),
-          const SizedBox(height: 8),
-          SizedBox(height: 200, child: StreamBuilder<List<Map<String, dynamic>>>(stream: _interactionService.getCommentsStream(_product!.id), builder: (context, snapshot) { if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator()); final comments = snapshot.data ?? []; if (comments.isEmpty) return const Padding(padding: EdgeInsets.all(16), child: Text('لا توجد تعليقات', style: TextStyle(color: Colors.grey))); return ListView.builder(itemCount: comments.length, itemBuilder: (context, index) => ListTile(title: Text(comments[index]['userName'] as String, style: TextStyle(fontWeight: FontWeight.w600)), subtitle: Text(comments[index]['text'] as String))); })),
-          Padding(padding: const EdgeInsets.all(16), child: Row(children: [Expanded(child: TextField(controller: _commentController, decoration: InputDecoration(hintText: 'أضف تعليق...', border: OutlineInputBorder(borderRadius: BorderRadius.circular(16))))), IconButton(icon: const Icon(Icons.send), onPressed: _addComment)])),
-        ])),
+      ),
+    );
+  }
+
+  Widget _buildLikeButton(ThemeData theme) {
+    return StreamBuilder<bool>(
+      stream: _auth.currentUser != null ? _interactionService.hasUserLikedStream(productId: _product!.id, userId: _auth.currentUser!.uid) : null,
+      builder: (context, snapshot) {
+        final isLiked = snapshot.data ?? false;
+        return Expanded(
+          child: InkWell(
+            onTap: _auth.currentUser != null ? _toggleLike : null,
+            borderRadius: BorderRadius.circular(14),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: isLiked ? Colors.red.withValues(alpha: 0.1) : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: isLiked ? Colors.red.withValues(alpha: 0.3) : theme.colorScheme.outlineVariant.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(isLiked ? Icons.favorite_rounded : Icons.favorite_border_rounded, color: Colors.red, size: 20),
+                  const SizedBox(width: 6),
+                  StreamBuilder<int>(stream: _interactionService.getLikeCountStream(_product!.id), builder: (context, countSnapshot) {
+                    final count = countSnapshot.data ?? _product!.likes;
+                    return Text('$count', style: theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w800));
+                  }),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildShareButton(ThemeData theme) {
+    return Expanded(
+      child: InkWell(
+        onTap: _shareProduct,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.2)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.share_rounded, color: theme.colorScheme.primary, size: 20),
+              const SizedBox(width: 6),
+              Text('مشاركة', style: theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w800, color: theme.colorScheme.primary)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReviewsBadge(ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3)),
+      ),
+      child: Row(children: [
+        const Icon(Icons.star_rounded, color: Colors.amber, size: 20),
+        const SizedBox(width: 6),
+        Text('${_product!.reviewCount} تقييم', style: theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w800)),
       ]),
-      bottomNavigationBar: Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 8, offset: const Offset(0, -4))]), child: Row(children: [Expanded(child: OutlinedButton(onPressed: () => Navigator.pushNamed(context, AppRoutes.marketCart), child: Text('السلة (${Cart.instance.totalItems})'))), const SizedBox(width: 12), Expanded(child: ElevatedButton(onPressed: _addToCart, child: const Text('أضف إلى السلة')))])),
+    );
+  }
+
+  Widget _buildCommentsSection(ThemeData theme, MarketProduct product) {
+    return SizedBox(
+      height: 220,
+      child: StreamBuilder<List<Map<String, dynamic>>>(
+        stream: _interactionService.getCommentsStream(product.id),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+          final comments = snapshot.data ?? [];
+          if (comments.isEmpty) return Center(child: Text('لا توجد تعليقات بعد', style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)));
+          return ListView.builder(
+            itemCount: comments.length,
+            itemBuilder: (context, index) {
+              final comment = comments[index];
+              return Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    CircleAvatar(backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.5), radius: 18, child: Icon(Icons.person, size: 16, color: theme.colorScheme.primary)),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(comment['userName'] as String? ?? 'زائر', style: theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w800)),
+                        const SizedBox(height: 4),
+                        Text(comment['text'] as String? ?? '', style: theme.textTheme.bodySmall),
+                      ]),
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildBottomBar(ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: theme.colorScheme.surface, boxShadow: [BoxShadow(color: theme.colorScheme.shadow.withValues(alpha: 0.08), blurRadius: 16, offset: const Offset(0, -4))]),
+      child: Row(children: [
+        Expanded(child: OutlinedButton.icon(
+          onPressed: () => Navigator.pushNamed(context, AppRoutes.marketCart),
+          icon: Icon(Icons.shopping_cart_outlined, color: theme.colorScheme.primary),
+          label: Text('السلة (${Cart.instance.distinctItemCount})', style: TextStyle(color: theme.colorScheme.primary)),
+          style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+        )),
+        const SizedBox(width: 12),
+        Expanded(
+          child: ElevatedButton(
+            onPressed: _addToCart,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: theme.colorScheme.primary,
+              foregroundColor: theme.colorScheme.onPrimary,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              elevation: 0,
+            ),
+            child: const Text('أضف إلى السلة', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+          ),
+        ),
+      ]),
     );
   }
 
@@ -137,27 +378,41 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     try {
       await _interactionService.toggleLike(productId: _product!.id, userId: user.uid);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ في الإعجاب: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ في الإعجاب: $e')));
+      }
     }
   }
 
   void _shareProduct() async {
-    final text = '${_product!.name}\n${_product!.description}\n${_product!.price} ج.م';
+    final text = Uri.encodeComponent('${_product!.name}\n${_product!.description}\n${_product!.effectivePrice.toStringAsFixed(0)} ج.م');
     await launchUrl(Uri.parse('https://t.me/share/url?url=$text'));
-  }
-
-  void _addComment() {
-    if (_commentController.text.isEmpty || _auth.currentUser == null) return;
-    _interactionService.addComment(productId: _product!.id, userName: _auth.currentUser!.displayName ?? 'زائر', text: _commentController.text);
-    _commentController.clear();
   }
 
   void _addToCart() {
     if (_product == null) return;
-    for (var i = 0; i < _quantity; i++) {
-      Cart.instance.add(_product!);
+    try {
+      final existingIndex = Cart.instance.items.indexWhere((c) => c.product.id == _product!.id);
+      if (existingIndex >= 0) {
+        Cart.instance.updateQuantity(_product!, Cart.instance.items[existingIndex].quantity + _quantity);
+      } else {
+        Cart.instance.add(_product!);
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(existingIndex >= 0 ? 'تم تحديث الكمية في السلة' : 'تمت الإضافة إلى السلة'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ في إضافة للسلة: $e'), backgroundColor: Colors.red),
+        );
+      }
     }
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تمت الإضافة إلى السلة')));
   }
 
   @override

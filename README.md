@@ -73,12 +73,14 @@ lib/
 │   └── app_routes.dart
 └── services/
     ├── user_service.dart
-    ├── review_service.dart
+    ├── forum_service.dart
     ├── market_service.dart
     ├── news_service.dart
-    ├── obituary_service.dart
-    ├── occasion_service.dart
-    └── phone_directory_service.dart
+    ├── order_service.dart
+    ├── product_interaction_service.dart
+    ├── image_upload_service.dart
+    ├── theme_service.dart
+    └── cache_service.dart
 ```
 
 ## Firebase Configuration
@@ -164,7 +166,7 @@ dependencies:
 | البناء | الحالة |
 |--------|--------|
 | الأخطاء | 0 |
-| التحذيرات | 0 |
+| التحذيرات | 2 |
 | النتيجة | ✅ جاهز للعرض |
 
 ## ملاحظات إضافية
@@ -173,3 +175,5 @@ dependencies:
 - تمت محاولة المحافظة على تجربة عربية وواجهة RTL في معظم الشاشات.
 - يحتوي السوق على خاصية عرض صور الشبكة تدريجيًا مع `FadeInImage.assetNetwork`.
 - البيانات تُخزن في Firestore مع دعم المصادقة عبر Google.
+- التحديثات الآن لحظية (real-time) في: السوق، الأخبار، المنتدى، الطلبات، والشاشة الرئيسية عبر Firestore Streams.
+- السلة استخدمت `ChangeNotifier` مع `ListenableBuilder` لضمان تحديث فوري عند الإضافة/الحذف/تعديل الكمية.

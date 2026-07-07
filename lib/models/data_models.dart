@@ -285,6 +285,7 @@ class MarketProduct implements BaseModel {
   @override
   Map<String, dynamic> toJson() {
     return {
+      'id': id,
       'name': name,
       'description': description,
       'price': price,
@@ -327,6 +328,8 @@ class MarketProduct implements BaseModel {
       rating: rating,
       reviewCount: reviewCount,
       isApproved: isApproved ?? this.isApproved,
+      likes: likes,
+      likedBy: likedBy,
     );
   }
 
@@ -979,6 +982,12 @@ DateTime _parseTimestamp(dynamic value) {
   }
   if (value is DateTime) {
     return value;
+  }
+  if (value is int) {
+    return DateTime.fromMillisecondsSinceEpoch(value);
+  }
+  if (value is String) {
+    return DateTime.tryParse(value) ?? DateTime.now();
   }
   return DateTime.now();
 }

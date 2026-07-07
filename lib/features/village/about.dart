@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+
 import '../../widgets/common_appbar_actions.dart';
 
 class VillageScreen extends StatelessWidget {
@@ -11,8 +12,15 @@ class VillageScreen extends StatelessWidget {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('عن القرية'),
-          bottom: const TabBar(
-            tabs: [
+          centerTitle: true,
+          elevation: 0,
+          shadowColor: Colors.transparent,
+          surfaceTintColor: Theme.of(context).colorScheme.surface,
+          bottom: TabBar(
+            indicatorColor: Theme.of(context).colorScheme.primary,
+            labelColor: Theme.of(context).colorScheme.primary,
+            unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
+            tabs: const [
               Tab(text: 'عن القرية'),
               Tab(text: 'تاريخ'),
               Tab(text: 'أرشيف'),
@@ -21,7 +29,7 @@ class VillageScreen extends StatelessWidget {
           ),
           actions: CommonAppBarActions.actions(context),
         ),
-        body: TabBarView(
+        body: const TabBarView(
           children: [
             _AboutTab(),
             _HistoryTab(),
@@ -35,75 +43,107 @@ class VillageScreen extends StatelessWidget {
 }
 
 class _AboutTab extends StatelessWidget {
+  const _AboutTab();
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Text(
-          'عن قرية أبوديشيشة',
-          style: Theme.of(context).textTheme.headlineMedium,
+        Text('عن قرية أبوديشيشة', style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
+        const SizedBox(height: 16),
+        Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildInfoRow(theme, 'السكان', '[عدد السكان]'),
+                _buildInfoRow(theme, 'المساحة', '[المساحة الكيلومترية المربعية]'),
+                _buildInfoRow(theme, 'تأسيس', '[سنة التأسيس]'),
+              ],
+            ),
+          ),
         ),
         const SizedBox(height: 16),
-        const Text(
+        Text(
           'قرية أبوديشيشة هي قرية تقع في محافظة [المحافظة] على طول خط العرض [خط العرض]. تتميز القرية بطبيعتها الجميلة وموقعها الاستراتيجي البليدي.',
-          style: TextStyle(height: 1.6),
+          style: TextStyle(height: 1.6, color: theme.colorScheme.onSurface),
         ),
-        const SizedBox(height: 20),
-        const Text(
-          'السكان: [عدد السكان]',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        const Text('المساحة: [المساحة الكيلومترية المربعية]'),
-        const Text('تأسيس: [سنة التأسيس]'),
       ],
+    );
+  }
+
+  Widget _buildInfoRow(ThemeData theme, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(Icons.info_rounded, size: 16, color: theme.colorScheme.primary),
+          ),
+          const SizedBox(width: 12),
+          Text('$label: ', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700)),
+          Expanded(child: Text(value, style: theme.textTheme.bodyMedium)),
+        ],
+      ),
     );
   }
 }
 
 class _HistoryTab extends StatelessWidget {
+  const _HistoryTab();
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Text(
-          'تاريخ قرية أبوديشيشة',
-          style: Theme.of(context).textTheme.headlineMedium,
-        ),
+        Text('تاريخ قرية أبوديشيشة', style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
         const SizedBox(height: 16),
-        _buildHistoryItem('1900', 'تأسيس القرية كمجتمع نقدي'),
-        _buildHistoryItem('1950', 'بدء بناء المدارس والمستشفيات'),
-        _buildHistoryItem('1980', 'تطوير البنية التحتية'),
-        _buildHistoryItem('2000', 'تأسيس المراكز الصحية'),
-        _buildHistoryItem('2020', 'مشاريع التوثيق الرقمي'),
+        _buildHistoryItem(theme, '1900', 'تأسيس القرية كمجتمع نقدي'),
+        _buildHistoryItem(theme, '1950', 'بدء بناء المدارس والمستشفيات'),
+        _buildHistoryItem(theme, '1980', 'تطوير البنية التحتية'),
+        _buildHistoryItem(theme, '2000', 'تأسيس المراكز الصحية'),
+        _buildHistoryItem(theme, '2020', 'مشاريع التوثيق الرقمي'),
       ],
     );
   }
 
-  Widget _buildHistoryItem(String year, String event) {
+  Widget _buildHistoryItem(ThemeData theme, String year, String event) {
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(14),
         child: Row(
           children: [
             Container(
-              width: 60,
-              height: 40,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.blue.shade100,
-                borderRadius: BorderRadius.circular(8),
+                color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: Center(
-                child: Text(
-                  year,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
+              child: Text(year, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800, color: theme.colorScheme.primary)),
             ),
-            const SizedBox(width: 12),
-            Expanded(child: Text(event)),
+            const SizedBox(width: 14),
+            Expanded(child: Text(event, style: theme.textTheme.bodyMedium)),
           ],
         ),
       ),
@@ -112,63 +152,89 @@ class _HistoryTab extends StatelessWidget {
 }
 
 class _ArchiveTab extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Text('أرشيف القرية', style: Theme.of(context).textTheme.headlineMedium),
-        const SizedBox(height: 16),
-        const ListTile(
-          title: Text('الوثائق التاريخية'),
-          trailing: Icon(Icons.picture_as_pdf),
-        ),
-        const ListTile(title: Text('صور قديمة'), trailing: Icon(Icons.image)),
-        const ListTile(
-          title: Text('سجلات المواليد'),
-          trailing: Icon(Icons.document_scanner),
-        ),
-        const ListTile(
-          title: Text('سجلات الوفيات'),
-          trailing: Icon(Icons.document_scanner),
-        ),
-      ],
-    );
-  }
-}
+  const _ArchiveTab();
 
-class _InstitutionsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Text('منشآت القرية', style: Theme.of(context).textTheme.headlineMedium),
+        Text('أرشيف القرية', style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
         const SizedBox(height: 16),
-        _buildInstitution('مدرسة الأمل الابتدائية', Icons.school, 'حي الوسط'),
-        _buildInstitution(
-          'مستشفى القرية المركزي',
-          Icons.local_hospital,
-          'وسط القرية',
-        ),
-        _buildInstitution('مسجد الفلاح', Icons.mosque, 'حي الفلاح'),
-        _buildInstitution('المركز الثقافي', Icons.theater_comedy, 'وسط القرية'),
-        _buildInstitution('الجمعية الزراعية', Icons.agriculture, 'حي الفلاح'),
+        _buildArchiveCard(theme, 'الوثائق التاريخية', Icons.picture_as_pdf_rounded),
+        _buildArchiveCard(theme, 'صور قديمة', Icons.image_rounded),
+        _buildArchiveCard(theme, 'سجلات المواليد', Icons.document_scanner_rounded),
+        _buildArchiveCard(theme, 'سجلات الوفيات', Icons.document_scanner_rounded),
       ],
     );
   }
 
-  Widget _buildInstitution(String name, IconData icon, String location) {
+  Widget _buildArchiveCard(ThemeData theme, String title, IconData icon) {
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      elevation: 0,
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
+      ),
       child: ListTile(
-        leading: Icon(icon, size: 40),
-        title: Text(name),
-        subtitle: Text(location),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-        onTap: () {},
+        leading: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, color: theme.colorScheme.primary, size: 20),
+        ),
+        title: Text(title, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
+        trailing: Icon(Icons.chevron_left_rounded, color: theme.colorScheme.onSurfaceVariant, size: 18),
       ),
     );
   }
 }
 
+class _InstitutionsTab extends StatelessWidget {
+  const _InstitutionsTab();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Text('منشآت القرية', style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
+        const SizedBox(height: 16),
+        _buildInstitution(theme, 'مدرسة الأمل الابتدائية', Icons.school_rounded, 'حي الوسط'),
+        _buildInstitution(theme, 'مستشفى القرية المركزي', Icons.local_hospital_rounded, 'وسط القرية'),
+        _buildInstitution(theme, 'مسجد الفلاح', Icons.mosque_rounded, 'حي الفلاح'),
+        _buildInstitution(theme, 'المركز الثقافي', Icons.theater_comedy_rounded, 'وسط القرية'),
+        _buildInstitution(theme, 'الجمعية الزراعية', Icons.agriculture_rounded, 'حي الفلاح'),
+      ],
+    );
+  }
+
+  Widget _buildInstitution(ThemeData theme, String name, IconData icon, String location) {
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
+      ),
+      child: ListTile(
+        leading: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, color: theme.colorScheme.primary, size: 22),
+        ),
+        title: Text(name, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
+        subtitle: Text(location, style: theme.textTheme.bodySmall),
+        trailing: Icon(Icons.chevron_left_rounded, color: theme.colorScheme.onSurfaceVariant, size: 18),
+      ),
+    );
+  }
+}
