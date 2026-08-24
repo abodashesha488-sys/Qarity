@@ -1,14 +1,16 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/helpers.dart';
+import '../../features/forum/posts.dart';
+import '../../features/market/products.dart';
+import '../../features/profile/main.dart';
+import '../../features/village/about.dart';
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
-import '../../services/admin_service.dart';
 import '../../services/forum_service.dart';
 import '../../services/market_service.dart';
 import '../../services/news_service.dart';
@@ -23,173 +25,105 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
-  final List<Widget> _pages = const [
-    HomeContent(),
+
+  final List<Widget> _pages = [
+    const HomeContent(),
+    const VillageScreen(),
+    const MarketProductsScreen(),
+    const ForumPostsScreen(),
+    const ProfileScreen(),
   ];
 
   void _onItemTapped(int index) {
     AppHelpers.hapticLight();
     setState(() => _selectedIndex = index);
-    if (index == 1) {
-      Navigator.pushReplacementNamed(context, AppRoutes.newsList);
-    } else if (index == 2) {
-      Navigator.pushReplacementNamed(context, AppRoutes.marketProducts);
-    } else if (index == 3) {
-      Navigator.pushReplacementNamed(context, AppRoutes.forumPosts);
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Scaffold(
       endDrawer: const HomeDrawer(),
       body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 350),
-        transitionBuilder: (child, animation) => FadeTransition(opacity: animation, child: child),
-        child: KeyedSubtree(key: ValueKey<int>(_selectedIndex), child: _pages[_selectedIndex]),
-      ),
-      bottomNavigationBar: DecoratedBox(
-        decoration: BoxDecoration(boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 16, offset: const Offset(0, -4))]),
-        child: BottomAppBar(
-          color: theme.colorScheme.surface,
-          surfaceTintColor: theme.colorScheme.surface,
-          elevation: 0,
-          shape: const CircularNotchedRectangle(),
-          notchMargin: 8,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildNavItem(context, Icons.home_outlined, Icons.home_rounded, 'الرئيسية', 0),
-              _buildNavItem(context, Icons.newspaper_outlined, Icons.newspaper_rounded, 'الأخبار', 1),
-              const SizedBox(width: 56),
-              _buildNavItem(context, Icons.store_outlined, Icons.store_rounded, 'السوق', 2),
-              _buildNavItem(context, Icons.forum_outlined, Icons.forum_rounded, 'المنتدى', 3),
-            ],
-          ),
+        duration: const Duration(milliseconds: 300),
+        transitionBuilder: (child, animation) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        child: KeyedSubtree(
+          key: ValueKey<int>(_selectedIndex),
+          child: _pages[_selectedIndex],
         ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: _buildAddFab(context),
+      bottomNavigationBar: DecoratedBox(decoration: BoxDecoration(boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 16, offset: const Offset(0, -4))]), child: NavigationBar(
+          selectedIndex: _selectedIndex,
+          onDestinationSelected: _onItemTapped,
+          animationDuration: const Duration(milliseconds: 400),
+          destinations: const [
+            NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'الرئيسية'),
+            NavigationDestination(icon: Icon(Icons.villa_outlined), selectedIcon: Icon(Icons.villa_rounded), label: 'عن القرية'),
+            NavigationDestination(icon: Icon(Icons.store_outlined), selectedIcon: Icon(Icons.store_rounded), label: 'السوق'),
+            NavigationDestination(icon: Icon(Icons.forum_outlined), selectedIcon: Icon(Icons.forum_rounded), label: 'المنتدى'),
+            NavigationDestination(icon: Icon(Icons.person_outlined), selectedIcon: Icon(Icons.person_rounded), label: 'الملف'),
+          ],
+        ),
+      ),
     );
   }
+}
 
-  Widget _buildNavItem(BuildContext context, IconData outlined, IconData filled, String label, int index) {
-    final theme = Theme.of(context);
-    final selected = _selectedIndex == index;
-    return Expanded(
-      child: IconButton(
-        onPressed: () => _onItemTapped(index),
-        icon: Column(
-          mainAxisSize: MainAxisSize.min,
+class HomeDrawer extends StatelessWidget {
+  const HomeDrawer({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Drawer(
+      child: SafeArea(
+        child: ListView(
+          padding: EdgeInsets.zero,
           children: [
-            Icon(selected ? filled : outlined, color: selected ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant),
-            if (selected)
-              Container(
-                margin: const EdgeInsets.only(top: 4),
-                width: 4,
-                height: 4,
-                decoration: BoxDecoration(color: theme.colorScheme.primary, shape: BoxShape.circle),
-              ),
+            DrawerHeader(
+              decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 12)]),
+                  child: const Icon(Icons.villa_rounded, color: AppColors.primary, size: 32),
+                ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack),
+                const SizedBox(height: 16),
+                const Text('قرية أبوديشيشة', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 4),
+                Text('خدمات المجتمع والمحتوى المحلي', style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 13)),
+              ]),
+            ),
+            _buildDrawerItem(context, 'الرئيسية', Icons.home_rounded, AppRoutes.home),
+            _buildDrawerItem(context, 'عن التطبيق', Icons.info_rounded, AppRoutes.aboutApp),
+            _buildDrawerItem(context, 'عن القرية', Icons.villa_rounded, AppRoutes.about),
+            _buildDrawerItem(context, 'أخبار القرية', Icons.newspaper_rounded, AppRoutes.newsList),
+            _buildDrawerItem(context, 'سجل العزاء', Icons.grade_rounded, AppRoutes.obituariesList),
+            _buildDrawerItem(context, 'المناسبات', Icons.card_giftcard_rounded, AppRoutes.occasionsList),
+            _buildDrawerItem(context, 'سوق القرية', Icons.store_rounded, AppRoutes.marketProducts),
+            _buildDrawerItem(context, 'طلب الخدمات', Icons.add_task_rounded, AppRoutes.serviceRequest),
+            _buildDrawerItem(context, 'المنتدى', Icons.forum_rounded, AppRoutes.forumPosts),
+            _buildDrawerItem(context, 'الطوارئ', Icons.contact_phone_rounded, AppRoutes.emergencyContacts),
+            _buildDrawerItem(context, 'دليل الهاتف', Icons.phone_rounded, AppRoutes.phoneDirectory),
+            _buildDrawerItem(context, 'الملف الشخصي', Icons.person_rounded, AppRoutes.profileMain),
+            _buildDrawerItem(context, 'الإعدادات', Icons.settings_rounded, AppRoutes.settingsIndex),
+            _buildDrawerItem(context, 'لوحة التحكم', Icons.admin_panel_settings_rounded, AppRoutes.admin),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildAddFab(BuildContext context) {
-    final theme = Theme.of(context);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [theme.colorScheme.primary, theme.colorScheme.primaryContainer]),
-        shape: BoxShape.circle,
-        boxShadow: [BoxShadow(color: theme.colorScheme.primary.withValues(alpha: 0.4), blurRadius: 16, offset: const Offset(0, 6))],
-      ),
-      child: IconButton(
-        onPressed: () => _showAddMenu(context),
-        icon: Icon(Icons.add_rounded, color: theme.colorScheme.onPrimary, size: 32),
-        style: IconButton.styleFrom(padding: const EdgeInsets.all(20)),
-      ),
-    );
-  }
-
-  void _showAddMenu(BuildContext context) {
-    final theme = Theme.of(context);
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => DecoratedBox(
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        ),
-        child: Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom + 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(top: 12),
-                decoration: BoxDecoration(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2)),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-                child: Text('إضافة محتوى', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
-              ),
-              GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                crossAxisCount: 3,
-                mainAxisSpacing: 16,
-                crossAxisSpacing: 16,
-                childAspectRatio: 0.85,
-                children: [
-                  _buildAddTile(context, Icons.store_rounded, 'منتج جديد', AppRoutes.marketAdd),
-                  _buildAddTile(context, Icons.newspaper_rounded, 'خبر جديد', AppRoutes.newsDetail),
-                  _buildAddTile(context, Icons.forum_rounded, 'نقاش جديد', AppRoutes.forumCreatePost),
-                  _buildAddTile(context, Icons.card_giftcard_rounded, 'مناسبة', AppRoutes.occasionsAdd),
-                  _buildAddTile(context, Icons.grade_rounded, 'خبر عزاء', AppRoutes.obituariesList),
-                  _buildAddTile(context, Icons.phone_rounded, 'رقم هاتف', AppRoutes.phoneDirectory),
-                ],
-              ),
-              const SizedBox(height: 16),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAddTile(BuildContext context, IconData icon, String label, String route) {
-    final theme = Theme.of(context);
-    return InkWell(
+  Widget _buildDrawerItem(BuildContext context, String title, IconData icon, String route) {
+    return ListTile(
+      leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       onTap: () {
         Navigator.pop(context);
-        Navigator.pushNamed(context, route);
+        if (route != AppRoutes.home) Navigator.pushNamed(context, route);
       },
-      borderRadius: BorderRadius.circular(20),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(color: theme.colorScheme.primary.withValues(alpha: 0.12), shape: BoxShape.circle),
-              child: Icon(icon, color: theme.colorScheme.primary, size: 24),
-            ),
-            const SizedBox(height: 10),
-            Text(label, textAlign: TextAlign.center, style: theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700, fontSize: 12)),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -199,11 +133,10 @@ class HomeContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return RefreshIndicator(
       onRefresh: () async {},
-      color: Theme.of(context).colorScheme.primary,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      strokeWidth: 3,
       child: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
@@ -223,7 +156,7 @@ class HomeContent extends StatelessWidget {
           ),
           const SliverToBoxAdapter(child: ModernServiceGrid()),
           SliverToBoxAdapter(
-            child: Padding(padding: const EdgeInsets.fromLTRB(20, 32, 20, 16), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('المنتجات المميزة', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)), Text('(مباشر)', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 12, fontWeight: FontWeight.w600))])),
+            child: Padding(padding: const EdgeInsets.fromLTRB(20, 32, 20, 16), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('المنتجات المميزة', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)), Text('(مباشر)', style: TextStyle(color: theme.colorScheme.primary, fontSize: 12, fontWeight: FontWeight.w600))])),
           ),
           SliverToBoxAdapter(child: _buildLiveProducts(context)),
           SliverToBoxAdapter(
@@ -413,88 +346,4 @@ class _ServiceItem {
   final String route;
   final Color color;
   const _ServiceItem(this.title, this.icon, this.route) : color = AppColors.primary;
-}
-
-class HomeDrawer extends StatelessWidget {
-  const HomeDrawer({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Drawer(
-      child: SafeArea(
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.fromLTRB(24, 48, 24, 24),
-              decoration: const BoxDecoration(gradient: AppColors.primaryGradient, borderRadius: BorderRadius.only(bottomLeft: Radius.circular(32), bottomRight: Radius.circular(32))),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 12)]),
-                  child: const Icon(Icons.villa_rounded, color: AppColors.primary, size: 32),
-                ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack),
-                const SizedBox(height: 16),
-                Text('قرية أبوديشيشة', style: GoogleFonts.cairo(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900)),
-                const SizedBox(height: 4),
-                Text('خدمات المجتمع والمحتوى المحلي', style: GoogleFonts.cairo(color: Colors.white.withValues(alpha: 0.85), fontSize: 13)),
-              ]),
-            ),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                children: [
-                  _buildDrawerItem(context, 'الرئيسية', Icons.home_rounded, AppRoutes.home),
-                  _buildDrawerItem(context, 'عن التطبيق', Icons.info_rounded, AppRoutes.aboutApp),
-                  _buildDrawerItem(context, 'عن القرية', Icons.villa_rounded, AppRoutes.about),
-                  _buildDrawerItem(context, 'أخبار القرية', Icons.newspaper_rounded, AppRoutes.newsList),
-                  _buildDrawerItem(context, 'سجل العزاء', Icons.grade_rounded, AppRoutes.obituariesList),
-                  _buildDrawerItem(context, 'المناسبات', Icons.card_giftcard_rounded, AppRoutes.occasionsList),
-                  _buildDrawerItem(context, 'سوق القرية', Icons.store_rounded, AppRoutes.marketProducts),
-                  _buildDrawerItem(context, 'طلب الخدمات', Icons.add_task_rounded, AppRoutes.serviceRequest),
-                  _buildDrawerItem(context, 'المنتدى', Icons.forum_rounded, AppRoutes.forumPosts),
-                  _buildDrawerItem(context, 'الطوارئ', Icons.contact_phone_rounded, AppRoutes.emergencyContacts),
-                  _buildDrawerItem(context, 'دليل الهاتف', Icons.phone_rounded, AppRoutes.phoneDirectory),
-                  _buildDrawerItem(context, 'الملف الشخصي', Icons.person_rounded, AppRoutes.profileMain),
-                  _buildDrawerItem(context, 'الإعدادات', Icons.settings_rounded, AppRoutes.settingsIndex),
-                  StreamBuilder<firebase_auth.User?>(
-                    stream: AdminService().authStateChanges,
-                    builder: (context, snapshot) {
-                      final user = snapshot.data;
-                      if (user?.email?.toLowerCase() == 'eleraki2040@gmail.com') {
-                        return _buildDrawerItem(context, 'لوحة التحكم', Icons.admin_panel_settings_rounded, AppRoutes.admin);
-                      }
-                      return const SizedBox.shrink();
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDrawerItem(BuildContext context, String title, IconData icon, String route) {
-    final theme = Theme.of(context);
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(14), color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35)),
-      child: ListTile(
-        leading: Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(color: theme.colorScheme.primary.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
-          child: Icon(icon, color: theme.colorScheme.primary, size: 20),
-        ),
-        title: Text(title, style: GoogleFonts.cairo(fontWeight: FontWeight.w700, fontSize: 14)),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        onTap: () {
-          Navigator.pop(context);
-          if (route != AppRoutes.home) Navigator.pushNamed(context, route);
-        },
-      ),
-    );
-  }
 }

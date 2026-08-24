@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+import '../core/utils/status_utils.dart';
+
 // ═══════════════════════════════════════════════════════════════
 // BASE MODEL
 // ═══════════════════════════════════════════════════════════════
@@ -285,7 +287,6 @@ class MarketProduct implements BaseModel {
   @override
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
       'name': name,
       'description': description,
       'price': price,
@@ -536,6 +537,100 @@ class EmergencyContact implements BaseModel {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// VILLAGE INFO MODEL
+// ═══════════════════════════════════════════════════════════════
+class VillageInfo implements BaseModel {
+  @override
+  final String id;
+  final String name;
+  final String description;
+  final String population;
+  final String area;
+  final String founded;
+  final List<Map<String, dynamic>> history;
+  final List<Map<String, dynamic>> institutions;
+  final List<String> archive;
+
+  const VillageInfo({
+    required this.id,
+    required this.name,
+    this.description = '',
+    this.population = '',
+    this.area = '',
+    this.founded = '',
+    this.history = const [],
+    this.institutions = const [],
+    this.archive = const [],
+  });
+
+  factory VillageInfo.fromJson(Map<String, dynamic> json, String docId) {
+    return VillageInfo(
+      id: docId,
+      name: json['name'] as String? ?? 'قرية أبوديشيشة',
+      description: json['description'] as String? ?? '',
+      population: json['population'] as String? ?? '',
+      area: json['area'] as String? ?? '',
+      founded: json['founded'] as String? ?? '',
+      history: _listOfMaps(json['history']),
+      institutions: _listOfMaps(json['institutions']),
+      archive: (json['archive'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? const [],
+    );
+  }
+
+  @override
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'description': description,
+      'population': population,
+      'area': area,
+      'founded': founded,
+      'history': history,
+      'institutions': institutions,
+      'archive': archive,
+    };
+  }
+
+  @override
+  DateTime? get createdAt => null;
+
+  static VillageInfo defaults() => const VillageInfo(
+        id: 'main',
+        name: 'قرية أبوديشيشة',
+        description:
+            'قرية أبوديشيشة إحدى قرى مركز أبو تشت بمحافظة قنا، تتميز بطبيعتها الجميلة وموقعها على ضفاف النيل، وتعد من القرى العريقة التي تجمع بين الأصالة والحداثة.',
+        population: 'حوالي 12,000 نسمة',
+        area: 'حوالي 8 كم²',
+        founded: 'أوائل القرن العشرين',
+        history: [
+          {'year': '1900', 'event': 'تأسيس القرية كتجمع سكاني زراعي'},
+          {'year': '1950', 'event': 'إنشاء أول مدرسة ومستوصف طبي'},
+          {'year': '1980', 'event': 'تطوير البنية التحتية والطرق'},
+          {'year': '2020', 'event': 'إطلاق منصة الخدمات الرقمية للقرية'},
+        ],
+        institutions: [
+          {'name': 'مدرسة الأمل الابتدائية', 'location': 'حي الوسط'},
+          {'name': 'الوحدة الصحية', 'location': 'وسط القرية'},
+          {'name': 'مسجد الفلاح', 'location': 'حي الفلاح'},
+          {'name': 'الجمعية الزراعية', 'location': 'حي الفلاح'},
+        ],
+        archive: [
+          'الوثائق التاريخية',
+          'الصور القديمة',
+          'سجلات المواليد',
+          'سجلات الوفيات',
+        ],
+      );
+}
+
+List<Map<String, dynamic>> _listOfMaps(dynamic value) {
+  if (value is List) {
+    return value.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+  return const [];
+}
+
+// ═══════════════════════════════════════════════════════════════
 // SERVICE REQUEST MODEL
 // ═══════════════════════════════════════════════════════════════
 class ServiceRequest implements BaseModel {
@@ -603,35 +698,22 @@ class ServiceRequest implements BaseModel {
     };
   }
 
-  String get statusLabel {
-    switch (status) {
-      case 'pending':
-        return 'قيد الانتظار';
-      case 'in_progress':
-        return 'قيد المعالجة';
-      case 'completed':
-        return 'مكتمل';
-      case 'cancelled':
-        return 'ملغي';
-      default:
-        return 'غير معروف';
-    }
-  }
+  static const Map<String, String> _statusLabels = {
+    'pending': 'قيد الانتظار',
+    'in_progress': 'قيد المعالجة',
+    'completed': 'مكتمل',
+    'cancelled': 'ملغي',
+  };
 
-  Color get statusColor {
-    switch (status) {
-      case 'pending':
-        return const Color(0xFFFF9800);
-      case 'in_progress':
-        return const Color(0xFF1E88E5);
-      case 'completed':
-        return const Color(0xFF43A047);
-      case 'cancelled':
-        return const Color(0xFFE53935);
-      default:
-        return const Color(0xFF757575);
-    }
-  }
+  static const Map<String, Color> _statusColors = {
+    'pending': Color(0xFFFF9800),
+    'in_progress': Color(0xFF1E88E5),
+    'completed': Color(0xFF43A047),
+    'cancelled': Color(0xFFE53935),
+  };
+
+  String get statusLabel => resolveStatusLabel(_statusLabels, status);
+  Color get statusColor => resolveStatusColor(_statusColors, status);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -938,39 +1020,24 @@ class AppOrder implements BaseModel {
     };
   }
 
-  String get statusLabel {
-    switch (status) {
-      case 'pending':
-        return 'قيد الانتظار';
-      case 'processing':
-        return 'قيد المعالجة';
-      case 'shipped':
-        return 'تم الشحن';
-      case 'delivered':
-        return 'تم التسليم';
-      case 'cancelled':
-        return 'ملغي';
-      default:
-        return 'غير معروف';
-    }
-  }
+  static const Map<String, String> _statusLabels = {
+    'pending': 'قيد الانتظار',
+    'processing': 'قيد المعالجة',
+    'shipped': 'تم الشحن',
+    'delivered': 'تم التسليم',
+    'cancelled': 'ملغي',
+  };
 
-  Color get statusColor {
-    switch (status) {
-      case 'pending':
-        return const Color(0xFFFF9800);
-      case 'processing':
-        return const Color(0xFF1E88E5);
-      case 'shipped':
-        return const Color(0xFF66BB6A);
-      case 'delivered':
-        return const Color(0xFF43A047);
-      case 'cancelled':
-        return const Color(0xFFE53935);
-      default:
-        return const Color(0xFF757575);
-    }
-  }
+  static const Map<String, Color> _statusColors = {
+    'pending': Color(0xFFFF9800),
+    'processing': Color(0xFF1E88E5),
+    'shipped': Color(0xFF66BB6A),
+    'delivered': Color(0xFF43A047),
+    'cancelled': Color(0xFFE53935),
+  };
+
+  String get statusLabel => resolveStatusLabel(_statusLabels, status);
+  Color get statusColor => resolveStatusColor(_statusColors, status);
 }
 
 // ═══════════════════════════════════════════════════════════════

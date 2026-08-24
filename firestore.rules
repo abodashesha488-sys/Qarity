@@ -74,5 +74,15 @@ service cloud.firestore {
       allow read, create: if isAdmin();
       allow update, delete: if isAdmin();
     }
+
+    match /emergency_contacts/{docId} {
+      allow list, get: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /village_info/{docId} {
+      allow list, get: if true;
+      allow create, update, delete: if isAdmin();
+    }
   }
 }
