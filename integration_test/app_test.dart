@@ -5,6 +5,7 @@ import 'package:integration_test/integration_test.dart';
 
 import 'package:qurity/firebase_options.dart';
 import 'package:qurity/main.dart' as app;
+import 'package:qurity/routes/app_routes.dart';
 
 /// End-to-end smoke test. Runs on a real device/emulator via:
 ///   flutter test integration_test
@@ -34,6 +35,43 @@ void main() {
     // A screen (Scaffold) is rendered and no fatal error widget is shown.
     expect(find.byType(Scaffold), findsWidgets);
     expect(find.byType(ErrorWidget), findsNothing);
+  });
+
+  testWidgets('Navigating to key screens builds without errors', (tester) async {
+    try {
+      await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+    } catch (_) {
+      // ignore — handled by main().
+    }
+
+    app.main();
+    await _settle(tester);
+
+    // Grab the root Navigator so we can drive navigation like a user would.
+    final navigator = tester.state<NavigatorState>(find.byType(Navigator).first);
+
+    // Public, argument-free list/info screens (work with or without auth).
+    final routes = [
+      AppRoutes.newsList,
+      AppRoutes.forumPosts,
+      AppRoutes.obituariesList,
+      AppRoutes.occasionsList,
+      AppRoutes.marketProducts,
+      AppRoutes.emergencyContacts,
+      AppRoutes.phoneDirectory,
+      AppRoutes.about,
+      AppRoutes.aboutApp,
+      AppRoutes.settingsIndex,
+    ];
+
+    for (final route in routes) {
+      await navigator.pushNamed(route);
+      await _settle(tester);
+      expect(find.byType(ErrorWidget), findsNothing,
+          reason: 'Screen for route "$route" threw a build/runtime error.');
+      navigator.pop();
+      await _settle(tester);
+    }
   });
 }
 
