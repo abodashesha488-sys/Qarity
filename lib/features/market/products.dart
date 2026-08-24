@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -28,7 +30,21 @@ class _MarketProductsScreenState extends State<MarketProductsScreen> with Automa
   final UserService _userService = UserService();
   String? _currentUserId;
 
-  static const List<String> _categories = ['الكل', 'مواد غذائية', 'خضار وفواكه', 'لحوم وطيور وأسماك', 'ألبان وخير البلد', 'حلويات ومخبوزات', 'مشروبات ومقاهي', 'أدوات منزلية ومنظفات', 'إلكترونيات وهواتف', 'أثاث ومفروشات', 'ملابس وأحذية', 'مستلزمات زراعة وأعلاف', 'سوق المستعمل'];
+  static const List<String> _categories = [
+    'الكل',
+    'مواد غذائية',
+    'خضار وفواكه',
+    'لحوم وطيور وأسماك',
+    'ألبان وخير البلد',
+    'حلويات ومخبوزات',
+    'مشروبات ومقاهي',
+    'أدوات منزلية ومنظفات',
+    'إلكترونيات وهواتف',
+    'أثاث ومفروشات',
+    'ملابس وأحذية',
+    'مستلزمات زراعة وأعلاف',
+    'سوق المستعمل',
+  ];
 
   @override
   bool get wantKeepAlive => true;
@@ -37,7 +53,14 @@ class _MarketProductsScreenState extends State<MarketProductsScreen> with Automa
   void initState() {
     super.initState();
     _initCurrentUser();
-    _searchController.addListener(_updateSearchResults);
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _initCurrentUser() async {
@@ -93,24 +116,10 @@ class _MarketProductsScreenState extends State<MarketProductsScreen> with Automa
     }
   }
 
-  @override
-  void dispose() {
-    _searchController.removeListener(_updateSearchResults);
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  List<MarketProduct> get _displayedProducts {
-    final categoryFiltered = _selectedCategory == 'الكل'
-        ? _filteredProducts
-        : _filteredProducts.where((item) => item.category == _selectedCategory).toList();
-    return categoryFiltered;
-  }
-
-  void _updateSearchResults() {
+  void _onSearchChanged() {
     final query = _searchController.text.trim().toLowerCase();
     if (query.isEmpty) {
-      setState(() => _applyCategoryFilter());
+      _applyCategoryFilter();
     } else {
       final filtered = _allProducts.where((item) {
         return item.name.toLowerCase().contains(query) ||
@@ -122,7 +131,10 @@ class _MarketProductsScreenState extends State<MarketProductsScreen> with Automa
   }
 
   void _applyCategoryFilter() {
-    _filteredProducts = _selectedCategory == 'الكل' ? _allProducts : _allProducts.where((item) => item.category == _selectedCategory).toList();
+    final filtered = _selectedCategory == 'الكل'
+        ? _allProducts
+        : _allProducts.where((item) => item.category == _selectedCategory).toList();
+    setState(() => _filteredProducts = filtered);
   }
 
   void _selectCategory(String category) {
@@ -133,7 +145,7 @@ class _MarketProductsScreenState extends State<MarketProductsScreen> with Automa
   }
 
   Future<void> _refreshProducts() async {
-    await _loadProducts();
+    await _loadProducts(forceRefresh: true);
   }
 
   @override
@@ -185,7 +197,7 @@ class _MarketProductsScreenState extends State<MarketProductsScreen> with Automa
               _buildSearchField(theme),
               const SizedBox(height: 16),
               _buildCategoryChips(theme),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
             ],
           ),
         ),
@@ -194,47 +206,26 @@ class _MarketProductsScreenState extends State<MarketProductsScreen> with Automa
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(colors: [theme.colorScheme.error, theme.colorScheme.errorContainer]),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: theme.colorScheme.error.withValues(alpha: 0.35),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
+                  Text(
+                    '🔥 عروض اليوم',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: theme.colorScheme.error,
                     ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.local_fire_department_rounded, color: Colors.white, size: 20),
-                        const SizedBox(width: 8),
-                        Text(
-                          'عروض اليوم',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 0.3,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ).animate().fade(duration: 400.ms).slideX(begin: -0.2),
-                  const Spacer(),
+                  ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.errorContainer.withValues(alpha: 0.4),
+                      color: theme.colorScheme.errorContainer.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      '${offerProducts.length}',
-                      style: theme.textTheme.titleMedium?.copyWith(
+                      '${offerProducts.length} عرض',
+                      style: theme.textTheme.labelMedium?.copyWith(
                         color: theme.colorScheme.error,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
@@ -242,10 +233,10 @@ class _MarketProductsScreenState extends State<MarketProductsScreen> with Automa
               ),
             ),
           ),
-          const SliverPadding(padding: EdgeInsets.only(top: 16)),
+          const SliverPadding(padding: EdgeInsets.only(top: 12)),
           SliverToBoxAdapter(
             child: SizedBox(
-              height: 210,
+              height: 200,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -266,34 +257,27 @@ class _MarketProductsScreenState extends State<MarketProductsScreen> with Automa
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Container(
-                  width: 4,
-                  height: 20,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(width: 10),
                 Text(
-                  'المنتجات (${_displayedProducts.length})',
+                  'المنتجات (${_filteredProducts.length})',
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w800,
-                    letterSpacing: 0.2,
                   ),
                 ),
-                const Spacer(),
                 if (_selectedCategory != 'الكل')
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(colors: [theme.colorScheme.primaryContainer, theme.colorScheme.primaryContainer.withValues(alpha: 0.6)]),
+                      color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       _selectedCategory,
-                      style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.w700),
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
               ],
@@ -308,14 +292,14 @@ class _MarketProductsScreenState extends State<MarketProductsScreen> with Automa
               crossAxisCount: 2,
               mainAxisSpacing: 16,
               crossAxisSpacing: 16,
-              childAspectRatio: 0.75,
+              childAspectRatio: 0.72,
             ),
             delegate: SliverChildBuilderDelegate(
               (context, index) {
-                final product = _displayedProducts[index];
+                final product = _filteredProducts[index];
                 return _buildProductCard(theme, product, index);
               },
-              childCount: _displayedProducts.length,
+              childCount: _filteredProducts.length,
             ),
           ),
         ),
@@ -327,46 +311,34 @@ class _MarketProductsScreenState extends State<MarketProductsScreen> with Automa
   Widget _buildSearchField(ThemeData theme) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: theme.colorScheme.shadow.withValues(alpha: 0.08),
-              blurRadius: 16,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: TextField(
-          controller: _searchController,
-          decoration: InputDecoration(
-            hintText: 'ابحث عن منتج أو فئة...',
-            hintStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
-            prefixIcon: Icon(Icons.search_rounded, color: theme.colorScheme.primary),
-            suffixIcon: _searchController.text.isNotEmpty
-                ? Container(
-                    margin: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      icon: Icon(Icons.clear_rounded, color: theme.colorScheme.primary, size: 18),
-                      onPressed: () {
-                        _searchController.clear();
-                        _applyCategoryFilter();
-                      },
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                    ),
-                  )
-                : null,
-            filled: true,
-            fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.4), width: 1.5)),
+      child: TextField(
+        controller: _searchController,
+        decoration: InputDecoration(
+          hintText: 'ابحث عن منتج أو فئة...',
+          hintStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
+          prefixIcon: Icon(Icons.search_rounded, color: theme.colorScheme.primary),
+          suffixIcon: _searchController.text.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear_rounded),
+                  onPressed: () {
+                    _searchController.clear();
+                    _applyCategoryFilter();
+                  },
+                )
+              : null,
+          filled: true,
+          fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.3)),
           ),
         ),
       ),
@@ -384,38 +356,20 @@ class _MarketProductsScreenState extends State<MarketProductsScreen> with Automa
         itemBuilder: (context, index) {
           final category = _categories[index];
           final selected = category == _selectedCategory;
-          return GestureDetector(
-            onTap: () => _selectCategory(category),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 250),
-              curve: Curves.easeInOut,
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-              decoration: BoxDecoration(
-                gradient: selected ? LinearGradient(colors: [theme.colorScheme.primary, theme.colorScheme.primaryContainer]) : null,
-                color: selected ? null : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: selected ? theme.colorScheme.primary : theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
-                  width: 1.2,
-                ),
-                boxShadow: selected
-                    ? [
-                        BoxShadow(
-                          color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                          blurRadius: 10,
-                          offset: const Offset(0, 3),
-                        ),
-                      ]
-                    : null,
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeInOut,
+            child: ChoiceChip(
+              label: Text(category, style: const TextStyle(fontWeight: FontWeight.w600)),
+              selected: selected,
+              onSelected: (_) => _selectCategory(category),
+              selectedColor: theme.colorScheme.primary,
+              backgroundColor: theme.colorScheme.surfaceContainerHighest,
+              labelStyle: TextStyle(
+                color: selected ? Colors.white : theme.colorScheme.onSurface,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
               ),
-              child: Text(
-                category,
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: selected ? Colors.white : theme.colorScheme.onSurface,
-                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                  letterSpacing: 0.2,
-                ),
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             ),
           );
         },
@@ -424,28 +378,37 @@ class _MarketProductsScreenState extends State<MarketProductsScreen> with Automa
   }
 
   Widget _buildOfferCard(ThemeData theme, MarketProduct product, int index) {
+    final price = product.effectivePrice;
+    final hasOffer = product.isOnOffer && product.offerPrice != null;
+
     return Container(
-      width: 160,
+      width: 150,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: theme.colorScheme.shadow.withValues(alpha: 0.12),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+            color: theme.colorScheme.shadow.withValues(alpha: 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Card(
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-          side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5), width: 1.2),
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+          ),
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          borderRadius: BorderRadius.circular(24),
-          onTap: () => Navigator.pushNamed(context, AppRoutes.marketProductDetail, arguments: product),
+          borderRadius: BorderRadius.circular(20),
+          onTap: () => Navigator.pushNamed(
+            context,
+            AppRoutes.marketProductDetail,
+            arguments: product,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -459,8 +422,8 @@ class _MarketProductsScreenState extends State<MarketProductsScreen> with Automa
                       width: double.infinity,
                       placeholder: (context, url) => ColoredBox(
                         color: theme.colorScheme.surfaceContainerHighest,
-                        child: Center(
-                          child: CircularProgressIndicator(strokeWidth: 2, color: theme.colorScheme.primary),
+                        child: const Center(
+                          child: CircularProgressIndicator(strokeWidth: 2),
                         ),
                       ),
                       errorWidget: (context, url, error) => ColoredBox(
@@ -470,10 +433,10 @@ class _MarketProductsScreenState extends State<MarketProductsScreen> with Automa
                     ),
                   ),
                   Positioned(
-                    top: 10,
-                    right: 10,
+                    top: 8,
+                    right: 8,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: theme.colorScheme.error,
                         borderRadius: BorderRadius.circular(10),
@@ -483,8 +446,7 @@ class _MarketProductsScreenState extends State<MarketProductsScreen> with Automa
                         style: TextStyle(
                           color: theme.colorScheme.onError,
                           fontSize: 11,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0.3,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
                     ),
@@ -492,40 +454,164 @@ class _MarketProductsScreenState extends State<MarketProductsScreen> with Automa
                 ],
               ),
               Padding(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      product.category,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.primary,
+                      product.name,
+                      style: theme.textTheme.labelMedium?.copyWith(
                         fontWeight: FontWeight.w700,
-                        fontSize: 9,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Text(
+                          '${price.toStringAsFixed(0)} ج.م',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            color: theme.colorScheme.error,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        if (hasOffer) ...[
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              product.price.toStringAsFixed(0),
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                                decoration: TextDecoration.lineThrough,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ).animate(delay: (index * 80).ms).fade(duration: 400.ms).slideY(begin: 0.15);
+  }
+
+  Widget _buildProductCard(ThemeData theme, MarketProduct product, int index) {
+    final price = product.effectivePrice;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: theme.colorScheme.shadow.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () => Navigator.pushNamed(
+            context,
+            AppRoutes.marketProductDetail,
+            arguments: product,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Stack(
+                children: [
+                  AspectRatio(
+                    aspectRatio: 1,
+                    child: CachedNetworkImage(
+                      imageUrl: product.imageUrls.isNotEmpty ? product.imageUrls.first : product.imageUrl,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      placeholder: (context, url) => ColoredBox(
+                        color: theme.colorScheme.surfaceContainerHighest,
+                        child: const Center(
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ),
+                      errorWidget: (context, url, error) => ColoredBox(
+                        color: theme.colorScheme.surfaceContainerHighest,
+                        child: Icon(Icons.broken_image_rounded, size: 32, color: theme.colorScheme.onSurfaceVariant),
+                      ),
+                    ),
+                  ),
+                  if (product.isOnOffer)
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.error,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          'عرض',
+                          style: TextStyle(
+                            color: theme.colorScheme.onError,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        product.category,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                     Text(
                       product.name,
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w800,
-                        height: 1.1,
+                        height: 1.3,
                       ),
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 8),
                     Row(
                       children: [
                         Text(
-                          '${product.effectivePrice.toStringAsFixed(0)} ج.م',
+                          '${price.toStringAsFixed(0)} ج.م',
                           style: theme.textTheme.titleSmall?.copyWith(
-                            color: theme.colorScheme.error,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 12,
+                            color: theme.colorScheme.primary,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
                       ],
@@ -540,101 +626,45 @@ class _MarketProductsScreenState extends State<MarketProductsScreen> with Automa
     ).animate(delay: (index * 50).ms).fade(duration: 400.ms).scale(begin: const Offset(0.96, 0.96));
   }
 
-  Widget _buildProductCard(ThemeData theme, MarketProduct product, int index) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3)),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: () => Navigator.pushNamed(context, AppRoutes.marketProductDetail, arguments: product),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
-                  child: Stack(
+  Widget _buildLoadingState(ThemeData theme) {
+    return ListView.builder(
+      padding: const EdgeInsets.all(20),
+      itemCount: 6,
+      itemBuilder: (context, index) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: double.infinity,
+                  height: 120,
+                  color: theme.colorScheme.surfaceContainerHighest,
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Positioned.fill(
-                        child: CachedNetworkImage(
-                          imageUrl: product.imageUrl,
-                          fit: BoxFit.cover,
-                          width: double.infinity,
-                        ),
-                      ),
-                      if (product.isOnOffer)
-                        Positioned(
-                          top: 8,
-                          left: 8,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(colors: [theme.colorScheme.error, theme.colorScheme.errorContainer]),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text('عرض', style: theme.textTheme.labelMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w900)),
-                          ),
-                        ),
+                      Container(width: 80, height: 16, color: theme.colorScheme.surfaceContainerHighest),
+                      const SizedBox(height: 8),
+                      Container(width: double.infinity, height: 14, color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.7)),
+                      const SizedBox(height: 8),
+                      Container(width: 60, height: 16, color: theme.colorScheme.surfaceContainerHighest),
                     ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                product.category,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.primary,
-                  fontWeight: FontWeight.w700,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                product.name,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              Row(
-                children: [
-                  Text(
-                    '${product.effectivePrice.toStringAsFixed(0)} ج.م',
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      color: theme.colorScheme.primary,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const Spacer(),
-                  Icon(Icons.favorite_border_rounded, size: 14, color: theme.colorScheme.onSurfaceVariant),
-                ],
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ),
-    ).animate(delay: (index * 40).ms).fade(duration: 400.ms).scale(begin: const Offset(0.96, 0.96));
-  }
-
-  Widget _buildLoadingState(ThemeData theme) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          children: [
-            CircularProgressIndicator(color: theme.colorScheme.primary, strokeWidth: 3),
-            const SizedBox(height: 20),
-            Text('جاري تحميل المنتجات...', style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-          ],
-        ),
-      ),
+        ).animate(delay: (index * 80).ms).fade(duration: 400.ms);
+      },
     );
   }
 
@@ -643,14 +673,37 @@ class _MarketProductsScreenState extends State<MarketProductsScreen> with Automa
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.wifi_off_rounded, size: 64, color: theme.colorScheme.error),
-            const SizedBox(height: 20),
-            Text('تعذر تحميل المنتجات', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
-            const SizedBox(height: 8),
-            Text(_errorMessage ?? 'تأكد من الاتصال بالإنترنت', style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant), textAlign: TextAlign.center),
-            const SizedBox(height: 20),
-            ElevatedButton.icon(onPressed: _loadProducts, icon: const Icon(Icons.refresh_rounded), label: const Text('إعادة المحاولة')),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.errorContainer.withValues(alpha: 0.3),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.wifi_off_rounded, size: 48, color: theme.colorScheme.error),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'تعذر تحميل المنتجات',
+              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            if (_errorMessage != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _errorMessage!,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: _refreshProducts,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('إعادة المحاولة'),
+            ),
           ],
         ),
       ),
@@ -664,15 +717,36 @@ class _MarketProductsScreenState extends State<MarketProductsScreen> with Automa
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.shopping_bag_outlined, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 20),
-            Text('لا توجد منتجات حالياً', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.store_rounded, size: 48, color: theme.colorScheme.primary),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              _selectedCategory == 'الكل' ? 'لا توجد منتجات بعد' : 'لا توجد منتجات في هذا القسم',
+              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+            ),
             const SizedBox(height: 8),
-            Text('كن أول من يضيف منتجاً في السوق', style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant), textAlign: TextAlign.center),
+            Text(
+              isSeller ? 'أضف منتجاتك الأولى لتبدأ البيع' : 'كن أول من يضيف منتجات إلى السوق',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+            ),
             if (isSeller) ...[
-              const SizedBox(height: 20),
-              ElevatedButton.icon(onPressed: () => Navigator.pushNamed(context, AppRoutes.marketAdd), icon: const Icon(Icons.add_rounded), label: const Text('إضافة منتج')),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: () => Navigator.pushNamed(context, AppRoutes.marketAdd),
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('إضافة منتج'),
+              ),
             ],
           ],
         ),

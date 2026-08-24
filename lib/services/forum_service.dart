@@ -12,6 +12,14 @@ class ForumService {
     return _firestore.collection('forum_posts').where('isApproved', isEqualTo: true).snapshots().map((snapshot) => snapshot.docs.map((doc) => ForumPost.fromJson(doc.data(), doc.id)).toList());
   }
 
+  /// Live stream for a single post so the detail screen shows fresh
+  /// like / comment / view counters.
+  Stream<ForumPost?> getPostStream(String postId) {
+    return _firestore.collection('forum_posts').doc(postId).snapshots().map(
+          (doc) => doc.exists ? ForumPost.fromJson(doc.data() ?? <String, dynamic>{}, doc.id) : null,
+        );
+  }
+
   Future<void> addPost(ForumPost post) async {
     await _firestore.collection('forum_posts').add({
       ...post.toJson(),
@@ -40,9 +48,11 @@ class ForumService {
       if (token != null) {
         await _firestore.collection('notifications').add({
           'type': 'like',
-          'postId': postId,
-          'title': postTitle,
-          'timestamp': FieldValue.serverTimestamp(),
+          'targetId': postId,
+          'title': 'إعجاب جديد',
+          'body': 'أعجب أحدهم بمنشورك: $postTitle',
+          'isRead': false,
+          'createdAt': FieldValue.serverTimestamp(),
         });
       }
     } catch (_) {

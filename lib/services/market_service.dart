@@ -1,7 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:http/http.dart' as http;
 import '../models/data_models.dart';
 import 'cache_service.dart';
+import 'image_upload_service.dart';
+import 'notification_service.dart';
 
 class MarketService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -25,10 +26,20 @@ class MarketService {
       'isApproved': false,
     });
     await CacheService.invalidateProducts();
+    await NotificationService.showLocalNotification(
+      title: '🛒 منتج جديد',
+      body: 'تم إرسال المنتج للمراجعة: ${product.name}',
+      payload: '/market',
+    );
   }
 
   Future<void> deleteProduct(String productId, List<String> imageUrls) async {
-    await _deleteImagesFromImgbb(imageUrls);
+    final uploader = ImageUploadService();
+    for (final url in imageUrls) {
+      try {
+        await uploader.deleteImage(url);
+      } catch (_) {}
+    }
     await _firestore.collection('market_products').doc(productId).delete();
     await CacheService.invalidateProducts();
   }
@@ -49,6 +60,14 @@ class MarketService {
         .map((snapshot) => snapshot.docs.map((doc) => MarketProduct.fromJson(doc.data(), doc.id)).toList());
   }
 
+  Future<List<MarketProduct>> getProductsBySeller(String sellerId) async {
+    final snapshot = await _firestore
+        .collection('market_products')
+        .where('sellerId', isEqualTo: sellerId)
+        .get();
+    return snapshot.docs.map((doc) => MarketProduct.fromJson(doc.data(), doc.id)).toList();
+  }
+
   Future<bool> isUserSeller(String userId) async {
     final snapshot = await _firestore.collection('market_products').where('sellerId', isEqualTo: userId).limit(1).get();
     return snapshot.docs.isNotEmpty;
@@ -62,25 +81,4 @@ class MarketService {
     return null;
   }
 
-  Future<void> _deleteImagesFromImgbb(List<String> imageUrls) async {
-    const String apiKey = '5adf17954a21d7d9146824fde7061c6d';
-    for (final url in imageUrls) {
-      try {
-        final uri = Uri.parse('https://api.imgbb.com/1/upload?key=$apiKey');
-        final deleteKey = _extractDeleteKey(url);
-        if (deleteKey.isNotEmpty) {
-          await http.post(uri.replace(path: '/1/delete'), body: {'delete_keys': deleteKey});
-        }
-      } catch (_) {}
-    }
-  }
-
-  String _extractDeleteKey(String imageUrl) {
-    try {
-      final uri = Uri.parse(imageUrl);
-      return uri.queryParameters['delete_key'] ?? '';
-    } catch (_) {
-      return '';
-    }
-  }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../services/admin_service.dart';
 
 class AdminEditScreen extends StatefulWidget {
@@ -57,6 +58,21 @@ class _AdminEditScreenState extends State<AdminEditScreen> {
     }
   }
 
+  String _fieldLabel(String key) {
+    const labels = {
+      'title': 'العنوان',
+      'content': 'المحتوى',
+      'name': 'الاسم',
+      'description': 'الوصف',
+      'price': 'السعر',
+      'deceasedName': 'اسم المتوفى',
+      'message': 'الرسالة',
+      'location': 'الموقع',
+      'date': 'التاريخ',
+    };
+    return labels[key] ?? key;
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSaving = true);
@@ -84,12 +100,25 @@ class _AdminEditScreenState extends State<AdminEditScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
         title: const Text('تعديل'),
         centerTitle: true,
+        elevation: 0,
+        shadowColor: Colors.transparent,
+        surfaceTintColor: theme.colorScheme.surface,
         actions: [
-          TextButton(onPressed: _isSaving ? null : _save, child: const Text('حفظ')),
+          _isSaving
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+                )
+              : TextButton.icon(
+                  onPressed: _save,
+                  icon: const Icon(Icons.save_rounded, size: 18),
+                  label: const Text('حفظ'),
+                ),
         ],
       ),
       body: Form(
@@ -101,25 +130,57 @@ class _AdminEditScreenState extends State<AdminEditScreen> {
               padding: const EdgeInsets.only(bottom: 16),
               child: TextFormField(
                 controller: entry.value,
-                maxLines: entry.key == 'content' || entry.key == 'message' || entry.key == 'description' ? null : 1,
+                maxLines: entry.key == 'content' || entry.key == 'message' || entry.key == 'description' ? 4 : 1,
+                keyboardType: entry.key == 'price' ? TextInputType.number : TextInputType.text,
                 decoration: InputDecoration(
-                  labelText: entry.key,
-                  border: const OutlineInputBorder(),
+                  labelText: _fieldLabel(entry.key),
+                  alignLabelWithHint: true,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5))),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.6))),
+                  prefixIcon: Icon(_fieldIcon(entry.key), color: theme.colorScheme.primary),
                 ),
                 validator: (value) => value == null || value.trim().isEmpty ? 'هذا الحقل مطلوب' : null,
               ),
             )),
-            const SizedBox(height: 24),
+            const SizedBox(height: 8),
             SizedBox(
-              height: 48,
-              child: FilledButton(
+              height: 52,
+              width: double.infinity,
+              child: FilledButton.icon(
                 onPressed: _isSaving ? null : _save,
-                child: _isSaving ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Text('حفظ التعديلات'),
+                icon: _isSaving ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.save_rounded, size: 20),
+                label: Text(_isSaving ? 'جاري الحفظ...' : 'حفظ التعديلات', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
               ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  IconData _fieldIcon(String key) {
+    switch (key) {
+      case 'title':
+      case 'name':
+        return Icons.title_rounded;
+      case 'content':
+      case 'message':
+      case 'description':
+        return Icons.notes_rounded;
+      case 'price':
+        return Icons.attach_money_rounded;
+      case 'location':
+        return Icons.location_on_rounded;
+      case 'date':
+        return Icons.calendar_today_rounded;
+      default:
+        return Icons.edit_rounded;
+    }
   }
 }

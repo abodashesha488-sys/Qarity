@@ -17,7 +17,7 @@ Qarity is a comprehensive digital platform for village community services (قر�
 
 ### SHA-1 Fingerprint (Debug)
 ```
-EE:04:D2:B9:EB:84:01:02:34:53:49:C4:17:1E:09:7C:8D:2D:A8:DC
+لا تنشر SHA-1 أو SHA-256 علناً. أضفها فقط في Firebase Console من بيئة آمنة.
 ```
 
 ### Setup Instructions
@@ -31,7 +31,12 @@ For Google Sign-In to work on web:
 2. Add `abudshisha.web.app` to authorized domains
 3. Ensure the Firebase config matches `lib/firebase_options.dart`
 
-## Firestore Security Rules
+## ImgBB Image Upload (client-side)
+- Image upload/delete is done directly from the client via the ImgBB API in `lib/services/image_upload_service.dart`.
+- The API key is stored in `lib/core/constants/app_config.dart` (`AppConfig.imgbbApiKey`). It is visible in the client by design (no Cloud Function / Blaze plan available).
+- Used by: add product, add news, and delete product images.
+
+## Firestore Securityrver-side only)
 - File: `firestore.rules`
 - Deployed to project `abudshisha`
 - Admin write/delete access via `users/{uid}.role == 'admin'`

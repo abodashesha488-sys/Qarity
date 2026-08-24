@@ -1,13 +1,16 @@
-﻿import 'dart:io';
+﻿import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../core/utils/helpers.dart';
 import '../../models/data_models.dart';
 import '../../services/forum_service.dart';
 import '../../services/image_upload_service.dart';
 import '../../services/user_service.dart';
 import '../../widgets/common_appbar_actions.dart';
 
+/// Creates a forum post. The post is stored unapproved (`isApproved: false`)
+/// so it goes through the admin review flow before appearing in the feed.
 class CreatePostScreen extends StatefulWidget {
   const CreatePostScreen({super.key});
 
@@ -16,14 +19,17 @@ class CreatePostScreen extends StatefulWidget {
 }
 
 class _CreatePostScreenState extends State<CreatePostScreen> {
+  final _formKey = GlobalKey<FormState>();
   final _contentController = TextEditingController();
-  final _forumService = ForumService();
-  final _userService = UserService();
-  final _picker = ImagePicker();
-  final _imageUploadService = ImageUploadService();
+  final ForumService _forumService = ForumService();
+  final UserService _userService = UserService();
+  final ImagePicker _picker = ImagePicker();
+  final ImageUploadService _imageUploadService = ImageUploadService();
+
   bool _isPosting = false;
   bool _isUploading = false;
-  String _userName = 'جاري التحميل...';
+  bool _isLoadingUser = true;
+  String _userName = '';
   String _userPhoto = '';
   String? _uploadedImageUrl;
 
@@ -33,12 +39,26 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     _loadUser();
   }
 
+  @override
+  void dispose() {
+    _contentController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadUser() async {
-    final user = await _userService.getCurrentUser();
-    if (user != null) {
+    try {
+      final user = await _userService.getCurrentUser();
+      if (!mounted) return;
       setState(() {
-        _userName = user.name;
-        _userPhoto = user.photoUrl ?? '';
+        _userName = user?.name ?? _userService.currentUser?.displayName ?? 'مستخدم';
+        _userPhoto = user?.photoUrl ?? '';
+        _isLoadingUser = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _userName = _userService.currentUser?.displayName ?? 'مستخدم';
+        _isLoadingUser = false;
       });
     }
   }
@@ -47,73 +67,298 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     setState(() => _isUploading = true);
     try {
       final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-      if (image != null) {
-        final bytes = await File(image.path).readAsBytes();
-        final url = await _imageUploadService.uploadImage(bytes);
-        setState(() {
-          _uploadedImageUrl = url;
-        });
+      if (image == null) {
+        if (mounted) setState(() => _isUploading = false);
+        return;
       }
+      final bytes = await image.readAsBytes();
+      final url = await _imageUploadService.uploadImage(bytes);
+      if (!mounted) return;
+      setState(() => _uploadedImageUrl = url);
+      AppHelpers.showSnackBar(context, 'تم رفع الصورة بنجاح', isSuccess: true);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ في اختيار الصورة: $e'), backgroundColor: Colors.red));
+      if (mounted) AppHelpers.showSnackBar(context, 'خطأ في اختيار الصورة: $e', isError: true);
     } finally {
-      setState(() => _isUploading = false);
+      if (mounted) setState(() => _isUploading = false);
     }
   }
 
   Future<void> _post() async {
-    if (_contentController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('يرجى إدخال المحتوى'), backgroundColor: Colors.red));
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    final authUser = _userService.currentUser;
+    if (authUser == null) {
+      AppHelpers.showSnackBar(context, 'يجب تسجيل الدخول أولاً', isError: true);
       return;
     }
     setState(() => _isPosting = true);
     try {
-      final authUser = _userService.currentUser;
-      if (authUser == null) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('يجب تسجيل الدخول أولاً'), backgroundColor: Colors.red));
-        return;
-      }
       final post = ForumPost(
         id: '',
         userId: authUser.uid,
-        userName: _userName,
+        userName: _userName.isEmpty ? (authUser.displayName ?? 'مستخدم') : _userName,
         userPhotoUrl: _userPhoto,
-        content: _contentController.text,
+        content: _contentController.text.trim(),
         imageUrl: _uploadedImageUrl ?? '',
         createdAt: DateTime.now(),
-        isApproved: true,
+        // Posts always enter the admin review queue first.
+        // ignore: avoid_redundant_argument_values
+        isApproved: false,
       );
       await _forumService.addPost(post);
-      if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم النشر بنجاح')));
-      }
+      if (!mounted) return;
+      AppHelpers.showSnackBar(context, 'تم إرسال المنشور للمراجعة', isSuccess: true);
+      Navigator.pop(context);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ: $e'), backgroundColor: Colors.red));
+      if (mounted) AppHelpers.showSnackBar(context, 'خطأ: $e', isError: true);
     } finally {
       if (mounted) setState(() => _isPosting = false);
     }
   }
 
   @override
-  void dispose() {
-    _contentController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('إنشاء منشور'), actions: CommonAppBarActions.actions(context)),
-      body: Padding(padding: const EdgeInsets.all(16), child: Column(children: [
-        Row(children: [CircleAvatar(backgroundImage: _userPhoto.isNotEmpty ? NetworkImage(_userPhoto) : null, child: _userPhoto.isEmpty ? const Icon(Icons.person) : null), const SizedBox(width: 12), Text(_userName, style: const TextStyle(fontWeight: FontWeight.bold))]),
-        const SizedBox(height: 20),
-        TextFormField(controller: _contentController, decoration: const InputDecoration(hintText: 'شارك فكرتك مع المجتمع...', border: InputBorder.none), maxLines: 5, style: const TextStyle(fontSize: 16), autofocus: true),
-        const SizedBox(height: 12),
-        if (_uploadedImageUrl != null) Stack(children: [Container(decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), image: DecorationImage(image: NetworkImage(_uploadedImageUrl!), fit: BoxFit.cover)), alignment: Alignment.topRight, child: IconButton(icon: const Icon(Icons.cancel, color: Colors.white), onPressed: () => setState(() => _uploadedImageUrl = null)))]),
-        const Spacer(),
-        Row(children: [IconButton(icon: const Icon(Icons.image), onPressed: _isUploading ? null : _pickImage), if (_isUploading) const CircularProgressIndicator(), const Spacer(), SizedBox(width: 120, child: ElevatedButton(onPressed: _isPosting ? null : _post, child: _isPosting ? const CircularProgressIndicator() : const Text('نشر'))),]),
-      ])),
+      appBar: AppBar(
+        title: const Text('إنشاء منشور'),
+        centerTitle: true,
+        elevation: 0,
+        shadowColor: Colors.transparent,
+        surfaceTintColor: theme.colorScheme.surface,
+        actions: CommonAppBarActions.actions(context),
+      ),
+      body: _isLoadingUser
+          ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+          : AbsorbPointer(
+              absorbing: _isPosting,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Card(
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 24,
+                                    backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
+                                    backgroundImage: _userPhoto.isNotEmpty
+                                        ? CachedNetworkImageProvider(_userPhoto)
+                                        : null,
+                                    child: _userPhoto.isEmpty
+                                        ? Icon(Icons.person_rounded, color: theme.colorScheme.primary)
+                                        : null,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          _userName.isEmpty ? 'مستخدم' : _userName,
+                                          style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+                                        ),
+                                        Text(
+                                          'ينشر في المنتدى المجتمعي',
+                                          style: theme.textTheme.bodySmall
+                                              ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              TextFormField(
+                                controller: _contentController,
+                                maxLines: 8,
+                                minLines: 5,
+                                autofocus: true,
+                                textCapitalization: TextCapitalization.sentences,
+                                style: theme.textTheme.bodyLarge?.copyWith(height: 1.6),
+                                decoration: InputDecoration(
+                                  hintText: 'شارك فكرتك مع المجتمع...',
+                                  alignLabelWithHint: true,
+                                  filled: true,
+                                  fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                    borderSide: BorderSide(
+                                      color: theme.colorScheme.primary.withValues(alpha: 0.4),
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                ),
+                                validator: (v) => (v == null || v.trim().isEmpty) ? 'يرجى إدخال المحتوى' : null,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Card(
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Icon(Icons.image_rounded, size: 18, color: theme.colorScheme.primary),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      'صورة المنشور (اختياري)',
+                                      style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              if (_uploadedImageUrl != null)
+                                Stack(
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(14),
+                                      child: CachedNetworkImage(
+                                        imageUrl: _uploadedImageUrl!,
+                                        height: 180,
+                                        width: double.infinity,
+                                        fit: BoxFit.cover,
+                                        placeholder: (context, url) => Container(
+                                          height: 180,
+                                          color: theme.colorScheme.surfaceContainerHighest,
+                                          child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                                        ),
+                                        errorWidget: (context, url, error) => Container(
+                                          height: 180,
+                                          color: theme.colorScheme.surfaceContainerHighest,
+                                          child: Icon(
+                                            Icons.broken_image_rounded,
+                                            color: theme.colorScheme.onSurfaceVariant,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    Positioned(
+                                      top: 8,
+                                      right: 8,
+                                      child: Material(
+                                        color: theme.colorScheme.surface.withValues(alpha: 0.9),
+                                        shape: const CircleBorder(),
+                                        child: InkWell(
+                                          customBorder: const CircleBorder(),
+                                          onTap: _isPosting
+                                              ? null
+                                              : () => setState(() => _uploadedImageUrl = null),
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(6),
+                                            child: Icon(
+                                              Icons.close_rounded,
+                                              size: 18,
+                                              color: theme.colorScheme.error,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              else
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: OutlinedButton.icon(
+                                    onPressed: _isUploading || _isPosting ? null : _pickImage,
+                                    icon: _isUploading
+                                        ? const SizedBox(
+                                            width: 18,
+                                            height: 18,
+                                            child: CircularProgressIndicator(strokeWidth: 2),
+                                          )
+                                        : const Icon(Icons.add_photo_alternate_rounded),
+                                    label: Text(_isUploading ? 'جاري الرفع...' : 'إضافة صورة'),
+                                    style: OutlinedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(vertical: 20),
+                                      side: BorderSide(
+                                        color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.info_outline_rounded, size: 20, color: theme.colorScheme.primary),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'تتم مراجعة المنشورات من الإدارة قبل ظهورها في المنتدى',
+                                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: _isPosting ? null : _post,
+                          icon: _isPosting
+                              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                              : const Icon(Icons.send_rounded),
+                          label: Text(_isPosting ? 'جاري النشر...' : 'نشر'),
+                          style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
     );
   }
 }

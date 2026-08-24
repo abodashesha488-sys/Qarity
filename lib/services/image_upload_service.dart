@@ -2,9 +2,11 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
+import '../core/constants/app_config.dart';
+
 class ImageUploadService {
-  static const String _apiKey = '5adf17954a21d7d9146824fde7061c6d';
   static const String _uploadUrl = 'https://api.imgbb.com/1/upload';
+  static const String _apiKey = AppConfig.imgbbApiKey;
 
   Future<String> uploadImage(Uint8List bytes) async {
     final request = http.MultipartRequest('POST', Uri.parse('$_uploadUrl?key=$_apiKey'));
@@ -32,7 +34,12 @@ class ImageUploadService {
   Future<void> deleteImage(String imageUrl) async {
     final deleteKey = extractDeleteKey(imageUrl);
     if (deleteKey != null && deleteKey.isNotEmpty) {
-      await http.post(Uri.parse('https://api.imgbb.com/1/delete?key=$_apiKey'), body: {'delete_keys': deleteKey});
+      try {
+        await http.post(
+          Uri.parse('https://api.imgbb.com/1/delete?key=$_apiKey'),
+          body: {'delete_keys': deleteKey},
+        );
+      } catch (_) {}
     }
   }
 }

@@ -99,7 +99,7 @@ lib/
 
 ### SHA-1 Fingerprint (Debug)
 ```
-EE:04:D2:B9:EB:84:01:02:34:53:49:C4:17:1E:09:7C:8D:2D:A8:DC
+لا تنشر SHA-1 أو SHA-256 علناً. أضفها فقط في Firebase Console من بيئة آمنة.
 ```
 
 ### إعداد Firebase
@@ -107,6 +107,10 @@ EE:04:D2:B9:EB:84:01:02:34:53:49:C4:17:1E:09:7C:8D:2D:A8:DC
 2. فعّل "Sign in with Google" في Authentication
 3. ضع ملف `google-services.json` في `android/app/`
 4. ضع ملف `GoogleService-Info.plist` في `ios/Runner/`
+
+### مفتاح ImgBB (في العميل)
+رفع/حذف الصور يتم مباشرة من العميل عبر ImgBB API من `lib/services/image_upload_service.dart`.
+المفتاح موجود في `lib/core/constants/app_config.dart` (`AppConfig.imgbbApiKey`) — ظاهر في العميل لعدم توفّر خطة Blaze/نشر عبر CLI.
 
 ## المميزات الرئيسية
 

@@ -86,11 +86,12 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.primary,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
+      body: DecoratedBox(
+        decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
             Container(
               width: 140,
               height: 140,
@@ -188,6 +189,7 @@ class _SplashScreenState extends State<SplashScreen>
                 .fade(delay: 400.ms, duration: 400.ms),
           ],
         ),
+      ),
       ),
     );
   }

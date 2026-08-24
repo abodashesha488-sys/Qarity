@@ -84,7 +84,7 @@ class CacheService {
   }
 
   static Future<List<Map<String, dynamic>>?> _read(String key, Duration maxAge) async {
-    final raw = await _readRaw(key);
+    final raw = await _readRaw(key, maxAge);
     if (raw == null) return null;
     try {
       final decoded = List<Map<String, dynamic>>.from(json.decode(raw));
@@ -94,12 +94,12 @@ class CacheService {
     }
   }
 
-  static Future<String?> _readRaw(String key) async {
+  static Future<String?> _readRaw(String key, [Duration maxAge = const Duration(hours: 2)]) async {
     final prefs = await _instance;
     final ts = prefs.getInt('$key$_prefsTsSuffix');
     if (ts != null) {
       final age = DateTime.now().difference(DateTime.fromMillisecondsSinceEpoch(ts));
-      if (age > const Duration(hours: 2)) {
+      if (age > maxAge) {
         await prefs.remove(key);
         await prefs.remove('$key$_prefsTsSuffix');
         return null;

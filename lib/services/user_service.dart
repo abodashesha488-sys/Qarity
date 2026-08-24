@@ -73,8 +73,19 @@ class UserService {
 
   Future<void> updateUser(UserModel user) async {
     try {
-      await _firestore.collection('users').doc(user.id).set(user.toJson(), SetOptions(merge: true));
-      await CacheService.saveUser(user.id, user.toJson());
+      final docRef = _firestore.collection('users').doc(user.id);
+      final data = user.toJson();
+      final existingDoc = await docRef.get();
+      if (existingDoc.exists) {
+        final existing = existingDoc.data() ?? <String, dynamic>{};
+        // Preserve sensitive fields that callers may not supply, so we never
+        // accidentally demote an admin or reset account state on a partial update.
+        data['role'] = existing['role'] ?? data['role'];
+        data['isActive'] = existing['isActive'] ?? data['isActive'];
+        data['lastLogin'] = existing['lastLogin'] ?? data['lastLogin'];
+      }
+      await docRef.set(data, SetOptions(merge: true));
+      await CacheService.saveUser(user.id, data);
     } catch (e) {
       debugPrint('updateUser failed: $e');
       rethrow;

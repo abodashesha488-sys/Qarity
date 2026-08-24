@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -9,6 +10,7 @@ import '../../models/data_models.dart';
 import '../../services/image_upload_service.dart';
 import '../../services/news_service.dart';
 import '../../services/user_service.dart';
+import '../../widgets/common_appbar_actions.dart';
 
 class AddNewsScreen extends StatefulWidget {
   const AddNewsScreen({super.key});
@@ -25,7 +27,8 @@ class _AddNewsScreenState extends State<AddNewsScreen> {
   final UserService _userService = UserService();
   final ImagePicker _picker = ImagePicker();
 
-  final List<String> _categories = ['عام', 'ثقافة', 'رياضة', 'مجتمع', 'تعليم', 'اقتصاد'];
+  static const List<String> _categories = ['عام', 'ثقافة', 'رياضة', 'مجتمع', 'تعليم', 'اقتصاد'];
+
   String _selectedCategory = 'عام';
   String? _imageUrl;
   bool _isUploading = false;
@@ -37,6 +40,13 @@ class _AddNewsScreenState extends State<AddNewsScreen> {
   void initState() {
     super.initState();
     _loadAuthor();
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _subtitleController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadAuthor() async {
@@ -75,7 +85,7 @@ class _AddNewsScreenState extends State<AddNewsScreen> {
   void _removeImage() => setState(() => _imageUrl = null);
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!(_formKey.currentState?.validate() ?? false)) return;
     if (!await NetworkInfo().isConnected) {
       if (!mounted) return;
       AppHelpers.showSnackBar(context, 'لا يوجد اتصال بالإنترنت', isError: true);
@@ -108,97 +118,211 @@ class _AddNewsScreenState extends State<AddNewsScreen> {
   }
 
   @override
-  void dispose() {
-    _titleController.dispose();
-    _subtitleController.dispose();
-    super.dispose();
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('إضافة خبر'),
+        centerTitle: true,
+        elevation: 0,
+        shadowColor: Colors.transparent,
+        surfaceTintColor: theme.colorScheme.surface,
+        actions: CommonAppBarActions.actions(context),
+      ),
+      body: AbsorbPointer(
+        absorbing: _isSaving,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _SectionCard(
+                  title: 'تفاصيل الخبر',
+                  icon: Icons.newspaper_rounded,
+                  children: [
+                    TextFormField(
+                      controller: _titleController,
+                      textInputAction: TextInputAction.next,
+                      decoration: const InputDecoration(
+                        labelText: 'عنوان الخبر',
+                        prefixIcon: Icon(Icons.title_rounded),
+                      ),
+                      validator: (v) => (v == null || v.trim().isEmpty) ? 'العنوان مطلوب' : null,
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      initialValue: _selectedCategory,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: 'الفئة',
+                        prefixIcon: Icon(Icons.category_rounded),
+                      ),
+                      items: _categories
+                          .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                          .toList(),
+                      onChanged: (v) => setState(() => _selectedCategory = v ?? 'عام'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _subtitleController,
+                      decoration: const InputDecoration(
+                        labelText: 'محتوى الخبر',
+                        alignLabelWithHint: true,
+                        prefixIcon: Icon(Icons.article_rounded),
+                      ),
+                      maxLines: 6,
+                      validator: (v) => (v == null || v.trim().isEmpty) ? 'المحتوى مطلوب' : null,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _SectionCard(
+                  title: 'صورة الخبر (اختياري)',
+                  icon: Icons.image_rounded,
+                  children: [
+                    if (_imageUrl != null)
+                      Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(14),
+                            child: CachedNetworkImage(
+                              imageUrl: _imageUrl!,
+                              height: 180,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) => Container(
+                                height: 180,
+                                color: theme.colorScheme.surfaceContainerHighest,
+                                child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                              ),
+                              errorWidget: (context, url, error) => Container(
+                                height: 180,
+                                color: theme.colorScheme.surfaceContainerHighest,
+                                child: Icon(Icons.broken_image_rounded, color: theme.colorScheme.onSurfaceVariant),
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: Material(
+                              color: theme.colorScheme.surface.withValues(alpha: 0.9),
+                              shape: const CircleBorder(),
+                              child: InkWell(
+                                customBorder: const CircleBorder(),
+                                onTap: _isSaving ? null : _removeImage,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(6),
+                                  child: Icon(Icons.close_rounded, size: 18, color: theme.colorScheme.error),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    else
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: _isUploading || _isSaving ? null : _pickAndUploadImage,
+                          icon: _isUploading
+                              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                              : const Icon(Icons.add_photo_alternate_rounded),
+                          label: Text(_isUploading ? 'جاري الرفع...' : 'إضافة صورة'),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 20),
+                            side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6)),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline_rounded, size: 20, color: theme.colorScheme.primary),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'سيتم مراجعة الخبر من الإدارة قبل ظهوره في قائمة الأخبار',
+                          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: _isSaving ? null : _submit,
+                    icon: _isSaving
+                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.send_rounded),
+                    label: Text(_isSaving ? 'جاري الإرسال...' : 'إرسال للمراجعة'),
+                    style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
+}
+
+class _SectionCard extends StatelessWidget {
+  const _SectionCard({required this.title, required this.icon, required this.children});
+
+  final String title;
+  final IconData icon;
+  final List<Widget> children;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Scaffold(
-      appBar: AppBar(title: const Text('إضافة خبر')),
-      body: SingleChildScrollView(
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
+      ),
+      child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('تفاصيل الخبر', style: theme.textTheme.titleLarge),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _titleController,
-                decoration: const InputDecoration(labelText: 'عنوان الخبر', prefixIcon: Icon(Icons.title)),
-                validator: (v) => v == null || v.isEmpty ? 'مطلوب' : null,
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: DropdownButtonFormField<String>(
-                  initialValue: _selectedCategory,
-                  items: _categories
-                      .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                      .toList(),
-                  onChanged: (v) => setState(() => _selectedCategory = v ?? 'عام'),
-                  decoration: const InputDecoration(labelText: 'الفئة', prefixIcon: Icon(Icons.category)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(icon, size: 18, color: theme.colorScheme.primary),
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _subtitleController,
-                decoration: const InputDecoration(labelText: 'محتوى الخبر', prefixIcon: Icon(Icons.article)),
-                maxLines: 6,
-                validator: (v) => v == null || v.isEmpty ? 'مطلوب' : null,
-              ),
-              const SizedBox(height: 24),
-              Text('صورة الخبر (اختياري)', style: theme.textTheme.titleMedium),
-              const SizedBox(height: 8),
-              if (_imageUrl != null)
-                Stack(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.network(_imageUrl!, height: 160, width: double.infinity, fit: BoxFit.cover),
-                    ),
-                    Positioned(
-                      top: -8,
-                      right: -8,
-                      child: IconButton(
-                        icon: const Icon(Icons.cancel, color: Colors.red),
-                        onPressed: _removeImage,
-                      ),
-                    ),
-                  ],
-                )
-              else
-                SizedBox(
-                  height: 80,
-                  child: ElevatedButton.icon(
-                    onPressed: _isUploading ? null : _pickAndUploadImage,
-                    icon: _isUploading
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Icon(Icons.camera_alt),
-                    label: Text(_isUploading ? 'جاري الرفع...' : 'إضافة صورة'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: theme.colorScheme.secondaryContainer,
-                    ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
                   ),
                 ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: _isSaving ? null : _submit,
-                  child: _isSaving
-                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Text('إرسال للمراجعة', style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
-              ),
-            ],
-          ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            ...children,
+          ],
         ),
       ),
     );

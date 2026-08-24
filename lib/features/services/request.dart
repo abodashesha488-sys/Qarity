@@ -1,6 +1,7 @@
-import 'package:firebase_auth/firebase_auth.dart';
+﻿import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/network/network_info.dart';
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
 import '../../services/service_request_service.dart';
@@ -54,6 +55,15 @@ class _ServicesScreenState extends State<ServicesScreen> with SingleTickerProvid
   }
 
   Future<void> _submitRequest() async {
+    if (!await NetworkInfo().isConnected) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('لا يوجد اتصال بالإنترنت'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+    if (!mounted) return;
+
     final type = _typeController.text.trim();
     final desc = _descController.text.trim();
     final location = _locationController.text.trim();

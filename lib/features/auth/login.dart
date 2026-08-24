@@ -1,11 +1,12 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/helpers.dart';
-import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
 import '../../services/user_service.dart';
 
@@ -16,89 +17,46 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
+class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
-  late AnimationController _animController;
-  late Animation<double> _logoScale;
-
-  @override
-  void initState() {
-    super.initState();
-    _animController = AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
-    _logoScale = CurvedAnimation(parent: _animController, curve: Curves.easeOutBack);
-    _animController.addListener(() => setState(() {}));
-    _animController.forward();
-  }
-
-  @override
-  void dispose() {
-    _animController.dispose();
-    super.dispose();
-  }
 
   Future<void> _signInWithGoogle() async {
     if (_isLoading) return;
     setState(() => _isLoading = true);
     try {
-      UserCredential userCredential;
-      if (kIsWeb) {
-        final provider = GoogleAuthProvider();
-        userCredential = await FirebaseAuth.instance.signInWithPopup(provider);
-      } else {
-        final GoogleSignInAccount? googleUser = await GoogleSignIn(
-          scopes: const <String>['openid', 'email', 'profile'],
-        ).signIn().timeout(const Duration(seconds: 30));
+      final GoogleSignInAccount? googleUser = await GoogleSignIn(
+        scopes: const <String>['openid', 'email', 'profile'],
+      ).signIn().timeout(const Duration(seconds: 30));
 
-        if (googleUser == null) {
-          if (mounted) setState(() => _isLoading = false);
-          return;
-        }
-
-        final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-        final credential = GoogleAuthProvider.credential(
-          accessToken: googleAuth.accessToken,
-          idToken: googleAuth.idToken,
-        );
-
-        userCredential = await FirebaseAuth.instance.signInWithCredential(credential).timeout(const Duration(seconds: 20));
-      }
-
-      if (!mounted) return;
-      final currentUser = userCredential.user;
-
-      if (currentUser == null) {
+      if (googleUser == null) {
         if (mounted) setState(() => _isLoading = false);
         return;
       }
 
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      final userCredential = await FirebaseAuth.instance.signInWithCredential(credential).timeout(const Duration(seconds: 20));
+
+      if (!mounted) return;
+      final currentUser = userCredential.user!;
+
+      // Try to sync user data to Firestore, but don't block login if it fails
       try {
-        await UserService().updateUser(UserModel(
-          id: currentUser.uid,
-          name: currentUser.displayName ?? '',
-          email: currentUser.email ?? '',
-          photoUrl: currentUser.photoURL,
-          joinDate: currentUser.metadata.creationTime ?? DateTime.now(),
-        ));
+        await UserService().saveUserToFirestore(currentUser);
       } catch (e) {
+        // Firestore write failed - still allow login
         debugPrint('Firestore write failed: $e');
       }
 
       if (!mounted) return;
 
-      final adminEmail = 'eleraki2040@gmail.com';
-      final isOwner = currentUser.email != null &&
-          currentUser.email!.toLowerCase() == adminEmail.toLowerCase();
-
-      if (isOwner) {
-        try {
-          await UserService().setRoleIfNeeded(currentUser.uid, 'admin');
-        } catch (e) {
-          debugPrint('set admin role failed: $e');
-        }
-      }
-
-      if (!mounted) return;
-      Navigator.pushReplacementNamed(context, AppRoutes.splash);
+      // Always go to home after successful auth
+      // Profile completion will be checked in splash screen
+      Navigator.pushReplacementNamed(context, AppRoutes.home);
     } on FirebaseAuthException catch (e) {
       if (mounted) {
         AppHelpers.showSnackBar(
@@ -146,115 +104,135 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      backgroundColor: theme.colorScheme.surface,
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ScaleTransition(
-                  scale: _logoScale,
-                  child: Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: AppColors.primaryGradient,
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primary.withValues(alpha: 0.3),
-                          blurRadius: 24,
-                          offset: const Offset(0, 12),
-                        ),
-                      ],
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Column(
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
+                decoration: BoxDecoration(
+                  gradient: AppColors.primaryGradient,
+                  borderRadius: BorderRadius.circular(28),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.3),
+                      blurRadius: 24,
+                      offset: const Offset(0, 12),
                     ),
-                    child: const Icon(
-                      Icons.villa_rounded,
-                      size: 60,
-                      color: Colors.white,
-                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 110,
+                      height: 110,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.15),
+                            blurRadius: 20,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.villa_rounded,
+                        size: 56,
+                        color: AppColors.primary,
+                      ),
+                    )
+                        .animate()
+                        .scale(duration: 600.ms, curve: Curves.easeOutBack)
+                        .fade(duration: 400.ms),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'قرية أبوديشيشة',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        height: 1.2,
+                      ),
+                      textAlign: TextAlign.center,
+                    ).animate().fade(delay: 200.ms).slideY(begin: 0.2, delay: 200.ms),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'بوابتك إلى الخدمات الرقمية والمجتمع المحلي',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w400,
+                      ),
+                      textAlign: TextAlign.center,
+                    ).animate().fade(delay: 300.ms),
+                  ],
+                ),
+              ).animate().fade(duration: 500.ms).slideY(begin: -0.1),
+
+              const SizedBox(height: 28),
+
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
                   ),
                 ),
-
-                const SizedBox(height: 28),
-
-                Text(
-                  'قرية أبوديشيشة',
-                  style: theme.textTheme.displaySmall?.copyWith(
-                    color: AppColors.primaryDark,
-                    fontWeight: FontWeight.w800,
-                    height: 1.2,
-                  ),
-                  textAlign: TextAlign.center,
+                child: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _FeatureItem(text: 'أخبار القرية والمناسبات', delay: 400),
+                    _FeatureItem(text: 'سوق القرية والمنتجات المحلية', delay: 500),
+                    _FeatureItem(text: 'منتدى المجتمع المحلي', delay: 600),
+                    _FeatureItem(text: 'أرقام الطوارئ ودليل الهاتف', delay: 700),
+                  ],
                 ),
+              ).animate().fade(delay: 400.ms).slideY(begin: 0.3, delay: 400.ms),
 
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(
-                    'بوابتك إلى الخدمات الرقمية والمجتمع المحلي',
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      color: AppColors.textSecondary,
-                      height: 1.4,
-                    ),
-                    textAlign: TextAlign.center,
+              const SizedBox(height: 36),
+
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton.icon(
+                  onPressed: _isLoading ? null : _signInWithGoogle,
+                  icon: _isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.login_rounded, size: 22),
+                  label: Text(
+                    _isLoading ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول باستخدام Google',
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
                   ),
-                ),
-
-                const SizedBox(height: 36),
-
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: theme.colorScheme.outline.withValues(alpha: 0.2),
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('ماذا يمكنك القيام به؟', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
-                      const SizedBox(height: 14),
-                      const _FeatureItem(text: 'أخبار القرية والمناسبات', color: Colors.blue),
-                      const SizedBox(height: 10),
-                      const _FeatureItem(text: 'سوق القرية والمنتجات المحلية', color: Colors.deepOrange),
-                      const SizedBox(height: 10),
-                      const _FeatureItem(text: 'منتدى المجتمع المحلي', color: Colors.purple),
-                      const SizedBox(height: 10),
-                      const _FeatureItem(text: 'أرقام الطوارئ ودليل الهاتف', color: Colors.teal),
-                    ],
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primary,
+                    foregroundColor: theme.colorScheme.onPrimary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
                 ),
+              ).animate().fade(delay: 600.ms).slideY(begin: 0.2, delay: 600.ms),
 
-                const SizedBox(height: 40),
-
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton.icon(
-                    onPressed: _isLoading ? null : _signInWithGoogle,
-                    icon: _isLoading
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Image.asset('assets/google_logo.png', width: 22, height: 22),
-                    label: Text(
-                      _isLoading ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول باستخدام Google',
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              const SizedBox(height: 16),
+              Text(
+                'بتسجيل الدخول فإنك توافق على شروط الاستخدام وسياسة الخصوصية',
+                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
         ),
       ),
@@ -264,37 +242,41 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
 class _FeatureItem extends StatelessWidget {
   final String text;
-  final Color color;
+  final int delay;
 
-  const _FeatureItem({required this.text, required this.color});
+  const _FeatureItem({required this.text, required this.delay});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.15),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            Icons.check_rounded,
-            color: color,
-            size: 16,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            text,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w500,
-              height: 1.4,
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.check_rounded,
+              color: AppColors.primary,
+              size: 16,
             ),
           ),
-        ),
-      ],
-    );
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              text,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+          ),
+        ],
+      ),
+    ).animate().fade(delay: delay.ms).slideX(begin: -0.1, delay: delay.ms);
   }
 }

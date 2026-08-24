@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -8,6 +9,8 @@ import '../../core/utils/helpers.dart';
 import '../../models/data_models.dart';
 import '../../services/image_upload_service.dart';
 import '../../services/obituary_service.dart';
+import '../../widgets/app_card.dart';
+import '../../widgets/common_appbar_actions.dart';
 
 class AddObituaryScreen extends StatefulWidget {
   const AddObituaryScreen({super.key});
@@ -132,103 +135,254 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('إضافة تعزية')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('بيانات المتوفى', style: theme.textTheme.titleLarge),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: 'الاسم', prefixIcon: Icon(Icons.person)),
-                validator: (v) => v == null || v.isEmpty ? 'مطلوب' : null,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _ageController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'العمر', prefixIcon: Icon(Icons.cake)),
-                validator: (v) => v == null || v.isEmpty ? 'مطلوب' : null,
-              ),
-              const SizedBox(height: 12),
-              InkWell(
-                onTap: _pickDate,
-                child: InputDecorator(
-                  decoration: const InputDecoration(labelText: 'تاريخ الوفاة', prefixIcon: Icon(Icons.calendar_today)),
-                  child: Text(
-                    _selectedDate == null ? 'اختر التاريخ' : DateFormat('yyyy/MM/dd').format(_selectedDate!),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _placeController,
-                decoration: const InputDecoration(labelText: 'مكان العزاء (اختياري)', prefixIcon: Icon(Icons.location_on)),
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _mosqueController,
-                decoration: const InputDecoration(labelText: 'المسجد (اختياري)', prefixIcon: Icon(Icons.mosque)),
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _descriptionController,
-                decoration: const InputDecoration(labelText: 'نبذة', prefixIcon: Icon(Icons.description)),
-                maxLines: 3,
-                validator: (v) => v == null || v.isEmpty ? 'مطلوب' : null,
-              ),
-              const SizedBox(height: 24),
-              Text('صورة (اختياري)', style: theme.textTheme.titleMedium),
-              const SizedBox(height: 8),
-              if (_imageUrl != null)
-                Stack(
+      appBar: AppBar(
+        title: const Text('إضافة تعزية'),
+        centerTitle: true,
+        elevation: 0,
+        shadowColor: Colors.transparent,
+        surfaceTintColor: theme.colorScheme.surface,
+        actions: CommonAppBarActions.actions(context),
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _ReviewNotice(theme: theme),
+                const SizedBox(height: 16),
+                _FormSection(
+                  title: 'بيانات المتوفى',
+                  icon: Icons.person_rounded,
                   children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.network(_imageUrl!, height: 160, width: double.infinity, fit: BoxFit.cover),
+                    TextFormField(
+                      controller: _nameController,
+                      textInputAction: TextInputAction.next,
+                      decoration: const InputDecoration(
+                        labelText: 'الاسم',
+                        prefixIcon: Icon(Icons.person_outline_rounded),
+                      ),
+                      validator: (v) => v == null || v.trim().isEmpty ? 'مطلوب' : null,
                     ),
-                    Positioned(
-                      top: -8,
-                      right: -8,
-                      child: IconButton(
-                        icon: const Icon(Icons.cancel, color: Colors.red),
-                        onPressed: _removeImage,
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _ageController,
+                      keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.next,
+                      decoration: const InputDecoration(
+                        labelText: 'العمر',
+                        prefixIcon: Icon(Icons.cake_outlined),
+                      ),
+                      validator: (v) => v == null || v.trim().isEmpty ? 'مطلوب' : null,
+                    ),
+                    const SizedBox(height: 12),
+                    InkWell(
+                      onTap: _pickDate,
+                      borderRadius: BorderRadius.circular(16),
+                      child: InputDecorator(
+                        decoration: const InputDecoration(
+                          labelText: 'تاريخ الوفاة',
+                          prefixIcon: Icon(Icons.calendar_today_outlined),
+                        ),
+                        child: Text(
+                          _selectedDate == null
+                              ? 'اختر التاريخ'
+                              : DateFormat('yyyy/MM/dd').format(_selectedDate!),
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: _selectedDate == null
+                                ? theme.colorScheme.onSurfaceVariant
+                                : theme.colorScheme.onSurface,
+                          ),
+                        ),
                       ),
                     ),
                   ],
-                )
-              else
+                ),
+                const SizedBox(height: 16),
+                _FormSection(
+                  title: 'مكان العزاء',
+                  icon: Icons.location_on_rounded,
+                  children: [
+                    TextFormField(
+                      controller: _placeController,
+                      textInputAction: TextInputAction.next,
+                      decoration: const InputDecoration(
+                        labelText: 'مكان العزاء (اختياري)',
+                        prefixIcon: Icon(Icons.location_on_outlined),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _mosqueController,
+                      textInputAction: TextInputAction.next,
+                      decoration: const InputDecoration(
+                        labelText: 'المسجد (اختياري)',
+                        prefixIcon: Icon(Icons.mosque_outlined),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _FormSection(
+                  title: 'نبذة',
+                  icon: Icons.description_rounded,
+                  children: [
+                    TextFormField(
+                      controller: _descriptionController,
+                      maxLines: 4,
+                      decoration: const InputDecoration(
+                        labelText: 'نبذة',
+                        alignLabelWithHint: true,
+                        prefixIcon: Icon(Icons.description_outlined),
+                      ),
+                      validator: (v) => v == null || v.trim().isEmpty ? 'مطلوب' : null,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _FormSection(
+                  title: 'صورة (اختياري)',
+                  icon: Icons.image_rounded,
+                  children: [
+                    if (_imageUrl != null)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: CachedNetworkImage(
+                              imageUrl: _imageUrl!,
+                              height: 180,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) => Container(
+                                height: 180,
+                                color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+                                child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                              ),
+                              errorWidget: (context, url, error) => Container(
+                                height: 180,
+                                color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+                                child: Icon(
+                                  Icons.broken_image_rounded,
+                                  size: 40,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          OutlinedButton.icon(
+                            onPressed: _removeImage,
+                            icon: const Icon(Icons.delete_outline_rounded),
+                            label: const Text('إزالة الصورة'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: theme.colorScheme.error,
+                              side: BorderSide(color: theme.colorScheme.error.withValues(alpha: 0.5), width: 1.5),
+                            ),
+                          ),
+                        ],
+                      )
+                    else
+                      OutlinedButton.icon(
+                        onPressed: _isUploading ? null : _pickAndUploadImage,
+                        icon: _isUploading
+                            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                            : const Icon(Icons.add_photo_alternate_outlined),
+                        label: Text(_isUploading ? 'جاري الرفع...' : 'إضافة صورة'),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 24),
                 SizedBox(
-                  height: 80,
+                  width: double.infinity,
+                  height: 52,
                   child: ElevatedButton.icon(
-                    onPressed: _isUploading ? null : _pickAndUploadImage,
-                    icon: _isUploading
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Icon(Icons.camera_alt),
-                    label: Text(_isUploading ? 'جاري الرفع...' : 'إضافة صورة'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: theme.colorScheme.secondaryContainer,
+                    onPressed: _isSaving ? null : _submit,
+                    icon: _isSaving
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Icon(Icons.send_rounded),
+                    label: Text(
+                      _isSaving ? 'جاري الإرسال...' : 'إرسال للمراجعة',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                   ),
                 ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: _isSaving ? null : _submit,
-                  child: _isSaving
-                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Text('إرسال للمراجعة', style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _FormSection extends StatelessWidget {
+  const _FormSection({required this.title, required this.icon, required this.children});
+
+  final String title;
+  final IconData icon;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, size: 16, color: theme.colorScheme.primary),
+              ),
+              const SizedBox(width: 10),
+              Text(title, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...children,
+        ],
+      ),
+    );
+  }
+}
+
+class _ReviewNotice extends StatelessWidget {
+  const _ReviewNotice({required this.theme});
+
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primaryContainer.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.info_outline_rounded, size: 20, color: theme.colorScheme.primary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'سيتم مراجعة التعزية من قبل الإدارة قبل نشرها',
+              style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
       ),
     );
   }

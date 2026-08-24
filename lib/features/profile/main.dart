@@ -1,8 +1,7 @@
-import 'dart:io';
+﻿import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../models/data_models.dart';
@@ -10,6 +9,7 @@ import '../../routes/app_routes.dart';
 import '../../services/image_upload_service.dart';
 import '../../services/market_service.dart';
 import '../../services/order_service.dart';
+import '../../services/theme_service.dart';
 import '../../services/user_service.dart';
 import '../../widgets/common_appbar_actions.dart';
 
@@ -26,6 +26,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final ImagePicker _picker = ImagePicker();
   final OrderService _orderService = OrderService();
   final MarketService _marketService = MarketService();
+  final ThemeService _themeService = ThemeService();
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
 
@@ -42,29 +43,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _loadUser();
   }
 
-  Future<void> _loadUser() async {
-    setState(() => _isLoading = true);
+  Future<void> _fetchData() async {
     final user = await _userService.getCurrentUser();
     final isSeller = await _marketService.isUserSeller(user?.id ?? '');
+    if (!mounted) return;
     setState(() {
       _user = user;
       _nameController.text = user?.name ?? '';
       _phoneController.text = user?.phone ?? '';
       _isSeller = isSeller;
-      _isLoading = false;
     });
+  }
+
+  Future<void> _loadUser() async {
+    setState(() => _isLoading = true);
+    await _fetchData();
+    if (mounted) setState(() => _isLoading = false);
+  }
+
+  Future<void> _refresh() async => _fetchData();
+
+  ImageProvider? _avatarImage() {
+    if (_profileImage != null) return FileImage(_profileImage!);
+    if (_uploadedImageUrl != null) return CachedNetworkImageProvider(_uploadedImageUrl!);
+    if (_user?.photoUrl?.isNotEmpty == true) return CachedNetworkImageProvider(_user!.photoUrl!);
+    return null;
   }
 
   Future<String?> _uploadProfileImage() async {
     if (_profileImage == null) return null;
     final bytes = await _profileImage!.readAsBytes();
-    final url = await _imageUploadService.uploadImage(bytes);
-    return url;
+    return _imageUploadService.uploadImage(bytes);
   }
 
   Future<void> _pickProfileImage() async {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-    if (image != null) {
+    if (image != null && mounted) {
       setState(() {
         _profileImage = File(image.path);
         _uploadedImageUrl = null;
@@ -96,7 +110,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('تم حفظ الملف الشخصي بنجاح')),
         );
-        _loadUser();
+        await _fetchData();
       }
     } catch (e) {
       if (mounted) {
@@ -119,38 +133,54 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    _phoneController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-
     final theme = Theme.of(context);
+
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('الملف الشخصي'),
+          centerTitle: true,
+          elevation: 0,
+          shadowColor: Colors.transparent,
+          surfaceTintColor: theme.colorScheme.surface,
+          actions: CommonAppBarActions.actions(context),
+        ),
+        body: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('الملف الشخصي'),
+        centerTitle: true,
+        elevation: 0,
+        shadowColor: Colors.transparent,
+        surfaceTintColor: theme.colorScheme.surface,
         actions: CommonAppBarActions.actions(context),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
           children: [
             _buildProfileHeader(theme),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             _buildEditForm(theme),
-            const SizedBox(height: 24),
-            _buildStatsSection(theme),
-            const SizedBox(height: 24),
-            _buildSellerOrdersSection(theme),
-            const SizedBox(height: 24),
-            _buildSellerProductsSection(theme),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             _buildSettingsSection(theme),
-            const SizedBox(height: 24),
+            if (_isSeller) ...[
+              const SizedBox(height: 16),
+              _buildSellerOrdersSection(theme),
+              const SizedBox(height: 16),
+              _buildSellerProductsSection(theme),
+            ],
+            const SizedBox(height: 16),
             SizedBox(
               height: 50,
               width: double.infinity,
@@ -158,7 +188,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 onPressed: _signOut,
                 icon: const Icon(Icons.logout, color: Colors.white),
                 label: const Text('تسجيل الخروج', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.red, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
               ),
             ),
           ],
@@ -168,63 +201,70 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildProfileHeader(ThemeData theme) {
-    ImageProvider? getBackground() {
-      if (_profileImage != null) return FileImage(_profileImage!);
-      if (_uploadedImageUrl != null) return CachedNetworkImageProvider(_uploadedImageUrl!);
-      if (_user?.photoUrl?.isNotEmpty == true) return CachedNetworkImageProvider(_user!.photoUrl!);
-      return null;
-    }
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [theme.colorScheme.primary, theme.colorScheme.secondary]),
-        borderRadius: BorderRadius.circular(24),
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
       ),
-      child: Column(
-        children: [
-          Stack(
-            alignment: Alignment.bottomRight,
-            children: [
-              CircleAvatar(
-                radius: 50,
-                backgroundColor: Colors.white.withValues(alpha: 0.2),
-                backgroundImage: getBackground(),
-                child: getBackground() == null ? Icon(Icons.person_rounded, size: 50, color: theme.colorScheme.onPrimary) : null,
-              ),
-              GestureDetector(
-                onTap: _pickProfileImage,
-                child: Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(color: theme.colorScheme.secondary, shape: BoxShape.circle, border: Border.all(color: theme.colorScheme.onPrimary, width: 2)),
-                  child: Icon(Icons.camera_alt_rounded, size: 16, color: theme.colorScheme.onSecondary),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            Stack(
+              alignment: Alignment.bottomRight,
+              children: [
+                CircleAvatar(
+                  radius: 46,
+                  backgroundColor: theme.colorScheme.primaryContainer,
+                  backgroundImage: _avatarImage(),
+                  child: _avatarImage() == null
+                      ? Icon(Icons.person, size: 46, color: theme.colorScheme.primary)
+                      : null,
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-           Text(_user?.name ?? 'مستخدم', style: theme.textTheme.titleLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.w900)),
-           if (_user != null && _user!.email.isNotEmpty) ...[
-             const SizedBox(height: 4),
-             Text(_user!.email, style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70)),
-           ],
-        ],
+                GestureDetector(
+                  onTap: _pickProfileImage,
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: theme.colorScheme.surface, width: 2),
+                    ),
+                    child: Icon(Icons.camera_alt, size: 16, color: theme.colorScheme.onPrimary),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              _user?.name.isNotEmpty == true ? _user!.name : 'المستخدم',
+              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              _user?.email ?? '',
+              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildEditForm(ThemeData theme) {
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('تعديل الملف الشخصي', style: GoogleFonts.cairo(fontWeight: FontWeight.bold, fontSize: 16)),
+            Text('تعديل الملف الشخصي', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
             const SizedBox(height: 16),
             TextFormField(
               controller: _nameController,
@@ -250,8 +290,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: _isSaving ? null : _saveProfile,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
+                ),
                 child: _isSaving
-                    ? const CircularProgressIndicator(color: Colors.white)
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                     : Text('حفظ', style: TextStyle(color: theme.colorScheme.onPrimary, fontWeight: FontWeight.bold)),
               ),
             ),
@@ -261,68 +305,55 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildStatsSection(ThemeData theme) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('إحصائياتي', style: GoogleFonts.cairo(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
-              _buildStat('0', 'منشور'),
-              Container(height: 30, width: 1, color: Colors.grey[300]),
-              _buildStat('0', 'إعجاب'),
-              Container(height: 30, width: 1, color: Colors.grey[300]),
-              _buildStat('0', 'تعليق'),
-            ]),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildSettingsSection(ThemeData theme) {
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            ListTile(
-              title: Text('إعدادات', style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
-              leading: const Icon(Icons.settings),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.pushNamed(context, AppRoutes.settingsIndex),
-            ),
-            const Divider(height: 1),
-            ListTile(
-              title: Text('الإشعارات', style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
-              leading: const Icon(Icons.notifications),
-              trailing: Switch(value: true, onChanged: (v) {}),
-            ),
-            const Divider(height: 1),
-            ListTile(
-              title: Text('اللغة', style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
-              leading: const Icon(Icons.language),
-              trailing: const Text('العربية'),
-            ),
-          ],
-        ),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
       ),
-    );
-  }
-
-  Widget _buildStat(String value, String label) {
-    return Column(
-      children: [
-        Text(value, style: GoogleFonts.cairo(fontWeight: FontWeight.bold, fontSize: 18)),
-        Text(label, style: GoogleFonts.cairo(color: Colors.grey[600], fontSize: 12)),
-      ],
+      child: Column(
+        children: [
+          AnimatedBuilder(
+            animation: _themeService,
+            builder: (context, _) => SwitchListTile(
+              title: Text('الوضع الليلي', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+              subtitle: Text('تفعيل المظهر الداكن للتطبيق', style: theme.textTheme.bodySmall),
+              value: _themeService.isDarkMode,
+              onChanged: (value) => _themeService.setDarkMode(value),
+              secondary: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: _themeService.isDarkMode
+                      ? theme.colorScheme.primaryContainer
+                      : theme.colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  _themeService.isDarkMode ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ),
+          ),
+          const Divider(height: 1),
+          _SettingsTile(
+            theme: theme,
+            icon: Icons.notifications_rounded,
+            title: 'الإشعارات',
+            subtitle: 'إعدادات الإشعارات التي تصلك',
+            onTap: () => Navigator.pushNamed(context, AppRoutes.notificationsSettings),
+          ),
+          const Divider(height: 1),
+          _SettingsTile(
+            theme: theme,
+            icon: Icons.settings_rounded,
+            title: 'الإعدادات',
+            subtitle: 'المظهر واللغة والحساب',
+            onTap: () => Navigator.pushNamed(context, AppRoutes.settingsIndex),
+          ),
+        ],
+      ),
     );
   }
 
@@ -332,7 +363,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       builder: (context) => Container(
         padding: const EdgeInsets.all(16),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Text(order.productName, style: GoogleFonts.cairo(fontWeight: FontWeight.bold, fontSize: 18)),
+          Text(order.productName, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800, fontSize: 18)),
           const SizedBox(height: 12),
           ListTile(title: Text('العميل: ${order.buyerName}'), leading: const Icon(Icons.person)),
           ListTile(title: Text('هاتف العميل: ${order.buyerPhone}'), leading: const Icon(Icons.phone)),
@@ -345,19 +376,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showCompleteDialog(AppOrder order) {
+    final navigator = Navigator.of(context);
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         title: const Text('إنهاء الطلب؟'),
         content: const Text('هل أنت متأكد أنك أنهيت هذا الطلب؟'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
+          TextButton(onPressed: () => navigator.pop(), child: const Text('إلغاء')),
           TextButton(
             onPressed: () {
-              _orderService.updateOrderStatus(order.id, 'delivered').then((_) {
-                // ignore: use_build_context_synchronously
-                if (Navigator.canPop(context)) Navigator.pop(context);
-              });
+              _orderService
+                  .updateOrderStatus(order.id, 'delivered')
+                  .then((_) => navigator.pop());
             },
             child: const Text('إنهاء'),
           ),
@@ -367,10 +398,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildSellerOrdersSection(ThemeData theme) {
-    if (!_isSeller) return const SizedBox.shrink();
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -380,7 +413,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 Icon(Icons.receipt_long, color: theme.colorScheme.primary),
                 const SizedBox(width: 8),
-                Text('طلباتي', style: GoogleFonts.cairo(fontWeight: FontWeight.bold, fontSize: 16)),
+                Text('طلباتي', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800, fontSize: 16)),
               ],
             ),
             const SizedBox(height: 12),
@@ -390,11 +423,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 children: [
                   TabBar(
                     tabs: [
-                      Tab(child: _buildCountTab('جديدة', _pendingCount(theme), Colors.red)),
+                      Tab(child: _buildCountTab('جديدة', _pendingCount(theme), theme.colorScheme.error)),
                       Tab(child: _buildCountTab('منفذة', _deliveredCount(theme), Colors.green)),
                     ],
                     labelColor: theme.colorScheme.primary,
-                    unselectedLabelColor: Colors.grey,
+                    unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
                   ),
                   SizedBox(
                     height: 300,
@@ -416,35 +449,74 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildOrdersList(String status, ThemeData theme) {
     return StreamBuilder<List<AppOrder>>(
-      stream: _orderService.getSellerOrdersStream(_user!.id),
+      stream: _orderService.getSellerOrdersStream(_user?.id ?? ''),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+        }
+        if (snapshot.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.error_outline_rounded, color: theme.colorScheme.error, size: 32),
+                  const SizedBox(height: 8),
+                  Text('خطأ في تحميل الطلبات', style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.error)),
+                  const SizedBox(height: 8),
+                  Text(snapshot.error.toString(), style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                ],
+              ),
+            ),
+          );
         }
         final orders = (snapshot.data ?? []).where((o) => o.status == status).toList();
         if (orders.isEmpty) {
-          return const Center(child: Text('لا توجد طلبات', style: TextStyle(color: Colors.grey)));
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.inbox_rounded, size: 40, color: theme.colorScheme.onSurfaceVariant),
+                const SizedBox(height: 8),
+                Text(status == 'pending' ? 'لا توجد طلبات جديدة' : 'لا توجد طلبات منفذة',
+                    style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+              ],
+            ),
+          );
         }
         return ListView.builder(
           itemCount: orders.length,
           itemBuilder: (context, index) {
             final order = orders[index];
             return Card(
-              elevation: 1,
+              elevation: 0,
               margin: const EdgeInsets.only(bottom: 8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
+              ),
               child: ListTile(
-                title: Text(order.productName, style: GoogleFonts.cairo(fontWeight: FontWeight.bold, fontSize: 13)),
+                title: Text(
+                  order.productName,
+                  style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800, fontSize: 13),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('من ${order.buyerName} • ${order.quantity} قطعة', style: GoogleFonts.cairo(color: Colors.grey[700])),
-                    Text('هاتف: ${order.buyerPhone}', style: GoogleFonts.cairo(color: Colors.grey[600], fontSize: 12)),
-                    Text(order.statusLabel, style: GoogleFonts.cairo(color: order.statusColor, fontSize: 11)),
+                    const SizedBox(height: 4),
+                    Text('من ${order.buyerName} • ${order.quantity} قطعة',
+                        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                    if (order.buyerPhone.isNotEmpty)
+                      Text('هاتف: ${order.buyerPhone}', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                    Text(order.statusLabel, style: theme.textTheme.bodySmall?.copyWith(color: order.statusColor)),
                   ],
                 ),
                 isThreeLine: true,
                 trailing: status == 'pending'
-                    ? IconButton(icon: const Icon(Icons.check_circle, color: Colors.green), onPressed: () => _showCompleteDialog(order))
+                    ? IconButton(icon: const Icon(Icons.check_circle_rounded, color: Colors.green), onPressed: () => _showCompleteDialog(order))
                     : null,
                 onTap: () => _showOrderDetails(order, theme),
               ),
@@ -457,35 +529,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _pendingCount(ThemeData theme) {
     return StreamBuilder<List<AppOrder>>(
-      stream: _orderService.getSellerOrdersStream(_user!.id),
+      stream: _orderService.getSellerOrdersStream(_user?.id ?? ''),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) return const Text('0', style: TextStyle(color: Colors.grey));
+        if (snapshot.hasError) return Icon(Icons.error_outline_rounded, size: 16, color: theme.colorScheme.error);
+        if (!snapshot.hasData) return const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2));
         final count = (snapshot.data ?? []).where((o) => o.status == 'pending').length;
-        return Text('$count', style: GoogleFonts.cairo(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 14));
+        return Text('$count', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error, fontWeight: FontWeight.bold, fontSize: 14));
       },
     );
   }
 
   Widget _deliveredCount(ThemeData theme) {
     return StreamBuilder<List<AppOrder>>(
-      stream: _orderService.getSellerOrdersStream(_user!.id),
+      stream: _orderService.getSellerOrdersStream(_user?.id ?? ''),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) return const Text('0', style: TextStyle(color: Colors.grey));
+        if (snapshot.hasError) return Icon(Icons.error_outline_rounded, size: 16, color: theme.colorScheme.error);
+        if (!snapshot.hasData) return const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2));
         final count = (snapshot.data ?? []).where((o) => o.status == 'delivered').length;
-        return Text('$count', style: GoogleFonts.cairo(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 14));
+        return Text('$count', style: theme.textTheme.bodySmall?.copyWith(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 14));
       },
     );
   }
 
   Widget _buildCountTab(String label, Widget countWidget, Color color) {
-    return Row(mainAxisAlignment: MainAxisAlignment.center, children: [Text(label, style: GoogleFonts.cairo(color: color)), const SizedBox(width: 4), countWidget]);
+    return Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+      Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w700)),
+      const SizedBox(width: 4),
+      countWidget,
+    ]);
   }
 
   Widget _buildSellerProductsSection(ThemeData theme) {
-    if (!_isSeller) return const SizedBox.shrink();
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -495,24 +575,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 Icon(Icons.inventory_2, color: theme.colorScheme.primary),
                 const SizedBox(width: 8),
-                Text('منتجاتي', style: GoogleFonts.cairo(fontWeight: FontWeight.bold, fontSize: 16)),
+                Text('منتجاتي', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800, fontSize: 16)),
               ],
             ),
             const SizedBox(height: 12),
             StreamBuilder<List<MarketProduct>>(
               stream: _marketService.getSellerProductsStream(_user!.id),
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
+                if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+                }
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.error_outline_rounded, color: theme.colorScheme.error, size: 32),
+                        const SizedBox(height: 8),
+                        Text('خطأ في تحميل المنتجات', style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.error)),
+                      ],
+                    ),
+                  );
                 }
                 final products = snapshot.data ?? [];
                 if (products.isEmpty) {
-                  return const Column(
-                    children: [
-                      Icon(Icons.inventory, size: 48, color: Colors.grey),
-                      SizedBox(height: 8),
-                      Text('لا توجد منتجات بعد', style: TextStyle(color: Colors.grey)),
-                    ],
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.inventory, size: 48, color: theme.colorScheme.onSurfaceVariant),
+                        const SizedBox(height: 8),
+                        Text('لا توجد منتجات بعد', style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                      ],
+                    ),
                   );
                 }
                 return SizedBox(
@@ -542,8 +637,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                               ),
                               const SizedBox(height: 4),
-                              Text(product.name, style: GoogleFonts.cairo(fontSize: 11, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
-                              Text('${product.price.toStringAsFixed(0)} ج.م', style: GoogleFonts.cairo(fontSize: 10, color: Colors.grey[600])),
+                              Text(product.name,
+                                  style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
+                              Text('${product.price.toStringAsFixed(0)} ج.م',
+                                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
                             ],
                           ),
                         ),
@@ -553,6 +650,57 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 );
               },
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SettingsTile extends StatelessWidget {
+  final ThemeData theme;
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const _SettingsTile({
+    required this.theme,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: theme.colorScheme.primary, size: 18),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 2),
+                  Text(subtitle, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_left_rounded, color: theme.colorScheme.onSurfaceVariant, size: 18),
           ],
         ),
       ),

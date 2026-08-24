@@ -15,31 +15,38 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
   final ServiceRequestService _service = ServiceRequestService();
   ServiceRequest? _request;
   bool _isLoading = true;
+  bool _initialized = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (_initialized) return;
+    _initialized = true;
+
     final args = ModalRoute.of(context)?.settings.arguments;
     if (args is ServiceRequest) {
       setState(() {
         _request = args;
         _isLoading = false;
       });
+    } else if (args is String) {
+      _loadRequest(args);
     } else {
-      _loadRequest();
+      setState(() => _isLoading = false);
     }
   }
 
-  Future<void> _loadRequest() async {
-    final args = ModalRoute.of(context)?.settings.arguments;
-    if (args is String) {
-      final req = await _service.getServiceRequest(args);
+  Future<void> _loadRequest(String id) async {
+    try {
+      final req = await _service.getServiceRequest(id);
       if (mounted) {
         setState(() {
           _request = req;
           _isLoading = false;
         });
       }
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -48,10 +55,46 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
     final theme = Theme.of(context);
     final request = _request;
 
-    if (_isLoading || request == null) {
+    if (_isLoading) {
       return Scaffold(
-        appBar: AppBar(title: const Text('تفاصيل الخدمة')),
+        appBar: AppBar(
+          title: const Text('تفاصيل الخدمة'),
+          centerTitle: true,
+          elevation: 0,
+          shadowColor: Colors.transparent,
+          surfaceTintColor: theme.colorScheme.surface,
+          actions: CommonAppBarActions.actions(context),
+        ),
         body: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      );
+    }
+
+    if (request == null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('تفاصيل الخدمة'),
+          centerTitle: true,
+          elevation: 0,
+          shadowColor: Colors.transparent,
+          surfaceTintColor: theme.colorScheme.surface,
+          actions: CommonAppBarActions.actions(context),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.request_page_rounded, size: 64, color: Colors.grey[400]),
+              const SizedBox(height: 16),
+              Text('لم يتم العثور على الطلب', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.arrow_back),
+                label: const Text('رجوع'),
+              ),
+            ],
+          ),
+        ),
       );
     }
 
@@ -106,9 +149,21 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Icon(Icons.circle, size: 10, color: _statusColor(request.status)),
-                      const SizedBox(width: 6),
-                      Text('الحالة: ${request.statusLabel}', style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600, color: _statusColor(request.status))),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: request.statusColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.circle, size: 8, color: request.statusColor),
+                            const SizedBox(width: 6),
+                            Text('الحالة: ${request.statusLabel}',
+                                style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700, color: request.statusColor)),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -118,21 +173,6 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
         ],
       ),
     );
-  }
-
-  Color _statusColor(String status) {
-    switch (status) {
-      case 'pending':
-        return Colors.orange;
-      case 'in_progress':
-        return Colors.blue;
-      case 'completed':
-        return Colors.green;
-      case 'cancelled':
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
   }
 }
 

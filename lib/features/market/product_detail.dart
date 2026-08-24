@@ -61,6 +61,20 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     }
   }
 
+  Future<void> _refreshProduct() async {
+    if (_product == null) {
+      await _loadProduct();
+      return;
+    }
+    try {
+      final fresh = await _marketService.getProductById(_product!.id);
+      if (!mounted) return;
+      setState(() => _product = fresh);
+    } catch (_) {
+      // keep showing the cached product on refresh failure
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -89,10 +103,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         surfaceTintColor: theme.colorScheme.surface,
         actions: CommonAppBarActions.actions(context),
       ),
-      body: ListView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        children: [
+      body: RefreshIndicator(
+        onRefresh: _refreshProduct,
+        color: theme.colorScheme.primary,
+        backgroundColor: theme.colorScheme.surface,
+        child: ListView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          children: [
           _buildImageCarousel(theme, product),
           Padding(
             padding: const EdgeInsets.all(16),
@@ -109,19 +127,57 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               Row(children: [
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.green.withValues(alpha: 0.25))),
-                  child: Text('${product.effectivePrice.toStringAsFixed(0)} ج.م', style: theme.textTheme.titleLarge?.copyWith(color: Colors.green, fontWeight: FontWeight.w900)),
+                  decoration: BoxDecoration(color: theme.colorScheme.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12), border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.25))),
+                  child: Text('${product.effectivePrice.toStringAsFixed(0)} ج.م', style: theme.textTheme.titleLarge?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.w900)),
                 ),
+                if (product.isOnOffer && product.discountPercent > 0) ...[
+                  const SizedBox(width: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(color: theme.colorScheme.error.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12), border: Border.all(color: theme.colorScheme.error.withValues(alpha: 0.25))),
+                    child: Text('خصم ${product.discountPercent.toInt()}%', style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.error, fontWeight: FontWeight.w800)),
+                  ),
+                ],
                 const SizedBox(width: 12),
                 const Icon(Icons.star_rounded, color: Colors.amber, size: 20),
                 const SizedBox(width: 4),
-                Text('4.5', style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
-                Text(' (120 مشتريات)', style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                Text(product.rating.toStringAsFixed(1), style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
+                Text(' (${product.reviewCount} تقييم)', style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
               ]),
               const SizedBox(height: 16),
-              _buildInfoRow(theme, Icons.store_rounded, product.sellerName),
-              const SizedBox(height: 8),
-              _buildInfoRow(theme, Icons.phone_rounded, product.sellerPhone, color: theme.colorScheme.primary),
+              InkWell(
+                onTap: () => _openSeller(),
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.2)),
+                  ),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 20,
+                        backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.12),
+                        child: Icon(Icons.store_rounded, size: 20, color: theme.colorScheme.primary),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(product.sellerName, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
+                            const SizedBox(height: 2),
+                            Text(product.sellerPhone, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.primary)),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.chevron_left_rounded, color: theme.colorScheme.onSurfaceVariant),
+                    ],
+                  ),
+                ),
+              ),
               const SizedBox(height: 16),
               Text('الوصف', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
               const SizedBox(height: 6),
@@ -138,16 +194,22 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           ),
         ],
       ),
+      ),
       bottomNavigationBar: _buildBottomBar(theme),
     );
   }
 
-  Widget _buildInfoRow(ThemeData theme, IconData icon, String text, {Color? color}) {
-    return Row(children: [
-      Icon(icon, size: 18, color: color ?? theme.colorScheme.onSurfaceVariant),
-      const SizedBox(width: 8),
-      Expanded(child: Text(text, style: theme.textTheme.bodyMedium)),
-    ]);
+  void _openSeller() {
+    if (_product == null) return;
+    Navigator.pushNamed(
+      context,
+      AppRoutes.marketSellerDetail,
+      arguments: {
+        'name': _product!.sellerName,
+        'phone': _product!.sellerPhone,
+        'sellerId': _product!.sellerId ?? '',
+      },
+    );
   }
 
   Widget _buildImageCarousel(ThemeData theme, MarketProduct product) {
@@ -378,7 +440,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     try {
       await _interactionService.toggleLike(productId: _product!.id, userId: user.uid);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ في الإعجاب: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('خطأ في الإعجاب: $e')));
+      }
     }
   }
 

@@ -18,6 +18,14 @@ class ObituaryService {
         .map((snapshot) => snapshot.docs.map((doc) => Obituary.fromJson(doc.data(), doc.id)).toList());
   }
 
+  Future<Obituary?> getObituaryById(String id) async {
+    if (id.trim().isEmpty) return null;
+    final doc = await _firestore.collection('obituaries').doc(id.trim()).get();
+    final data = doc.data();
+    if (!doc.exists || data == null) return null;
+    return Obituary.fromJson(data, doc.id);
+  }
+
   Future<void> addObituary(Obituary obituary) async {
     await _firestore.collection('obituaries').add({
       ...obituary.toJson(),

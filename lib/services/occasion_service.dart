@@ -17,6 +17,14 @@ class OccasionService {
         .map((snapshot) => snapshot.docs.map((doc) => Occasion.fromJson(doc.data(), doc.id)).toList());
   }
 
+  Future<Occasion?> getOccasionById(String id) async {
+    if (id.trim().isEmpty) return null;
+    final doc = await _firestore.collection('occasions').doc(id.trim()).get();
+    final data = doc.data();
+    if (!doc.exists || data == null) return null;
+    return Occasion.fromJson(data, doc.id);
+  }
+
   Future<void> addOccasion(Occasion occasion) async {
     await _firestore.collection('occasions').add({
       ...occasion.toJson(),

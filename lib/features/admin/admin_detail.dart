@@ -1,7 +1,10 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../routes/app_routes.dart';
 import '../../services/admin_service.dart';
+import '../../widgets/common_appbar_actions.dart';
 
 class AdminDetailScreen extends StatefulWidget {
   final String collection;
@@ -30,19 +33,42 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
     }
   }
 
+  bool _looksLikeImageUrl(dynamic value) {
+    return value is String && value.startsWith('http') && (value.endsWith('.png') || value.endsWith('.jpg') || value.endsWith('.jpeg') || value.endsWith('.webp') || value.contains('firebasestorage'));
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final item = widget.item;
     final title = item['title'] ?? item['name'] ?? item['content'] ?? 'بدون عنوان';
+    final isApproved = item['isApproved'] == true;
+
+    final visualEntries = item.entries.where((e) {
+      if (e.key == 'id') return false;
+      final v = e.value;
+      if (v is String && _looksLikeImageUrl(v)) return false;
+      if (v is List && _isImageList(v)) return false;
+      return true;
+    }).toList();
+
+    final imageEntries = item.entries.where((e) {
+      final v = e.value;
+      if (v is String && _looksLikeImageUrl(v)) return true;
+      if (v is List && _isImageList(v)) return true;
+      return false;
+    }).toList();
 
     return Scaffold(
       appBar: AppBar(
         title: Text(title.length > 24 ? '${title.substring(0, 24)}...' : title),
         centerTitle: true,
+        elevation: 0,
+        shadowColor: Colors.transparent,
+        surfaceTintColor: theme.colorScheme.surface,
         actions: [
           _busy.isEmpty
-              ? TextButton(
+              ? TextButton.icon(
                   onPressed: () async {
                     final result = await Navigator.pushNamed(
                       context,
@@ -55,32 +81,82 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
                     );
                     if (result == true && mounted) setState(() {});
                   },
-                  child: const Text('تعديل'),
+                  icon: const Icon(Icons.edit_rounded, size: 18),
+                  label: const Text('تعديل'),
                 )
               : const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
                 ),
+          ...CommonAppBarActions.actions(context),
         ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: AppColors.primaryGradient,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), shape: BoxShape.circle),
+                  child: Icon(_collectionIcon(widget.collection), color: Colors.white, size: 24),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title.length > 30 ? '${title.substring(0, 30)}...' : title,
+                        style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(_collectionLabel(widget.collection), style: const TextStyle(color: Colors.white, fontSize: 13)),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: isApproved ? Colors.green.withValues(alpha: 0.2) : Colors.orange.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(isApproved ? Icons.check_circle_rounded : Icons.pending_rounded, color: isApproved ? Colors.green.shade100 : Colors.orange.shade100, size: 14),
+                      const SizedBox(width: 4),
+                      Text(isApproved ? 'معتمد' : 'قيد المراجعة', style: TextStyle(color: isApproved ? Colors.green.shade100 : Colors.orange.shade100, fontSize: 12, fontWeight: FontWeight.w700)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          for (final entry in imageEntries) ...[
+            _buildImages(theme, entry.value),
+            const SizedBox(height: 16),
+          ],
           Card(
             elevation: 0,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3))),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4))),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ...item.entries.expand((entry) {
-                    final key = entry.key;
-                    final value = entry.value;
-                    if (key == 'id') return const <Widget>[];
+                  ...visualEntries.expand((entry) {
                     return [
-                      const Divider(height: 32),
-                      _buildDetailRow(theme, key, value),
+                      if (visualEntries.first != entry) const Divider(height: 24),
+                      _buildDetailRow(theme, entry.key, entry.value),
                     ];
                   }),
                 ],
@@ -116,7 +192,7 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
                               content: const Text('هل أنت متأكد من حذف هذا العنصر؟'),
                               actions: [
                                 TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
-                                TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('حذف')),
+                                TextButton(onPressed: () => Navigator.pop(ctx, true), style: TextButton.styleFrom(foregroundColor: Colors.red), child: const Text('حذف')),
                               ],
                             ),
                           );
@@ -131,27 +207,114 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
     );
   }
 
+  bool _isImageList(List value) {
+    return value.isNotEmpty && value.any((e) => e is String && _looksLikeImageUrl(e));
+  }
+
+  Widget _buildImages(ThemeData theme, dynamic value) {
+    final urls = <String>[];
+    if (value is String && _looksLikeImageUrl(value)) {
+      urls.add(value);
+    } else if (value is List) {
+      for (final e in value) {
+        if (e is String && _looksLikeImageUrl(e)) urls.add(e);
+      }
+    }
+    if (urls.isEmpty) return const SizedBox.shrink();
+    return SizedBox(
+      height: 160,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: urls.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (context, index) => ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: CachedNetworkImage(
+            imageUrl: urls[index],
+            fit: BoxFit.cover,
+            width: 160,
+            placeholder: (c, u) => Container(width: 160, color: theme.colorScheme.surfaceContainerHighest),
+            errorWidget: (c, u, e) => Container(width: 160, color: theme.colorScheme.surfaceContainerHighest, child: const Icon(Icons.broken_image_rounded)),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildDetailRow(ThemeData theme, String key, dynamic value) {
     final display =
         value == null ? 'لا يوجد' : value is List ? value.join('، ') : value.toString();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(key, style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.primary, fontFamily: 'monospace')),
+        Text(_prettyKey(key), style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.w700)),
         const SizedBox(height: 4),
         Text(display, style: theme.textTheme.bodyMedium?.copyWith(height: 1.3)),
       ],
     );
   }
 
+  String _prettyKey(String key) {
+    const labels = {
+      'title': 'العنوان',
+      'name': 'الاسم',
+      'content': 'المحتوى',
+      'description': 'الوصف',
+      'message': 'الرسالة',
+      'deceasedName': 'اسم المتوفى',
+      'location': 'الموقع',
+      'date': 'التاريخ',
+      'price': 'السعر',
+      'isApproved': 'الحالة',
+      'createdAt': 'تاريخ الإنشاء',
+      'phone': 'الهاتف',
+      'email': 'البريد الإلكتروني',
+    };
+    return labels[key] ?? key;
+  }
+
+  IconData _collectionIcon(String collection) {
+    switch (collection) {
+      case 'news':
+        return Icons.newspaper_rounded;
+      case 'market_products':
+        return Icons.store_rounded;
+      case 'obituaries':
+        return Icons.grade_rounded;
+      case 'occasions':
+        return Icons.card_giftcard_rounded;
+      case 'forum_posts':
+        return Icons.forum_rounded;
+      default:
+        return Icons.description_rounded;
+    }
+  }
+
+  String _collectionLabel(String collection) {
+    switch (collection) {
+      case 'news':
+        return 'خبر';
+      case 'market_products':
+        return 'منتج';
+      case 'obituaries':
+        return 'عزاء';
+      case 'occasions':
+        return 'مناسبة';
+      case 'forum_posts':
+        return 'منشور';
+      default:
+        return 'عنصر';
+    }
+  }
+
   Widget _buildActionFilled(ThemeData theme, String label, IconData icon, Color color, VoidCallback? onPressed) {
     final isLoading = onPressed == null;
     return FilledButton.icon(
       style: FilledButton.styleFrom(
-        backgroundColor: color.withValues(alpha: 0.1),
+        backgroundColor: color.withValues(alpha: 0.12),
         foregroundColor: color,
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: color.withValues(alpha: 0.2))),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: color.withValues(alpha: 0.25))),
       ),
       onPressed: isLoading ? null : onPressed,
       icon: isLoading ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : Icon(icon, size: 18),

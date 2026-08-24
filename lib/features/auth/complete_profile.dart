@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
 import '../../services/image_upload_service.dart';
+import '../../services/notification_service.dart';
 import '../../services/user_service.dart';
 
 class CompleteProfileScreen extends StatefulWidget {
@@ -22,6 +23,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
   final UserService _userService = UserService();
   final ImageUploadService _imageUploadService = ImageUploadService();
   final ImagePicker _picker = ImagePicker();
+  final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
 
@@ -141,6 +143,12 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
         const SnackBar(content: Text('تم حفظ الملف الشخصي بنجاح'), backgroundColor: Colors.green),
       );
 
+      await NotificationService.subscribeToTopic('village_news');
+      await NotificationService.subscribeToTopic('village_obituaries');
+      await NotificationService.subscribeToTopic('village_occasions');
+      await NotificationService.subscribeToTopic('village_market');
+
+      if (!mounted) return;
       Navigator.pushReplacementNamed(context, AppRoutes.home);
     } catch (e) {
       if (mounted) {
@@ -172,14 +180,26 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
 
     if (_isLoading) {
       return Scaffold(
-        appBar: AppBar(title: const Text('إكمال الملف الشخصي')),
+        appBar: AppBar(
+          title: const Text('إكمال الملف الشخصي'),
+          centerTitle: true,
+          elevation: 0,
+          shadowColor: Colors.transparent,
+          surfaceTintColor: theme.colorScheme.surface,
+        ),
         body: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
       );
     }
 
     if (_errorMessage != null || _user == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('إكمال الملف الشخصي')),
+        appBar: AppBar(
+          title: const Text('إكمال الملف الشخصي'),
+          centerTitle: true,
+          elevation: 0,
+          shadowColor: Colors.transparent,
+          surfaceTintColor: theme.colorScheme.surface,
+        ),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -198,67 +218,116 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       );
     }
 
+    final imageProvider = _getImageProvider();
+
     return Scaffold(
-      appBar: AppBar(title: const Text('إكمال الملف الشخصي'), centerTitle: true, elevation: 0, shadowColor: Colors.transparent, surfaceTintColor: theme.colorScheme.surface),
+      appBar: AppBar(
+        title: const Text('إكمال الملف الشخصي'),
+        centerTitle: true,
+        elevation: 0,
+        shadowColor: Colors.transparent,
+        surfaceTintColor: theme.colorScheme.surface,
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            Stack(
-              alignment: Alignment.bottomRight,
-              children: [
-                CircleAvatar(
-                  radius: 50,
-                  backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
-                  backgroundImage: _getImageProvider(),
-                  child: _getImageProvider() == null
-                      ? Icon(Icons.person_rounded, size: 50, color: theme.colorScheme.onPrimaryContainer)
-                      : null,
-                ),
-                GestureDetector(
-                  onTap: _pickProfileImage,
-                  child: Container(
-                    width: 30,
-                    height: 30,
-                    decoration: BoxDecoration(color: theme.colorScheme.secondary, shape: BoxShape.circle, border: Border.all(color: theme.colorScheme.surface, width: 2)),
-                    child: Icon(Icons.camera_alt_rounded, size: 16, color: theme.colorScheme.onSecondary),
+            Center(
+              child: Stack(
+                alignment: Alignment.bottomLeft,
+                children: [
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: theme.colorScheme.surface, width: 4),
+                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 12, offset: const Offset(0, 6))],
+                    ),
+                    child: CircleAvatar(
+                      radius: 52,
+                      backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
+                      backgroundImage: imageProvider,
+                      child: imageProvider == null
+                          ? Icon(Icons.person_rounded, size: 52, color: theme.colorScheme.onPrimaryContainer)
+                          : null,
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: _pickProfileImage,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(color: theme.colorScheme.primary, shape: BoxShape.circle, border: Border.all(color: theme.colorScheme.surface, width: 2)),
+                      child: Icon(Icons.camera_alt_rounded, size: 18, color: theme.colorScheme.onPrimary),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'أهلًا بك! أكمل بياناتك لنتمكن من خدمتك بشكل أفضل',
+              style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    children: [
+                      TextFormField(
+                        controller: _nameController,
+                        textInputAction: TextInputAction.next,
+                        decoration: InputDecoration(
+                          labelText: 'الاسم',
+                          hintText: 'أدخل اسمك الكامل',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5))),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.6))),
+                          prefixIcon: Icon(Icons.person_rounded, color: theme.colorScheme.primary),
+                        ),
+                        validator: (value) => value == null || value.trim().isEmpty ? 'الاسم مطلوب' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _phoneController,
+                        keyboardType: TextInputType.phone,
+                        decoration: InputDecoration(
+                          labelText: 'رقم الهاتف',
+                          hintText: 'مثال: 05xxxxxxxx',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5))),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.6))),
+                          prefixIcon: Icon(Icons.phone_rounded, color: theme.colorScheme.primary),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        height: 52,
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: _isLoading ? null : () {
+                            if (_formKey.currentState?.validate() ?? false) _saveProfile();
+                          },
+                          icon: _isSaving
+                              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                              : const Icon(Icons.check_circle_rounded, size: 20),
+                          label: Text(_isSaving ? 'جاري الحفظ...' : 'حفظ', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: theme.colorScheme.primary,
+                            foregroundColor: theme.colorScheme.onPrimary,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            TextFormField(
-              controller: _nameController,
-              decoration: InputDecoration(
-                labelText: 'الاسم',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                prefixIcon: Icon(Icons.person_rounded, color: theme.colorScheme.primary),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _phoneController,
-              decoration: InputDecoration(
-                labelText: 'رقم الهاتف',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                prefixIcon: Icon(Icons.phone_rounded, color: theme.colorScheme.primary),
-              ),
-              keyboardType: TextInputType.phone,
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              height: 50,
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isSaving ? null : _saveProfile,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: theme.colorScheme.primary,
-                  foregroundColor: theme.colorScheme.onPrimary,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: _isSaving
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : const Text('حفظ', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
               ),
             ),
           ],
