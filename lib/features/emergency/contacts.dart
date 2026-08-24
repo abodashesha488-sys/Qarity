@@ -18,7 +18,7 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen> {
   @override
   void initState() {
     super.initState();
-    _service.seedIfEmpty();
+    _service.seedIfEmpty().catchError((_) {});
   }
 
   Future<void> _makeCall(String phone) async {

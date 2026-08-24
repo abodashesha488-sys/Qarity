@@ -19,7 +19,7 @@ class _VillageScreenState extends State<VillageScreen> with SingleTickerProvider
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
-    _service.seedIfEmpty();
+    _service.seedIfEmpty().catchError((_) {});
   }
 
   @override
