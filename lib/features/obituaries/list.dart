@@ -15,33 +15,6 @@ class ObituariesListScreen extends StatefulWidget {
 
 class _ObituariesListScreenState extends State<ObituariesListScreen> {
   final ObituaryService _service = ObituaryService();
-  List<Obituary> _obituaries = [];
-  bool _isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadObituaries();
-  }
-
-  Future<void> _loadObituaries() async {
-    try {
-      final obituaries = await _service.getObituariesList();
-      if (!mounted) return;
-      setState(() {
-        _obituaries = obituaries;
-        _isLoading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _refresh() async {
-    setState(() => _isLoading = true);
-    await _loadObituaries();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,18 +33,26 @@ class _ObituariesListScreenState extends State<ObituariesListScreen> {
         tooltip: 'إضافة تعزية',
         child: const Icon(Icons.add),
       ),
-      body: RefreshIndicator(
-        onRefresh: _refresh,
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
-            : _obituaries.isEmpty
-                ? const EmptyContentState(icon: Icons.grade_rounded, message: 'لا توجد تعازي مسجلة')
-                : ListView.separated(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _obituaries.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) => _buildObituaryCard(context, _obituaries[index]),
-                  ),
+      body: StreamBuilder<List<Obituary>>(
+        stream: _service.getObituariesStream(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+          }
+          if (snapshot.hasError) {
+            return const Center(child: Text('تعذر تحميل التعازي'));
+          }
+          final obituaries = snapshot.data ?? [];
+          if (obituaries.isEmpty) {
+            return const EmptyContentState(icon: Icons.grade_rounded, message: 'لا توجد تعازي مسجلة');
+          }
+          return ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: obituaries.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemBuilder: (context, index) => _buildObituaryCard(context, obituaries[index]),
+          );
+        },
       ),
     );
   }

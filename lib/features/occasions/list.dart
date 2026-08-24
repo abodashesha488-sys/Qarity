@@ -15,33 +15,6 @@ class OccasionsListScreen extends StatefulWidget {
 
 class _OccasionsListScreenState extends State<OccasionsListScreen> {
   final OccasionService _service = OccasionService();
-  List<Occasion> _occasions = [];
-  bool _isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadOccasions();
-  }
-
-  Future<void> _loadOccasions() async {
-    try {
-      final occasions = await _service.getOccasionsList();
-      if (!mounted) return;
-      setState(() {
-        _occasions = occasions;
-        _isLoading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _refresh() async {
-    setState(() => _isLoading = true);
-    await _loadOccasions();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,18 +33,26 @@ class _OccasionsListScreenState extends State<OccasionsListScreen> {
         tooltip: 'إضافة مناسبة',
         child: const Icon(Icons.add),
       ),
-      body: RefreshIndicator(
-        onRefresh: _refresh,
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
-            : _occasions.isEmpty
-                ? const EmptyContentState(icon: Icons.card_giftcard_rounded, message: 'لا توجد مناسبات مسجلة')
-                : ListView.separated(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _occasions.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) => _buildOccasionCard(context, _occasions[index]),
-                  ),
+      body: StreamBuilder<List<Occasion>>(
+        stream: _service.getOccasionsStream(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+          }
+          if (snapshot.hasError) {
+            return const Center(child: Text('تعذر تحميل المناسبات'));
+          }
+          final occasions = snapshot.data ?? [];
+          if (occasions.isEmpty) {
+            return const EmptyContentState(icon: Icons.card_giftcard_rounded, message: 'لا توجد مناسبات مسجلة');
+          }
+          return ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: occasions.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemBuilder: (context, index) => _buildOccasionCard(context, occasions[index]),
+          );
+        },
       ),
     );
   }

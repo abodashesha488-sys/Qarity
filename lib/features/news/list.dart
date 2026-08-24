@@ -1,6 +1,4 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
@@ -19,11 +17,7 @@ class NewsScreen extends StatefulWidget {
 class _NewsScreenState extends State<NewsScreen> with AutomaticKeepAliveClientMixin {
   final TextEditingController _searchController = TextEditingController();
   String _selectedCategory = 'الكل';
-  List<NewsItem> _allNews = [];
-  List<NewsItem> _filteredNews = [];
-  bool _isLoading = true;
-  bool _hasError = false;
-  String? _errorMessage;
+  String _searchQuery = '';
   final NewsService _newsService = NewsService();
 
   static const List<String> _categories = ['الكل', 'ثقافة', 'رياضة', 'مجتمع', 'تعليم', 'اقتصاد'];
@@ -34,93 +28,39 @@ class _NewsScreenState extends State<NewsScreen> with AutomaticKeepAliveClientMi
   @override
   void initState() {
     super.initState();
-    _loadNews();
-    _searchController.addListener(_updateSearchResults);
+    _searchController.addListener(_onSearchChanged);
   }
 
   @override
   void dispose() {
-    _searchController.removeListener(_updateSearchResults);
+    _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadNews({bool forceRefresh = false}) async {
+  void _onSearchChanged() {
     if (!mounted) return;
-    setState(() {
-      _isLoading = true;
-      _hasError = false;
-      _errorMessage = null;
-    });
-
-    try {
-      final news = await _newsService.getNewsList(forceRefresh: forceRefresh);
-      if (!mounted) return;
-      setState(() {
-        _allNews = news;
-        _filteredNews = news;
-        _isLoading = false;
-      });
-    } on FirebaseException catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _hasError = true;
-        _isLoading = false;
-        _errorMessage = _getFirebaseErrorMessage(e);
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _hasError = true;
-        _isLoading = false;
-        _errorMessage = e.toString();
-      });
-    }
-  }
-
-  String _getFirebaseErrorMessage(FirebaseException e) {
-    switch (e.code) {
-      case 'permission-denied':
-        return 'ليس لديك صلاحية الوصول';
-      case 'unavailable':
-        return 'الخدمة غير متاحة حالياً';
-      case 'deadline-exceeded':
-        return 'انتهت مهلة الاتصال';
-      default:
-        return 'خطأ في تحميل الأخبار';
-    }
-  }
-
-  void _updateSearchResults() {
-    final query = _searchController.text.trim().toLowerCase();
-    if (query.isEmpty) {
-      _applyCategoryFilter();
-    } else {
-      final filtered = _allNews.where((item) {
-        return item.title.toLowerCase().contains(query) ||
-            item.subtitle.toLowerCase().contains(query) ||
-            item.category.toLowerCase().contains(query);
-      }).toList();
-      setState(() => _filteredNews = filtered);
-    }
-  }
-
-  void _applyCategoryFilter() {
-    final filtered = _selectedCategory == 'الكل'
-        ? _allNews
-        : _allNews.where((item) => item.category == _selectedCategory).toList();
-    setState(() => _filteredNews = filtered);
+    setState(() => _searchQuery = _searchController.text.trim().toLowerCase());
   }
 
   void _selectCategory(String category) {
-    setState(() {
-      _selectedCategory = category;
-      _applyCategoryFilter();
-    });
+    setState(() => _selectedCategory = category);
   }
 
-  Future<void> _refreshNews() async {
-    await _loadNews(forceRefresh: true);
+  List<NewsItem> _filter(List<NewsItem> all) {
+    var list = all;
+    if (_selectedCategory != 'الكل') {
+      list = list.where((i) => i.category == _selectedCategory).toList();
+    }
+    if (_searchQuery.isNotEmpty) {
+      list = list
+          .where((i) =>
+              i.title.toLowerCase().contains(_searchQuery) ||
+              i.subtitle.toLowerCase().contains(_searchQuery) ||
+              i.category.toLowerCase().contains(_searchQuery))
+          .toList();
+    }
+    return list;
   }
 
   @override
@@ -138,39 +78,38 @@ class _NewsScreenState extends State<NewsScreen> with AutomaticKeepAliveClientMi
         tooltip: 'إضافة خبر',
         child: const Icon(Icons.add),
       ),
-      body: RefreshIndicator(
-        onRefresh: _refreshNews,
-        color: theme.colorScheme.primary,
-        backgroundColor: theme.colorScheme.surface,
-        strokeWidth: 3,
-        child: _buildBody(theme),
-      ),
-    );
-  }
-
-  Widget _buildBody(ThemeData theme) {
-    if (_isLoading) return _buildLoadingState();
-    if (_hasError) return _buildErrorState(theme);
-    if (_allNews.isEmpty) return _buildEmptyState(theme);
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: _filteredNews.length + 1,
-      itemBuilder: (context, index) {
-        if (index == 0) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildSearchField(theme),
-              const SizedBox(height: 20),
-              _buildCategoryChips(theme),
-              const SizedBox(height: 24),
-            ],
+      body: StreamBuilder<List<NewsItem>>(
+        stream: _newsService.getNewsStream(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+            return _buildLoadingState();
+          }
+          if (snapshot.hasError) {
+            return _buildErrorState(theme, message: 'تعذر تحميل الأخبار');
+          }
+          final filtered = _filter(snapshot.data ?? []);
+          if (filtered.isEmpty) return _buildEmptyState(theme);
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: filtered.length + 1,
+            itemBuilder: (context, index) {
+              if (index == 0) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSearchField(theme),
+                    const SizedBox(height: 20),
+                    _buildCategoryChips(theme),
+                    const SizedBox(height: 24),
+                  ],
+                );
+              }
+              final newsItem = filtered[index - 1];
+              return _buildNewsCard(theme, newsItem, index - 1);
+            },
           );
-        }
-        final newsItem = _filteredNews[index - 1];
-        return _buildNewsCard(theme, newsItem, index - 1);
-      },
+        },
+      ),
     );
   }
 
@@ -186,7 +125,6 @@ class _NewsScreenState extends State<NewsScreen> with AutomaticKeepAliveClientMi
                 icon: const Icon(Icons.clear_rounded),
                 onPressed: () {
                   _searchController.clear();
-                  _applyCategoryFilter();
                 },
               )
             : null,
@@ -445,7 +383,7 @@ class _NewsScreenState extends State<NewsScreen> with AutomaticKeepAliveClientMi
     );
   }
 
-  Widget _buildErrorState(ThemeData theme) {
+  Widget _buildErrorState(ThemeData theme, {String? message}) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -465,10 +403,10 @@ class _NewsScreenState extends State<NewsScreen> with AutomaticKeepAliveClientMi
               'تعذر تحميل الأخبار',
               style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
             ),
-            if (_errorMessage != null) ...[
+            if (message != null) ...[
               const SizedBox(height: 8),
               Text(
-                _errorMessage!,
+                message,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -477,7 +415,7 @@ class _NewsScreenState extends State<NewsScreen> with AutomaticKeepAliveClientMi
             ],
             const SizedBox(height: 24),
             FilledButton.icon(
-              onPressed: _refreshNews,
+              onPressed: () => setState(() {}),
               icon: const Icon(Icons.refresh_rounded),
               label: const Text('إعادة المحاولة'),
             ),
