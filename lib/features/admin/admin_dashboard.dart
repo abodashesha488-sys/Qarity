@@ -234,127 +234,97 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
     final theme = Theme.of(context);
     final totalPending = _pendingCounts.values.fold<int>(0, (p, e) => p + e);
 
-    return DefaultTabController(
-      length: _tabs.length,
-      child: Scaffold(
-        body: NestedScrollView(
-          headerSliverBuilder: (context, innerBoxIsScrolled) => [
-            SliverAppBar(
-              expandedHeight: 132,
-              pinned: true,
-              elevation: 0,
-              centerTitle: false,
-              titleSpacing: 16,
-              flexibleSpace: FlexibleSpaceBar(
-                collapseMode: CollapseMode.pin,
-                titlePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                title: const Text('لوحة التحكم', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 22)),
-                background: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topRight,
-                      end: Alignment.bottomLeft,
-                      colors: [
-                        theme.colorScheme.primary.withValues(alpha: 0.18),
-                        theme.colorScheme.surface,
-                      ],
-                    ),
-                  ),
-                  child: Align(
-                    alignment: Alignment.bottomRight,
-                    child: Padding(
-                      padding: const EdgeInsets.only(right: 16, bottom: 14),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.shield_rounded, size: 16, color: theme.colorScheme.primary),
-                          const SizedBox(width: 6),
-                          Text('إدارة المحتوى', style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.w700)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              actions: [
-                if (totalPending > 0)
-                  Container(
-                    margin: const EdgeInsets.only(left: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(color: theme.colorScheme.errorContainer.withValues(alpha: 0.6), borderRadius: BorderRadius.circular(12)),
-                    child: Row(
-                      children: [
-                        Icon(Icons.pending_actions_rounded, size: 16, color: theme.colorScheme.error),
-                        const SizedBox(width: 6),
-                        Text('$totalPending منتظر', style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w800, color: theme.colorScheme.error)),
-                      ],
-                    ),
-                  ),
-                IconButton(
-                  onPressed: () {
-                    _loadStats();
-                    _loadPendingCounts();
-                  },
-                  icon: const Icon(Icons.refresh_rounded),
-                  tooltip: 'تحديث',
-                ),
-              ],
-              bottom: TabBar(
-                controller: _tabController,
-                dividerColor: Colors.transparent,
-                indicatorColor: theme.colorScheme.primary,
-                labelColor: theme.colorScheme.primary,
-                unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
-                isScrollable: true,
-                tabs: _tabs
-                    .map((t) => Tab(
-                          child: Row(
-                            children: [
-                              Icon(t.icon, size: 18),
-                              const SizedBox(width: 6),
-                              Text(t.label),
-                              if (t.index != 5 &&
-                                  _pendingCounts[t.collection] != null &&
-                                  _pendingCounts[t.collection]! > 0) ...[
-                                const SizedBox(width: 6),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(color: theme.colorScheme.error, borderRadius: BorderRadius.circular(8)),
-                                  child: Text('${_pendingCounts[t.collection]}', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800)),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ))
-                    .toList(),
+    return Scaffold(
+      appBar: AppBar(
+        centerTitle: false,
+        elevation: 0,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('لوحة التحكم', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 22)),
+            Text('إدارة المحتوى', style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.w700)),
+          ],
+        ),
+        actions: [
+          if (totalPending > 0)
+            Container(
+              margin: const EdgeInsets.only(left: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(color: theme.colorScheme.errorContainer.withValues(alpha: 0.6), borderRadius: BorderRadius.circular(12)),
+              child: Row(
+                children: [
+                  Icon(Icons.pending_actions_rounded, size: 16, color: theme.colorScheme.error),
+                  const SizedBox(width: 6),
+                  Text('$totalPending منتظر', style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w800, color: theme.colorScheme.error)),
+                ],
               ),
             ),
-          ],
-          body: Column(
-            children: [
-              _buildStatsGrid(theme),
-              if (_tabController.index != 5)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                  child: Row(
-                    children: [
-                      Expanded(child: _buildSearchField(theme)),
-                      const SizedBox(width: 8),
-                      _buildFilterChip(theme, 'الكل'),
-                      const SizedBox(width: 8),
-                      _buildFilterChip(theme, 'معلق'),
-                    ],
-                  ),
-                ),
-              Expanded(
-                child: TabBarView(
-                  controller: _tabController,
-                  children: List.generate(_tabs.length, (index) => _buildTabContent(theme, index)),
-                ),
-              ),
-            ],
+          IconButton(
+            onPressed: () {
+              _loadStats();
+              _loadPendingCounts();
+            },
+            icon: const Icon(Icons.refresh_rounded),
+            tooltip: 'تحديث',
+          ),
+        ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: TabBar(
+            controller: _tabController,
+            dividerColor: Colors.transparent,
+            indicatorColor: theme.colorScheme.primary,
+            labelColor: theme.colorScheme.primary,
+            unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
+            isScrollable: true,
+            tabs: _tabs
+                .map((t) => Tab(
+                      child: Row(
+                        children: [
+                          Icon(t.icon, size: 18),
+                          const SizedBox(width: 6),
+                          Text(t.label),
+                          if (t.index != 5 &&
+                              _pendingCounts[t.collection] != null &&
+                              _pendingCounts[t.collection]! > 0) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(color: theme.colorScheme.error, borderRadius: BorderRadius.circular(8)),
+                              child: Text('${_pendingCounts[t.collection]}', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800)),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ))
+                .toList(),
           ),
         ),
+      ),
+      body: Column(
+        children: [
+          _buildStatsGrid(theme),
+          if (_tabController.index != 5)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: Row(
+                children: [
+                  Expanded(child: _buildSearchField(theme)),
+                  const SizedBox(width: 8),
+                  _buildFilterChip(theme, 'الكل'),
+                  const SizedBox(width: 8),
+                  _buildFilterChip(theme, 'معلق'),
+                ],
+              ),
+            ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: List.generate(_tabs.length, (index) => _buildTabContent(theme, index)),
+            ),
+          ),
+        ],
       ),
     ).animate().fade(duration: 300.ms);
   }

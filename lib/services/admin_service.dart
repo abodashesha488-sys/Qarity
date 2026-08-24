@@ -218,6 +218,9 @@ class AdminService {
   }
 
   Future<void> approveItem(String collection, String docId) async {
+    if (collection.isEmpty || docId.isEmpty) {
+      throw Exception('بيانات غير صالحة: معرّف العنصر أو المجموعة فارغ');
+    }
     final doc = await _firestore.collection(collection).doc(docId).get();
     final title = doc.data()?['title'] as String? ??
         doc.data()?['name'] as String? ??
@@ -229,29 +232,39 @@ class AdminService {
       'approvedBy': _auth.currentUser?.uid,
     });
     _invalidateContentCache(collection);
-    await _logActivity(
-      action: 'approve',
-      targetCollection: collection,
-      targetDocId: docId,
-      targetTitle: title,
-    );
+    try {
+      await _logActivity(
+        action: 'approve',
+        targetCollection: collection,
+        targetDocId: docId,
+        targetTitle: title,
+      );
+    } catch (_) {}
   }
 
   Future<void> rejectItem(String collection, String docId) async {
+    if (collection.isEmpty || docId.isEmpty) {
+      throw Exception('بيانات غير صالحة: معرّف العنصر أو المجموعة فارغ');
+    }
     await _firestore.collection(collection).doc(docId).update({
       'isApproved': false,
       'rejectedAt': FieldValue.serverTimestamp(),
       'rejectedBy': _auth.currentUser?.uid,
     });
     _invalidateContentCache(collection);
-    await _logActivity(
-      action: 'reject',
-      targetCollection: collection,
-      targetDocId: docId,
-    );
+    try {
+      await _logActivity(
+        action: 'reject',
+        targetCollection: collection,
+        targetDocId: docId,
+      );
+    } catch (_) {}
   }
 
   Future<void> deleteItem(String collection, String docId) async {
+    if (collection.isEmpty || docId.isEmpty) {
+      throw Exception('بيانات غير صالحة: معرّف العنصر أو المجموعة فارغ');
+    }
     final doc = await _firestore.collection(collection).doc(docId).get();
     final title = doc.data()?['title'] as String? ??
         doc.data()?['name'] as String? ??
@@ -259,12 +272,14 @@ class AdminService {
         doc.id;
     await _firestore.collection(collection).doc(docId).delete();
     _invalidateContentCache(collection);
-    await _logActivity(
-      action: 'delete',
-      targetCollection: collection,
-      targetDocId: docId,
-      targetTitle: title,
-    );
+    try {
+      await _logActivity(
+        action: 'delete',
+        targetCollection: collection,
+        targetDocId: docId,
+        targetTitle: title,
+      );
+    } catch (_) {}
   }
 
   void _invalidateContentCache(String collection) {
