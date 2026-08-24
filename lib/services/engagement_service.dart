@@ -5,7 +5,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 /// documents so regular signed-in users can write them without
 /// requiring admin write access to the parent item.
 class EngagementService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore;
+
+  /// Accepts an optional [FirebaseFirestore] so tests can inject an
+  /// in-memory fake (e.g. FakeFirebaseFirestore). Defaults to the
+  /// production instance.
+  EngagementService([FirebaseFirestore? firestore])
+      : _firestore = firestore ?? FirebaseFirestore.instance;
 
   // ───────────────────────── Condolences ─────────────────────────
   Future<void> addCondolence({
