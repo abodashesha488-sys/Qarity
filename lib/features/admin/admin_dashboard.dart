@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+
+import '../../core/network/network_info.dart';
 import '../../routes/app_routes.dart';
 import '../../services/admin_service.dart';
 
@@ -20,14 +22,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
   final AdminService _adminService = AdminService();
   final Set<String> _busyActions = {};
 
+  static const List<_TabMeta> _tabs = [
+    _TabMeta(index: 0, label: 'الأخبار', collection: 'news', icon: Icons.newspaper_rounded, color: Colors.blue),
+    _TabMeta(index: 1, label: 'المنتجات', collection: 'market_products', icon: Icons.store_rounded, color: Colors.deepPurple),
+    _TabMeta(index: 2, label: 'العزاء', collection: 'obituaries', icon: Icons.volunteer_activism_rounded, color: Colors.indigo),
+    _TabMeta(index: 3, label: 'المناسبات', collection: 'occasions', icon: Icons.celebration_rounded, color: Colors.teal),
+    _TabMeta(index: 4, label: 'المنتدى', collection: 'forum_posts', icon: Icons.forum_rounded, color: Colors.brown),
+    _TabMeta(index: 5, label: 'التقارير', collection: '', icon: Icons.bar_chart_rounded, color: Colors.cyan),
+  ];
+
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: _tabs.length, vsync: this);
     _tabController.addListener(() {
-      if (_tabController.indexIsChanging) {
-        setState(() {});
-      }
+      if (_tabController.indexIsChanging) setState(() {});
     });
     _loadStats();
     _loadPendingCounts();
@@ -81,61 +90,136 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
     }
   }
 
+  String _getTitle(int tabIndex) {
+    for (final t in _tabs) {
+      if (t.index == tabIndex) return t.label;
+    }
+    return '';
+  }
+
+  _TabMeta _tabMeta(int index) => _tabs.firstWhere((t) => t.index == index, orElse: () => _tabs.first);
+
+  Widget _buildReportsTab(ThemeData theme) {
+    return FutureBuilder<bool>(
+      future: NetworkInfo().isConnected,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+        }
+        if (snapshot.data == false) {
+          return const Center(child: Text('لا يوجد اتصال بالإنترنت'));
+        }
+        return FutureBuilder<List<Map<String, dynamic>>>(
+          future: _adminService.getTopProducts(),
+          builder: (context, productsSnapshot) {
+            if (productsSnapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+            }
+            final topProducts = productsSnapshot.data ?? [];
+
+            return FutureBuilder<int>(
+              future: _adminService.getActiveUsersCount(),
+              builder: (context, usersSnapshot) {
+                final activeUsers = usersSnapshot.data ?? 0;
+
+                return FutureBuilder<List<Map<String, dynamic>>>(
+                  future: _adminService.getServiceRequestsStats(),
+                  builder: (context, requestsSnapshot) {
+                    final requests = requestsSnapshot.data ?? [];
+
+                    return FutureBuilder<List<Map<String, dynamic>>>(
+                      future: _adminService.getOccasionsStats(),
+                      builder: (context, occasionsSnapshot) {
+                        final occasions = occasionsSnapshot.data ?? [];
+
+                        if (topProducts.isEmpty && requests.isEmpty && occasions.isEmpty) {
+                          return _buildEmptyState(theme, 'لا توجد إحصائيات كافية بعد');
+                        }
+
+                        return ListView(
+                          padding: const EdgeInsets.all(16),
+                          children: [
+                            _buildReportSection(theme, 'المستخدمون النشطون', Icons.people_rounded, '$activeUsers مستخدم', Colors.green),
+                            const SizedBox(height: 16),
+                            _buildReportSection(theme, 'أكثر المنتجات مشاهدة', Icons.shopping_bag_rounded, '${topProducts.length} منتج', Colors.deepPurple),
+                            const SizedBox(height: 8),
+                            ...topProducts.map((p) => ListTile(
+                                  dense: true,
+                                  leading: const Icon(Icons.store_rounded, size: 20),
+                                  title: Text(p['name']?.toString() ?? 'بدون اسم', maxLines: 1, overflow: TextOverflow.ellipsis),
+                                  trailing: Text('${p['price'] ?? 0} ج.م', style: theme.textTheme.labelSmall),
+                                )),
+                            const SizedBox(height: 16),
+                            _buildReportSection(theme, 'أحدث الطلبات', Icons.request_page_rounded, '${requests.length} طلب', Colors.orange),
+                            const SizedBox(height: 8),
+                            ...requests.take(5).map((r) => ListTile(
+                                  dense: true,
+                                  leading: const Icon(Icons.assignment_rounded, size: 20),
+                                  title: Text(r['type']?.toString() ?? 'طلب', maxLines: 1, overflow: TextOverflow.ellipsis),
+                                  trailing: Text(r['status']?.toString() ?? '', style: theme.textTheme.labelSmall),
+                                )),
+                            const SizedBox(height: 16),
+                            _buildReportSection(theme, 'أحدث المناسبات', Icons.event_rounded, '${occasions.length} مناسبة', Colors.teal),
+                            const SizedBox(height: 8),
+                            ...occasions.take(5).map((o) => ListTile(
+                                  dense: true,
+                                  leading: const Icon(Icons.celebration_rounded, size: 20),
+                                  title: Text(o['title']?.toString() ?? 'بدون عنوان', maxLines: 1, overflow: TextOverflow.ellipsis),
+                                  trailing: Text(o['date']?.toString() ?? '', style: theme.textTheme.labelSmall),
+                                )),
+                          ],
+                        );
+                      },
+                    );
+                  },
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildReportSection(ThemeData theme, String title, IconData icon, String summary, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.18)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color),
+          const SizedBox(width: 12),
+          Expanded(child: Text(title, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800))),
+          Text(summary, style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+        ],
+      ),
+    );
+  }
+
   Future<void> _handleAction(int tabIndex, String docId, String action) async {
     final key = '${action}_${tabIndex}_$docId';
     if (_busyActions.contains(key)) return;
     setState(() => _busyActions.add(key));
     try {
-      switch (tabIndex) {
-        case 0:
-          if (action == 'approve') {
-            await _adminService.approveNews(docId);
-          } else if (action == 'reject') {
-            await _adminService.rejectNews(docId);
-          } else if (action == 'delete') {
-            await _adminService.deleteNews(docId);
-          }
+      final collection = _tabMeta(tabIndex).collection;
+      switch (action) {
+        case 'approve':
+          await _adminService.approveItem(collection, docId);
           break;
-        case 1:
-          if (action == 'approve') {
-            await _adminService.approveProduct(docId);
-          } else if (action == 'reject') {
-            await _adminService.rejectProduct(docId);
-          } else if (action == 'delete') {
-            await _adminService.deleteProduct(docId);
-          }
+        case 'reject':
+          await _adminService.rejectItem(collection, docId);
           break;
-        case 2:
-          if (action == 'approve') {
-            await _adminService.approveObituary(docId);
-          } else if (action == 'reject') {
-            await _adminService.rejectObituary(docId);
-          } else if (action == 'delete') {
-            await _adminService.deleteObituary(docId);
-          }
-          break;
-        case 3:
-          if (action == 'approve') {
-            await _adminService.approveOccasion(docId);
-          } else if (action == 'reject') {
-            await _adminService.rejectOccasion(docId);
-          } else if (action == 'delete') {
-            await _adminService.deleteOccasion(docId);
-          }
-          break;
-        case 4:
-          if (action == 'approve') {
-            await _adminService.approveForumPost(docId);
-          } else if (action == 'reject') {
-            await _adminService.rejectForumPost(docId);
-          } else if (action == 'delete') {
-            await _adminService.deleteForumPost(docId);
-          }
+        case 'delete':
+          await _adminService.deleteItem(collection, docId);
           break;
       }
       if (!mounted) return;
       ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        SnackBar(content: Text('تم ${action == 'approve' ? 'الموافقة' : action == 'reject' ? 'الرفض' : action == 'delete' ? 'الحذف' : 'التعديل'} بنجاح'), backgroundColor: Colors.green),
+        SnackBar(content: Text('تم ${action == 'approve' ? 'الموافقة' : action == 'reject' ? 'الرفض' : 'الحذف'} بنجاح'), backgroundColor: Colors.green),
       );
     } catch (e) {
       if (!mounted) return;
@@ -145,178 +229,131 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
     }
   }
 
-  String _collectionForTab(int tabIndex) {
-    switch (tabIndex) {
-      case 0:
-        return 'news';
-      case 1:
-        return 'market_products';
-      case 2:
-        return 'obituaries';
-      case 3:
-        return 'occasions';
-      case 4:
-        return 'forum_posts';
-      default:
-        return '';
-    }
-  }
-
-  String _getTitle(int tabIndex) {
-    switch (tabIndex) {
-      case 0:
-        return 'الأخبار';
-      case 1:
-        return 'المنتجات';
-      case 2:
-        return 'العزاء';
-      case 3:
-        return 'المناسبات';
-      case 4:
-        return 'المنتدى';
-      default:
-        return '';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final totalPending = _pendingCounts.values.fold<int>(0, (p, e) => p + e);
 
     return DefaultTabController(
-      length: 5,
+      length: _tabs.length,
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('لوحة التحكم'),
-          centerTitle: true,
-          elevation: 0,
-          shadowColor: Colors.transparent,
-          surfaceTintColor: theme.colorScheme.surface,
-          bottom: TabBar(
-            controller: _tabController,
-            dividerColor: Colors.transparent,
-            indicatorColor: theme.colorScheme.primary,
-            labelColor: theme.colorScheme.primary,
-            unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
-            isScrollable: true,
-            tabs: [
-              Tab(
-                child: Row(
-                  children: [
-                    const Text('الأخبار'),
-                    if (_pendingCounts['news'] != null && _pendingCounts['news']! > 0) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(color: theme.colorScheme.error, borderRadius: BorderRadius.circular(8)),
-                        child: Text('${_pendingCounts['news']}', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800)),
+        body: NestedScrollView(
+          headerSliverBuilder: (context, innerBoxIsScrolled) => [
+            SliverAppBar(
+              expandedHeight: 132,
+              pinned: true,
+              elevation: 0,
+              centerTitle: false,
+              titleSpacing: 16,
+              flexibleSpace: FlexibleSpaceBar(
+                collapseMode: CollapseMode.pin,
+                titlePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                title: const Text('لوحة التحكم', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 22)),
+                background: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
+                      colors: [
+                        theme.colorScheme.primary.withValues(alpha: 0.18),
+                        theme.colorScheme.surface,
+                      ],
+                    ),
+                  ),
+                  child: Align(
+                    alignment: Alignment.bottomRight,
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 16, bottom: 14),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.shield_rounded, size: 16, color: theme.colorScheme.primary),
+                          const SizedBox(width: 6),
+                          Text('إدارة المحتوى', style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.w700)),
+                        ],
                       ),
-                    ],
-                  ],
+                    ),
+                  ),
                 ),
               ),
-              Tab(
-                child: Row(
-                  children: [
-                    const Text('المنتجات'),
-                    if (_pendingCounts['market_products'] != null && _pendingCounts['market_products']! > 0) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(color: theme.colorScheme.error, borderRadius: BorderRadius.circular(8)),
-                        child: Text('${_pendingCounts['market_products']}', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800)),
-                      ),
-                    ],
-                  ],
+              actions: [
+                if (totalPending > 0)
+                  Container(
+                    margin: const EdgeInsets.only(left: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(color: theme.colorScheme.errorContainer.withValues(alpha: 0.6), borderRadius: BorderRadius.circular(12)),
+                    child: Row(
+                      children: [
+                        Icon(Icons.pending_actions_rounded, size: 16, color: theme.colorScheme.error),
+                        const SizedBox(width: 6),
+                        Text('$totalPending منتظر', style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w800, color: theme.colorScheme.error)),
+                      ],
+                    ),
+                  ),
+                IconButton(
+                  onPressed: () {
+                    _loadStats();
+                    _loadPendingCounts();
+                  },
+                  icon: const Icon(Icons.refresh_rounded),
+                  tooltip: 'تحديث',
                 ),
+              ],
+              bottom: TabBar(
+                controller: _tabController,
+                dividerColor: Colors.transparent,
+                indicatorColor: theme.colorScheme.primary,
+                labelColor: theme.colorScheme.primary,
+                unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
+                isScrollable: true,
+                tabs: _tabs
+                    .map((t) => Tab(
+                          child: Row(
+                            children: [
+                              Icon(t.icon, size: 18),
+                              const SizedBox(width: 6),
+                              Text(t.label),
+                              if (t.index != 5 &&
+                                  _pendingCounts[t.collection] != null &&
+                                  _pendingCounts[t.collection]! > 0) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(color: theme.colorScheme.error, borderRadius: BorderRadius.circular(8)),
+                                  child: Text('${_pendingCounts[t.collection]}', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800)),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ))
+                    .toList(),
               ),
-              Tab(
-                child: Row(
-                  children: [
-                    const Text('العزاء'),
-                    if (_pendingCounts['obituaries'] != null && _pendingCounts['obituaries']! > 0) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(color: theme.colorScheme.error, borderRadius: BorderRadius.circular(8)),
-                        child: Text('${_pendingCounts['obituaries']}', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800)),
-                      ),
+            ),
+          ],
+          body: Column(
+            children: [
+              _buildStatsGrid(theme),
+              if (_tabController.index != 5)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                  child: Row(
+                    children: [
+                      Expanded(child: _buildSearchField(theme)),
+                      const SizedBox(width: 8),
+                      _buildFilterChip(theme, 'الكل'),
+                      const SizedBox(width: 8),
+                      _buildFilterChip(theme, 'معلق'),
                     ],
-                  ],
+                  ),
                 ),
-              ),
-              Tab(
-                child: Row(
-                  children: [
-                    const Text('المناسبات'),
-                    if (_pendingCounts['occasions'] != null && _pendingCounts['occasions']! > 0) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(color: theme.colorScheme.error, borderRadius: BorderRadius.circular(8)),
-                        child: Text('${_pendingCounts['occasions']}', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800)),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              Tab(
-                child: Row(
-                  children: [
-                    const Text('المنتدى'),
-                    if (_pendingCounts['forum_posts'] != null && _pendingCounts['forum_posts']! > 0) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(color: theme.colorScheme.error, borderRadius: BorderRadius.circular(8)),
-                        child: Text('${_pendingCounts['forum_posts']}', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800)),
-                      ),
-                    ],
-                  ],
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: List.generate(_tabs.length, (index) => _buildTabContent(theme, index)),
                 ),
               ),
             ],
           ),
-          actions: [
-            if (totalPending > 0)
-              Container(
-                margin: const EdgeInsets.only(left: 12),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(color: theme.colorScheme.errorContainer.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(12)),
-                child: Row(
-                  children: [
-                    Icon(Icons.pending_actions_rounded, size: 16, color: theme.colorScheme.error),
-                    const SizedBox(width: 6),
-                    Text('$totalPending منتظر', style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w800, color: theme.colorScheme.error)),
-                  ],
-                ),
-              ),
-            IconButton(onPressed: _loadStats, icon: const Icon(Icons.refresh_rounded)),
-          ],
-        ),
-        body: Column(
-          children: [
-            _buildStatsGrid(theme),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              child: Row(
-                children: [
-                  Expanded(child: _buildSearchField(theme)),
-                  const SizedBox(width: 8),
-                  _buildFilterChip(theme, 'الكل'),
-                  const SizedBox(width: 8),
-                  _buildFilterChip(theme, 'معلق'),
-                ],
-              ),
-            ),
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: List.generate(5, (index) => _buildTabContent(theme, index)),
-              ),
-            ),
-          ],
         ),
       ),
     ).animate().fade(duration: 300.ms);
@@ -326,7 +363,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
     return _isLoadingStats
         ? const Padding(
             padding: EdgeInsets.all(16),
-            child: SizedBox(height: 72, child: Center(child: CircularProgressIndicator(strokeWidth: 2))),
+            child: SizedBox(height: 84, child: Center(child: CircularProgressIndicator(strokeWidth: 2))),
           )
         : Container(
             padding: const EdgeInsets.all(16),
@@ -334,33 +371,47 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
               color: theme.colorScheme.surface,
               boxShadow: [BoxShadow(color: theme.colorScheme.shadow.withValues(alpha: 0.05), blurRadius: 12, offset: const Offset(0, 4))],
             ),
-            child: Row(
-              children: [
-                Expanded(child: _buildStatChip(theme, 'أخبار', '${_stats['news'] ?? 0}', Colors.blue)),
-                const SizedBox(width: 8),
-                Expanded(child: _buildStatChip(theme, 'منتجات', '${_stats['market_products'] ?? 0}', Colors.deepPurple)),
-                const SizedBox(width: 8),
-                Expanded(child: _buildStatChip(theme, 'عزاء', '${_stats['obituaries'] ?? 0}', Colors.indigo)),
-                const SizedBox(width: 8),
-                Expanded(child: _buildStatChip(theme, 'مناسبات', '${_stats['occasions'] ?? 0}', Colors.teal)),
-                const SizedBox(width: 8),
-                Expanded(child: _buildStatChip(theme, 'منتدى', '${_stats['forum_posts'] ?? 0}', Colors.brown)),
-              ],
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: _tabs
+                    .where((t) => t.index != 5)
+                    .map((t) {
+                      final value = _stats[t.collection] ?? 0;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: _buildStatChip(theme, t.label, '$value', t.color, t.icon),
+                      );
+                    })
+                    .toList(),
+              ),
             ),
           );
   }
 
-  Widget _buildStatChip(ThemeData theme, String title, String value, Color color) {
+  Widget _buildStatChip(ThemeData theme, String title, String value, Color color, IconData icon) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+      width: 110,
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 14),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [color.withValues(alpha: 0.16), color.withValues(alpha: 0.06)],
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: color.withValues(alpha: 0.22)),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(value, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900, color: color)),
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(10)),
+            child: Icon(icon, size: 18, color: color),
+          ),
+          const SizedBox(height: 10),
+          Text(value, style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900, color: color)),
           Text(title, style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600)),
         ],
       ),
@@ -371,9 +422,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
     return TextField(
       controller: _searchController,
       decoration: InputDecoration(
-        hintText: 'بحث...',
+        hintText: 'بحث في المحتوى...',
         prefixIcon: Icon(Icons.search_rounded, color: theme.colorScheme.primary),
-        suffixIcon: _searchController.text.isNotEmpty ? IconButton(onPressed: () => _searchController.clear(), icon: const Icon(Icons.clear_rounded)) : null,
+        suffixIcon: _searchController.text.isNotEmpty
+            ? IconButton(onPressed: () => _searchController.clear(), icon: const Icon(Icons.clear_rounded))
+            : null,
         filled: true,
         fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
@@ -385,17 +438,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
   }
 
   Widget _buildFilterChip(ThemeData theme, String label) {
-    final isSelected = _selectedFilter == (label == 'الكل' ? 'all' : 'pending');
+    final value = label == 'الكل' ? 'all' : 'pending';
+    final isSelected = _selectedFilter == value;
     return FilterChip(
       label: Text(label),
       selected: isSelected,
       onSelected: (selected) {
-        if (selected) {
-          setState(() => _selectedFilter = label == 'الكل' ? 'all' : 'pending');
-        }
+        if (selected) setState(() => _selectedFilter = value);
       },
       backgroundColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
       selectedColor: theme.colorScheme.primary,
+      labelStyle: TextStyle(color: isSelected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface),
+      checkmarkColor: theme.colorScheme.onPrimary,
     );
   }
 
@@ -407,46 +461,76 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
   bool _matchesQuery(Map<String, dynamic> item, String query) {
     if (query.isEmpty) return true;
     final q = query.toLowerCase();
-    final searchable = [item['title'], item['content'], item['name'], item['providerName'], item['submittedBy'], item['authorName']].whereType<String>().join(' ');
+    final searchable = [
+      item['title'],
+      item['content'],
+      item['name'],
+      item['providerName'],
+      item['submittedBy'],
+      item['authorName'],
+    ].whereType<String>().join(' ');
     return searchable.toLowerCase().contains(q);
   }
 
   Widget _buildTabContent(ThemeData theme, int tabIndex) {
-    return StreamBuilder<List<Map<String, dynamic>>>(
-      stream: _getStreamForTab(tabIndex),
+    if (tabIndex == 5) return _buildReportsTab(theme);
+    return FutureBuilder<bool>(
+      future: NetworkInfo().isConnected,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator(strokeWidth: 2));
         }
-        final query = _searchController.text.trim().toLowerCase();
-        List<Map<String, dynamic>> items = snapshot.data ?? [];
-        items = items.where((item) => _matchesFilter(item) && _matchesQuery(item, query)).toList();
+        if (snapshot.data == false) {
+          return const Center(child: Text('لا يوجد اتصال بالإنترنت'));
+        }
+        return StreamBuilder<List<Map<String, dynamic>>>(
+          stream: _getStreamForTab(tabIndex),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+            }
+            final query = _searchController.text.trim().toLowerCase();
+            List<Map<String, dynamic>> items = snapshot.data ?? [];
+            items = items.where((item) => _matchesFilter(item) && _matchesQuery(item, query)).toList();
 
-        if (items.isEmpty) return _buildEmptyState(theme, _getTitle(tabIndex));
-
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: items.length,
-          itemBuilder: (context, index) => _buildItemCard(theme, tabIndex, items[index]),
+            if (items.isEmpty) return _buildEmptyState(theme, _getTitle(tabIndex));
+            return ListView.separated(
+              padding: const EdgeInsets.all(16),
+              itemCount: items.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, index) => _buildItemCard(theme, tabIndex, items[index]),
+            );
+          },
         );
       },
     );
   }
 
+  String? _itemImage(Map<String, dynamic> item) {
+    if (item['imageUrls'] is List && (item['imageUrls'] as List).isNotEmpty) {
+      final first = (item['imageUrls'] as List).first;
+      if (first is String && first.isNotEmpty) return first;
+    }
+    if (item['imageUrl'] is String && (item['imageUrl'] as String).isNotEmpty) return item['imageUrl'] as String;
+    return null;
+  }
+
   Widget _buildItemCard(ThemeData theme, int tabIndex, Map<String, dynamic> item) {
     final isApproved = item['isApproved'] == true;
     final itemLabel = item['title'] ?? item['name'] ?? item['content'] ?? item['providerName'] ?? '';
+    final accent = _tabMeta(tabIndex).color;
+    final image = _itemImage(item);
+    final collection = _tabMeta(tabIndex).collection;
 
     return Card(
       elevation: 0,
+      clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.35)),
       ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(18),
         onTap: () async {
-          final collection = _collectionForTab(tabIndex);
           await Navigator.pushNamed(
             context,
             AppRoutes.adminDetail,
@@ -455,60 +539,158 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
           if (mounted) setState(() {});
         },
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(child: Text(itemLabel, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800))),
-                  _buildStatusBadge(theme, isApproved),
+                  if (image != null)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(14),
+                      child: Image.network(
+                        image,
+                        width: 64,
+                        height: 64,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _placeholder(accent),
+                      ),
+                    )
+                  else
+                    _placeholder(accent),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          itemLabel.toString(),
+                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            _buildStatusBadge(theme, isApproved),
+                            const Spacer(),
+                            _buildActionIcon(theme, Icons.edit_rounded, Colors.blueGrey, () async {
+                              await Navigator.pushNamed(
+                                context,
+                                AppRoutes.adminEdit,
+                                arguments: {'collection': collection, 'docId': item['id'] as String, 'item': item},
+                              );
+                              if (mounted) setState(() {});
+                            }),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 14),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildActionChip(theme, 'موافقة', Icons.check_rounded, Colors.green, () => _handleAction(tabIndex, item['id'] as String, 'approve'), isLoading: _busyActions.contains('approve_${tabIndex}_${item['id']}')),
-                  _buildActionChip(theme, 'رفض', Icons.close_rounded, Colors.orange, () => _handleAction(tabIndex, item['id'] as String, 'reject'), isLoading: _busyActions.contains('reject_${tabIndex}_${item['id']}')),
-                  _buildActionChip(theme, 'حذف', Icons.delete_rounded, Colors.red, () => _handleAction(tabIndex, item['id'] as String, 'delete'), isLoading: _busyActions.contains('delete_${tabIndex}_${item['id']}')),
+                  Expanded(
+                    child: _buildActionButton(
+                      theme,
+                      'موافقة',
+                      Icons.check_rounded,
+                      Colors.green,
+                      () => _handleAction(tabIndex, item['id'] as String, 'approve'),
+                      isLoading: _busyActions.contains('approve_${tabIndex}_${item['id']}'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildActionButton(
+                      theme,
+                      'رفض',
+                      Icons.close_rounded,
+                      Colors.orange,
+                      () => _handleAction(tabIndex, item['id'] as String, 'reject'),
+                      isLoading: _busyActions.contains('reject_${tabIndex}_${item['id']}'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  _buildActionIcon(
+                    theme,
+                    Icons.delete_rounded,
+                    Colors.red,
+                    () => _handleAction(tabIndex, item['id'] as String, 'delete'),
+                    isLoading: _busyActions.contains('delete_${tabIndex}_${item['id']}'),
+                  ),
                 ],
-              )
+              ),
             ],
           ),
         ),
       ),
-    ).animate().fade(duration: 200.ms).slideY(begin: 0.05);
+    ).animate().fade(duration: 220.ms).slideY(begin: 0.05);
   }
 
-  Widget _buildActionChip(ThemeData theme, String label, IconData icon, Color color, VoidCallback onPressed, {bool isLoading = false}) {
+  Widget _placeholder(Color accent) => Container(
+        width: 64,
+        height: 64,
+        decoration: BoxDecoration(
+          color: accent.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Icon(Icons.article_rounded, color: accent),
+      );
+
+  Widget _buildActionButton(
+    ThemeData theme,
+    String label,
+    IconData icon,
+    Color color,
+    VoidCallback onPressed, {
+    bool isLoading = false,
+  }) {
     return SizedBox(
-      height: 36,
+      height: 40,
       child: isLoading
-          ? const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 12),
-              child: Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))),
-            )
+          ? Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: color)))
           : InkWell(
               onTap: onPressed,
-              borderRadius: BorderRadius.circular(10),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+              borderRadius: BorderRadius.circular(12),
+              child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: color.withValues(alpha: 0.2)),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: color.withValues(alpha: 0.25)),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(icon, size: 16, color: color),
-                    if (label.isNotEmpty) ...[
-                      const SizedBox(width: 4),
-                      Text(label, style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700, color: color)),
-                    ],
+                    const SizedBox(width: 6),
+                    Text(label, style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w800, color: color)),
                   ],
                 ),
+              ),
+            ),
+    );
+  }
+
+  Widget _buildActionIcon(ThemeData theme, IconData icon, Color color, VoidCallback onPressed, {bool isLoading = false}) {
+    return SizedBox(
+      width: 40,
+      height: 40,
+      child: isLoading
+          ? Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: color)))
+          : InkWell(
+              onTap: onPressed,
+              borderRadius: BorderRadius.circular(12),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: color.withValues(alpha: 0.25)),
+                ),
+                child: Icon(icon, size: 18, color: color),
               ),
             ),
     );
@@ -542,4 +724,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
       ),
     );
   }
+}
+
+class _TabMeta {
+  final int index;
+  final String label;
+  final String collection;
+  final IconData icon;
+  final Color color;
+
+  const _TabMeta({
+    required this.index,
+    required this.label,
+    required this.collection,
+    required this.icon,
+    required this.color,
+  });
 }
