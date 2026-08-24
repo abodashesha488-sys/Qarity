@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -5,6 +6,7 @@ import 'package:integration_test/integration_test.dart';
 
 import 'package:qurity/firebase_options.dart';
 import 'package:qurity/main.dart' as app;
+import 'package:qurity/models/data_models.dart';
 import 'package:qurity/routes/app_routes.dart';
 
 /// End-to-end smoke test. Runs on a real device/emulator via:
@@ -37,7 +39,7 @@ void main() {
     expect(find.byType(ErrorWidget), findsNothing);
   });
 
-  testWidgets('Navigating to key screens builds without errors', (tester) async {
+  testWidgets('All screens build without errors (full navigation coverage)', (tester) async {
     try {
       await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
     } catch (_) {
@@ -47,32 +49,111 @@ void main() {
     app.main();
     await _settle(tester);
 
-    // Grab the root Navigator so we can drive navigation like a user would.
     final navigator = tester.state<NavigatorState>(find.byType(Navigator).first);
 
-    // Public, argument-free list/info screens (work with or without auth).
-    final routes = [
-      AppRoutes.newsList,
-      AppRoutes.forumPosts,
-      AppRoutes.obituariesList,
-      AppRoutes.occasionsList,
-      AppRoutes.marketProducts,
-      AppRoutes.emergencyContacts,
-      AppRoutes.phoneDirectory,
-      AppRoutes.about,
-      AppRoutes.aboutApp,
-      AppRoutes.settingsIndex,
+    // Minimal model objects so argument-driven detail screens render.
+    final newsItem = NewsItem(
+      id: 'n1',
+      title: 'عنوان',
+      subtitle: 'موضوع',
+      imageUrl: '',
+      date: '2020',
+    );
+    final marketProduct = MarketProduct(
+      id: 'p1',
+      name: 'منتج',
+      description: 'وصف',
+      price: 10,
+      imageUrl: '',
+      category: 'عام',
+      sellerName: 'بائع',
+      sellerPhone: '123',
+    );
+    final forumPost = ForumPost(
+      id: 'f1',
+      userId: 'u1',
+      userName: 'مستخدم',
+      content: 'محتوى',
+      createdAt: DateTime(2020),
+    );
+    final serviceRequest = ServiceRequest(
+      id: 's1',
+      userId: 'u1',
+      userName: 'مستخدم',
+      type: 'كهرباء',
+      description: 'وصف',
+      location: 'مكان',
+      createdAt: DateTime(2020),
+    );
+    final obituary = Obituary(
+      id: 'o1',
+      name: 'محمد',
+      age: '70',
+      date: '2020',
+      description: 'وصف',
+    );
+    final occasion = Occasion(
+      id: 'oc1',
+      title: 'فرح',
+      date: '2020',
+      description: 'وصف',
+      location: 'مكان',
+    );
+
+    // Every reachable screen. The admin *wrapper* route is intentionally
+    // skipped (it redirects unauthenticated users); admin detail/edit are
+    // included since they render without an admin gate.
+    final entries = <_Entry>[
+      _Entry(AppRoutes.newsList),
+      _Entry(AppRoutes.newsView, newsItem),
+      _Entry(AppRoutes.newsDetail),
+      _Entry(AppRoutes.newsAdd),
+      _Entry(AppRoutes.forumPosts),
+      _Entry(AppRoutes.forumPostDetail, forumPost),
+      _Entry(AppRoutes.forumCreatePost),
+      _Entry(AppRoutes.obituariesList),
+      _Entry(AppRoutes.obituariesDetail, obituary),
+      _Entry(AppRoutes.obituariesAdd),
+      _Entry(AppRoutes.occasionsList),
+      _Entry(AppRoutes.occasionsDetail, occasion),
+      _Entry(AppRoutes.occasionsAdd),
+      _Entry(AppRoutes.marketProducts),
+      _Entry(AppRoutes.marketProductDetail, marketProduct),
+      _Entry(AppRoutes.marketAdd),
+      _Entry(AppRoutes.marketSellerDetail, <String, String>{'name': 'بائع', 'phone': '123', 'sellerId': ''}),
+      _Entry(AppRoutes.marketSellerReviews, <String, String>{'name': 'بائع', 'phone': '123'}),
+      _Entry(AppRoutes.marketSellerGallery, <String, String>{'name': 'بائع', 'sellerId': ''}),
+      _Entry(AppRoutes.marketSellerOrders),
+      _Entry(AppRoutes.marketCart),
+      _Entry(AppRoutes.serviceRequest),
+      _Entry(AppRoutes.serviceDetail, serviceRequest),
+      _Entry(AppRoutes.emergencyContacts),
+      _Entry(AppRoutes.phoneDirectory),
+      _Entry(AppRoutes.about),
+      _Entry(AppRoutes.aboutApp),
+      _Entry(AppRoutes.profileMain),
+      _Entry(AppRoutes.settingsIndex),
+      _Entry(AppRoutes.notificationsSettings),
+      _Entry(AppRoutes.completeProfile, 'test-user-id'),
+      _Entry(AppRoutes.adminDetail, <String, dynamic>{'collection': 'news', 'docId': 'x', 'item': <String, dynamic>{}}),
+      _Entry(AppRoutes.adminEdit, <String, dynamic>{'collection': 'news', 'docId': 'x', 'item': <String, dynamic>{}}),
     ];
 
-    for (final route in routes) {
-      await navigator.pushNamed(route);
+    for (final entry in entries) {
+      await navigator.pushNamed(entry.route, arguments: entry.arguments);
       await _settle(tester);
       expect(find.byType(ErrorWidget), findsNothing,
-          reason: 'Screen for route "$route" threw a build/runtime error.');
+          reason: 'Screen for route "${entry.route}" threw a build/runtime error.');
       navigator.pop();
       await _settle(tester);
     }
   });
+}
+
+class _Entry {
+  const _Entry(this.route, [this.arguments]);
+  final String route;
+  final Object? arguments;
 }
 
 /// Pumps through the splash sequence while tolerating perpetual
