@@ -4,6 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter/foundation.dart';
 
+import 'cache_service.dart';
+
 class AdminService {
   static final AdminService _instance = AdminService._internal();
   factory AdminService() => _instance;
@@ -13,7 +15,6 @@ class AdminService {
   final firebase_auth.FirebaseAuth _auth = firebase_auth.FirebaseAuth.instance;
 
   Stream<firebase_auth.User?> get authStateChanges => _auth.authStateChanges();
-  bool get isAdmin => _auth.currentUser?.uid != null;
 
   Future<bool> isAdminUser(String uid) async {
     try {
@@ -66,29 +67,25 @@ class AdminService {
   Stream<List<Map<String, dynamic>>> getPendingOccasionsStream() => _pendingStream('occasions');
   Stream<List<Map<String, dynamic>>> getPendingForumPostsStream() => _pendingStream('forum_posts');
 
-  Stream<List<Map<String, dynamic>>> getPendingStream(String collection) => _pendingStream(collection);
-  Stream<List<Map<String, dynamic>>> getApprovedStream(String collection) => _approvedStream(collection);
-  Stream<List<Map<String, dynamic>>> getAllStream(String collection) => _allStream(collection);
+  Future<void> approveNews(String docId) => approveItem('news', docId);
+  Future<void> rejectNews(String docId) => rejectItem('news', docId);
+  Future<void> deleteNews(String docId) => deleteItem('news', docId);
 
-  Future<void> approveNews(String docId) => _approve('news', docId);
-  Future<void> rejectNews(String docId) => _reject('news', docId);
-  Future<void> deleteNews(String docId) => _delete('news', docId);
+  Future<void> approveProduct(String docId) => approveItem('market_products', docId);
+  Future<void> rejectProduct(String docId) => rejectItem('market_products', docId);
+  Future<void> deleteProduct(String docId) => deleteItem('market_products', docId);
 
-  Future<void> approveProduct(String docId) => _approve('market_products', docId);
-  Future<void> rejectProduct(String docId) => _reject('market_products', docId);
-  Future<void> deleteProduct(String docId) => _delete('market_products', docId);
+  Future<void> approveObituary(String docId) => approveItem('obituaries', docId);
+  Future<void> rejectObituary(String docId) => rejectItem('obituaries', docId);
+  Future<void> deleteObituary(String docId) => deleteItem('obituaries', docId);
 
-  Future<void> approveObituary(String docId) => _approve('obituaries', docId);
-  Future<void> rejectObituary(String docId) => _reject('obituaries', docId);
-  Future<void> deleteObituary(String docId) => _delete('obituaries', docId);
+  Future<void> approveOccasion(String docId) => approveItem('occasions', docId);
+  Future<void> rejectOccasion(String docId) => rejectItem('occasions', docId);
+  Future<void> deleteOccasion(String docId) => deleteItem('occasions', docId);
 
-  Future<void> approveOccasion(String docId) => _approve('occasions', docId);
-  Future<void> rejectOccasion(String docId) => _reject('occasions', docId);
-  Future<void> deleteOccasion(String docId) => _delete('occasions', docId);
-
-  Future<void> approveForumPost(String docId) => _approve('forum_posts', docId);
-  Future<void> rejectForumPost(String docId) => _reject('forum_posts', docId);
-  Future<void> deleteForumPost(String docId) => _delete('forum_posts', docId);
+  Future<void> approveForumPost(String docId) => approveItem('forum_posts', docId);
+  Future<void> rejectForumPost(String docId) => rejectItem('forum_posts', docId);
+  Future<void> deleteForumPost(String docId) => deleteItem('forum_posts', docId);
 
   Stream<List<Map<String, dynamic>>> getActivityLogStream({int limit = 100}) {
     return _firestore
@@ -119,6 +116,56 @@ class AdminService {
       }
     }
     return counts;
+  }
+
+  Future<int> getActiveUsersCount() async {
+    try {
+      final snapshot = await _firestore.collection('users').count().get();
+      return snapshot.count ?? 0;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getTopProducts({int limit = 5}) async {
+    try {
+      final snapshot = await _firestore
+          .collection('market_products')
+          .where('isApproved', isEqualTo: true)
+          .get();
+      final docs = snapshot.docs.map((d) => {'id': d.id, ...d.data()}).toList();
+      docs.sort((a, b) => _toMillis(b['createdAt']).compareTo(_toMillis(a['createdAt'])));
+      return docs.take(limit).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getServiceRequestsStats() async {
+    try {
+      final snapshot = await _firestore
+          .collection('service_requests')
+          .orderBy('createdAt', descending: true)
+          .limit(20)
+          .get();
+      return snapshot.docs.map((d) => {'id': d.id, ...d.data()}).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getOccasionsStats() async {
+    try {
+      final snapshot = await _firestore
+          .collection('occasions')
+          .where('isApproved', isEqualTo: true)
+          .get();
+      final docs = snapshot.docs.map((d) => {'id': d.id, ...d.data()}).toList();
+      docs.sort((a, b) => _toMillis(b['createdAt']).compareTo(_toMillis(a['createdAt'])));
+      return docs.take(10).toList();
+    } catch (_) {
+      return [];
+    }
   }
 
   Future<List<Map<String, dynamic>>> getAdmins() async {
@@ -181,6 +228,7 @@ class AdminService {
       'approvedAt': FieldValue.serverTimestamp(),
       'approvedBy': _auth.currentUser?.uid,
     });
+    _invalidateContentCache(collection);
     await _logActivity(
       action: 'approve',
       targetCollection: collection,
@@ -195,6 +243,7 @@ class AdminService {
       'rejectedAt': FieldValue.serverTimestamp(),
       'rejectedBy': _auth.currentUser?.uid,
     });
+    _invalidateContentCache(collection);
     await _logActivity(
       action: 'reject',
       targetCollection: collection,
@@ -209,6 +258,7 @@ class AdminService {
         doc.data()?['content'] as String? ??
         doc.id;
     await _firestore.collection(collection).doc(docId).delete();
+    _invalidateContentCache(collection);
     await _logActivity(
       action: 'delete',
       targetCollection: collection,
@@ -217,16 +267,14 @@ class AdminService {
     );
   }
 
-  Future<void> _approve(String collection, String docId) async {
-    await approveItem(collection, docId);
-  }
-
-  Future<void> _reject(String collection, String docId) async {
-    await rejectItem(collection, docId);
-  }
-
-  Future<void> _delete(String collection, String docId) async {
-    await deleteItem(collection, docId);
+  void _invalidateContentCache(String collection) {
+    if (collection == 'market_products') {
+      CacheService.invalidateProducts();
+    } else if (collection == 'news') {
+      CacheService.invalidateNews();
+    } else if (collection == 'forum_posts') {
+      CacheService.invalidateForumPosts();
+    }
   }
 
   Future<void> _logActivity({
@@ -244,5 +292,11 @@ class AdminService {
       if (targetTitle != null) 'targetTitle': targetTitle,
       'createdAt': FieldValue.serverTimestamp(),
     });
+  }
+
+  int _toMillis(dynamic value) {
+    if (value is Timestamp) return value.millisecondsSinceEpoch;
+    if (value is DateTime) return value.millisecondsSinceEpoch;
+    return 0;
   }
 }

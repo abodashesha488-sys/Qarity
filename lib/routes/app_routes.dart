@@ -21,9 +21,11 @@ import '../features/market/seller_detail.dart';
 import '../features/market/seller_gallery.dart';
 import '../features/market/seller_orders.dart';
 import '../features/market/seller_reviews.dart';
+import '../features/news/add.dart';
 import '../features/news/detail.dart';
 import '../features/news/list.dart';
 import '../features/news/view.dart';
+import '../features/obituaries/add.dart';
 import '../features/obituaries/detail.dart';
 import '../features/obituaries/list.dart';
 import '../features/occasions/add.dart';
@@ -51,12 +53,14 @@ class AppRoutes {
   static const String about = '/about';
   static const String obituariesList = '/obituaries';
   static const String obituariesDetail = '/obituaries/detail';
+  static const String obituariesAdd = '/obituaries/add';
   static const String occasionsList = '/occasions';
   static const String occasionsDetail = '/occasions/detail';
   static const String occasionsAdd = '/occasions/add';
   static const String newsList = '/news';
   static const String newsDetail = '/news/detail';
   static const String newsView = '/news/view';
+  static const String newsAdd = '/news/add';
   static const String admin = '/admin';
   static const String adminEdit = '/admin/edit';
   static const String adminDetail = '/admin/detail';
@@ -88,12 +92,14 @@ class AppRoutes {
     about: (_) => const VillageScreen(),
     obituariesList: (_) => const ObituariesListScreen(),
     obituariesDetail: (_) => const ObituaryDetailScreen(),
+    obituariesAdd: (_) => const AddObituaryScreen(),
     occasionsList: (_) => const OccasionsListScreen(),
     occasionsDetail: (_) => const OccasionDetailScreen(),
     occasionsAdd: (_) => const AddOccasionScreen(),
     newsList: (_) => const NewsScreen(),
     newsDetail: (_) => const NewsDetailScreen(),
     newsView: (_) => const NewsViewScreen(),
+    newsAdd: (_) => const AddNewsScreen(),
     marketProducts: (_) => const MarketProductsScreen(),
     marketAdd: (_) => const AddMarketProductScreen(),
     marketProductDetail: (_) => const ProductDetailScreen(),
