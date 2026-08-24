@@ -133,7 +133,7 @@ class AdminService {
           .collection('market_products')
           .where('isApproved', isEqualTo: true)
           .get();
-      final docs = snapshot.docs.map((d) => {'id': d.id, ...d.data()}).toList();
+      final docs = snapshot.docs.map((d) => {...d.data(), 'id': d.id}).toList();
       docs.sort((a, b) => _toMillis(b['createdAt']).compareTo(_toMillis(a['createdAt'])));
       return docs.take(limit).toList();
     } catch (_) {
@@ -148,7 +148,7 @@ class AdminService {
           .orderBy('createdAt', descending: true)
           .limit(20)
           .get();
-      return snapshot.docs.map((d) => {'id': d.id, ...d.data()}).toList();
+      return snapshot.docs.map((d) => {...d.data(), 'id': d.id}).toList();
     } catch (_) {
       return [];
     }
@@ -160,7 +160,7 @@ class AdminService {
           .collection('occasions')
           .where('isApproved', isEqualTo: true)
           .get();
-      final docs = snapshot.docs.map((d) => {'id': d.id, ...d.data()}).toList();
+      final docs = snapshot.docs.map((d) => {...d.data(), 'id': d.id}).toList();
       docs.sort((a, b) => _toMillis(b['createdAt']).compareTo(_toMillis(a['createdAt'])));
       return docs.take(10).toList();
     } catch (_) {
@@ -198,7 +198,7 @@ class AdminService {
     return _firestore
         .collection(collection)
         .snapshots()
-        .map((s) => s.docs.map((d) => {'id': d.id, ...d.data()}).toList());
+        .map((s) => s.docs.map((d) => {...d.data(), 'id': d.id}).toList());
   }
 
   Stream<List<Map<String, dynamic>>> _pendingStream(String collection) {
@@ -206,7 +206,7 @@ class AdminService {
         .collection(collection)
         .where('isApproved', isEqualTo: false)
         .snapshots()
-        .map((s) => s.docs.map((d) => {'id': d.id, ...d.data()}).toList());
+        .map((s) => s.docs.map((d) => {...d.data(), 'id': d.id}).toList());
   }
 
   Stream<List<Map<String, dynamic>>> _approvedStream(String collection) {
@@ -214,7 +214,7 @@ class AdminService {
         .collection(collection)
         .where('isApproved', isEqualTo: true)
         .snapshots()
-        .map((s) => s.docs.map((d) => {'id': d.id, ...d.data()}).toList());
+        .map((s) => s.docs.map((d) => {...d.data(), 'id': d.id}).toList());
   }
 
   Future<void> approveItem(String collection, String docId) async {
