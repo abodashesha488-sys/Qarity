@@ -5,6 +5,8 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter/foundation.dart';
 
 import 'cache_service.dart';
+import 'notification_service.dart';
+import 'remote_push_service.dart';
 
 class AdminService {
   static final AdminService _instance = AdminService._internal();
@@ -196,12 +198,14 @@ class AdminService {
       'approvedBy': _auth.currentUser?.uid,
     });
     _invalidateContentCache(collection);
+    final title = (data['title'] ?? data['name'] ?? ref.id).toString();
     await _logActivity(
       action: 'publish',
       targetCollection: collection,
       targetDocId: ref.id,
-      targetTitle: (data['title'] ?? data['name'] ?? ref.id).toString(),
+      targetTitle: title,
     );
+    _announceApproval(collection, title);
     return ref.id;
   }
 
@@ -296,6 +300,38 @@ class AdminService {
         targetTitle: title,
       );
     } catch (_) {}
+    _announceApproval(collection, title.toString());
+  }
+
+  /// إشعار عام بعد الموافقة/النشر — Push للمواضيع + محلي على جهاز الأدمن.
+  void _announceApproval(String collection, String itemTitle) {
+    final topic = kPushTopicForCollection[collection];
+    final (title, body, route) = _pushMessageFor(collection, itemTitle);
+    if (topic != null) {
+      RemotePushService.send(topic: topic, title: title, body: body, route: route);
+    }
+    NotificationService.showLocalNotification(
+      title: title,
+      body: body,
+      payload: route,
+    );
+  }
+
+  static (String title, String body, String route) _pushMessageFor(
+      String collection, String item) {
+    final preview = item.length > 60 ? '${item.substring(0, 60)}…' : item;
+    return switch (collection) {
+      'news' => ('📰 خبر جديد', preview, '/news'),
+      'obituaries' => ('⚰️ تعزية', preview, '/obituaries'),
+      'occasions' => ('🎉 مناسبة جديدة', preview, '/occasions'),
+      'market_products' => ('🛒 منتج جديد', preview, '/market'),
+      'forum_posts' => ('💬 منشور جديد', preview, '/forum'),
+      'service_requests' => ('🔔 طلب خدمة', preview, '/services'),
+      'shops' => ('🏬 محل جديد في السوق', preview, '/market'),
+      'village_clinics' || 'pharmacies' || 'medical_center_clinics' || 'blood_requests' || 'blood_donors' =>
+        ('🩺 خدمات طبية', preview, '/medical'),
+      _ => ('محتوى جديد', preview, '/'),
+    };
   }
 
   Future<void> rejectItem(String collection, String docId) async {

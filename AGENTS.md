@@ -39,12 +39,57 @@ For Google Sign-In to work on web:
   - The value in `app_config.dart` is only a **dev default**; override it for releases and rotate it in ImgBB if leaked.
 - Used by: add product, add news, medical submissions, and image deletion flows.
 
-## Firestore Securityrver-side only)
+## Push Notifications (Vercel worker — no Blaze plan required)
+Because Firebase Cloud Functions require the Blaze plan and this project is on Spark,
+push notifications go through a Vercel Serverless function instead.
+
+- Worker code: `api/push.js` (Node 18+, uses `firebase-admin`).
+- Vercel config: `vercel.json` and root `package.json` (dep on `firebase-admin`).
+- Client service: `lib/services/remote_push_service.dart` — fired on approve/publish
+  in `AdminService.approveItem` and `AdminService.publishContent`.
+
+### One-time setup
+1. Create a **Service Account** key: Firebase Console → Project Settings → Service
+   accounts → *Generate new private key*. Keep the JSON safe.
+2. Push to GitHub, then in Vercel:
+   - Import this repository.
+   - Environment Variables:
+     - `FIREBASE_SERVICE_ACCOUNT` — paste the JSON (or base64 of it).
+     - `PUSH_SHARED_SECRET` — any long random string (e.g. `openssl rand -hex 32`).
+   - Deploy → note the resulting URL (e.g. `https://qarity-push.vercel.app`).
+3. Add the URL to Firebase Hosting's authorized domains if FCM web push is ever
+   needed. Android/iOS app delivery works without this step.
+
+### Build the Flutter app with push enabled
+```
+flutter build web \
+  --dart-define=PUSH_ENDPOINT=https://<your-vercel-project>.vercel.app/api/push \
+  --dart-define=PUSH_SHARED_SECRET=<same-secret>
+```
+If `PUSH_ENDPOINT` or `PUSH_SHARED_SECRET` are unset, `RemotePushService` silently
+skips the call and the app keeps working (just without cross-device push).
+
+### Topics subscribed by every user on profile completion
+`village_news`, `village_obituaries`, `village_occasions`, `village_market`,
+`village_forum`, `village_services`, `village_medical`.
+Add more by extending `kPushTopicForCollection` in `remote_push_service.dart` and
+subscribing from `complete_profile.dart`.
+
+### Legacy `functions/` folder
+The original Cloud Functions code is still present at `functions/index.js`. It is
+**not** deployed. Keep it as a reference — it will work identically if you upgrade
+to Blaze and run `firebase deploy --only functions`.
+
+## Firestore Security (server-side only)
 - File: `firestore.rules`
 - Deployed to project `abudshisha`
 - Admin write/delete access via `users/{uid}.role == 'admin'`
-- Public read for content collections: `news`, `market_products`, `obituaries`, `occasions`, `forum_posts`
-- Authenticated create access for content collections
+- Medical content review access via `users/{uid}.role in ['admin','medical_admin']`
+- Public read for content collections: `news`, `market_products`, `obituaries`,
+  `occasions`, `forum_posts`, `village_clinics`, `pharmacies`, `blood_requests`,
+  `blood_donors`, `medical_center_clinics`, `shops`, `buy_requests`, `donations`,
+  `price_history`, `phone_directory`, `emergency_contacts`, `village_info`
+- Authenticated create access for content collections (starts `isApproved: false`)
 - ** Important:** Firestore rules are versioned in `firestore.rules` and published via `firebase.json`
 
 ## Project Structure
@@ -137,6 +182,8 @@ lib/
 - Split monolithic files via Dart `part`: `data_models.dart` → content/community parts, `admin_dashboard.dart` → models/overview/review/users/reports parts, `market_tabs_screen.dart` → market/shops/buy-donate parts.
 - Services made test-friendly with optional `FirebaseFirestore` injection: `MedicalCenterService`, `VillageClinicService`, `PharmacyService`, `BloodBankService`, `ShopService`, `DonationService`, `BuyRequestService`, `PhoneDirectoryService`.
 - Added 21 service tests (`test/services/medical_service_test.dart`, `phone_and_shop_test.dart`). Suite now 50/50.
+- Push notifications: implemented via Vercel serverless (`api/push.js`) + `RemotePushService` since Firebase
+  Cloud Functions require a Blaze plan. Admin `approveItem` / `publishContent` now fan out to FCM topics.
 - Admin approve/reject/delete/edit buttons now working with proper loading states
 - Added AdminDetailScreen to view full request content before approval
 - Added AdminEditScreen for inline editing of approved/pending content

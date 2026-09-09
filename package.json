@@ -1,0 +1,13 @@
+{
+  "name": "qarity-push-worker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Vercel Serverless endpoint for pushing FCM notifications to village topics. Alternative to Firebase Cloud Functions when the project is on Spark (free) plan.",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.7.0"
+  }
+}

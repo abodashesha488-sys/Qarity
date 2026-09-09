@@ -1,0 +1,11 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/push.js": {
+      "memory": 128,
+      "maxDuration": 10
+    }
+  },
+  "rewrites": [],
+  "cleanUrls": true
+}
