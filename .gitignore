@@ -59,3 +59,10 @@ TESTING_NEWS.md
 *.docx
 android/build/reports/
 
+
+# Firebase service account keys (NEVER commit)
+*firebase-adminsdk*.json
+serviceAccount*.json
+
+# Android build caches
+android/.kotlin/
