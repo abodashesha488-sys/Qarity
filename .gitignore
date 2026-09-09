@@ -66,3 +66,6 @@ serviceAccount*.json
 
 # Android build caches
 android/.kotlin/
+
+# Firebase local cache
+.firebase/*.cache
