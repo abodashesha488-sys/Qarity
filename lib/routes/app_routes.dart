@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter/material.dart';
 
+import '../core/constants/app_config.dart';
 import '../features/admin/admin_dashboard.dart';
 import '../features/admin/admin_detail.dart';
 import '../features/admin/admin_edit.dart';
@@ -14,15 +15,15 @@ import '../features/home/about_app.dart';
 import '../features/home/home.dart';
 import '../features/home/splash.dart';
 import '../features/market/add_product.dart';
-import '../features/market/cart_screen.dart';
+import '../features/market/market_tabs_screen.dart';
 import '../features/market/product_detail.dart';
-import '../features/market/products.dart';
 import '../features/market/seller_detail.dart';
 import '../features/market/seller_gallery.dart';
-import '../features/market/seller_orders.dart';
+import '../features/market/seller_profile.dart';
 import '../features/market/seller_reviews.dart';
+import '../features/market/sellers_list.dart';
+import '../features/medical/medical_home_screen.dart';
 import '../features/news/add.dart';
-import '../features/news/detail.dart';
 import '../features/news/list.dart';
 import '../features/news/view.dart';
 import '../features/obituaries/add.dart';
@@ -31,6 +32,7 @@ import '../features/obituaries/list.dart';
 import '../features/occasions/add.dart';
 import '../features/occasions/detail.dart';
 import '../features/occasions/list.dart';
+import '../features/phone/add_directory.dart';
 import '../features/phone/directory.dart';
 import '../features/profile/main.dart';
 import '../features/services/detail.dart';
@@ -58,31 +60,33 @@ class AppRoutes {
   static const String occasionsDetail = '/occasions/detail';
   static const String occasionsAdd = '/occasions/add';
   static const String newsList = '/news';
-  static const String newsDetail = '/news/detail';
   static const String newsView = '/news/view';
   static const String newsAdd = '/news/add';
   static const String admin = '/admin';
   static const String adminEdit = '/admin/edit';
   static const String adminDetail = '/admin/detail';
-  static const String marketProducts = '/market';
+static const String marketProducts = '/market';
   static const String marketAdd = '/market/add';
   static const String marketProductDetail = '/market/product';
   static const String marketSellerDetail = '/market/seller';
-  static const String serviceRequest = '/service-request';
-  static const String serviceDetail = '/service/detail';
+  static const String marketSellerProfile = '/market/seller/profile';
+  static const String marketSellers = '/market/sellers';
   static const String marketSellerGallery = '/market/seller/gallery';
   static const String marketSellerReviews = '/market/seller/reviews';
-  static const String marketSellerOrders = '/market/seller/orders';
-  static const String marketCart = '/market/cart';
+  static const String marketTabs = '/market/tabs';
   static const String forumPosts = '/forum';
   static const String forumCreatePost = '/forum/create';
   static const String forumPostDetail = '/forum/detail';
   static const String emergencyContacts = '/emergency';
   static const String phoneDirectory = '/phone-directory';
+  static const String phoneDirectoryAdd = '/phone-directory-add';
   static const String profileMain = '/profile';
   static const String completeProfile = '/complete-profile';
   static const String settingsIndex = '/settings';
   static const String notificationsSettings = '/settings/notifications';
+  static const String serviceRequest = '/services';
+  static const String serviceDetail = '/services/detail';
+  static const String medical = '/medical';
 
   static final routes = <String, Widget Function(BuildContext)>{
     splash: (_) => const SplashScreen(),
@@ -97,27 +101,29 @@ class AppRoutes {
     occasionsDetail: (_) => const OccasionDetailScreen(),
     occasionsAdd: (_) => const AddOccasionScreen(),
     newsList: (_) => const NewsScreen(),
-    newsDetail: (_) => const NewsDetailScreen(),
     newsView: (_) => const NewsViewScreen(),
     newsAdd: (_) => const AddNewsScreen(),
-    marketProducts: (_) => const MarketProductsScreen(),
+    marketProducts: (_) => const MarketTabsScreen(),
     marketAdd: (_) => const AddMarketProductScreen(),
     marketProductDetail: (_) => const ProductDetailScreen(),
     marketSellerDetail: (_) => const SellerDetailScreen(),
+    marketSellerProfile: (_) => const SellerProfileScreen(sellerId: ''),
+    marketSellers: (_) => const MarketSellersScreen(),
     marketSellerGallery: (_) => const SellerGalleryScreen(),
     marketSellerReviews: (_) => const SellerReviewsScreen(),
-    marketSellerOrders: (_) => const SellerOrdersScreen(),
-    marketCart: (_) => const CartScreen(),
-    serviceRequest: (_) => const ServicesScreen(),
-    serviceDetail: (_) => const ServiceDetailScreen(),
+    marketTabs: (_) => const MarketTabsScreen(),
     forumPosts: (_) => const ForumPostsScreen(),
     forumCreatePost: (_) => const CreatePostScreen(),
     forumPostDetail: (_) => const ForumPostDetailScreen(),
     emergencyContacts: (_) => const EmergencyContactsScreen(),
     phoneDirectory: (_) => const PhoneDirectoryScreen(),
+    phoneDirectoryAdd: (_) => const AddPhoneDirectoryScreen(),
     profileMain: (_) => const ProfileScreen(),
     settingsIndex: (_) => const SettingsScreen(),
     notificationsSettings: (_) => const NotificationsSettingsScreen(),
+    serviceRequest: (_) => const ServicesScreen(),
+    serviceDetail: (_) => const ServiceDetailScreen(),
+    medical: (_) => const MedicalHomeScreen(),
   };
 
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
@@ -151,6 +157,13 @@ class AppRoutes {
       final userId = settings.arguments as String? ?? '';
       return _buildSlideRoute(
         (_) => CompleteProfileScreen(userId: userId),
+        settings,
+      );
+    }
+    if (settings.name == marketSellerProfile) {
+      final sellerId = settings.arguments as String? ?? '';
+      return _buildSlideRoute(
+        (_) => SellerProfileScreen(sellerId: sellerId),
         settings,
       );
     }
@@ -231,8 +244,12 @@ class AdminScreenWrapper extends StatelessWidget {
               );
             }
 
-            final isAdminByEmail = user.email != null &&
-                user.email!.toLowerCase().trim() == 'eleraki2040@gmail.com';
+            // بريد المالك للاختصار عبر dart-define (اختياري). بدون ضبطه،
+            // الوصول للأدمن يتطلب users/{uid}.role == 'admin' في Firestore.
+            final bootstrapEmail = AppConfig.bootstrapAdminEmail.trim().toLowerCase();
+            final isAdminByEmail = bootstrapEmail.isNotEmpty &&
+                user.email != null &&
+                user.email!.toLowerCase().trim() == bootstrapEmail;
 
             final isAdminByRole = adminSnapshot.data == true;
 

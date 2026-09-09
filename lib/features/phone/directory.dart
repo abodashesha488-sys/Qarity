@@ -1,7 +1,10 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/data_models.dart';
+import '../../routes/app_routes.dart';
+import '../../services/admin_service.dart';
 import '../../services/phone_directory_service.dart';
 import '../../widgets/common_appbar_actions.dart';
 
@@ -14,21 +17,48 @@ class PhoneDirectoryScreen extends StatefulWidget {
 
 class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
   final PhoneDirectoryService _service = PhoneDirectoryService();
+  final AdminService _adminService = AdminService();
   final TextEditingController _searchController = TextEditingController();
   List<PhoneDirectoryEntry> _entries = [];
   List<PhoneDirectoryEntry> _filteredEntries = [];
   bool _isLoading = true;
+  bool _isAdmin = false;
+  int _pendingCount = 0;
 
   @override
   void initState() {
     super.initState();
     _loadEntries();
+    _checkAdminStatus();
     _searchController.addListener(_filterEntries);
+  }
+
+  Future<void> _checkAdminStatus() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final isAdmin = await _adminService.isAdminUser(user.uid);
+      if (!mounted) return;
+      setState(() => _isAdmin = isAdmin);
+      if (isAdmin) {
+        _loadPendingCount();
+      }
+    }
+  }
+
+  Future<void> _loadPendingCount() async {
+    try {
+      final count = await _adminService.getPendingCountFuture('phone_directory');
+      if (!mounted) return;
+      setState(() => _pendingCount = count);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _pendingCount = 0);
+    }
   }
 
   Future<void> _loadEntries() async {
     try {
-      final entries = await _service.getEntriesList();
+      final entries = await _service.getApprovedEntriesList();
       if (!mounted) return;
       setState(() {
         _entries = entries;
@@ -76,7 +106,18 @@ class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
         elevation: 0,
         shadowColor: Colors.transparent,
         surfaceTintColor: theme.colorScheme.surface,
-        actions: CommonAppBarActions.actions(context),
+        actions: _isAdmin
+            ? [
+                IconButton(
+                  icon: Icon(_pendingCount > 0 ? Icons.pending_rounded : Icons.check_rounded,
+                      color: _pendingCount > 0 ? Colors.orange : Colors.green),
+                  tooltip: 'طلباتpending',
+                  onPressed: _pendingCount > 0
+                      ? () => _showPendingBottomSheet()
+                      : null,
+                ),
+              ]
+            : CommonAppBarActions.actions(context),
       ),
       body: RefreshIndicator(
         onRefresh: _refresh,
@@ -114,7 +155,9 @@ class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
                     fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
                     enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.4), width: 1.5)),
+                    focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.4), width: 1.5)),
                   ),
                 ),
               ),
@@ -134,27 +177,42 @@ class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
           ],
         ),
       ),
+floatingActionButton: FloatingActionButton.extended(
+                onPressed: () => _navigateToAddScreen(),
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('إضافة جهة اتصال'),
+                tooltip: 'إضافة جهة اتصال جديدة',
+                backgroundColor: theme.colorScheme.primary,
+              ),
     );
   }
 
   Widget _buildEmptyState(ThemeData theme) {
     return Center(
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.phone_rounded, size: 64, color: Colors.grey[400]),
           const SizedBox(height: 16),
           Text('لا توجد جهات اتصال', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 6),
+          Text('يمكنك إضافتها من القائمة العلوية', style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey)),
         ],
       ),
     );
   }
 
   Widget _buildContactCard(ThemeData theme, PhoneDirectoryEntry entry) {
+    final isApproved = entry.isApproved;
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
+        side: BorderSide(
+          color: isApproved
+              ? theme.colorScheme.outlineVariant.withValues(alpha: 0.4)
+              : theme.colorScheme.error.withValues(alpha: 0.3),
+        ),
       ),
       child: Theme(
         data: theme.copyWith(dividerColor: Colors.transparent),
@@ -167,7 +225,24 @@ class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
             ),
           ),
           title: Text(entry.name, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
-          subtitle: Text(entry.title, style: theme.textTheme.bodySmall),
+          subtitle: isApproved
+              ? null
+              : Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.pending_rounded, size: 14, color: Colors.orange),
+                      const SizedBox(width: 4),
+                      Text(
+                        'قيد المراجعة',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: Colors.orange,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -176,6 +251,39 @@ class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
                 icon: const Icon(Icons.call_rounded, size: 18),
                 style: IconButton.styleFrom(backgroundColor: Colors.green.withValues(alpha: 0.15)),
               ),
+              if (_isAdmin && !isApproved)
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert_rounded, size: 18),
+                  onSelected: (String value) {
+                    if (value == 'approve') {
+                      _approveEntry(entry);
+                    } else if (value == 'reject') {
+                      _rejectEntry(entry);
+                    }
+                  },
+                  itemBuilder: (BuildContext context) => <PopupMenuItem<String>>[
+                    const PopupMenuItem<String>(
+                      value: 'approve',
+                      child: Row(
+                        children: [
+                          Icon(Icons.check_circle_rounded, color: Colors.green),
+                          SizedBox(width: 8),
+                          Text('موافقة'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem<String>(
+                      value: 'reject',
+                      child: Row(
+                        children: [
+                          Icon(Icons.cancel_rounded, color: Colors.orange),
+                          SizedBox(width: 8),
+                          Text('رفض'),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
             ],
           ),
           children: [
@@ -218,5 +326,272 @@ class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
     }
+  }
+
+  Future<void> _approveEntry(PhoneDirectoryEntry entry) async {
+    if (!mounted) return;
+    setState(() {});
+    try {
+      await _adminService.approveItem('phone_directory', entry.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تم قبول الدخول في الدليل'), backgroundColor: Colors.green),
+      );
+      _loadEntries();
+      _loadPendingCount();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('خطأ: $e'), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  Future<void> _rejectEntry(PhoneDirectoryEntry entry) async {
+    if (!mounted) return;
+    setState(() {});
+    try {
+      await _adminService.rejectItem('phone_directory', entry.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تم رفض الدخول'), backgroundColor: Colors.red),
+      );
+      _loadEntries();
+      _loadPendingCount();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('خطأ: $e'), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  void _navigateToAddScreen() {
+    Navigator.pushNamed(context, AppRoutes.phoneDirectoryAdd).then((_) {
+      _refresh();
+    });
+  }
+
+  void _showPendingBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      builder: (_) => _PendingEntriesBottomSheet(
+        onApprove: _approveEntry,
+        onReject: _rejectEntry,
+        pendingCount: _pendingCount,
+      ),
+    );
+  }
+}
+
+class _PendingEntriesBottomSheet extends StatefulWidget {
+  final Function(PhoneDirectoryEntry) onApprove;
+  final Function(PhoneDirectoryEntry) onReject;
+  final int pendingCount;
+  const _PendingEntriesBottomSheet({
+    required this.onApprove,
+    required this.onReject,
+    required this.pendingCount,
+  });
+
+  @override
+  State<_PendingEntriesBottomSheet> createState() => _PendingEntriesBottomSheetState();
+}
+
+class _PendingEntriesBottomSheetState extends State<_PendingEntriesBottomSheet> {
+  final _searchController = TextEditingController();
+  List<PhoneDirectoryEntry> _pendingEntries = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPendingEntries();
+    _searchController.addListener(_filterPending);
+  }
+
+  Future<void> _loadPendingEntries() async {
+    final service = PhoneDirectoryService();
+    try {
+      final snapshot = await service.getEntriesList();
+      setState(() {
+        _pendingEntries = snapshot.where((e) => e.isApproved == false).toList();
+        _isLoading = false;
+      });
+    } catch (_) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  void _filterPending() {
+    final query = _searchController.text.trim().toLowerCase();
+    setState(() {
+      _pendingEntries = query.isEmpty
+          ? _pendingEntries
+          : _pendingEntries.where((e) {
+              return e.name.toLowerCase().contains(query) ||
+                  e.phone.contains(query);
+            }).toList();
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_filterPending);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('طلباتpending (${widget.pendingCount})', style: theme.textTheme.titleMedium),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _searchController,
+            decoration: const InputDecoration(
+              hintText: 'ابحث بالاسم أو الرقم...',
+              prefixIcon: Icon(Icons.search_rounded),
+              border: OutlineInputBorder(),
+            ),
+            onChanged: (_) => _filterPending(),
+          ),
+          const SizedBox(height: 16),
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _pendingEntries.isEmpty
+                  ? const Center(child: Text('لا توجد طلبات pending'))
+                  : Expanded(
+                      child: ListView.separated(
+                        itemCount: _pendingEntries.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 10),
+                        itemBuilder: (context, index) => _PendingEntryCard(
+                          entry: _pendingEntries[index],
+                          onApprove: widget.onApprove,
+                          onReject: widget.onReject,
+                        ),
+                      ),
+                    ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PendingEntryCard extends StatefulWidget {
+  final PhoneDirectoryEntry entry;
+  final Function(PhoneDirectoryEntry) onApprove;
+  final Function(PhoneDirectoryEntry) onReject;
+
+  const _PendingEntryCard({
+    required this.entry,
+    required this.onApprove,
+    required this.onReject,
+  });
+
+  @override
+  State<_PendingEntryCard> createState() => _PendingEntryCardState();
+}
+
+class _PendingEntryCardState extends State<_PendingEntryCard> {
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: theme.colorScheme.error.withValues(alpha: 0.3)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
+                  child: Text(
+                    widget.entry.name.isNotEmpty ? widget.entry.name[0] : '',
+                    style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.w800),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(widget.entry.name, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
+                      Text(widget.entry.phone, style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey)),
+                    ],
+                  ),
+                ),
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert_rounded, size: 18),
+                  onSelected: (String value) {
+                    if (value == 'approve') {
+                      widget.onApprove(widget.entry);
+                    } else if (value == 'reject') {
+                      widget.onReject(widget.entry);
+                    }
+                  },
+                  itemBuilder: (BuildContext context) => <PopupMenuItem<String>>[
+                    const PopupMenuItem<String>(
+                      value: 'approve',
+                      child: Row(
+                        children: [
+                          Icon(Icons.check_circle_rounded, color: Colors.green),
+                          SizedBox(width: 8),
+                          Text('موافقة'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem<String>(
+                      value: 'reject',
+                      child: Row(
+                        children: [
+                          Icon(Icons.cancel_rounded, color: Colors.orange),
+                          SizedBox(width: 8),
+                          Text('رفض'),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const Divider(height: 24),
+            _buildInfoRow(theme, 'الهاتف:', widget.entry.phone),
+            if (widget.entry.secondaryPhone != null && widget.entry.secondaryPhone!.isNotEmpty)
+              _buildInfoRow(theme, 'هاتف إضافي:', widget.entry.secondaryPhone!),
+            if (widget.entry.job != null && widget.entry.job!.isNotEmpty)
+              _buildInfoRow(theme, 'الوظيفة:', widget.entry.job!),
+            if (widget.entry.address != null && widget.entry.address!.isNotEmpty)
+              _buildInfoRow(theme, 'العنوان:', widget.entry.address!),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(ThemeData theme, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Text(label, style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700)),
+          const SizedBox(width: 8),
+          Expanded(child: Text(value, style: theme.textTheme.bodySmall)),
+        ],
+      ),
+    );
   }
 }

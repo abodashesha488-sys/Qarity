@@ -28,6 +28,7 @@ class _ForumPostDetailScreenState extends State<ForumPostDetailScreen> {
   String _currentUserId = '';
   String _currentUserName = '';
   bool _isSendingComment = false;
+  bool _viewCounted = false;
 
   @override
   void initState() {
@@ -40,6 +41,10 @@ class _ForumPostDetailScreenState extends State<ForumPostDetailScreen> {
     super.didChangeDependencies();
     final args = ModalRoute.of(context)?.settings.arguments;
     if (args is ForumPost) _post = args;
+    if (!_viewCounted && _post != null && _post!.id.isNotEmpty) {
+      _viewCounted = true;
+      _forumService.incrementViews(_post!.id);
+    }
   }
 
   @override
@@ -110,7 +115,13 @@ class _ForumPostDetailScreenState extends State<ForumPostDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(passedPost?.userName.isNotEmpty == true ? passedPost!.userName : 'الموضوع'),
+        title: Text(
+          (passedPost != null && passedPost.title.isNotEmpty)
+              ? passedPost.title
+              : (passedPost?.userName.isNotEmpty == true ? passedPost!.userName : 'الموضوع'),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
         centerTitle: true,
         elevation: 0,
         shadowColor: Colors.transparent,
@@ -217,6 +228,30 @@ class _ForumPostDetailScreenState extends State<ForumPostDetailScreen> {
               ],
             ),
             const SizedBox(height: 16),
+            if (post.category.isNotEmpty && post.category != 'عام')
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.secondary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(post.category,
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: theme.colorScheme.secondary)),
+                ),
+              ),
+            if (post.title.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Text(
+                  post.title,
+                  style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900, height: 1.3),
+                ),
+              ),
             Text(
               post.content,
               style: theme.textTheme.bodyLarge?.copyWith(height: 1.8, color: theme.colorScheme.onSurface),

@@ -1,0 +1,230 @@
+﻿part of 'market_tabs_screen.dart';
+
+// ═══════════════════ Tab 1: السوق ═══════════════════
+class _MarketTab extends StatefulWidget {
+  const _MarketTab();
+
+  @override
+  State<_MarketTab> createState() => _MarketTabState();
+}
+
+class _MarketTabState extends State<_MarketTab> {
+  final MarketService _service = MarketService();
+  final TextEditingController _search = TextEditingController();
+  String _cat = 'الكل';
+
+  static const _cats = [
+    'الكل',
+    'مواد غذائية',
+    'خضار وفواكه',
+    'إلكترونيات وهواتف',
+    'ملابس وأحذية',
+    'أثاث ومفروشات',
+    'سوق المستعمل'
+  ];
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return OfflineStreamBuilder<List<MarketProduct>>(
+      stream: _service.getProductsStream(),
+      onlineBuilder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        var products = (snapshot.data ?? []).where((p) => p.isInStock).toList();
+        final q = _search.text.trim().toLowerCase();
+        if (q.isNotEmpty) {
+          products = products
+              .where((p) =>
+                  p.name.toLowerCase().contains(q) ||
+                  p.description.toLowerCase().contains(q))
+              .toList();
+        }
+        if (_cat != 'الكل') {
+          products = products.where((p) => p.category == _cat).toList();
+        }
+        return _buildMarketContent(theme, products);
+      },
+      cacheBuilder: (context) => FutureBuilder(
+        future: CacheService.getProducts(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+          var products = (snapshot.data ?? []).map((j) => MarketProduct.fromJson(j, 'cache')).where((p) => p.isInStock).toList();
+          final q = _search.text.trim().toLowerCase();
+          if (q.isNotEmpty) {
+            products = products.where((p) => p.name.toLowerCase().contains(q) || p.description.toLowerCase().contains(q)).toList();
+          }
+          if (_cat != 'الكل') {
+            products = products.where((p) => p.category == _cat).toList();
+          }
+          return _buildMarketContent(theme, products);
+        },
+      ),
+    );
+  }
+
+  Widget _buildMarketContent(ThemeData theme, List<MarketProduct> products) {
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: TextField(
+              controller: _search,
+              onChanged: (_) => setState(() {}),
+              decoration: InputDecoration(
+                hintText: 'ابحث في السوق...',
+                prefixIcon: Icon(Icons.search_rounded,
+                    color: theme.colorScheme.primary),
+                filled: true,
+                fillColor: theme.colorScheme.surfaceContainerHighest
+                    .withValues(alpha: 0.5),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide.none),
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+          ),
+        ),
+        SliverToBoxAdapter(
+          child: SizedBox(
+            height: 44,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: _cats.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (context, i) => ChoiceChip(
+                label: Text(_cats[i]),
+                selected: _cats[i] == _cat,
+                onSelected: (_) => setState(() => _cat = _cats[i]),
+                selectedColor: theme.colorScheme.primary,
+                labelStyle: TextStyle(
+                    color: _cats[i] == _cat
+                        ? Colors.white
+                        : theme.colorScheme.onSurface,
+                    fontWeight: FontWeight.w700),
+              ),
+            ),
+          ),
+        ),
+        if (products.isEmpty)
+          const SliverFillRemaining(
+            hasScrollBody: false,
+            child: _TabEmpty(
+                icon: Icons.store_rounded,
+                message: 'لا توجد منتجات حالياً'),
+          )
+        else
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+            sliver: SliverGrid(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                mainAxisSpacing: 14,
+                crossAxisSpacing: 14,
+                childAspectRatio: 0.62,
+              ),
+              delegate: SliverChildBuilderDelegate(
+                (context, i) => _MiniProductCard(product: products[i]),
+                childCount: products.length,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _MiniProductCard extends StatelessWidget {
+  const _MiniProductCard({required this.product});
+  final MarketProduct product;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final price = product.effectivePrice;
+    return Card(
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => Navigator.pushNamed(context, AppRoutes.marketProductDetail,
+            arguments: product),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  _net(
+                      product.imageUrls.isNotEmpty
+                          ? product.imageUrls.first
+                          : product.imageUrl,
+                      theme),
+                  if (product.isOnOffer)
+                    Positioned(
+                      top: 6,
+                      right: 6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(
+                            color: theme.colorScheme.error,
+                            borderRadius: BorderRadius.circular(8)),
+                        child: Text('-${product.discountPercent.round()}%',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800)),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(9),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(product.category,
+                      style: TextStyle(
+                          fontSize: 9,
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 2),
+                  Text(product.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w800, fontSize: 12)),
+                  const SizedBox(height: 3),
+                  Text('${price.toStringAsFixed(0)} ج.م',
+                      style: TextStyle(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 13)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    ).animate(delay: (product.hashCode % 20 * 15).ms).fadeIn(duration: 300.ms);
+  }
+}
+

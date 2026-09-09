@@ -14,7 +14,7 @@ import 'package:qurity/routes/app_routes.dart';
 ///
 /// It initializes Firebase from the platform options and boots the real
 /// app, then verifies the first screen renders without a fatal error.
-/// This exercises the full boot path (Firebase, ThemeService, Cart,
+/// This exercises the full boot path (Firebase, ThemeService,
 /// NotificationService) and catches per-screen build/runtime crashes
 /// that unit tests cannot.
 void main() {
@@ -89,7 +89,7 @@ void main() {
       id: 'o1',
       name: 'محمد',
       age: '70',
-      date: '2020',
+      dateOfDeath: '2020',
       description: 'وصف',
     );
     final occasion = Occasion(
@@ -106,7 +106,6 @@ void main() {
     final entries = <_Entry>[
       _Entry(AppRoutes.newsList),
       _Entry(AppRoutes.newsView, newsItem),
-      _Entry(AppRoutes.newsDetail),
       _Entry(AppRoutes.newsAdd),
       _Entry(AppRoutes.forumPosts),
       _Entry(AppRoutes.forumPostDetail, forumPost),
@@ -123,8 +122,6 @@ void main() {
       _Entry(AppRoutes.marketSellerDetail, <String, String>{'name': 'بائع', 'phone': '123', 'sellerId': ''}),
       _Entry(AppRoutes.marketSellerReviews, <String, String>{'name': 'بائع', 'phone': '123'}),
       _Entry(AppRoutes.marketSellerGallery, <String, String>{'name': 'بائع', 'sellerId': ''}),
-      _Entry(AppRoutes.marketSellerOrders),
-      _Entry(AppRoutes.marketCart),
       _Entry(AppRoutes.serviceRequest),
       _Entry(AppRoutes.serviceDetail, serviceRequest),
       _Entry(AppRoutes.emergencyContacts),

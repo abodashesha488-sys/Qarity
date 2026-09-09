@@ -8,9 +8,11 @@ import '../../core/utils/helpers.dart';
 import '../../core/widgets/shared_cards.dart';
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
+import '../../services/cache_service.dart';
 import '../../services/forum_service.dart';
 import '../../services/user_service.dart';
 import '../../widgets/common_appbar_actions.dart';
+import '../../widgets/offline_stream_builder.dart';
 
 class ForumPostsScreen extends StatefulWidget {
   const ForumPostsScreen({super.key});
@@ -25,6 +27,7 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
   final TextEditingController _searchController = TextEditingController();
 
   String _selectedFilter = _latestFilter;
+  String _topic = 'الكل';
   String _searchQuery = '';
   String _currentUserId = '';
   String _currentUserName = '';
@@ -34,6 +37,16 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
   static const String _allFilter = 'الكل';
   static const String _topFilter = 'الأكثر إعجاباً';
   static const List<String> _filters = [_latestFilter, _allFilter, _topFilter];
+
+  static const List<String> _topics = [
+    'الكل',
+    'عام',
+    'نقاشات',
+    'إعلانات القرية',
+    'استشارات',
+    'شكاوى ومقترحات',
+    'طلبات وتواصل',
+  ];
 
   @override
   bool get wantKeepAlive => true;
@@ -93,7 +106,10 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
   }
 
   List<ForumPost> _applyFilters(List<ForumPost> source) {
-    final posts = List<ForumPost>.of(source);
+    var posts = List<ForumPost>.of(source);
+    if (_topic != 'الكل') {
+      posts = posts.where((p) => (p.category.isEmpty ? 'عام' : p.category) == _topic).toList();
+    }
     if (_selectedFilter == _latestFilter) {
       posts.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     } else if (_selectedFilter == _topFilter) {
@@ -103,6 +119,7 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
     return posts
         .where((p) =>
             p.userName.toLowerCase().contains(_searchQuery) ||
+            p.title.toLowerCase().contains(_searchQuery) ||
             p.content.toLowerCase().contains(_searchQuery))
         .toList();
   }
@@ -206,6 +223,32 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
               },
             ),
           ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 36,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _topics.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                final topic = _topics[index];
+                final selected = topic == _topic;
+                return ChoiceChip(
+                  label: Text(topic),
+                  selected: selected,
+                  showCheckmark: false,
+                  onSelected: (_) => setState(() => _topic = topic),
+                  selectedColor: theme.colorScheme.secondary,
+                  backgroundColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                  labelStyle: theme.textTheme.labelMedium?.copyWith(
+                    color: selected ? Colors.white : theme.colorScheme.onSurface,
+                    fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                );
+              },
+            ),
+          ),
         ],
       ),
     );
@@ -216,9 +259,9 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
       return const Center(child: CircularProgressIndicator(strokeWidth: 2));
     }
 
-    return StreamBuilder<List<ForumPost>>(
+    return OfflineStreamBuilder<List<ForumPost>>(
       stream: _forumService.getPostsStream(),
-      builder: (context, snapshot) {
+      onlineBuilder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
           return const Center(child: CircularProgressIndicator(strokeWidth: 2));
         }
@@ -255,6 +298,45 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
           itemBuilder: (context, index) => _buildPostCard(theme, posts[index], index),
         );
       },
+      cacheBuilder: (context) => FutureBuilder(
+        future: CacheService.getForumPosts(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+          final all = (snapshot.data ?? []).map((j) => ForumPost.fromJson(j, 'cache')).toList();
+          final posts = _applyFilters(all);
+           return Scaffold(
+             body: ColoredBox(
+               color: theme.colorScheme.surface,
+               child: Column(
+                children: [
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                    color: theme.colorScheme.errorContainer.withValues(alpha: 0.3),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.wifi_off, size: 16, color: Colors.grey),
+                        SizedBox(width: 8),
+                        Text('وضع غير متصل', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                  Expanded(child: posts.isEmpty
+                    ? _buildStateScroller(const EmptyContentState(icon: Icons.forum_rounded, message: 'لا توجد مواضيع بعد'))
+                    : ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        itemCount: posts.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 10),
+                        itemBuilder: (context, index) => _buildPostCard(theme, posts[index], index),
+                      )),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -317,7 +399,35 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
                     Icon(Icons.push_pin_rounded, size: 18, color: theme.colorScheme.primary),
                 ],
               ),
-              const SizedBox(height: 12),
+              if (post.isPinned)
+                const SizedBox(height: 8),
+              if (post.category.isNotEmpty && post.category != 'عام')
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.secondary.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(post.category,
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: theme.colorScheme.secondary)),
+                  ),
+                ),
+              if (post.title.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Text(
+                    post.title,
+                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              const SizedBox(height: 4),
               Text(
                 post.content,
                 style: theme.textTheme.bodyMedium?.copyWith(height: 1.6, color: theme.colorScheme.onSurface),

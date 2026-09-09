@@ -1,4 +1,4 @@
-# Miscellaneous
+﻿# Miscellaneous
 *.class
 *.log
 *.pyc
@@ -46,3 +46,16 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# AI agent working directories (do not commit)
+.kilo/
+nul
+analyze.cmd
+devtools_options.yaml
+TESTING_NEWS.md
+
+
+# Local docs and build reports
+*.docx
+android/build/reports/
+

@@ -98,6 +98,17 @@ class NewsService {
     return null;
   }
 
+  /// يزيد عدّاد المشاهدات لخبر عند فتحه.
+  Future<void> incrementViews(String newsId) async {
+    if (newsId.isEmpty) return;
+    try {
+      await _firestore.collection('news').doc(newsId)
+          .update({'views': FieldValue.increment(1)});
+    } catch (_) {
+      // لا نكسر تجربة القراءة إذا فشل العدّاد (مثلاً بلا اتصال)
+    }
+  }
+
   Future<void> addNews(NewsItem news) async {
     await _firestore.collection('news').add({
       ...news.toJson(),

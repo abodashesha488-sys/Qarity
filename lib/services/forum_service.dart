@@ -20,6 +20,17 @@ class ForumService {
         );
   }
 
+  /// يزيد عدّاد المشاهدات لمنشور عند فتحه.
+  Future<void> incrementViews(String postId) async {
+    if (postId.isEmpty) return;
+    try {
+      await _firestore.collection('forum_posts').doc(postId)
+          .update({'views': FieldValue.increment(1)});
+    } catch (_) {
+      // لا نكسر التجربة إذا فشل العدّاد
+    }
+  }
+
   Future<void> addPost(ForumPost post) async {
     await _firestore.collection('forum_posts').add({
       ...post.toJson(),

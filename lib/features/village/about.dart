@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../models/data_models.dart';
+import '../../services/cache_service.dart';
 import '../../services/village_info_service.dart';
 import '../../widgets/common_appbar_actions.dart';
+import '../../widgets/offline_stream_builder.dart';
 
 class VillageScreen extends StatefulWidget {
   const VillageScreen({super.key});
@@ -52,9 +54,9 @@ class _VillageScreenState extends State<VillageScreen> with SingleTickerProvider
         ),
         actions: CommonAppBarActions.actions(context),
       ),
-      body: StreamBuilder<VillageInfo?>(
+      body: OfflineStreamBuilder<VillageInfo?>(
         stream: _service.getInfoStream(),
-        builder: (context, snapshot) {
+        onlineBuilder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
             return const Center(child: CircularProgressIndicator(strokeWidth: 2));
           }
@@ -69,6 +71,45 @@ class _VillageScreenState extends State<VillageScreen> with SingleTickerProvider
             ],
           );
         },
+        cacheBuilder: (context) => FutureBuilder(
+          future: CacheService.getVillageInfo(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+            final json = snapshot.data;
+            final info = json != null ? VillageInfo.fromJson(json, 'main') : null;
+             return Scaffold(
+               body: ColoredBox(
+                 color: Theme.of(context).colorScheme.surface,
+                 child: Column(
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                      color: Theme.of(context).colorScheme.errorContainer.withValues(alpha: 0.3),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.wifi_off, size: 16, color: Colors.grey),
+                          SizedBox(width: 8),
+                          Text('وضع غير متصل', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                    Expanded(child: TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _AboutTab(info: info),
+                        _HistoryTab(history: info?.history ?? []),
+                        _ArchiveTab(archive: info?.archive ?? []),
+                        _InstitutionsTab(institutions: info?.institutions ?? []),
+                      ],
+                    )),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
   }

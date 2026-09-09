@@ -26,12 +26,17 @@ class _NewsViewScreenState extends State<NewsViewScreen> {
 
   NewsItem? _news;
   bool _isSendingComment = false;
+  bool _viewCounted = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final args = ModalRoute.of(context)?.settings.arguments;
     if (args is NewsItem) _news = args;
+    if (!_viewCounted && _news != null && _news!.id.isNotEmpty) {
+      _viewCounted = true;
+      _newsService.incrementViews(_news!.id);
+    }
   }
 
   @override

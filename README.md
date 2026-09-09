@@ -54,8 +54,6 @@ lib/
 │   │   ├── seller_gallery.dart
 │   │   ├── seller_reviews.dart
 │   │   ├── seller_orders.dart
-│   │   ├── cart.dart
-│   │   ├── cart_screen.dart
 │   │   └── add_product.dart
 │   ├── services/
 │   │   ├── detail.dart
@@ -157,7 +155,6 @@ dependencies:
 - `AppRoutes.home` -> `lib/features/home/home.dart`
 - `AppRoutes.market` -> `lib/features/market/products.dart`
 - `AppRoutes.marketProductDetail` -> `lib/features/market/product_detail.dart`
-- `AppRoutes.marketCart` -> `lib/features/market/cart_screen.dart`
 - `AppRoutes.admin` -> `lib/features/admin/admin_dashboard.dart`
 - `AppRoutes.adminDetail` -> `lib/features/admin/admin_detail.dart`
 - `AppRoutes.adminEdit` -> `lib/features/admin/admin_edit.dart`

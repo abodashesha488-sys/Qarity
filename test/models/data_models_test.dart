@@ -21,7 +21,6 @@ void main() {
       'authorId': 'au',
       'authorName': 'كاتب',
       'createdAt': Timestamp.fromDate(now),
-      'tags': ['x', 'y'],
     };
 
     test('fromJson maps all fields', () {
@@ -30,7 +29,6 @@ void main() {
       expect(m.title, 'عنوان');
       expect(m.imageUrls, ['a', 'b']);
       expect(m.likes, 3);
-      expect(m.tags, ['x', 'y']);
       expect(m.createdAt, now);
     });
 
@@ -48,7 +46,6 @@ void main() {
       expect(m.title, '');
       expect(m.likes, 0);
       expect(m.isApproved, isFalse);
-      expect(m.tags, isEmpty);
     });
   });
 
@@ -163,11 +160,11 @@ void main() {
 
     test('Occasion fromJson/toJson', () {
       final o = Occasion.fromJson(
-        {'title': 'فرح', 'date': '2020', 'description': 'د', 'location': 'ل', 'organizer': 'منظم', 'attendees': 4, 'isApproved': true},
+        {'title': 'فرح', 'date': '2020', 'description': 'د', 'location': 'ل', 'organizer': 'منظم', 'isApproved': true},
         'oc1',
       );
       expect(o.title, 'فرح');
-      expect(o.attendees, 4);
+      expect(o.organizer, 'منظم');
       expect(o.toJson()['location'], 'ل');
     });
   });

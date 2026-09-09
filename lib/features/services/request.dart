@@ -262,17 +262,16 @@ class _MyRequestsTab extends StatelessWidget {
       itemBuilder: (context, index) {
         final req = requests[index];
         Color statusColor;
-        switch (req.status) {
-          case 'pending':
-            statusColor = Colors.orange;
-          case 'in_progress':
-            statusColor = Colors.blue;
-          case 'completed':
-            statusColor = Colors.green;
-          case 'cancelled':
-            statusColor = Colors.red;
-          default:
-            statusColor = Colors.grey;
+        if (req.status == 'cancelled') {
+          statusColor = Colors.red;
+        } else if (req.status == 'completed') {
+          statusColor = Colors.green;
+        } else if (req.status == 'in_progress') {
+          statusColor = Colors.blue;
+        } else if (req.status == 'pending') {
+          statusColor = Colors.orange;
+        } else {
+          statusColor = Colors.grey;
         }
 
         return Card(

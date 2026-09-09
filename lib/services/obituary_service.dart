@@ -1,13 +1,22 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/data_models.dart';
+import 'cache_service.dart';
 import 'notification_service.dart';
 
 class ObituaryService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  Future<List<Obituary>> getObituariesList() async {
+  Future<List<Obituary>> getObituariesList({bool forceRefresh = false}) async {
+    if (!forceRefresh) {
+      final cached = await CacheService.getObituaries();
+      if (cached != null) {
+        return cached.map((json) => Obituary.fromJson(json, 'cache')).toList();
+      }
+    }
     final snapshot = await _firestore.collection('obituaries').where('isApproved', isEqualTo: true).get();
-    return snapshot.docs.map((doc) => Obituary.fromJson(doc.data(), doc.id)).toList();
+    final obituaries = snapshot.docs.map((doc) => Obituary.fromJson(doc.data(), doc.id)).toList();
+    await CacheService.saveObituaries(obituaries.map((o) => o.toJson()).toList());
+    return obituaries;
   }
 
   Stream<List<Obituary>> getObituariesStream() {
@@ -31,6 +40,7 @@ class ObituaryService {
       ...obituary.toJson(),
       'isApproved': false,
     });
+    await CacheService.invalidateObituaries();
     await NotificationService.showLocalNotification(
       title: '⚰️ تعزية',
       body: 'تم إرسال التعزية للمراجعة: ${obituary.name}',

@@ -7,7 +7,7 @@ Qarity is a comprehensive digital platform for village community services (قر�
 - **Errors:** 0
 - **Warnings:** 0
 - **Info:** 35 (pre-existing lint suggestions)
-- **Status:** Compiles successfully
+- **Status:** Compiles successfully · `flutter test`: 50/50 passing
 
 ## Firebase Configuration
 
@@ -33,8 +33,11 @@ For Google Sign-In to work on web:
 
 ## ImgBB Image Upload (client-side)
 - Image upload/delete is done directly from the client via the ImgBB API in `lib/services/image_upload_service.dart`.
-- The API key is stored in `lib/core/constants/app_config.dart` (`AppConfig.imgbbApiKey`). It is visible in the client by design (no Cloud Function / Blaze plan available).
-- Used by: add product, add news, and delete product images.
+- The API key is read from `AppConfig.imgbbApiKey` (`lib/core/constants/app_config.dart`).
+- **For production**, inject the key at build time so the real value never lives in the repo:
+  - `flutter build web --dart-define=IMGBB_API_KEY=<your_key>`
+  - The value in `app_config.dart` is only a **dev default**; override it for releases and rotate it in ImgBB if leaked.
+- Used by: add product, add news, medical submissions, and image deletion flows.
 
 ## Firestore Securityrver-side only)
 - File: `firestore.rules`
@@ -54,7 +57,7 @@ lib/
 ├── features/
 │   ├── auth/          # Authentication (login, complete profile)
 │   ├── home/          # Home, splash, about app
-│   ├── market/        # Products, cart, detail, add, seller pages
+│   ├── market/        # Products, detail, add, seller pages
 │   ├── news/          # News list, detail, view
 │   ├── forum/         # Forum posts, create, detail
 │   ├── profile/       # User profile (edit name, photo)
@@ -78,7 +81,11 @@ lib/
 │   ├── admin_service.dart
 │   └── cache_service.dart
 ├── models/
-│   └── data_models.dart  # User, NewsItem, MarketProduct, ForumPost, AppOrder, ServiceRequest, etc.
+│   ├── data_models.dart          # Parent — BaseModel + parts
+│   ├── data_models_content.dart  # part — UserModel, NewsItem, MarketProduct, SellerProfile, SellerType, etc.
+│   ├── data_models_community.dart# part — Obituary, Occasion, EmergencyContact, VillageInfo, ServiceRequest, ForumPost, etc.
+│   ├── market_extra_models.dart  # Shop, BuyRequest, Donation
+│   └── medical_models.dart       # MedicalCenterClinic, VillageClinic, Pharmacy, BloodDonor/Request, BloodType
 ├── widgets/           # Shared widgets
 ├── routes/
 │   └── app_routes.dart
@@ -100,14 +107,15 @@ lib/
 ## Models
 - `UserModel` - User profile with role
 - `NewsItem`, `MarketProduct`, `ForumPost`, `Obituary`, `Occasion`
-- `AppOrder`, `CartItem`, `EmergencyContact`, `ServiceRequest`, `Review`
+- `AppOrder`, `EmergencyContact`, `ServiceRequest`, `Review`
 
 ## Admin Access
-- Hardcoded admin email: `eleraki2040@gmail.com`
-- Firestore role field: `role = 'admin'`
-- Admin access granted via role == 'admin'
-- `AdminScreenWrapper` checks email first, then falls back to Firestore role check via `AdminService.isAdminUser()`
-- Admin drawer link conditionally shown via `AdminService` auth stream
+- **Role-based only** (no hardcoded email in Firestore rules).
+- Firestore role values: `'user'` (default), `'seller'`, `'moderator'`, `'medical_admin'`, `'admin'`.
+- **Bootstrapping the first admin**: create your Firestore user document and set `role: 'admin'` (Firebase Console → Firestore → `users/{uid}`). After that, use the admin dashboard's Users tab to assign further roles.
+- Optionally, at build time you may pass `--dart-define=BOOTSTRAP_ADMIN_EMAIL=<email>` to grant one email a client-side shortcut (empty by default — the source of truth is always the Firestore role).
+- `AdminScreenWrapper` checks the optional bootstrap email, then falls back to Firestore role check via `AdminService.isAdminUser()`.
+- `AdminService.isMedicalAdmin()` grants access to the Medical Center management when role is `medical_admin` or `admin`.
 
 ## Admin Dashboard
 - 5 real-time tabs: News, Products, Obituaries, Occasions, Forum Posts
@@ -120,6 +128,15 @@ lib/
 - Admin edit screen supports fields by collection type
 
 ## Recent Updates
+- Removed dead code: `features/market/products.dart` (was unused, ~1178 lines).
+- Removed unused l10n: `lib/l10n/*` and `l10n.yaml` and `generate: true` in pubspec (all strings hardcoded Arabic).
+- Fixed latent bug: `AdminService.getPendingSellerRequestsCount` now uses `status == 'pending'` (was `isApproved == false` which never matched).
+- Firestore rules: removed hardcoded admin email — admin access is purely `users/{uid}.role == 'admin'`.
+- ImgBB API key: reads `--dart-define=IMGBB_API_KEY`; dev default retained but should be overridden for production.
+- Offline-first: Firestore persistence enabled (`persistenceEnabled: true, CACHE_SIZE_UNLIMITED`), `ConnectivityOverlay` shows offline banner globally, background init (notifications + connectivity) no longer blocks `runApp`, splash opens faster from cached auth.
+- Split monolithic files via Dart `part`: `data_models.dart` → content/community parts, `admin_dashboard.dart` → models/overview/review/users/reports parts, `market_tabs_screen.dart` → market/shops/buy-donate parts.
+- Services made test-friendly with optional `FirebaseFirestore` injection: `MedicalCenterService`, `VillageClinicService`, `PharmacyService`, `BloodBankService`, `ShopService`, `DonationService`, `BuyRequestService`, `PhoneDirectoryService`.
+- Added 21 service tests (`test/services/medical_service_test.dart`, `phone_and_shop_test.dart`). Suite now 50/50.
 - Admin approve/reject/delete/edit buttons now working with proper loading states
 - Added AdminDetailScreen to view full request content before approval
 - Added AdminEditScreen for inline editing of approved/pending content
@@ -127,13 +144,10 @@ lib/
 - AdminService exposes approveItem, rejectItem, deleteItem, updateItem for direct collection access
 - Fixed BuildContext usage across async gaps with mounted checks
 - Reduced RenderFlex overflow in market product cards
-- Fixed cart reactivity and add-to-cart logic
-- Fixed cart clear dialog typo in cart_screen.dart
 - Fixed stale username display and missing buyer phone in orders
 - Removed silent error handling swallowing in order service streams
 - Added CacheService.invalidateUser(uid) called after role changes
 - Added firestore.rules with admin permissions and deployed to Firebase
-- Reduced cart padding and added maxLines to prevent overflow errors
 - Added navigator_key.dart for global scaffold messaging
 - Added service_request_service.dart for service_requests collection
 - Removed redundant floating action buttons from services pages and admin dashboard

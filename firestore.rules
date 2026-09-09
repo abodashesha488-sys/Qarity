@@ -1,100 +1,300 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // ───────────────────────── دوال مساعدة ─────────────────────────
     function isSignedIn() {
       return request.auth != null;
     }
 
+    // الوصول للأدمن عبر الدور فقط (users/{uid}.role == 'admin').
+    // لإضافة أول مدير: أنشئ مستخدمك ثم عيّن users/<uid>.role = 'admin' من
+    // Firebase Console. لا نربط القواعد ببريد ثابت حتى لا يصبح نقطة فشل/تسريب.
     function isAdmin() {
-      return isSignedIn() && (
-        request.auth.token.email == 'eleraki2040@gmail.com'
-        || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
-      );
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
+    // مدير المركز الطبي: دوره medical_admin (أو مدير عام). مسؤول عن محتوى المركز
+    // ومراجعة المدخلات الطبية.
+    function isMedicalAdmin() {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'medical_admin'];
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // يسمح للمستخدم بتحديث حقول التفاعل فقط (عدّادات) دون المساس بالمحتوى أو حالة الموافقة
+    function interactionOnly() {
+      return isSignedIn()
+        && request.resource.data.diff(resource.data).affectedKeys()
+           .hasOnly(['likes', 'likedBy', 'comments', 'views', 'rating', 'reviewCount']);
+    }
+
+    // ───────────────────────── المستخدمون ─────────────────────────
     match /users/{userId} {
       allow list, get: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if request.auth.uid == userId;
+      // الإنشاء للمالك نفسه فقط، ولا يُسمح بإنشاء حساب بأدمن من الواجهة
+      allow create: if isSignedIn() && request.auth.uid == userId
+                    && request.resource.data.role != 'admin';
+      // المالك يحدّث نفسه، والأدمن يحدّث أي حساب (تغيير الأدوار)
+      allow update: if isOwner(userId) || isAdmin();
       allow delete: if isAdmin();
     }
 
+    // ───────────────────────── الأخبار ─────────────────────────
     match /news/{docId} {
-      allow list: if true;
-      allow get: if true;
-      allow create: if isSignedIn();
-      allow update, delete: if isAdmin();
+      allow list, get: if true;
+      // كل خبر جديد يجب أن يبدأ غير موافق عليه
+      allow create: if isSignedIn() && request.resource.data.isApproved == false;
+      allow update: if isAdmin() || interactionOnly();
+      allow delete: if isAdmin();
+
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
+        allow update, delete: if isAdmin() || request.auth.uid == resource.data.userId;
+      }
     }
 
+    // ───────────────────────── منتجات السوق ─────────────────────────
     match /market_products/{docId} {
-      allow list: if true;
-      allow get: if true;
-      allow create: if isSignedIn();
-      allow update, delete: if isAdmin();
+      allow list, get: if true;
+      allow create: if isSignedIn() && request.resource.data.isApproved == false;
+      allow update: if isAdmin() || interactionOnly();
+      allow delete: if isAdmin();
+
+      match /likes/{userId} {
+        allow read: if true;
+        allow write: if isOwner(userId);
+      }
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
+        allow update, delete: if isAdmin() || request.auth.uid == resource.data.userId;
+      }
     }
 
+    // ───────────────────────── العزاء ─────────────────────────
     match /obituaries/{docId} {
-      allow list: if true;
-      allow get: if true;
-      allow create: if isSignedIn();
-      allow update, delete: if isAdmin();
+      allow list, get: if true;
+      allow create: if isSignedIn() && request.resource.data.isApproved == false;
+      allow update: if isAdmin() || interactionOnly();
+      allow delete: if isAdmin();
     }
 
+    // ───────────────────────── المناسبات ─────────────────────────
     match /occasions/{docId} {
-      allow list: if true;
-      allow get: if true;
-      allow create: if isSignedIn();
-      allow update, delete: if isAdmin();
+      allow list, get: if true;
+      allow create: if isSignedIn() && request.resource.data.isApproved == false;
+      allow update: if isAdmin() || interactionOnly();
+      allow delete: if isAdmin();
     }
 
+    // ───────────────────────── المنتدى ─────────────────────────
     match /forum_posts/{docId} {
-      allow list: if true;
-      allow get: if true;
-      allow create: if isSignedIn();
-      allow update, delete: if isAdmin();
+      allow list, get: if true;
+      allow create: if isSignedIn() && request.resource.data.isApproved == false;
+      allow update: if isAdmin() || interactionOnly();
+      allow delete: if isAdmin();
+
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
+        allow update, delete: if isAdmin() || request.auth.uid == resource.data.userId;
+      }
     }
 
+    // ───────────────────────── طلبات الخدمات ─────────────────────────
     match /service_requests/{docId} {
-      allow list, get: if isSignedIn();
-      allow create: if isSignedIn();
+      allow get: if isAdmin() || resource.data.userId == request.auth.uid;
+      allow list: if isAdmin();
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
       allow update, delete: if isAdmin();
     }
 
+    // ───────────────────────── الطلبات (السوق) ─────────────────────────
     match /orders/{docId} {
-      allow list, get: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update, delete: if isAdmin();
+      allow get: if isAdmin()
+                 || resource.data.buyerId == request.auth.uid
+                 || resource.data.sellerId == request.auth.uid;
+      allow list: if isAdmin();
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.buyerId;
+      // المشتري أو البائع أو الأدمن يستطيع تحديث حالة الطلب
+      allow update: if isAdmin()
+                    || resource.data.buyerId == request.auth.uid
+                    || resource.data.sellerId == request.auth.uid;
+      allow delete: if isAdmin();
     }
 
-    match /cart/{userId} {
-      allow read, write: if request.auth.uid == userId;
-    }
-
+    // ───────────────────────── سجل النشاط (للأدمن) ─────────────────────────
     match /activity_log/{docId} {
-      allow read, create: if isAdmin();
-      allow update, delete: if isAdmin();
+      allow read, create, update, delete: if isAdmin();
     }
 
+    // ───────────────────────── جهات الاتصال الطارئة ─────────────────────────
     match /emergency_contacts/{docId} {
       allow list, get: if true;
       allow create, update, delete: if isAdmin();
     }
 
+    // ───────────────────────── معلومات القرية ─────────────────────────
     match /village_info/{docId} {
       allow list, get: if true;
       allow create, update, delete: if isAdmin();
     }
 
+    // ───────────────────────── التعازي (مجموعة مستقلة) ─────────────────────────
     match /condolences/{docId} {
       allow list, get: if isSignedIn();
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
+      allow update, delete: if isAdmin() || request.auth.uid == resource.data.userId;
+    }
+
+    // ───────────────────────── حضور المناسبات ─────────────────────────
+    match /occasion_attendees/{docId} {
+      allow list, get: if isSignedIn();
+      allow create, delete: if isSignedIn() && request.auth.uid == request.resource.data.userId;
+      allow update: if isAdmin();
+    }
+
+    // ───────────────────────── مراجعات المنتجات ─────────────────────────
+    match /product_reviews/{docId} {
+      allow list, get: if true;
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
+      allow update, delete: if isAdmin() || request.auth.uid == resource.data.userId;
+    }
+
+    // ───────────────────────── مراجعات البائعين (reviews) ─────────────────────────
+    match /reviews/{docId} {
+      allow list, get: if true;
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
+      allow update, delete: if isAdmin() || request.auth.uid == resource.data.userId;
+    }
+
+    // ───────────────────────── ملفات البائعين ─────────────────────────
+    match /seller_profiles/{docId} {
+      allow list, get: if true;
+      // الأدمن يستطيع إنشاء/تعديل أي ملف (عند الموافقة)، والمالك يعدّل ملفه
+      allow create, update: if isAdmin() || isOwner(docId);
+      allow delete: if isAdmin();
+    }
+
+    // ───────────────────────── طلبات أن تكون بائعاً ─────────────────────────
+    match /seller_requests/{docId} {
+      // الأدمن يرى الكل، والمقدِّم يرى طلبه فقط
+      allow get: if isAdmin() || resource.data.userId == request.auth.uid;
+      allow list: if isAdmin();
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
+      allow update, delete: if isAdmin();
+    }
+
+    // ───────────────────────── تنبيهات المخزون ─────────────────────────
+    match /stock_alerts/{docId} {
+      allow list, get: if isSignedIn() && request.auth.uid == resource.data.userId;
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
+      allow delete: if isSignedIn() && request.auth.uid == resource.data.userId;
+    }
+
+    // ───────────────────────── الإشعارات ─────────────────────────
+    match /notifications/{docId} {
+      allow get: if isSignedIn() && request.auth.uid == resource.data.userId;
+      allow list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && request.auth.uid == resource.data.userId;
+      allow delete: if isAdmin();
+    }
+
+    // ───────────────────────── دليل الهاتف ─────────────────────────
+    match /phone_directory/{docId} {
+      allow list, get: if true;
       allow create: if isSignedIn();
       allow update, delete: if isAdmin();
     }
 
-    match /occasion_attendees/{docId} {
-      allow list, get: if isSignedIn();
-      allow create, delete: if isSignedIn();
-      allow update: if isAdmin();
+    // محلات القرية — الإنشاء لصاحب المحل، والتعديل لصاحبه أو الأدمن
+    match /shops/{docId} {
+      allow list, get: if true;
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.ownerUid;
+      allow update: if isAdmin() || resource.data.ownerUid == request.auth.uid;
+      allow delete: if isAdmin();
+    }
+
+    // سلع مطلوبة
+    match /buy_requests/{docId} {
+      allow list, get: if true;
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
+      allow update: if isAdmin() || resource.data.userId == request.auth.uid;
+      allow delete: if isAdmin() || resource.data.userId == request.auth.uid;
+    }
+
+    // تبرعات
+    match /donations/{docId} {
+      allow list, get: if true;
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
+      allow update: if isAdmin() || resource.data.userId == request.auth.uid;
+      allow delete: if isAdmin() || resource.data.userId == request.auth.uid;
+    }
+
+    // ───────────────────────── سجل الأسعار ─────────────────────────
+    match /price_history/{docId} {
+      allow list, get: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ───────────────────────── الخدمات الطبية ─────────────────────────
+    // عيادات المركز الطبي الخيري: يديرها مدير المركز الطبي، والعام للقراءة.
+    match /medical_center_clinics/{docId} {
+      allow list, get: if true;
+      allow create, update, delete: if isMedicalAdmin();
+    }
+
+    // عيادات القرية: مدخلات مستخدمين (تبدأ غير موافق عليها) + موافقة الأدمن/مدير المركز.
+    match /village_clinics/{docId} {
+      allow list, get: if true;
+      allow create: if isSignedIn() && request.resource.data.isApproved == false;
+      allow update, delete: if isMedicalAdmin()
+                            || (isSignedIn() && resource.data.submittedBy == request.auth.uid
+                                && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isApproved']) == false
+                                && resource.data.isApproved == false);
+      // المتابعة: المستخدم يستطيع تعديل مدخلاته غير المعتمدة فقط
+    }
+
+    // صيدليات القرية: نفس نهج العيادات.
+    match /pharmacies/{docId} {
+      allow list, get: if true;
+      allow create: if isSignedIn() && request.resource.data.isApproved == false;
+      allow update, delete: if isMedicalAdmin()
+                            || (isSignedIn() && resource.data.submittedBy == request.auth.uid
+                                && resource.data.isApproved == false);
+    }
+
+    // متبرعو الدم: إضافة من المالك، ظهور عام بعد الموافقة، تعديل المالك لبياناته.
+    match /blood_donors/{docId} {
+      allow get: if true;
+      allow list: if isSignedIn();
+      allow create: if isSignedIn()
+                    && request.auth.uid == request.resource.data.userId
+                    && request.resource.data.isApproved == false;
+      allow update: if isMedicalAdmin()
+                    || (isSignedIn() && resource.data.userId == request.auth.uid
+                        && request.resource.data.isApproved == false);
+      allow delete: if isMedicalAdmin()
+                    || (isSignedIn() && resource.data.userId == request.auth.uid);
+    }
+
+    // طلبات التبرع بالدم: المالك ينشئ/يغلق طلبه، والموافقة والنشر للأدمن/مدير المركز.
+    match /blood_requests/{docId} {
+      allow list, get: if true;
+      allow create: if isSignedIn()
+                    && request.auth.uid == request.resource.data.userId
+                    && request.resource.data.isApproved == false;
+      allow update: if isMedicalAdmin()
+                    || (isSignedIn() && resource.data.userId == request.auth.uid
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']));
+      allow delete: if isMedicalAdmin();
     }
   }
 }

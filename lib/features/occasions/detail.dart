@@ -6,6 +6,7 @@ import '../../core/widgets/shared_cards.dart';
 import '../../models/data_models.dart';
 import '../../services/engagement_service.dart';
 import '../../services/occasion_service.dart';
+import '../../services/share_service.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/common_appbar_actions.dart';
 
@@ -65,7 +66,15 @@ class _OccasionDetailScreenState extends State<OccasionDetailScreen> {
         elevation: 0,
         shadowColor: Colors.transparent,
         surfaceTintColor: theme.colorScheme.surface,
-        actions: CommonAppBarActions.actions(context),
+        actions: [
+          if (_occasion != null)
+            IconButton(
+              tooltip: 'مشاركة الدعوة',
+              icon: const Icon(Icons.share_rounded),
+              onPressed: () => ShareService.shareOccasionAsImage(context, _occasion!),
+            ),
+          ...CommonAppBarActions.actions(context),
+        ],
       ),
       body: _buildBody(),
     );
@@ -140,6 +149,7 @@ class _OccasionDetailContent extends StatelessWidget {
           style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 12),
+        _CountdownBanner(occasion: occasion),
         Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -310,6 +320,58 @@ class _AttendeesCountChip extends StatelessWidget {
           color: theme.colorScheme.secondary,
         );
       },
+    );
+  }
+}
+
+class _CountdownBanner extends StatelessWidget {
+  const _CountdownBanner({required this.occasion});
+
+  final Occasion occasion;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final raw = occasion.date;
+    final date = raw.isEmpty ? null : DateTime.tryParse(raw.replaceAll('/', '-'));
+    if (date == null) return const SizedBox.shrink();
+    final diff = date.difference(DateTime.now());
+    if (diff.isNegative) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: _banner(theme, 'انتهت هذه المناسبة', Colors.grey),
+      );
+    }
+    final days = diff.inDays;
+    final label = days == 0
+        ? 'المناسبة اليوم 🎉'
+        : days == 1
+            ? 'غداً بإذن الله • يوم واحد'
+            : 'بعد $days يوم من الآن';
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: _banner(theme, label, theme.colorScheme.primary),
+    );
+  }
+
+  Widget _banner(ThemeData theme, String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.hourglass_bottom_rounded, size: 16, color: color),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(text,
+                style: TextStyle(fontWeight: FontWeight.w800, color: color)),
+          ),
+        ],
+      ),
     );
   }
 }

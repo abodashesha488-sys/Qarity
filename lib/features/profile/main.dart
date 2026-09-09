@@ -36,6 +36,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoading = true;
   bool _isSaving = false;
   bool _isSeller = false;
+  SellerRequest? _sellerRequest;
+  bool _checkingRequest = false;
 
   @override
   void initState() {
@@ -45,13 +47,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _fetchData() async {
     final user = await _userService.getCurrentUser();
-    final isSeller = await _marketService.isUserSeller(user?.id ?? '');
+    final isSeller = user != null ? await _marketService.isUserSeller(user.id) : false;
+    SellerRequest? request;
+    if (user != null && !isSeller) {
+      request = await _marketService.getUserSellerRequest(user.id);
+    }
     if (!mounted) return;
     setState(() {
       _user = user;
       _nameController.text = user?.name ?? '';
       _phoneController.text = user?.phone ?? '';
       _isSeller = isSeller;
+      _sellerRequest = request;
     });
   }
 
@@ -120,6 +127,130 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  Future<void> _submitSellerRequest() async {
+    if (_user == null) return;
+
+    // Show dialog to get shop details
+    final shopNameController =
+        TextEditingController(text: '${_user!.name}\'s Shop');
+    final shopDescController = TextEditingController();
+    final shopAddressController = TextEditingController();
+    String? selectedCategory;
+    SellerType selectedType = SellerType.regular;
+
+    final categories = [
+      'مواد غذائية', 'خضار وفواكه', 'لحوم وطيور وأسماك',
+      'ألبان وخير البلد', 'حلويات ومخبوزات', 'مشروبات ومقاهي',
+      'أدوات منزلية ومنظفات', 'إلكترونيات وهواتف', 'أثاث ومفروشات',
+      'ملابس وأحذية', 'مستلزمات زراعة وأعلاف', 'سوق المستعمل',
+      'ورش صيانة', 'كهرباء وسباكة', 'نجارة وألمنيوم', 'حدادة ولحام',
+      'تكييف وتبريد', 'سيارات وموتوسيكلات', 'مخازن ومستودعات',
+      'حرف يدوية', 'خياطة وتفصيل', 'مطاعم ومخابز', 'صيدليات', 'خدمات أخرى',
+    ];
+
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('طلب فتح متجر'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: shopNameController,
+                  decoration: const InputDecoration(labelText: 'اسم المتجر *', border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: shopDescController,
+                  decoration: const InputDecoration(labelText: 'وصف المتجر', border: OutlineInputBorder()),
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: shopAddressController,
+                  decoration: const InputDecoration(labelText: 'عنوان المتجر', border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: selectedCategory,
+                  decoration: const InputDecoration(labelText: 'الفئة الرئيسية *', border: OutlineInputBorder()),
+                  items: categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                  onChanged: (v) => setState(() => selectedCategory = v),
+                  menuMaxHeight: 360,
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<SellerType>(
+                  initialValue: selectedType,
+                  decoration: const InputDecoration(labelText: 'نوع البائع *', border: OutlineInputBorder()),
+                  items: SellerType.values.map((t) => DropdownMenuItem(
+                    value: t,
+                    child: Row(
+                      children: [
+                        Icon(t.icon, size: 18, color: Theme.of(context).colorScheme.primary),
+                        const SizedBox(width: 8),
+                        Text('${t.label} (حتى ${t.maxImages} صور)'),
+                      ],
+                    ),
+                  )).toList(),
+                  onChanged: (v) => setState(() => selectedType = v ?? selectedType),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
+            FilledButton(
+              onPressed: () {
+                if (shopNameController.text.isEmpty || selectedCategory == null) return;
+                Navigator.pop(context, {
+                  'shopName': shopNameController.text,
+                  'shopDescription': shopDescController.text,
+                  'shopAddress': shopAddressController.text,
+                  'category': selectedCategory!,
+                  'sellerType': selectedType.name,
+                });
+              },
+              child: const Text('إرسال الطلب'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result == null) return;
+
+    setState(() => _checkingRequest = true);
+    try {
+      final request = SellerRequest(
+        id: '',
+        userId: _user!.id,
+        userName: _user!.name,
+        userPhone: _user!.phone ?? '',
+        userPhotoUrl: _user!.photoUrl,
+        shopName: result['shopName'] as String,
+        shopDescription: result['shopDescription'] as String,
+        shopAddress: result['shopAddress'] as String,
+        categories: [result['category'] as String],
+        requestedSellerType: result['sellerType'] as String,
+      );
+      await _marketService.submitSellerRequest(request);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تم إرسال طلبك بنجاح! سنراجعه قريباً'), backgroundColor: Colors.green),
+      );
+      await _fetchData();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('خطأ: $e'), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) setState(() => _checkingRequest = false);
     }
   }
 
@@ -306,6 +437,105 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildSettingsSection(ThemeData theme) {
+    Widget? sellerAction;
+    if (_isSeller) {
+      final st = _user?.sellerType ?? SellerType.regular;
+      sellerAction = Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              theme.colorScheme.primary.withValues(alpha: 0.12),
+              theme.colorScheme.primary.withValues(alpha: 0.04),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.25)),
+        ),
+        child: Row(
+          children: [
+            Icon(st.icon, color: theme.colorScheme.primary, size: 28),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('أنت بائع', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800, color: theme.colorScheme.primary)),
+                  Text(st.label, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                  Text('الحد الأقصى للصور: ${st.maxImages}', style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    } else if (_sellerRequest?.isPending == true) {
+      sellerAction = Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.orange.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.hourglass_empty_rounded, color: Colors.orange),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('طلبك قيد المراجعة', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: Colors.orange[800])),
+                  Text('سيتم مراجعة طلبك من قبل الإدارة', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    } else if (_sellerRequest?.isRejected == true) {
+      sellerAction = Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.errorContainer.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: theme.colorScheme.error.withValues(alpha: 0.3)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.cancel_rounded, color: theme.colorScheme.error),
+                const SizedBox(width: 12),
+                Text('تم رفض طلبك', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: theme.colorScheme.error)),
+              ],
+            ),
+            if (_sellerRequest!.adminNotes != null) ...[
+              const SizedBox(height: 8),
+              Text('السبب: ${_sellerRequest!.adminNotes}', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+            ],
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              onPressed: _checkingRequest ? null : _submitSellerRequest,
+              icon: _checkingRequest ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.add_business_rounded),
+              label: Text(_checkingRequest ? 'جاري الإرسال...' : 'إعادة المحاولة'),
+            ),
+          ],
+        ),
+      );
+    } else {
+      sellerAction = FilledButton.icon(
+        onPressed: _checkingRequest ? null : _submitSellerRequest,
+        icon: _checkingRequest ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.storefront_rounded),
+        label: Text(_checkingRequest ? 'جاري الإرسال...' : 'أريد أن أصبح بائع'),
+        style: FilledButton.styleFrom(
+          minimumSize: const Size(double.infinity, 48),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    }
+
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -352,6 +582,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             subtitle: 'المظهر واللغة والحساب',
             onTap: () => Navigator.pushNamed(context, AppRoutes.settingsIndex),
           ),
+          const Divider(height: 1),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: sellerAction,
+          ),
         ],
       ),
     );
@@ -367,7 +602,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 12),
           ListTile(title: Text('العميل: ${order.buyerName}'), leading: const Icon(Icons.person)),
           ListTile(title: Text('هاتف العميل: ${order.buyerPhone}'), leading: const Icon(Icons.phone)),
-          ListTile(title: Text('الكمية: ${order.quantity} قطعة'), leading: const Icon(Icons.shopping_cart)),
+          ListTile(title: Text('الكمية: ${order.quantity} قطعة'), leading: const Icon(Icons.numbers)),
           ListTile(title: Text('السعر: ${order.price.toStringAsFixed(0)} ج.م'), leading: const Icon(Icons.money)),
           ListTile(title: Text('الحالة: ${order.statusLabel}'), leading: Icon(Icons.info, color: order.statusColor)),
         ]),

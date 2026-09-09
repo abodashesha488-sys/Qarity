@@ -44,11 +44,19 @@ class _AdminEditScreenState extends State<AdminEditScreen> {
   List<String> _editableFields() {
     switch (widget.collection) {
       case 'news':
-        return ['title', 'content'];
+        return ['title', 'subtitle'];
       case 'market_products':
         return ['name', 'description', 'price'];
       case 'obituaries':
-        return ['deceasedName', 'message', 'location'];
+        return [
+          'name',
+          'dateOfDeath',
+          'funeralDate',
+          'funeralLocation',
+          'condolenceLocation',
+          'mosque',
+          'description',
+        ];
       case 'occasions':
         return ['title', 'description', 'date', 'location'];
       case 'forum_posts':
@@ -62,11 +70,15 @@ class _AdminEditScreenState extends State<AdminEditScreen> {
     const labels = {
       'title': 'العنوان',
       'content': 'المحتوى',
+      'subtitle': 'المحتوى',
       'name': 'الاسم',
       'description': 'الوصف',
       'price': 'السعر',
-      'deceasedName': 'اسم المتوفى',
-      'message': 'الرسالة',
+      'dateOfDeath': 'تاريخ الوفاة',
+      'funeralDate': 'تاريخ الدفن',
+      'funeralLocation': 'مكان الصلاة',
+      'condolenceLocation': 'مكان العزاء',
+      'mosque': 'المسجد',
       'location': 'الموقع',
       'date': 'التاريخ',
     };
@@ -82,7 +94,13 @@ class _AdminEditScreenState extends State<AdminEditScreen> {
         final key = entry.key;
         final text = entry.value.text.trim();
         if (text.isEmpty) continue;
-        data[key] = text;
+        // السعر يُحفظ كرقم مزدوج وليس نصاً
+        if (key == 'price') {
+          final parsed = double.tryParse(text);
+          if (parsed != null) data[key] = parsed;
+        } else {
+          data[key] = text;
+        }
       }
       await AdminService().updateItem(widget.collection, widget.docId, data);
       if (mounted) {
@@ -170,14 +188,21 @@ class _AdminEditScreenState extends State<AdminEditScreen> {
       case 'name':
         return Icons.title_rounded;
       case 'content':
+      case 'subtitle':
       case 'message':
       case 'description':
         return Icons.notes_rounded;
       case 'price':
         return Icons.attach_money_rounded;
       case 'location':
+      case 'funeralLocation':
+      case 'condolenceLocation':
         return Icons.location_on_rounded;
+      case 'mosque':
+        return Icons.mosque_rounded;
       case 'date':
+      case 'dateOfDeath':
+      case 'funeralDate':
         return Icons.calendar_today_rounded;
       default:
         return Icons.edit_rounded;

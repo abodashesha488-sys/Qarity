@@ -6,15 +6,17 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/helpers.dart';
 import '../../features/forum/posts.dart';
-import '../../features/market/products.dart';
+import '../../features/market/market_tabs_screen.dart';
 import '../../features/profile/main.dart';
 import '../../features/village/about.dart';
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
+import '../../services/cache_service.dart';
 import '../../services/forum_service.dart';
 import '../../services/market_service.dart';
 import '../../services/news_service.dart';
 import '../../widgets/common_appbar_actions.dart';
+import '../../widgets/offline_stream_builder.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -29,7 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<Widget> _pages = [
     const HomeContent(),
     const VillageScreen(),
-    const MarketProductsScreen(),
+    const MarketTabsScreen(),
     const ForumPostsScreen(),
     const ProfileScreen(),
   ];
@@ -102,6 +104,8 @@ class HomeDrawer extends StatelessWidget {
             _buildDrawerItem(context, 'سجل العزاء', Icons.grade_rounded, AppRoutes.obituariesList),
             _buildDrawerItem(context, 'المناسبات', Icons.card_giftcard_rounded, AppRoutes.occasionsList),
             _buildDrawerItem(context, 'سوق القرية', Icons.store_rounded, AppRoutes.marketProducts),
+            _buildDrawerItem(context, 'الخدمات الطبية', Icons.medical_services_rounded, AppRoutes.medical),
+            _buildDrawerItem(context, 'دليل البائعين', Icons.business_center_rounded, AppRoutes.marketSellers),
             _buildDrawerItem(context, 'طلب الخدمات', Icons.add_task_rounded, AppRoutes.serviceRequest),
             _buildDrawerItem(context, 'المنتدى', Icons.forum_rounded, AppRoutes.forumPosts),
             _buildDrawerItem(context, 'الطوارئ', Icons.contact_phone_rounded, AppRoutes.emergencyContacts),
@@ -174,97 +178,142 @@ class HomeContent extends StatelessWidget {
   }
 
   Widget _buildLiveProducts(BuildContext context) {
-    return StreamBuilder<List<MarketProduct>>(
+    final theme = Theme.of(context);
+    return OfflineStreamBuilder<List<MarketProduct>>(
       stream: MarketService().getProductsStream(),
-      builder: (context, snapshot) {
+      onlineBuilder: (context, snapshot) {
         final products = snapshot.data ?? [];
         final featured = products.where((p) => p.isFeatured).take(6).toList();
         if (featured.isEmpty) return const SizedBox(height: 160);
-        return SizedBox(
-          height: 160,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            itemCount: featured.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemBuilder: (context, index) => GestureDetector(
-              onTap: () => Navigator.pushNamed(context, AppRoutes.marketProductDetail, arguments: featured[index]),
-              child: SizedBox(
-                width: 120,
-                child: Card(elevation: 6, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(16)), child: SizedBox(width: double.infinity, height: 80, child: CachedNetworkImage(imageUrl: featured[index].imageUrl, fit: BoxFit.cover))),
-                  Padding(padding: const EdgeInsets.all(8), child: Text(featured[index].name, style: Theme.of(context).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                ])),
-              ),
-            ),
-          ),
-        );
+        return _buildProductList(theme, featured);
       },
+      cacheBuilder: (context) => FutureBuilder(
+        future: CacheService.getProducts(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) return const SizedBox(height: 160);
+          final all = (snapshot.data ?? []).map((j) => MarketProduct.fromJson(j, 'cache')).toList();
+          final featured = all.where((p) => p.isFeatured).take(6).toList();
+          if (featured.isEmpty) return const SizedBox(height: 160);
+          return _buildProductList(theme, featured);
+        },
+      ),
+    );
+  }
+
+  Widget _buildProductList(ThemeData theme, List<MarketProduct> featured) {
+    return SizedBox(
+      height: 160,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        itemCount: featured.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        itemBuilder: (context, index) => GestureDetector(
+          onTap: () => Navigator.pushNamed(context, AppRoutes.marketProductDetail, arguments: featured[index]),
+          child: SizedBox(
+            width: 120,
+            child: Card(elevation: 6, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), child: Column(mainAxisSize: MainAxisSize.min, children: [
+              ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(16)), child: SizedBox(width: double.infinity, height: 80, child: CachedNetworkImage(imageUrl: featured[index].imageUrl, fit: BoxFit.cover))),
+              Padding(padding: const EdgeInsets.all(8), child: Text(featured[index].name, style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis)),
+            ])),
+          ),
+        ),
+      ),
     );
   }
 
   Widget _buildLiveNews(BuildContext context) {
-    return StreamBuilder<List<NewsItem>>(
+    final theme = Theme.of(context);
+    return OfflineStreamBuilder<List<NewsItem>>(
       stream: NewsService().getNewsStream(),
-      builder: (context, snapshot) {
+      onlineBuilder: (context, snapshot) {
         final news = snapshot.data ?? [];
         final latest = news.take(3).toList();
         if (latest.isEmpty) return const SizedBox(height: 120);
-        return SizedBox(
-          height: 120,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            itemCount: latest.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemBuilder: (context, index) => GestureDetector(
-              onTap: () => Navigator.pushNamed(context, AppRoutes.newsView, arguments: latest[index]),
-              child: SizedBox(
-                width: 140,
-                child: Card(elevation: 4, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(16)), child: SizedBox(width: double.infinity, height: 70, child: CachedNetworkImage(imageUrl: latest[index].imageUrl, fit: BoxFit.cover))),
-                  Padding(padding: const EdgeInsets.all(6), child: Text(latest[index].title, style: Theme.of(context).textTheme.labelSmall, maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center)),
-                ])),
-              ),
-            ),
-          ),
-        );
+        return _buildNewsList(theme, latest);
       },
+      cacheBuilder: (context) => FutureBuilder(
+        future: CacheService.getNews(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) return const SizedBox(height: 120);
+          final all = (snapshot.data ?? []).map((j) => NewsItem.fromJson(j, 'cache')).toList()
+            ..sort((a, b) => (b.createdAt ?? DateTime(1970)).compareTo(a.createdAt ?? DateTime(1970)));
+          final latest = all.take(3).toList();
+          if (latest.isEmpty) return const SizedBox(height: 120);
+          return _buildNewsList(theme, latest);
+        },
+      ),
+    );
+  }
+
+  Widget _buildNewsList(ThemeData theme, List<NewsItem> latest) {
+    return SizedBox(
+      height: 120,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        itemCount: latest.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        itemBuilder: (context, index) => GestureDetector(
+          onTap: () => Navigator.pushNamed(context, AppRoutes.newsView, arguments: latest[index]),
+          child: SizedBox(
+            width: 140,
+            child: Card(elevation: 4, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), child: Column(mainAxisSize: MainAxisSize.min, children: [
+              ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(16)), child: SizedBox(width: double.infinity, height: 70, child: CachedNetworkImage(imageUrl: latest[index].imageUrl, fit: BoxFit.cover))),
+              Padding(padding: const EdgeInsets.all(6), child: Text(latest[index].title, style: theme.textTheme.labelSmall, maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center)),
+            ])),
+          ),
+        ),
+      ),
     );
   }
 
   Widget _buildLivePosts(BuildContext context) {
     final theme = Theme.of(context);
-    return StreamBuilder<List<ForumPost>>(
+    return OfflineStreamBuilder<List<ForumPost>>(
       stream: ForumService().getPostsStream(),
-      builder: (context, snapshot) {
+      onlineBuilder: (context, snapshot) {
         final posts = snapshot.data ?? [];
         final latest = posts.take(5).toList();
         if (latest.isEmpty) return const SizedBox(height: 180);
-        return SizedBox(
-          height: 180,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            itemCount: latest.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemBuilder: (context, index) {
-              final post = latest[index];
-              return GestureDetector(
-                onTap: () => Navigator.pushNamed(context, AppRoutes.forumPostDetail, arguments: post),
-                child: Container(
-                  width: 140,
-                  decoration: BoxDecoration(color: theme.colorScheme.surface, borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8)]),
-                  child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Container(height: 80, decoration: BoxDecoration(color: theme.colorScheme.surfaceContainerHighest, borderRadius: const BorderRadius.vertical(top: Radius.circular(16))), child: post.imageUrl != null && post.imageUrl!.isNotEmpty ? ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(16)), child: CachedNetworkImage(imageUrl: post.imageUrl!, fit: BoxFit.cover, width: double.infinity, height: 80, errorWidget: (context, url, error) => Center(child: Icon(Icons.forum, color: theme.colorScheme.onSurfaceVariant)))) : Center(child: Icon(Icons.forum, color: theme.colorScheme.onSurfaceVariant))),
-                    Padding(padding: const EdgeInsets.all(8), child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [Text(post.userName, style: GoogleFonts.cairo(fontWeight: FontWeight.bold, fontSize: 12)), Text(post.content, style: GoogleFonts.cairo(fontSize: 11), maxLines: 2, overflow: TextOverflow.ellipsis)])),
-                  ]),
-                ),
-              );
-            },
-          ),
-        );
+        return _buildPostsList(theme, latest);
       },
+      cacheBuilder: (context) => FutureBuilder(
+        future: CacheService.getForumPosts(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) return const SizedBox(height: 180);
+          final all = (snapshot.data ?? []).map((j) => ForumPost.fromJson(j, 'cache')).toList();
+          final latest = all.take(5).toList();
+          if (latest.isEmpty) return const SizedBox(height: 180);
+          return _buildPostsList(theme, latest);
+        },
+      ),
+    );
+  }
+
+  Widget _buildPostsList(ThemeData theme, List<ForumPost> latest) {
+    return SizedBox(
+      height: 180,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        itemCount: latest.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        itemBuilder: (context, index) {
+          final post = latest[index];
+          return GestureDetector(
+            onTap: () => Navigator.pushNamed(context, AppRoutes.forumPostDetail, arguments: post),
+            child: Container(
+              width: 140,
+              decoration: BoxDecoration(color: theme.colorScheme.surface, borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8)]),
+              child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Container(height: 80, decoration: BoxDecoration(color: theme.colorScheme.surfaceContainerHighest, borderRadius: const BorderRadius.vertical(top: Radius.circular(16))), child: post.imageUrl != null && post.imageUrl!.isNotEmpty ? ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(16)), child: CachedNetworkImage(imageUrl: post.imageUrl!, fit: BoxFit.cover, width: double.infinity, height: 80, errorWidget: (context, url, error) => Center(child: Icon(Icons.forum, color: theme.colorScheme.onSurfaceVariant)))) : Center(child: Icon(Icons.forum, color: theme.colorScheme.onSurfaceVariant))),
+                Padding(padding: const EdgeInsets.all(8), child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [Text(post.userName, style: GoogleFonts.cairo(fontWeight: FontWeight.bold, fontSize: 12)), Text(post.content, style: GoogleFonts.cairo(fontSize: 11), maxLines: 2, overflow: TextOverflow.ellipsis)])),
+              ]),
+            ),
+          );
+        },
+      ),
     );
   }
 }
@@ -302,6 +351,7 @@ class ModernServiceGrid extends StatelessWidget {
     _ServiceItem('عن القرية', Icons.villa_rounded, AppRoutes.about),
     _ServiceItem('أخبار القرية', Icons.newspaper_rounded, AppRoutes.newsList),
     _ServiceItem('سوق القرية', Icons.store_rounded, AppRoutes.marketProducts),
+    _ServiceItem('الخدمات الطبية', Icons.medical_services_rounded, AppRoutes.medical, Color(0xFF00897B)),
     _ServiceItem('سجل العزاء', Icons.grade_rounded, AppRoutes.obituariesList),
     _ServiceItem('المناسبات', Icons.card_giftcard_rounded, AppRoutes.occasionsList),
     _ServiceItem('المنتدى', Icons.forum_rounded, AppRoutes.forumPosts),
@@ -345,5 +395,6 @@ class _ServiceItem {
   final IconData icon;
   final String route;
   final Color color;
-  const _ServiceItem(this.title, this.icon, this.route) : color = AppColors.primary;
+  const _ServiceItem(this.title, this.icon, this.route,
+      [this.color = AppColors.primary]);
 }

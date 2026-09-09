@@ -1,12 +1,14 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:shimmer/shimmer.dart';
 
-import '../../core/widgets/shared_cards.dart';
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
+import '../../services/cache_service.dart';
 import '../../services/news_service.dart';
 import '../../widgets/common_appbar_actions.dart';
+import '../../widgets/offline_stream_builder.dart';
 
 class NewsScreen extends StatefulWidget {
   const NewsScreen({super.key});
@@ -15,14 +17,34 @@ class NewsScreen extends StatefulWidget {
   State<NewsScreen> createState() => _NewsScreenState();
 }
 
-class _NewsScreenState extends State<NewsScreen> with AutomaticKeepAliveClientMixin {
+class _NewsScreenState extends State<NewsScreen>
+    with AutomaticKeepAliveClientMixin {
   final NewsService _newsService = NewsService();
   final TextEditingController _searchController = TextEditingController();
-  String _selectedCategory = _allLabel;
-  String _searchQuery = '';
 
-  static const String _allLabel = 'الكل';
-  static const List<String> _baseCategories = ['عام', 'ثقافة', 'رياضة', 'مجتمع', 'تعليم', 'اقتصاد'];
+  String _selectedCategory = 'الكل';
+  String _searchQuery = '';
+  bool _loading = true;
+
+  static const List<String> _categories = [
+    'الكل',
+    'عام',
+    'ثقافة',
+    'رياضة',
+    'مجتمع',
+    'تعليم',
+    'اقتصاد',
+  ];
+
+  static const Map<String, IconData> _categoryIcons = {
+    'الكل': Icons.apps_rounded,
+    'عام': Icons.public_rounded,
+    'ثقافة': Icons.menu_book_rounded,
+    'رياضة': Icons.sports_soccer_rounded,
+    'مجتمع': Icons.groups_rounded,
+    'تعليم': Icons.school_rounded,
+    'اقتصاد': Icons.trending_up_rounded,
+  };
 
   @override
   bool get wantKeepAlive => true;
@@ -30,58 +52,45 @@ class _NewsScreenState extends State<NewsScreen> with AutomaticKeepAliveClientMi
   @override
   void initState() {
     super.initState();
-    _searchController.addListener(_onSearchChanged);
+    _searchController.addListener(() {
+      setState(() => _searchQuery = _searchController.text.trim().toLowerCase());
+    });
   }
 
   @override
   void dispose() {
-    _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     super.dispose();
   }
 
-  void _onSearchChanged() {
-    if (!mounted) return;
-    setState(() => _searchQuery = _searchController.text.trim().toLowerCase());
-  }
-
-  void _selectCategory(String category) {
-    setState(() => _selectedCategory = category);
-  }
-
-  Future<void> _refresh() async {
-    try {
-      await _newsService.getNewsList(forceRefresh: true);
-    } catch (_) {
-      // The list is stream driven; a failed cache refresh must not break the UI.
-    }
-    if (mounted) setState(() {});
-  }
-
-  List<String> _buildCategories(List<NewsItem> all) {
-    final categories = <String>[_allLabel, ..._baseCategories];
-    for (final item in all) {
-      if (item.category.isNotEmpty && !categories.contains(item.category)) {
-        categories.add(item.category);
-      }
-    }
-    return categories;
+  List<NewsItem> _sortedByDate(List<NewsItem> all) {
+    final list = List<NewsItem>.of(all);
+    list.sort((a, b) => (b.createdAt ?? DateTime(1970))
+        .compareTo(a.createdAt ?? DateTime(1970)));
+    return list;
   }
 
   List<NewsItem> _filter(List<NewsItem> all) {
     var list = all;
-    if (_selectedCategory != _allLabel) {
-      list = list.where((i) => i.category == _selectedCategory).toList();
+    if (_selectedCategory != 'الكل') {
+      list = list.where((n) => n.category == _selectedCategory).toList();
     }
     if (_searchQuery.isNotEmpty) {
       list = list
-          .where((i) =>
-              i.title.toLowerCase().contains(_searchQuery) ||
-              i.subtitle.toLowerCase().contains(_searchQuery) ||
-              i.category.toLowerCase().contains(_searchQuery))
+          .where((n) =>
+              n.title.toLowerCase().contains(_searchQuery) ||
+              n.subtitle.toLowerCase().contains(_searchQuery) ||
+              n.category.toLowerCase().contains(_searchQuery))
           .toList();
     }
     return list;
+  }
+
+  List<NewsItem> _trending(List<NewsItem> all) {
+    final list = List<NewsItem>.of(all);
+    list.sort((a, b) =>
+        (b.views + b.likes * 3).compareTo(a.views + a.likes * 3));
+    return list.take(8).toList();
   }
 
   @override
@@ -90,423 +99,744 @@ class _NewsScreenState extends State<NewsScreen> with AutomaticKeepAliveClientMi
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('أخبار القرية'),
-        centerTitle: true,
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        surfaceTintColor: theme.colorScheme.surface,
-        actions: CommonAppBarActions.actions(context),
-      ),
+      backgroundColor: theme.colorScheme.surface,
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'news-add',
         onPressed: () => Navigator.pushNamed(context, AppRoutes.newsAdd),
-        tooltip: 'إضافة خبر',
         icon: const Icon(Icons.add_rounded),
-        label: const Text('إضافة خبر'),
+        label: const Text('إضافة خبر',
+            style: TextStyle(fontWeight: FontWeight.w800)),
+        backgroundColor: theme.colorScheme.primary,
+        foregroundColor: theme.colorScheme.onPrimary,
       ),
-      body: StreamBuilder<List<NewsItem>>(
+      body: OfflineStreamBuilder<List<NewsItem>>(
         stream: _newsService.getNewsStream(),
-        builder: (context, snapshot) {
-          final all = snapshot.data ?? const <NewsItem>[];
-          final isLoading = snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData;
-
-          return Column(
-            children: [
-              _buildFilterHeader(theme, _buildCategories(all)),
-              Expanded(
-                child: RefreshIndicator(
-                  onRefresh: _refresh,
-                  child: _buildContent(theme, snapshot, all, isLoading: isLoading),
+        onlineBuilder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting && _loading) {
+            return const _NewsSkeleton();
+          }
+          if (snapshot.hasError) {
+            return _ErrorState(onRetry: () => setState(() {}));
+          }
+          final all = _sortedByDate(snapshot.data ?? const []);
+          _loading = false;
+          return _buildContent(theme, all);
+        },
+        cacheBuilder: (context) => FutureBuilder(
+          future: CacheService.getNews(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) return const _NewsSkeleton();
+            final all = (snapshot.data ?? []).map((j) => NewsItem.fromJson(j, 'cache')).toList();
+             return Scaffold(
+               body: ColoredBox(
+                 color: theme.colorScheme.surface,
+                 child: Column(
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                      color: theme.colorScheme.errorContainer.withValues(alpha: 0.3),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.wifi_off_rounded, size: 16, color: Theme.of(context).colorScheme.error),
+                          const SizedBox(width: 8),
+                          const Text('وضع غير متصل', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                    Expanded(child: _buildContent(theme, _sortedByDate(all))),
+                  ],
                 ),
               ),
-            ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContent(ThemeData theme, List<NewsItem> all) {
+    final filtered = _filter(all);
+    final showHero = _selectedCategory == 'الكل' && _searchQuery.isEmpty;
+    final featured = showHero && all.isNotEmpty ? all.first : null;
+    final breaking = showHero && all.length > 1 ? all[1] : null;
+    final trending = showHero ? _trending(all) : <NewsItem>[];
+    final rest = showHero
+        ? filtered.where((n) => n.id != featured?.id).toList()
+        : filtered;
+
+    return CustomScrollView(
+      physics: const BouncingScrollPhysics(),
+      slivers: [
+        _buildAppBar(theme),
+        if (breaking != null)
+          SliverToBoxAdapter(child: _BreakingBar(item: breaking)),
+        if (featured != null)
+          SliverToBoxAdapter(child: _FeaturedHero(item: featured)),
+        SliverToBoxAdapter(child: _buildCategoryChips(theme)),
+        if (trending.length > 1)
+          SliverToBoxAdapter(child: _buildTrending(theme, trending)),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+            child: Text(
+              _selectedCategory == 'الكل' ? 'أحدث الأخبار' : _selectedCategory,
+              style: theme.textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w900),
+            ),
+          ),
+        ),
+        if (rest.isEmpty)
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: _EmptyNews(
+              filtered: _searchQuery.isNotEmpty || _selectedCategory != 'الكل',
+              onClear: () {
+                setState(() {
+                  _selectedCategory = 'الكل';
+                  _searchController.clear();
+                  _searchQuery = '';
+                });
+              },
+            ),
+          )
+        else
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
+            sliver: SliverList.separated(
+              itemCount: rest.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 14),
+              itemBuilder: (context, i) =>
+                  _NewsCard(item: rest[i], index: i),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildAppBar(ThemeData theme) {
+    return SliverAppBar(
+      pinned: true,
+      expandedHeight: 150,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      backgroundColor: theme.colorScheme.primary,
+      foregroundColor: Colors.white,
+      actions: CommonAppBarActions.actions(context),
+      flexibleSpace: FlexibleSpaceBar(
+        title: const Text('أخبار القرية',
+            style: TextStyle(
+                fontWeight: FontWeight.w900, color: Colors.white, fontSize: 18)),
+        background: DecoratedBox(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topRight,
+              end: Alignment.bottomLeft,
+              colors: [Color(0xFF1565C0), Color(0xFF0D47A1)],
+            ),
+          ),
+          child: SafeArea(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  child: TextField(
+                    controller: _searchController,
+                    style: const TextStyle(color: Colors.black87),
+                    decoration: InputDecoration(
+                      hintText: 'ابحث في الأخبار...',
+                      hintStyle:
+                          TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                      prefixIcon:
+                          const Icon(Icons.search_rounded, color: Colors.grey),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear_rounded),
+                              onPressed: _searchController.clear,
+                            )
+                          : null,
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryChips(ThemeData theme) {
+    return SizedBox(
+      height: 60,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        itemCount: _categories.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (context, i) {
+          final cat = _categories[i];
+          final selected = cat == _selectedCategory;
+          return GestureDetector(
+            onTap: () => setState(() => _selectedCategory = cat),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: selected
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.surfaceContainerHighest
+                        .withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: selected
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.outlineVariant
+                          .withValues(alpha: 0.4),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    _categoryIcons[cat] ?? Icons.label_outline_rounded,
+                    size: 18,
+                    color: selected
+                        ? Colors.white
+                        : theme.colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    cat,
+                    style: TextStyle(
+                      fontWeight:
+                          selected ? FontWeight.w800 : FontWeight.w600,
+                      color: selected
+                          ? Colors.white
+                          : theme.colorScheme.onSurface,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           );
         },
       ),
     );
   }
 
-  Widget _buildContent(
-    ThemeData theme,
-    AsyncSnapshot<List<NewsItem>> snapshot,
-    List<NewsItem> all, {
-    required bool isLoading,
-  }) {
-    if (isLoading) {
-      return const Center(child: CircularProgressIndicator(strokeWidth: 2));
-    }
-    if (snapshot.hasError && all.isEmpty) {
-      return _buildErrorState(theme);
-    }
-
-    final filtered = _filter(all);
-    if (filtered.isEmpty) {
-      final isFiltered = _searchQuery.isNotEmpty || _selectedCategory != _allLabel;
-      return _buildStateScroller(
-        Column(
-          children: [
-            EmptyContentState(
-              icon: isFiltered ? Icons.search_off_rounded : Icons.newspaper_rounded,
-              message: isFiltered ? 'لا توجد أخبار مطابقة' : 'لا توجد أخبار بعد',
-            ),
-            const SizedBox(height: 8),
-            Text(
-              isFiltered ? 'جرّب تغيير الفئة أو كلمة البحث' : 'كن أول من ينشر خبراً عن القرية',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-            ),
-          ],
+  Widget _buildTrending(ThemeData theme, List<NewsItem> trending) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.fromLTRB(16, 8, 16, 12),
+          child: Text('🔥 الأكثر قراءة',
+              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
         ),
+        SizedBox(
+          height: 190,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: trending.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (context, i) {
+              final n = trending[i];
+              return GestureDetector(
+                onTap: () => _open(n),
+                child: SizedBox(
+                  width: 150,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(14),
+                          child: _thumb(n),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(n.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w700, fontSize: 12)),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _open(NewsItem item) =>
+      Navigator.pushNamed(context, AppRoutes.newsView, arguments: item);
+
+  Widget _thumb(NewsItem item, {BoxFit fit = BoxFit.cover}) {
+    final theme = Theme.of(context);
+    final url = item.imageUrls.isNotEmpty ? item.imageUrls.first : item.imageUrl;
+    if (url.isEmpty) {
+      return ColoredBox(
+        color: theme.colorScheme.surfaceContainerHighest,
+        child: Icon(Icons.newspaper_rounded,
+            size: 40, color: theme.colorScheme.onSurfaceVariant),
       );
     }
-
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-      physics: const AlwaysScrollableScrollPhysics(),
-      itemCount: filtered.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemBuilder: (context, index) => _buildNewsCard(theme, filtered[index], index),
+    return CachedNetworkImage(
+      imageUrl: url,
+      fit: fit,
+      placeholder: (c, u) => ColoredBox(
+        color: theme.colorScheme.surfaceContainerHighest,
+        child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      ),
+      errorWidget: (c, u, e) => ColoredBox(
+        color: theme.colorScheme.surfaceContainerHighest,
+        child: Icon(Icons.broken_image_rounded,
+            color: theme.colorScheme.onSurfaceVariant),
+      ),
     );
   }
+}
 
-  Widget _buildStateScroller(Widget child) {
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(24, 72, 24, 24),
-      children: [child],
-    );
-  }
+// ═══════════════════════ Breaking bar ═══════════════════════
+class _BreakingBar extends StatelessWidget {
+  const _BreakingBar({required this.item});
+  final NewsItem item;
 
-  Widget _buildFilterHeader(ThemeData theme, List<String> categories) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        border: Border(
-          bottom: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return GestureDetector(
+      onTap: () => Navigator.pushNamed(context, AppRoutes.newsView,
+          arguments: item),
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFFC62828).withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFC62828).withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: const Color(0xFFC62828),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Text('عاجل',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900)),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(item.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: theme.colorScheme.onSurface,
+                      fontSize: 13)),
+            ),
+            Icon(Icons.chevron_left_rounded,
+                size: 20, color: theme.colorScheme.onSurfaceVariant),
+          ],
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          TextField(
-            controller: _searchController,
-            textInputAction: TextInputAction.search,
-            decoration: InputDecoration(
-              hintText: 'ابحث في الأخبار...',
-              hintStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
-              prefixIcon: Icon(Icons.search_rounded, color: theme.colorScheme.primary),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: Icon(Icons.clear_rounded, color: theme.colorScheme.primary, size: 18),
-                      onPressed: _searchController.clear,
-                    )
-                  : null,
-              filled: true,
-              fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.4), width: 1.5),
+    ).animate().fadeIn();
+  }
+}
+
+// ═══════════════════════ Featured hero ═══════════════════════
+class _FeaturedHero extends StatelessWidget {
+  const _FeaturedHero({required this.item});
+  final NewsItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return GestureDetector(
+      onTap: () => Navigator.pushNamed(context, AppRoutes.newsView,
+          arguments: item),
+      child: Container(
+        height: 240,
+        margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(22),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              _HeroThumb(item: item),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.8),
+                    ],
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(18),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primary,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(item.category,
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w800)),
+                          ),
+                          const SizedBox(width: 8),
+                          const Text('الخبر الرئيسي',
+                              style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700)),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Text(item.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 20,
+                              height: 1.25)),
+                      const SizedBox(height: 6),
+                      Text(item.subtitle,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.85),
+                              fontSize: 13,
+                              height: 1.4)),
+                      const SizedBox(height: 10),
+                      _NewsMeta(item: item, light: true),
+                    ],
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 40,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: categories.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (context, index) {
-                final category = categories[index];
-                final selected = category == _selectedCategory;
-                return ChoiceChip(
-                  label: Text(category),
-                  selected: selected,
-                  showCheckmark: false,
-                  onSelected: (_) => _selectCategory(category),
-                  selectedColor: theme.colorScheme.primary,
-                  backgroundColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
-                  side: BorderSide(
-                    color: selected
-                        ? Colors.transparent
-                        : theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
-                  ),
-                  labelStyle: theme.textTheme.labelLarge?.copyWith(
-                    color: selected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface,
-                    fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                  ),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                );
-              },
-            ),
-          ),
-        ],
+        ),
+      ),
+    ).animate().fadeIn(duration: 400.ms);
+  }
+}
+
+class _HeroThumb extends StatelessWidget {
+  const _HeroThumb({required this.item});
+  final NewsItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final url = item.imageUrls.isNotEmpty ? item.imageUrls.first : item.imageUrl;
+    if (url.isEmpty) {
+      return ColoredBox(
+        color: theme.colorScheme.surfaceContainerHighest,
+        child: Icon(Icons.newspaper_rounded,
+            size: 60, color: theme.colorScheme.onSurfaceVariant),
+      );
+    }
+    return CachedNetworkImage(
+      imageUrl: url,
+      fit: BoxFit.cover,
+      placeholder: (c, u) => ColoredBox(
+        color: theme.colorScheme.surfaceContainerHighest,
+        child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      ),
+      errorWidget: (c, u, e) => ColoredBox(
+        color: theme.colorScheme.surfaceContainerHighest,
+        child: Icon(Icons.broken_image_rounded,
+            color: theme.colorScheme.onSurfaceVariant),
       ),
     );
   }
+}
 
-  Widget _buildNewsCard(ThemeData theme, NewsItem item, int index) {
-    final images = item.imageUrls.isNotEmpty
-        ? item.imageUrls
-        : (item.imageUrl.isNotEmpty ? [item.imageUrl] : const <String>[]);
+// ═══════════════════════ News card (list) ═══════════════════════
+class _NewsCard extends StatelessWidget {
+  const _NewsCard({required this.item, required this.index});
+  final NewsItem item;
+  final int index;
 
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Card(
       elevation: 0,
+      margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => Navigator.pushNamed(context, AppRoutes.newsView, arguments: item),
+        onTap: () => Navigator.pushNamed(context, AppRoutes.newsView,
+            arguments: item),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Stack(
-              children: [
-                _NewsCardGallery(images: images, height: 180),
-                Positioned(
-                  top: 12,
-                  right: 12,
-                  child: _CategoryBadge(category: item.category),
-                ),
-              ],
-            ),
+            SizedBox(height: 160, child: _CardThumb(item: item)),
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    item.title,
-                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800, height: 1.3),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  if (item.subtitle.isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      item.subtitle,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                        height: 1.5,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 14,
-                    runSpacing: 6,
+                  Row(
                     children: [
-                      if (item.date.isNotEmpty) _MetaItem(icon: Icons.calendar_today_outlined, label: item.date),
-                      if (item.authorName != null && item.authorName!.isNotEmpty)
-                        _MetaItem(icon: Icons.person_outline_rounded, label: item.authorName!),
-                      _MetaItem(icon: Icons.favorite_border_rounded, label: '${item.likes}'),
-                      _MetaItem(icon: Icons.chat_bubble_outline_rounded, label: '${item.comments}'),
-                      _MetaItem(icon: Icons.visibility_outlined, label: '${item.views}'),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary
+                              .withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(item.category,
+                            style: TextStyle(
+                                color: theme.colorScheme.primary,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800)),
+                      ),
+                      const Spacer(),
+                      if (item.date.isNotEmpty)
+                        Text(item.date,
+                            style: TextStyle(
+                                fontSize: 11,
+                                color: theme.colorScheme.onSurfaceVariant)),
                     ],
                   ),
+                  const SizedBox(height: 10),
+                  Text(item.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 16,
+                          height: 1.3)),
+                  if (item.subtitle.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(item.subtitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 13,
+                            height: 1.5,
+                            color: theme.colorScheme.onSurfaceVariant)),
+                  ],
+                  const SizedBox(height: 12),
+                  _NewsMeta(item: item),
                 ],
               ),
             ),
           ],
         ),
       ),
-    ).animate(delay: (index * 60).ms).fade(duration: 350.ms).slideY(begin: 0.1);
+    ).animate(delay: (index * 50).ms).fadeIn(duration: 350.ms).slideY(begin: 0.08);
   }
+}
 
-  Widget _buildErrorState(ThemeData theme) {
-    return _buildStateScroller(
-      Card(
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.errorContainer.withValues(alpha: 0.4),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.wifi_off_rounded, size: 40, color: theme.colorScheme.error),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'تعذر تحميل الأخبار',
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'تحقق من الاتصال بالإنترنت ثم أعد المحاولة',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-              ),
-              const SizedBox(height: 16),
+class _CardThumb extends StatelessWidget {
+  const _CardThumb({required this.item});
+  final NewsItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final url = item.imageUrls.isNotEmpty ? item.imageUrls.first : item.imageUrl;
+    if (url.isEmpty) {
+      return ColoredBox(
+        color: theme.colorScheme.surfaceContainerHighest,
+        child: Icon(Icons.newspaper_rounded,
+            size: 44, color: theme.colorScheme.onSurfaceVariant),
+      );
+    }
+    return CachedNetworkImage(
+      imageUrl: url,
+      fit: BoxFit.cover,
+      width: double.infinity,
+      placeholder: (c, u) => ColoredBox(
+        color: theme.colorScheme.surfaceContainerHighest,
+        child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      ),
+      errorWidget: (c, u, e) => ColoredBox(
+        color: theme.colorScheme.surfaceContainerHighest,
+        child: Icon(Icons.broken_image_rounded,
+            color: theme.colorScheme.onSurfaceVariant),
+      ),
+    );
+  }
+}
+
+class _NewsMeta extends StatelessWidget {
+  const _NewsMeta({required this.item, this.light = false});
+  final NewsItem item;
+  final bool light;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = light ? Colors.white70 : Theme.of(context).colorScheme.onSurfaceVariant;
+    final readMin = (item.subtitle.split(RegExp(r'\s+')).length / 180).ceil().clamp(1, 20);
+    return Row(
+      children: [
+        Icon(Icons.visibility_rounded, size: 14, color: color),
+        const SizedBox(width: 3),
+        Text('${item.views}',
+            style: TextStyle(fontSize: 11, color: color)),
+        const SizedBox(width: 12),
+        Icon(Icons.favorite_rounded, size: 14, color: color),
+        const SizedBox(width: 3),
+        Text('${item.likes}',
+            style: TextStyle(fontSize: 11, color: color)),
+        const SizedBox(width: 12),
+        Icon(Icons.mode_comment_outlined, size: 14, color: color),
+        const SizedBox(width: 3),
+        Text('${item.comments}',
+            style: TextStyle(fontSize: 11, color: color)),
+        const SizedBox(width: 12),
+        Icon(Icons.schedule_rounded, size: 14, color: color),
+        const SizedBox(width: 3),
+        Text('$readMin د',
+            style: TextStyle(fontSize: 11, color: color)),
+      ],
+    );
+  }
+}
+
+// ═══════════════════════ States ═══════════════════════
+class _EmptyNews extends StatelessWidget {
+  const _EmptyNews({required this.filtered, required this.onClear});
+  final bool filtered;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(filtered ? Icons.search_off_rounded : Icons.newspaper_rounded,
+                size: 64, color: theme.colorScheme.onSurfaceVariant),
+            const SizedBox(height: 16),
+            Text(filtered ? 'لا توجد أخبار مطابقة' : 'لا توجد أخبار بعد',
+                style: theme.textTheme.titleLarge
+                    ?.copyWith(fontWeight: FontWeight.w800)),
+            const SizedBox(height: 8),
+            Text(
+              filtered ? 'جرّب تغيير الفئة أو كلمة البحث' : 'كن أول من ينشر خبراً عن القرية',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            ),
+            if (filtered) ...[
+              const SizedBox(height: 20),
               FilledButton.icon(
-                onPressed: _refresh,
+                onPressed: onClear,
                 icon: const Icon(Icons.refresh_rounded),
-                label: const Text('إعادة المحاولة'),
+                label: const Text('عرض الكل'),
               ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ErrorState extends StatelessWidget {
+  const _ErrorState({required this.onRetry});
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.wifi_off_rounded, size: 64, color: theme.colorScheme.error),
+            const SizedBox(height: 16),
+            Text('تعذر تحميل الأخبار',
+                style: theme.textTheme.titleLarge
+                    ?.copyWith(fontWeight: FontWeight.w800)),
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('إعادة المحاولة'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NewsSkeleton extends StatelessWidget {
+  const _NewsSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final base = theme.colorScheme.surfaceContainerHighest;
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: List.generate(
+        5,
+        (i) => Padding(
+          padding: const EdgeInsets.only(bottom: 14),
+          child: Shimmer.fromColors(
+            baseColor: base,
+            highlightColor: theme.colorScheme.surface,
+            child: Container(
+              height: i == 0 ? 220 : 200,
+              decoration: BoxDecoration(
+                color: base,
+                borderRadius: BorderRadius.circular(18),
+              ),
+            ),
           ),
         ),
       ),
-    );
-  }
-}
-
-/// Cover gallery used by the news cards: swipeable when the item has
-/// multiple images, with page indicators that follow the active page.
-class _NewsCardGallery extends StatefulWidget {
-  const _NewsCardGallery({required this.images, required this.height});
-
-  final List<String> images;
-  final double height;
-
-  @override
-  State<_NewsCardGallery> createState() => _NewsCardGalleryState();
-}
-
-class _NewsCardGalleryState extends State<_NewsCardGallery> {
-  final PageController _controller = PageController();
-  int _current = 0;
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    if (widget.images.isEmpty) {
-      return _NewsImagePlaceholder(height: widget.height, icon: Icons.newspaper_rounded);
-    }
-
-    return SizedBox(
-      height: widget.height,
-      width: double.infinity,
-      child: Stack(
-        children: [
-          PageView.builder(
-            controller: _controller,
-            itemCount: widget.images.length,
-            onPageChanged: (i) => setState(() => _current = i),
-            itemBuilder: (context, i) => CachedNetworkImage(
-              imageUrl: widget.images[i],
-              fit: BoxFit.cover,
-              width: double.infinity,
-              placeholder: (context, url) => ColoredBox(
-                color: theme.colorScheme.surfaceContainerHighest,
-                child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-              ),
-              errorWidget: (context, url, error) =>
-                  _NewsImagePlaceholder(height: widget.height, icon: Icons.broken_image_rounded),
-            ),
-          ),
-          if (widget.images.length > 1)
-            Positioned(
-              bottom: 10,
-              left: 0,
-              right: 0,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(
-                  widget.images.length,
-                  (i) => AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    margin: const EdgeInsets.symmetric(horizontal: 3),
-                    width: i == _current ? 18 : 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: i == _current ? 0.95 : 0.5),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _NewsImagePlaceholder extends StatelessWidget {
-  const _NewsImagePlaceholder({required this.height, required this.icon});
-
-  final double height;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      height: height,
-      width: double.infinity,
-      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
-      child: Center(child: Icon(icon, size: 40, color: theme.colorScheme.onSurfaceVariant)),
-    );
-  }
-}
-
-class _CategoryBadge extends StatelessWidget {
-  const _CategoryBadge({required this.category});
-
-  final String category;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.primary.withValues(alpha: 0.92),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        category.isEmpty ? 'عام' : category,
-        style: theme.textTheme.labelSmall?.copyWith(
-          color: theme.colorScheme.onPrimary,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-}
-
-class _MetaItem extends StatelessWidget {
-  const _MetaItem({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 14, color: theme.colorScheme.onSurfaceVariant),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-        ),
-      ],
     );
   }
 }

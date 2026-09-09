@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/data_models.dart';
+import 'cache_service.dart';
 
 class EmergencyContactsService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -15,11 +16,19 @@ class EmergencyContactsService {
             .toList());
   }
 
-  Future<List<EmergencyContact>> getContactsList() async {
+  Future<List<EmergencyContact>> getContactsList({bool forceRefresh = false}) async {
+    if (!forceRefresh) {
+      final cached = await CacheService.getEmergencyContacts();
+      if (cached != null) {
+        return cached.map((json) => EmergencyContact.fromJson(json, 'cache')).toList();
+      }
+    }
     final snapshot = await _ref.orderBy('priority').get();
-    return snapshot.docs
+    final contacts = snapshot.docs
         .map((doc) => EmergencyContact.fromJson(doc.data() as Map<String, dynamic>, doc.id))
         .toList();
+    await CacheService.saveEmergencyContacts(contacts.map((c) => c.toJson()).toList());
+    return contacts;
   }
 
   // Seed real, working national emergency numbers the first time only.
@@ -68,5 +77,6 @@ class EmergencyContactsService {
       batch.set(_ref.doc(), data);
     }
     await batch.commit();
+    await CacheService.invalidateEmergencyContacts();
   }
 }

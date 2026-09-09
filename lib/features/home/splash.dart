@@ -1,12 +1,9 @@
-import 'dart:async';
-
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../routes/app_routes.dart';
-import '../../services/user_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -47,30 +44,19 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _startAnimationSequence() async {
-    await Future.delayed(const Duration(milliseconds: 300));
+    await Future.delayed(const Duration(milliseconds: 250));
     if (!mounted) return;
-    await _logoController.forward();
-    await Future.delayed(const Duration(milliseconds: 200));
-    await _textController.forward();
-    await Future.delayed(const Duration(milliseconds: 1500));
+    _logoController.forward();
+    _textController.forward();
+    // لا ننتظر الشبكة أو مصادقة الفيربيس: المستخدم الحالي متاح فوراً من
+    // الجلسة المحفوظة محلياً، لذا يفتح التطبيق مباشرة إن كان مسجّلاً.
+    await Future.delayed(const Duration(milliseconds: 900));
 
     if (!mounted) return;
 
     final currentUser = firebase_auth.FirebaseAuth.instance.currentUser;
     if (currentUser != null) {
-      try {
-        final userService = UserService();
-        final firestoreUser = await userService
-            .getUser(currentUser.uid)
-            .timeout(const Duration(seconds: 6));
-        if (firestoreUser?.phone != null && firestoreUser!.phone!.isNotEmpty) {
-          _safeNavigate(AppRoutes.home);
-          return;
-        }
-      } catch (_) {
-        // Offline or timeout - continue to home anyway
-      }
-      _safeNavigate(AppRoutes.completeProfile, arguments: currentUser.uid);
+      _safeNavigate(AppRoutes.home);
     } else {
       _safeNavigate(AppRoutes.login);
     }

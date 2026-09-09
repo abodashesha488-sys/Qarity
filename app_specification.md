@@ -38,8 +38,6 @@ lib/
 │   │   ├── seller_detail.dart
 │   │   ├── seller_gallery.dart
 │   │   ├── seller_reviews.dart
-│   │   ├── cart.dart
-│   │   ├── cart_screen.dart
 │   │   └── add_product.dart
 │   ├── services/
 │   │   ├── detail.dart
@@ -127,7 +125,6 @@ dependencies:
 | `/market/seller` | بيانات البائع | `market/seller_detail.dart` |
 | `/market/seller/gallery` | معرض البائع | `market/seller_gallery.dart` |
 | `/market/seller/reviews` | مراجعات البائع | `market/seller_reviews.dart` |
-| `/market/cart` | سلة المشتريات | `market/cart_screen.dart` |
 | `/service-request` | طلب خدمة | `services/request.dart` |
 | `/service/detail` | تفاصيل الخدمة | `services/detail.dart` |
 | `/forum` | المنتدى | `forum/posts.dart` |

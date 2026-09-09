@@ -20,11 +20,22 @@ class CreatePostScreen extends StatefulWidget {
 
 class _CreatePostScreenState extends State<CreatePostScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _titleController = TextEditingController();
   final _contentController = TextEditingController();
   final ForumService _forumService = ForumService();
   final UserService _userService = UserService();
   final ImagePicker _picker = ImagePicker();
   final ImageUploadService _imageUploadService = ImageUploadService();
+
+  static const List<String> _topics = [
+    'عام',
+    'نقاشات',
+    'إعلانات القرية',
+    'استشارات',
+    'شكاوى ومقترحات',
+    'طلبات وتواصل',
+  ];
+  String _category = 'عام';
 
   bool _isPosting = false;
   bool _isUploading = false;
@@ -41,6 +52,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
   @override
   void dispose() {
+    _titleController.dispose();
     _contentController.dispose();
     super.dispose();
   }
@@ -97,6 +109,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         userId: authUser.uid,
         userName: _userName.isEmpty ? (authUser.displayName ?? 'مستخدم') : _userName,
         userPhotoUrl: _userPhoto,
+        title: _titleController.text.trim(),
+        category: _category,
         content: _contentController.text.trim(),
         imageUrl: _uploadedImageUrl ?? '',
         createdAt: DateTime.now(),
@@ -180,6 +194,59 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                                     ),
                                   ),
                                 ],
+                              ),
+                              const SizedBox(height: 16),
+                              TextFormField(
+                                controller: _titleController,
+                                textCapitalization: TextCapitalization.sentences,
+                                textInputAction: TextInputAction.next,
+                                style: theme.textTheme.titleMedium,
+                                decoration: InputDecoration(
+                                  hintText: 'عنوان الموضوع',
+                                  filled: true,
+                                  fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.5),
+                                  ),
+                                ),
+                                validator: (v) =>
+                                    (v == null || v.trim().isEmpty) ? 'العنوان مطلوب' : null,
+                              ),
+                              const SizedBox(height: 16),
+                              Text('اختر الموضوع',
+                                  style: theme.textTheme.labelLarge
+                                      ?.copyWith(fontWeight: FontWeight.w800)),
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: _topics.map((t) {
+                                  final selected = t == _category;
+                                  return ChoiceChip(
+                                    label: Text(t),
+                                    selected: selected,
+                                    showCheckmark: false,
+                                    onSelected: (_) => setState(() => _category = t),
+                                    selectedColor: theme.colorScheme.primary,
+                                    backgroundColor: theme.colorScheme.surfaceContainerHighest
+                                        .withValues(alpha: 0.4),
+                                    labelStyle: TextStyle(
+                                      color: selected
+                                          ? theme.colorScheme.onPrimary
+                                          : theme.colorScheme.onSurface,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  );
+                                }).toList(),
                               ),
                               const SizedBox(height: 16),
                               TextFormField(

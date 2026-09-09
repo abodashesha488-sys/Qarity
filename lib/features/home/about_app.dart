@@ -114,7 +114,7 @@ class AboutScreen extends StatelessWidget {
             child: ListTile(
               leading: Icon(Icons.policy_rounded, color: theme.colorScheme.primary),
               title: Text('سياسة الخصوصية', style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-              trailing: const Icon(Icons.arrow_back_rounded, size: 18),
+              trailing: const Icon(Icons.chevron_left_rounded, size: 18),
               onTap: () => showDialog(
                 context: context,
                 builder: (ctx) => AlertDialog(
@@ -132,7 +132,7 @@ class AboutScreen extends StatelessWidget {
             child: ListTile(
               leading: Icon(Icons.villa_rounded, color: theme.colorScheme.primary),
               title: Text('عن القرية', style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-              trailing: const Icon(Icons.arrow_back_rounded, size: 18),
+              trailing: const Icon(Icons.chevron_left_rounded, size: 18),
               onTap: () => Navigator.pushNamed(context, AppRoutes.about),
             ),
           ),

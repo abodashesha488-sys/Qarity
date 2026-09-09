@@ -242,16 +242,40 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
   }
 
   Widget _buildDetailRow(ThemeData theme, String key, dynamic value) {
-    final display =
-        value == null ? 'لا يوجد' : value is List ? value.join('، ') : value.toString();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(_prettyKey(key), style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.w700)),
         const SizedBox(height: 4),
-        Text(display, style: theme.textTheme.bodyMedium?.copyWith(height: 1.3)),
+        Text(_formatValue(key, value), style: theme.textTheme.bodyMedium?.copyWith(height: 1.3)),
       ],
     );
+  }
+
+  String _formatValue(String key, dynamic value) {
+    if (value == null) return 'لا يوجد';
+    if (key == 'isApproved') return value == true ? 'معتمد' : 'قيد المراجعة';
+    if (value is List) {
+      // قائمة أقارب المتوفى: كائنات فيها name/type
+      if (key == 'relatives') {
+        final names = value
+            .whereType<Map>()
+            .map((r) => (r['name'] ?? '').toString())
+            .where((n) => n.isNotEmpty)
+            .join('، ');
+        return names.isEmpty ? 'لا يوجد' : names;
+      }
+      // قوائم كائنات عامة: نحاول استخراج الحقول النصية
+      if (value.isNotEmpty && value.first is Map) {
+        final parts = value.whereType<Map>().map((m) {
+          final name = m['name'] ?? m['text'] ?? m['userName'] ?? m['title'];
+          return name?.toString() ?? '';
+        }).where((s) => s.isNotEmpty).join('، ');
+        return parts.isEmpty ? '${value.length} عنصر' : parts;
+      }
+      return value.join('، ');
+    }
+    return value.toString();
   }
 
   String _prettyKey(String key) {
@@ -259,16 +283,31 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
       'title': 'العنوان',
       'name': 'الاسم',
       'content': 'المحتوى',
+      'subtitle': 'المحتوى',
       'description': 'الوصف',
       'message': 'الرسالة',
       'deceasedName': 'اسم المتوفى',
       'location': 'الموقع',
       'date': 'التاريخ',
+      'dateOfDeath': 'تاريخ الوفاة',
+      'funeralDate': 'تاريخ الدفن',
+      'funeralLocation': 'مكان الصلاة',
+      'condolenceLocation': 'مكان العزاء',
+      'mosque': 'المسجد',
+      'relatives': 'أقارب المتوفى',
       'price': 'السعر',
       'isApproved': 'الحالة',
       'createdAt': 'تاريخ الإنشاء',
       'phone': 'الهاتف',
       'email': 'البريد الإلكتروني',
+      'category': 'التصنيف',
+      'stock': 'الكمية',
+      'sellerName': 'اسم البائع',
+      'sellerPhone': 'هاتف البائع',
+      'organizer': 'المنظّم',
+      'type': 'النوع',
+      'userId': 'المستخدم',
+      'userName': 'اسم المستخدم',
     };
     return labels[key] ?? key;
   }
