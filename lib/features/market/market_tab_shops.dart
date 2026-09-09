@@ -44,13 +44,16 @@ class _ShopsTab extends StatelessWidget {
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, i) {
             final s = shops[i];
+            final accent = RoleStyle.contentAccent(s.ownerRole, s.ownerSellerType);
             return Card(
-              elevation: 0,
+              elevation: accent != null ? 2 : 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(18),
                 side: BorderSide(
-                    color: theme.colorScheme.outlineVariant
-                        .withValues(alpha: 0.4)),
+                    width: accent != null ? 1.5 : 1,
+                    color: accent?.withValues(alpha: 0.7) ??
+                        theme.colorScheme.outlineVariant
+                            .withValues(alpha: 0.4)),
               ),
               child: InkWell(
                 borderRadius: BorderRadius.circular(18),
@@ -74,11 +77,13 @@ class _ShopsTab extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(s.name,
+                            RoleNameText(
+                                name: s.name,
+                                role: s.ownerRole,
+                                sellerType: s.ownerSellerType,
                                 style: const TextStyle(
                                     fontWeight: FontWeight.w900, fontSize: 15),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis),
+                                iconSize: 14),
                             const SizedBox(height: 3),
                             Text(s.category,
                                 style: TextStyle(

@@ -5,6 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/utils/role_style.dart';
 import '../../models/data_models.dart';
 import '../../models/market_extra_models.dart';
 import '../../routes/app_routes.dart';
@@ -38,6 +39,7 @@ class _MarketTabsScreenState extends State<MarketTabsScreen>
   final DonationService _donationService = DonationService();
   final UserService _userService = UserService();
   SellerType _sellerType = SellerType.regular;
+  String _userRole = 'user';
 
   /// تصنيفات المحلات — تشمل المحلات التجارية والخدمية (ورش، مخازن، حرف يدوية…)
   static const List<String> _shopCats = [
@@ -92,7 +94,10 @@ class _MarketTabsScreenState extends State<MarketTabsScreen>
   Future<void> _loadSellerType() async {
     final u = await _userService.getCurrentUser();
     if (mounted) {
-      setState(() => _sellerType = u?.sellerType ?? SellerType.regular);
+      setState(() {
+        _sellerType = u?.sellerType ?? SellerType.regular;
+        _userRole = u?.role ?? 'user';
+      });
     }
   }
 
@@ -294,6 +299,8 @@ class _MarketTabsScreenState extends State<MarketTabsScreen>
           logoUrl: images.isNotEmpty ? images.first : null,
           imageUrls: List.from(images),
           whatsapp: waC.text.trim(),
+          ownerRole: _userRole,
+          ownerSellerType: _sellerType.name,
         ));
         _snack('تم إنشاء المحل، وسيظهر بعد موافقة الإدارة');
       } catch (e) {
@@ -378,6 +385,8 @@ class _MarketTabsScreenState extends State<MarketTabsScreen>
           details: detailsC.text.trim(),
           budget: budgetC.text.trim(),
           imageUrls: List.from(images),
+          userRole: _userRole,
+          userSellerType: _sellerType.name,
         ));
         _snack('تم نشر طلبك');
       } catch (e) {
@@ -476,6 +485,8 @@ class _MarketTabsScreenState extends State<MarketTabsScreen>
           category: category,
           contactPhone: phoneC.text.trim(),
           imageUrls: List.from(images),
+          userRole: _userRole,
+          userSellerType: _sellerType.name,
         ));
         _snack('جزاك الله خيراً، تم نشر التبرع');
       } catch (e) {

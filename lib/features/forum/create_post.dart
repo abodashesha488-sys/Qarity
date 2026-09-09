@@ -42,6 +42,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   bool _isLoadingUser = true;
   String _userName = '';
   String _userPhoto = '';
+  String? _userRole;
+  String? _userSellerType;
   String? _uploadedImageUrl;
 
   @override
@@ -64,6 +66,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       setState(() {
         _userName = user?.name ?? _userService.currentUser?.displayName ?? 'مستخدم';
         _userPhoto = user?.photoUrl ?? '';
+        _userRole = user?.role;
+        _userSellerType = user?.sellerType?.name;
         _isLoadingUser = false;
       });
     } catch (_) {
@@ -114,6 +118,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         content: _contentController.text.trim(),
         imageUrl: _uploadedImageUrl ?? '',
         createdAt: DateTime.now(),
+        userRole: _userRole,
+        userSellerType: _userSellerType,
         // Posts always enter the admin review queue first.
         // ignore: avoid_redundant_argument_values
         isApproved: false,

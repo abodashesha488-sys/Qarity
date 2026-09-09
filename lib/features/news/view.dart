@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/utils/helpers.dart';
+import '../../core/utils/role_style.dart';
 import '../../core/widgets/shared_cards.dart';
 import '../../models/data_models.dart';
 import '../../services/news_service.dart';
@@ -224,8 +225,10 @@ class _NewsViewScreenState extends State<NewsViewScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            item.authorName ?? 'محرر النظام',
+                          RoleNameText(
+                            name: item.authorName ?? 'محرر النظام',
+                            role: item.authorRole,
+                            sellerType: item.authorSellerType,
                             style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
                           ),
                           Text(

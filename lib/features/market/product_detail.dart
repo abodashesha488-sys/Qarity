@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/utils/role_style.dart';
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
 import '../../services/market_service.dart';
@@ -287,7 +288,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(product.sellerName,
+                                  RoleNameText(
+                                      name: product.sellerName,
+                                      role: 'seller',
+                                      sellerType: product.sellerType,
                                       style: theme.textTheme.titleSmall
                                           ?.copyWith(
                                               fontWeight: FontWeight.w800)),
@@ -864,11 +868,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis),
                       const SizedBox(height: 4),
-                      Text(product.sellerName,
+                      RoleNameText(
+                          name: product.sellerName,
+                          role: 'seller',
+                          sellerType: product.sellerType,
                           style: theme.textTheme.labelSmall?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis),
+                          iconSize: 12),
                       const SizedBox(height: 8),
                       Row(
                         children: [

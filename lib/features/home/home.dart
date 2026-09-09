@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/helpers.dart';
+import '../../core/utils/role_style.dart';
 import '../../features/forum/posts.dart';
 import '../../features/market/market_tabs_screen.dart';
 import '../../features/profile/main.dart';
@@ -308,7 +309,7 @@ class HomeContent extends StatelessWidget {
               decoration: BoxDecoration(color: theme.colorScheme.surface, borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8)]),
               child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Container(height: 80, decoration: BoxDecoration(color: theme.colorScheme.surfaceContainerHighest, borderRadius: const BorderRadius.vertical(top: Radius.circular(16))), child: post.imageUrl != null && post.imageUrl!.isNotEmpty ? ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(16)), child: CachedNetworkImage(imageUrl: post.imageUrl!, fit: BoxFit.cover, width: double.infinity, height: 80, errorWidget: (context, url, error) => Center(child: Icon(Icons.forum, color: theme.colorScheme.onSurfaceVariant)))) : Center(child: Icon(Icons.forum, color: theme.colorScheme.onSurfaceVariant))),
-                Padding(padding: const EdgeInsets.all(8), child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [Text(post.userName, style: GoogleFonts.cairo(fontWeight: FontWeight.bold, fontSize: 12)), Text(post.content, style: GoogleFonts.cairo(fontSize: 11), maxLines: 2, overflow: TextOverflow.ellipsis)])),
+                Padding(padding: const EdgeInsets.all(8), child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [RoleNameText(name: post.userName, role: post.userRole, sellerType: post.userSellerType, style: GoogleFonts.cairo(fontWeight: FontWeight.bold, fontSize: 12), iconSize: 12), Text(post.content, style: GoogleFonts.cairo(fontSize: 11), maxLines: 2, overflow: TextOverflow.ellipsis)])),
               ]),
             ),
           );

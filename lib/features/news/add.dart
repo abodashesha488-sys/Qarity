@@ -35,6 +35,8 @@ class _AddNewsScreenState extends State<AddNewsScreen> {
   bool _isSaving = false;
   String? _authorId;
   String? _authorName;
+  String? _authorRole;
+  String? _authorSellerType;
 
   @override
   void initState() {
@@ -57,6 +59,8 @@ class _AddNewsScreenState extends State<AddNewsScreen> {
       setState(() {
         _authorId = user.uid;
         _authorName = model?.name ?? user.displayName ?? 'مستخدم';
+        _authorRole = model?.role;
+        _authorSellerType = model?.sellerType?.name;
       });
     }
   }
@@ -103,6 +107,8 @@ class _AddNewsScreenState extends State<AddNewsScreen> {
         category: _selectedCategory,
         authorId: _authorId,
         authorName: _authorName,
+        authorRole: _authorRole,
+        authorSellerType: _authorSellerType,
         createdAt: DateTime.now(),
       );
       await _newsService.addNews(news);

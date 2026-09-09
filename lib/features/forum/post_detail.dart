@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/utils/helpers.dart';
+import '../../core/utils/role_style.dart';
 import '../../core/widgets/shared_cards.dart';
 import '../../models/data_models.dart';
 import '../../services/forum_service.dart';
@@ -212,8 +213,10 @@ class _ForumPostDetailScreenState extends State<ForumPostDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        post.userName.isEmpty ? 'مستخدم' : post.userName,
+                      RoleNameText(
+                        name: post.userName,
+                        role: post.userRole,
+                        sellerType: post.userSellerType,
                         style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
                       ),
                       const SizedBox(height: 2),

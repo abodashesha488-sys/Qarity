@@ -152,13 +152,17 @@ class _MiniProductCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final price = product.effectivePrice;
+    final accent = RoleStyle.sellerNameColor(
+        RoleStyle.parseSellerType(product.sellerType));
     return Card(
-      elevation: 0,
+      elevation: accent != null ? 2 : 0,
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
         side: BorderSide(
-            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
+            width: accent != null ? 1.6 : 1,
+            color: accent?.withValues(alpha: 0.7) ??
+                theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -218,6 +222,15 @@ class _MiniProductCard extends StatelessWidget {
                           color: theme.colorScheme.primary,
                           fontWeight: FontWeight.w900,
                           fontSize: 13)),
+                  const SizedBox(height: 2),
+                  RoleNameText(
+                    name: product.sellerName,
+                    role: 'seller',
+                    sellerType: product.sellerType,
+                    style: const TextStyle(
+                        fontSize: 9, fontWeight: FontWeight.w700),
+                    iconSize: 11,
+                  ),
                 ],
               ),
             ),

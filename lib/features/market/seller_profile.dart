@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/utils/role_style.dart';
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
 import '../../services/market_service.dart';
@@ -255,8 +256,11 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          Text(
-            profile.name,
+          RoleNameText(
+            name: profile.name,
+            role: 'seller',
+            sellerType: profile.sellerType,
+            maxLines: 2,
             style: theme.textTheme.headlineSmall
                 ?.copyWith(fontWeight: FontWeight.w800),
           ),

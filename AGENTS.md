@@ -168,12 +168,18 @@ lib/
 - `AdminScreenWrapper` checks the optional bootstrap email, then falls back to Firestore role check via `AdminService.isAdminUser()`.
 - `AdminService.isMedicalAdmin()` grants access to the Medical Center management when role is `medical_admin` or `admin`.
 
-### User & seller role management (admin dashboard → المستخدمون)
-- Search by name/email + role filter chips (الكل/مستخدمون/بائعون/مشرفون/مدير طبي/مدراء/معطّلون) + live counters.
+### User & seller role management (admin dashboard → المستخدمون)- Search by name/email + role filter chips (الكل/مستخدمون/بائعون/مشرفون/مدير طبي/مدراء/معطّلون) + live counters.
 - Each account opens a management sheet: role (with per-role permission hints), seller type (image limits 3/7/15/15), enable/disable account (`setUserActive`), and delete.
 - Self-protection: the signed-in admin sees the role controls disabled for their own account.
 - `UserModel.roleLabel`/`canAccessAdminPanel` expose unified Arabic role labels; the profile header shows the role badge (+ seller type with image limit) and a panel shortcut for admin/medical_admin.
 - Seller conversion flow: user request (`seller_requests`) → admin approval (`approveSellerRequest`) → creates `seller_profiles/{uid}` + sets `role:'seller'` + `sellerType` from `requestedSellerType` + invalidates user cache.
+
+### Role Colors & Badges (single source of truth: `lib/core/utils/role_style.dart`)
+- Sellers: gold seller → gold name + gold product/shop card border; super seller → silver; premium seller → red; regular seller → normal color.
+- Admins: general admin (`role: admin`) → gold name + crown icon; `medical_admin`/`moderator` → role-colored name + star icon.
+- Content (products, shops, forum posts, news, buy requests, donations) denormalizes the author's `role`/`sellerType` at creation time, so cards render colors/borders without extra reads.
+- Disabled accounts (`isActive == false`) are signed out at splash and shown a notice.
+- Use `RoleNameText(name, role, sellerType)` for any user-facing author/seller name.
 
 ## Admin Dashboard
 - 5 real-time tabs: News, Products, Obituaries, Occasions, Forum Posts

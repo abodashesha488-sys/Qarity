@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
+import '../../core/utils/role_style.dart';
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
 import '../../services/market_service.dart';
@@ -397,14 +398,14 @@ class _MarketSellersScreenState extends State<MarketSellersScreen>
                 padding: const EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      seller.name,
-                      style: theme.textTheme.titleSmall
-                          ?.copyWith(fontWeight: FontWeight.w800),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                   children: [
+                     RoleNameText(
+                       name: seller.name,
+                       role: 'seller',
+                       sellerType: seller.sellerType,
+                       style: theme.textTheme.titleSmall
+                           ?.copyWith(fontWeight: FontWeight.w800),
+                     ),
                     const SizedBox(height: 4),
                     if (seller.address != null && seller.address!.isNotEmpty)
                       Row(

@@ -22,6 +22,8 @@ class Shop {
   final String? coverUrl;
   final List<String> imageUrls;
   final String whatsapp;
+  final String? ownerRole;       // دور صاحب المحل للتلوين
+  final String? ownerSellerType; // نوع البائع للتلوين
   final bool isActive;
   final bool isApproved;
   final DateTime? createdAt;
@@ -37,6 +39,8 @@ class Shop {
     this.coverUrl,
     this.imageUrls = const [],
     this.whatsapp = '',
+    this.ownerRole,
+    this.ownerSellerType,
     this.isActive = true,
     this.isApproved = false,
     this.createdAt,
@@ -55,6 +59,8 @@ class Shop {
       imageUrls:
           (json['imageUrls'] as List<dynamic>?)?.cast<String>() ?? const [],
       whatsapp: json['whatsapp'] as String? ?? '',
+      ownerRole: json['ownerRole'] as String?,
+      ownerSellerType: json['ownerSellerType'] as String?,
       isActive: json['isActive'] as bool? ?? true,
       isApproved: json['isApproved'] as bool? ?? false,
       createdAt: json['createdAt'] != null ? _parseTs(json['createdAt']) : null,
@@ -71,6 +77,8 @@ class Shop {
         'coverUrl': coverUrl,
         'imageUrls': imageUrls,
         'whatsapp': whatsapp,
+        if (ownerRole != null) 'ownerRole': ownerRole,
+        if (ownerSellerType != null) 'ownerSellerType': ownerSellerType,
         'isActive': isActive,
         'isApproved': isApproved,
         'createdAt': createdAt != null
@@ -117,6 +125,8 @@ class BuyRequest {
   final String budget;
   final List<String> imageUrls;
   final String status; // open | closed
+  final String? userRole;
+  final String? userSellerType;
   final DateTime? createdAt;
 
   const BuyRequest({
@@ -128,6 +138,8 @@ class BuyRequest {
     this.budget = '',
     this.imageUrls = const [],
     this.status = 'open',
+    this.userRole,
+    this.userSellerType,
     this.createdAt,
   });
 
@@ -142,6 +154,8 @@ class BuyRequest {
       imageUrls:
           (json['imageUrls'] as List<dynamic>?)?.cast<String>() ?? const [],
       status: json['status'] as String? ?? 'open',
+      userRole: json['userRole'] as String?,
+      userSellerType: json['userSellerType'] as String?,
       createdAt: json['createdAt'] != null ? _parseTs(json['createdAt']) : null,
     );
   }
@@ -154,6 +168,8 @@ class BuyRequest {
         'budget': budget,
         'imageUrls': imageUrls,
         'status': status,
+        if (userRole != null) 'userRole': userRole,
+        if (userSellerType != null) 'userSellerType': userSellerType,
         'createdAt': createdAt != null
             ? Timestamp.fromDate(createdAt!)
             : FieldValue.serverTimestamp(),
@@ -176,6 +192,8 @@ class Donation {
   final List<String> imageUrls;
   final String contactPhone;
   final String status; // available | donated
+  final String? userRole;
+  final String? userSellerType;
   final DateTime? createdAt;
 
   const Donation({
@@ -188,6 +206,8 @@ class Donation {
     this.imageUrls = const [],
     this.contactPhone = '',
     this.status = 'available',
+    this.userRole,
+    this.userSellerType,
     this.createdAt,
   });
 
@@ -203,6 +223,8 @@ class Donation {
           (json['imageUrls'] as List<dynamic>?)?.cast<String>() ?? const [],
       contactPhone: json['contactPhone'] as String? ?? '',
       status: json['status'] as String? ?? 'available',
+      userRole: json['userRole'] as String?,
+      userSellerType: json['userSellerType'] as String?,
       createdAt: json['createdAt'] != null ? _parseTs(json['createdAt']) : null,
     );
   }
@@ -216,6 +238,8 @@ class Donation {
         'imageUrls': imageUrls,
         'contactPhone': contactPhone,
         'status': status,
+        if (userRole != null) 'userRole': userRole,
+        if (userSellerType != null) 'userSellerType': userSellerType,
         'createdAt': createdAt != null
             ? Timestamp.fromDate(createdAt!)
             : FieldValue.serverTimestamp(),

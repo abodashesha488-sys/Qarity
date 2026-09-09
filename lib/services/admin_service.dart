@@ -501,6 +501,7 @@ class AdminService {
     final requestDoc = await _firestore.collection('seller_requests').doc(docId).get();
     if (requestDoc.exists) {
       final data = requestDoc.data()!;
+      final reqType = (data['requestedSellerType'] as String?) ?? 'regular';
       final profile = {
         'userId': data['userId'],
         'name': data['shopName'],
@@ -508,6 +509,7 @@ class AdminService {
         'phone': data['userPhone'],
         'address': data['shopAddress'],
         'categories': data['categories'] ?? [],
+        'sellerType': reqType,
         'rating': 0.0,
         'reviewCount': 0,
         'totalProducts': 0,
@@ -519,7 +521,6 @@ class AdminService {
       await _firestore.collection('seller_profiles').doc(data['userId']).set(profile);
 
       // Apply the requested seller type + promote user to seller
-      final reqType = (data['requestedSellerType'] as String?) ?? 'regular';
       await _firestore
           .collection('users')
           .doc(data['userId'])

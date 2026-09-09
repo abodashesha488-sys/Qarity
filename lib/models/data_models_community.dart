@@ -516,6 +516,8 @@ class ForumPost implements BaseModel {
   final DateTime createdAt;
   final bool isApproved;
   final bool isPinned;
+  final String? userRole;       // دور الناشر للتلوين/الشارة
+  final String? userSellerType; // نوع البائع إن كان بائعاً
 
   const ForumPost({
     required this.id,
@@ -533,6 +535,8 @@ class ForumPost implements BaseModel {
     required this.createdAt,
     this.isApproved = false,
     this.isPinned = false,
+    this.userRole,
+    this.userSellerType,
   });
 
   factory ForumPost.fromJson(Map<String, dynamic> json, String docId) {
@@ -552,6 +556,8 @@ class ForumPost implements BaseModel {
       createdAt: _parseTimestamp(json['createdAt']),
       isApproved: json['isApproved'] as bool? ?? false,
       isPinned: json['isPinned'] as bool? ?? false,
+      userRole: json['userRole'] as String?,
+      userSellerType: json['userSellerType'] as String?,
     );
   }
 
@@ -572,6 +578,8 @@ class ForumPost implements BaseModel {
       'createdAt': Timestamp.fromDate(createdAt),
       'isApproved': isApproved,
       'isPinned': isPinned,
+      if (userRole != null) 'userRole': userRole,
+      if (userSellerType != null) 'userSellerType': userSellerType,
     };
   }
 

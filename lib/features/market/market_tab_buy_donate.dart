@@ -109,8 +109,8 @@ class _BuyRequestsTabState extends State<_BuyRequestsTab> {
                                   size: 14,
                                   color: theme.colorScheme.onSurfaceVariant),
                               const SizedBox(width: 4),
-                              Text(r.userName,
-                                  style: const TextStyle(fontSize: 12)),
+                              RoleNameText(name: r.userName, role: r.userRole, sellerType: r.userSellerType,
+                                  style: const TextStyle(fontSize: 12), iconSize: 12),
                               if (r.budget.isNotEmpty) ...[
                                 const SizedBox(width: 12),
                                 Icon(Icons.payments_rounded,
@@ -252,8 +252,8 @@ class _DonationsTabState extends State<_DonationsTab> {
                                   size: 13,
                                   color: theme.colorScheme.onSurfaceVariant),
                               const SizedBox(width: 4),
-                              Text(d.userName,
-                                  style: const TextStyle(fontSize: 11)),
+                              RoleNameText(name: d.userName, role: d.userRole, sellerType: d.userSellerType,
+                                  style: const TextStyle(fontSize: 11), iconSize: 11),
                               if (d.imageUrls.length > 1)
                                 Padding(
                                   padding:

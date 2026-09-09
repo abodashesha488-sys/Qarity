@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/utils/navigator_key.dart';
 import '../../routes/app_routes.dart';
+import '../../services/user_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -55,11 +57,32 @@ class _SplashScreenState extends State<SplashScreen>
     if (!mounted) return;
 
     final currentUser = firebase_auth.FirebaseAuth.instance.currentUser;
-    if (currentUser != null) {
-      _safeNavigate(AppRoutes.home);
-    } else {
+    if (currentUser == null) {
       _safeNavigate(AppRoutes.login);
+      return;
     }
+    // فحص حالة الحساب من الكاش المحلي (يعمل دون إنترنت). حساب معطّل → تسجيل خروج.
+    try {
+      final model = await UserService().getUser(currentUser.uid);
+      if (model != null && !model.isActive) {
+        await firebase_auth.FirebaseAuth.instance.signOut();
+        if (!mounted) return;
+        _safeNavigate(AppRoutes.login);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final ctx = navigatorKey.currentContext;
+          if (ctx != null) {
+            ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
+              content: Text('تم تعطيل حسابك — يرجى التواصل مع إدارة القرية'),
+              backgroundColor: Colors.red,
+            ));
+          }
+        });
+        return;
+      }
+    } catch (_) {
+      // تعذّر الفحص (أوفلاين/غير محفوظ) → لا نمنع الدخول.
+    }
+    _safeNavigate(AppRoutes.home);
   }
 
   @override

@@ -125,6 +125,7 @@ class _AddMarketProductScreenState extends State<AddMarketProductScreen> {
         sellerName: _sellerName,
         sellerPhone: _sellerPhone,
         sellerId: _sellerId,
+        sellerType: _sellerType.name,
         stock: 10,
       );
       await _marketService.addProduct(product);

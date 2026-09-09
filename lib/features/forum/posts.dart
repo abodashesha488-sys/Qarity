@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../core/utils/helpers.dart';
+import '../../core/utils/role_style.dart';
 import '../../core/widgets/shared_cards.dart';
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
@@ -383,8 +384,10 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          post.userName.isEmpty ? 'مستخدم' : post.userName,
+                        RoleNameText(
+                          name: post.userName,
+                          role: post.userRole,
+                          sellerType: post.userSellerType,
                           style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
                         ),
                         const SizedBox(height: 2),

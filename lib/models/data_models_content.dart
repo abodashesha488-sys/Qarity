@@ -132,6 +132,8 @@ class NewsItem implements BaseModel {
   final bool isApproved;
   final String? authorId;
   final String? authorName;
+  final String? authorRole; // لدور الكاتب (تلوين الاسم + شارة)
+  final String? authorSellerType;
   @override
   final DateTime? createdAt;
 
@@ -149,6 +151,8 @@ class NewsItem implements BaseModel {
     this.isApproved = false,
     this.authorId,
     this.authorName,
+    this.authorRole,
+    this.authorSellerType,
     this.createdAt,
   });
 
@@ -168,6 +172,8 @@ class NewsItem implements BaseModel {
       isApproved: json['isApproved'] as bool? ?? false,
       authorId: json['authorId'] as String?,
       authorName: json['authorName'] as String?,
+      authorRole: json['authorRole'] as String?,
+      authorSellerType: json['authorSellerType'] as String?,
       createdAt:
           json['createdAt'] != null ? _parseTimestamp(json['createdAt']) : null,
     );
@@ -188,6 +194,8 @@ class NewsItem implements BaseModel {
       'isApproved': isApproved,
       'authorId': authorId,
       'authorName': authorName,
+      if (authorRole != null) 'authorRole': authorRole,
+      if (authorSellerType != null) 'authorSellerType': authorSellerType,
       'createdAt': createdAt != null
           ? Timestamp.fromDate(createdAt!)
           : FieldValue.serverTimestamp(),
@@ -241,6 +249,7 @@ class MarketProduct implements BaseModel {
   final String sellerName;
   final String sellerPhone;
   final String? sellerId;
+  final String? sellerType; // SellerType enum name — لألوان الاسم والإطارات
   final bool isOnOffer;
   final double? offerPrice;
   final String productStatus;
@@ -265,6 +274,7 @@ class MarketProduct implements BaseModel {
     required this.sellerName,
     required this.sellerPhone,
     this.sellerId,
+    this.sellerType,
     this.isOnOffer = false,
     this.offerPrice,
     this.productStatus = 'regular',
@@ -291,6 +301,7 @@ factory MarketProduct.fromJson(Map<String, dynamic> json, String docId) {
       sellerName: json['sellerName'] as String? ?? '',
       sellerPhone: json['sellerPhone'] as String? ?? '',
       sellerId: json['sellerId'] as String?,
+      sellerType: json['sellerType'] as String?,
       isOnOffer: json['isOnOffer'] as bool? ?? false,
       offerPrice: _parseDouble(json['offerPrice']),
       productStatus: json['productStatus'] as String? ?? 'regular',
@@ -332,6 +343,7 @@ factory MarketProduct.fromJson(Map<String, dynamic> json, String docId) {
       'sellerName': sellerName,
       'sellerPhone': sellerPhone,
       'sellerId': sellerId,
+      if (sellerType != null) 'sellerType': sellerType,
       'isOnOffer': isOnOffer,
       'offerPrice': offerPrice,
       'productStatus': productStatus,
@@ -360,6 +372,7 @@ factory MarketProduct.fromJson(Map<String, dynamic> json, String docId) {
       sellerName: sellerName,
       sellerPhone: sellerPhone,
       sellerId: sellerId,
+      sellerType: sellerType,
       isOnOffer: isOnOffer,
       offerPrice: offerPrice,
       createdAt: createdAt,
@@ -469,6 +482,7 @@ class SellerProfile implements BaseModel {
   final int totalSales;
   final bool isVerified;
   final List<String> categories;
+  final String? sellerType; // نوع البائع لألوان الاسم
   @override
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -487,6 +501,7 @@ class SellerProfile implements BaseModel {
     this.totalSales = 0,
     this.isVerified = false,
     this.categories = const [],
+    this.sellerType,
     this.createdAt,
     this.updatedAt,
   });
@@ -507,6 +522,7 @@ class SellerProfile implements BaseModel {
       isVerified: json['isVerified'] as bool? ?? false,
       categories:
           (json['categories'] as List<dynamic>?)?.cast<String>() ?? const [],
+      sellerType: json['sellerType'] as String?,
       createdAt:
           json['createdAt'] != null ? _parseTimestamp(json['createdAt']) : null,
       updatedAt:
@@ -529,6 +545,7 @@ class SellerProfile implements BaseModel {
       'totalSales': totalSales,
       'isVerified': isVerified,
       'categories': categories,
+      if (sellerType != null) 'sellerType': sellerType,
       'createdAt': createdAt != null
           ? Timestamp.fromDate(createdAt!)
           : FieldValue.serverTimestamp(),
