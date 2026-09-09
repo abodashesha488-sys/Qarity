@@ -1,41 +1,44 @@
 import 'dart:convert';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 
-/// يرسل طلب push إلى Vercel Worker (`api/push.js`) ليوصل FCM إلى كل
-/// الأجهزة المشتركة في topic محدد.
+/// يرسل طلب دفع إشعارات إلى Vercel Worker (`api/push.js`).
 ///
-/// يعمل فقط إذا تم ضبط كلا القيمتين وقت البناء:
-/// ```
-/// flutter build web \
-///   --dart-define=PUSH_ENDPOINT=https://qarity-push.vercel.app/api/push \
-///   --dart-define=PUSH_SHARED_SECRET=<same-secret-as-vercel-env>
-/// ```
-/// وإلا فإن إرسال Push يُتخطى بصمت (لن يؤثر على بقية التطبيق).
+/// المصادقة الآن **بدون أي سر في البناء**: نُرفق Firebase ID Token للمستخدم
+/// المسجّل حالياً، والخادم يتحقق منه ثم من دوره (`admin` / `medical_admin`)
+/// في Firestore قبل الإرسال.
+///
+/// العنوان الافتراضي مضمّن في الكود؛ يمكن تجاوزه فقط عند الحاجة:
+/// `--dart-define=PUSH_ENDPOINT=https://...` (اختياري تماماً).
 class RemotePushService {
   RemotePushService._();
 
-  static const String endpoint = String.fromEnvironment('PUSH_ENDPOINT');
-  static const String sharedSecret = String.fromEnvironment('PUSH_SHARED_SECRET');
+  static const String endpoint = String.fromEnvironment(
+    'PUSH_ENDPOINT',
+    defaultValue: 'https://qarity.vercel.app/api/push',
+  );
 
-  /// هل الإعداد مكتمل؟ (يستخدم للاختبار ولتفعيل/تعطيل الواجهة)
-  static bool get isConfigured => endpoint.isNotEmpty && sharedSecret.isNotEmpty;
-
-  /// أرسل إشعار FCM لـ topic. فشل الشبكة يُبتلع (best-effort).
+  /// أرسل إشعار FCM إلى topic — best-effort (أخطاء الشبكة تُبتلع بصمت).
+  /// يُتخطى بهدوء إذا لم يكن هناك مستخدم مسجّل دخوله (المتلقي لا يرسل أصلاً).
   static Future<void> send({
     required String topic,
     required String title,
     required String body,
     String? route,
   }) async {
-    if (!isConfigured) return;
+    if (endpoint.isEmpty) return;
     try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+      final idToken = await user.getIdToken();
+      if (idToken == null || idToken.isEmpty) return;
       await http
           .post(
             Uri.parse(endpoint),
             headers: {
               'content-type': 'application/json',
-              'authorization': 'Bearer $sharedSecret',
+              'authorization': 'Bearer $idToken',
             },
             body: jsonEncode({
               'topic': topic,

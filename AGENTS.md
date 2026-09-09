@@ -50,24 +50,29 @@ push notifications go through a Vercel Serverless function instead.
 
 ### One-time setup
 1. Create a **Service Account** key: Firebase Console → Project Settings → Service
-   accounts → *Generate new private key*. Keep the JSON safe.
+   accounts → *Generate new private key*. Keep the JSON safe (it is git-ignored).
 2. Push to GitHub, then in Vercel:
    - Import this repository.
    - Environment Variables:
      - `FIREBASE_SERVICE_ACCOUNT` — paste the JSON (or base64 of it).
-     - `PUSH_SHARED_SECRET` — any long random string (e.g. `openssl rand -hex 32`).
-   - Deploy → note the resulting URL (e.g. `https://qarity-push.vercel.app`).
-3. Add the URL to Firebase Hosting's authorized domains if FCM web push is ever
-   needed. Android/iOS app delivery works without this step.
+   - Deploy → note the resulting URL (default baked in the client is
+     `https://qarity.vercel.app/api/push`).
+3. Every `git push` to `main` auto-redeploys the worker on Vercel.
 
-### Build the Flutter app with push enabled
+### Authentication model (no shared secret, no build flags)
+The worker authenticates each request with the sender's **Firebase ID Token**,
+then verifies `users/{uid}.role in ['admin','medical_admin']` in Firestore.
+Only a signed-in admin can trigger a village push. There is no secret to
+embed, rotate, or leak.
+
+### Build the Flutter app
+Plain commands — push works out of the box:
 ```
-flutter build web \
-  --dart-define=PUSH_ENDPOINT=https://<your-vercel-project>.vercel.app/api/push \
-  --dart-define=PUSH_SHARED_SECRET=<same-secret>
+flutter build web
+flutter build apk --release
 ```
-If `PUSH_ENDPOINT` or `PUSH_SHARED_SECRET` are unset, `RemotePushService` silently
-skips the call and the app keeps working (just without cross-device push).
+Optional override only if the worker moves: `--dart-define=PUSH_ENDPOINT=https://...`.
+If the user isn't signed in, `RemotePushService` silently no-ops.
 
 ### Topics subscribed by every user on profile completion
 `village_news`, `village_obituaries`, `village_occasions`, `village_market`,
