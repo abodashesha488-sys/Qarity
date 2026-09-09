@@ -162,10 +162,18 @@ lib/
 ## Admin Access
 - **Role-based only** (no hardcoded email in Firestore rules).
 - Firestore role values: `'user'` (default), `'seller'`, `'moderator'`, `'medical_admin'`, `'admin'`.
+- **Privilege hardening (firestore.rules):** a user updating their *own* doc may NOT change `role`/`sellerType`/`isActive` — only `isAdmin()` (role `admin`) may change roles. Users `list` is admin-only; `get` is signed-in. New accounts cannot be created with a privileged role. `UserService.setRoleIfNeeded` was removed (dead + escalation vector).
 - **Bootstrapping the first admin**: create your Firestore user document and set `role: 'admin'` (Firebase Console → Firestore → `users/{uid}`). After that, use the admin dashboard's Users tab to assign further roles.
 - Optionally, at build time you may pass `--dart-define=BOOTSTRAP_ADMIN_EMAIL=<email>` to grant one email a client-side shortcut (empty by default — the source of truth is always the Firestore role).
 - `AdminScreenWrapper` checks the optional bootstrap email, then falls back to Firestore role check via `AdminService.isAdminUser()`.
 - `AdminService.isMedicalAdmin()` grants access to the Medical Center management when role is `medical_admin` or `admin`.
+
+### User & seller role management (admin dashboard → المستخدمون)
+- Search by name/email + role filter chips (الكل/مستخدمون/بائعون/مشرفون/مدير طبي/مدراء/معطّلون) + live counters.
+- Each account opens a management sheet: role (with per-role permission hints), seller type (image limits 3/7/15/15), enable/disable account (`setUserActive`), and delete.
+- Self-protection: the signed-in admin sees the role controls disabled for their own account.
+- `UserModel.roleLabel`/`canAccessAdminPanel` expose unified Arabic role labels; the profile header shows the role badge (+ seller type with image limit) and a panel shortcut for admin/medical_admin.
+- Seller conversion flow: user request (`seller_requests`) → admin approval (`approveSellerRequest`) → creates `seller_profiles/{uid}` + sets `role:'seller'` + `sellerType` from `requestedSellerType` + invalidates user cache.
 
 ## Admin Dashboard
 - 5 real-time tabs: News, Products, Obituaries, Occasions, Forum Posts

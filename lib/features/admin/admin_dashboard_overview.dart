@@ -345,6 +345,10 @@ class _ActivityPreview extends StatelessWidget {
       case 'set_role':
       case 'remove_admin':
         return Icons.shield_rounded;
+      case 'enable_user':
+        return Icons.toggle_on_rounded;
+      case 'disable_user':
+        return Icons.toggle_off_rounded;
       default:
         return Icons.info_rounded;
     }
@@ -378,6 +382,10 @@ class _ActivityPreview extends StatelessWidget {
         return 'تغيير دور';
       case 'remove_admin':
         return 'إزالة إدارة';
+      case 'enable_user':
+        return 'تفعيل حساب';
+      case 'disable_user':
+        return 'تعطيل حساب';
       default:
         return '$action';
     }

@@ -241,5 +241,34 @@ void main() {
       expect(copy.name, 'جديد');
       expect(copy.role, 'admin');
     });
+
+    test('roleLabel covers all defined roles', () {
+      String labelFor(String r) => UserModel(
+            id: 'u',
+            name: 'ن',
+            email: 'e',
+            joinDate: DateTime(2024),
+            role: r,
+          ).roleLabel;
+      expect(labelFor('user'), 'مستخدم');
+      expect(labelFor('seller'), 'بائع');
+      expect(labelFor('moderator'), 'مشرف');
+      expect(labelFor('medical_admin'), 'مدير المركز الطبي');
+      expect(labelFor('admin'), 'مدير عام');
+      expect(labelFor('unknown'), 'unknown');
+    });
+
+    test('medical_admin counts as moderator but not as admin', () {
+      final u = UserModel(
+        id: 'u',
+        name: 'ن',
+        email: 'e',
+        joinDate: DateTime(2024),
+        role: 'medical_admin',
+      );
+      expect(u.isAdmin, isFalse);
+      expect(u.isModerator, isTrue);
+      expect(u.canAccessAdminPanel, isTrue);
+    });
   });
 }

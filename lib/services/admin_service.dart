@@ -236,6 +236,20 @@ class AdminService {
     await _logActivity(action: 'remove_admin', targetCollection: 'users', targetDocId: uid);
   }
 
+  /// تعطيل/تفعيل حساب مستخدم من لوحة التحكم (المعطّل يفقد واجهة الأدمن).
+  Future<void> setUserActive(String uid, bool active) async {
+    await _firestore
+        .collection('users')
+        .doc(uid)
+        .set({'isActive': active}, SetOptions(merge: true));
+    await CacheService.invalidateUser(uid);
+    await _logActivity(
+      action: active ? 'enable_user' : 'disable_user',
+      targetCollection: 'users',
+      targetDocId: uid,
+    );
+  }
+
   Future<void> updateItem(String collection, String docId, Map<String, dynamic> data) => _update(collection, docId, data);
   Future<void> updateNews(String docId, Map<String, dynamic> data) => _update('news', docId, data);
   Future<void> updateProduct(String docId, Map<String, dynamic> data) => _update('market_products', docId, data);

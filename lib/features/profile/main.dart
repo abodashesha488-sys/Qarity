@@ -377,8 +377,80 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _user?.email ?? '',
               style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
+            const SizedBox(height: 10),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                _roleBadge(theme),
+                if (_user?.role == 'seller' && _user?.sellerType != null)
+                  _sellerTypeBadge(theme, _user!.sellerType!),
+              ],
+            ),
+            if (_user?.role == 'admin' || _user?.role == 'medical_admin') ...[
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () => Navigator.pushNamed(
+                    context,
+                    _user!.role == 'admin'
+                        ? AppRoutes.admin
+                        : AppRoutes.medical),
+                icon: const Icon(Icons.admin_panel_settings_rounded, size: 18),
+                label: Text(_user!.role == 'admin' ? 'لوحة التحكم' : 'إدارة المركز الطبي'),
+              ),
+            ],
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _roleBadge(ThemeData theme) {
+    final (label, color, icon) = switch (_user?.role ?? 'user') {
+      'admin' => ('مدير عام', const Color(0xFF1565C0), Icons.admin_panel_settings_rounded),
+      'medical_admin' => ('مدير المركز الطبي', const Color(0xFF00897B), Icons.medical_services_rounded),
+      'moderator' => ('مشرف', Colors.orange, Icons.verified_user_rounded),
+      'seller' => ('بائع', Colors.deepPurple, Icons.store_rounded),
+      _ => ('مستخدم', Colors.teal, Icons.person_rounded),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: color.withValues(alpha: 0.3))),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: color),
+          const SizedBox(width: 5),
+          Text(label,
+              style: TextStyle(
+                  fontSize: 11, fontWeight: FontWeight.w800, color: color)),
+        ],
+      ),
+    );
+  }
+
+  Widget _sellerTypeBadge(ThemeData theme, SellerType t) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+          color: Colors.brown.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.brown.withValues(alpha: 0.25))),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(t.icon, size: 13, color: Colors.brown),
+          const SizedBox(width: 5),
+          Text('${t.label} • حتى ${t.maxImages} صور',
+              style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.brown)),
+        ],
       ),
     );
   }

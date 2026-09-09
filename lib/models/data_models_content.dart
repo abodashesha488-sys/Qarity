@@ -70,7 +70,24 @@ class UserModel implements BaseModel {
   DateTime? get createdAt => joinDate;
 
   bool get isAdmin => role == 'admin';
-  bool get isModerator => role == 'moderator' || role == 'admin';
+  bool get isModerator =>
+      role == 'moderator' || role == 'admin' || role == 'medical_admin';
+
+  static const Map<String, String> _roleLabels = {
+    'user': 'مستخدم',
+    'seller': 'بائع',
+    'moderator': 'مشرف',
+    'medical_admin': 'مدير المركز الطبي',
+    'admin': 'مدير عام',
+  };
+
+  /// الاسم العربي الموحّد للدور — يُستخدم في الملف الشخصي ولوحة التحكم.
+  String get roleLabel => _roleLabels[role] ?? role;
+
+  /// هل يُسمح لهذا الدور بفتح لوحة التحكم؟ (المدير العام فقط للوحة الكاملة،
+  /// والمدير الطبي والمشرف لواجهاتهما الخاصة).
+  bool get canAccessAdminPanel =>
+      role == 'admin' || role == 'medical_admin' || role == 'moderator';
 
   UserModel copyWith({
     String? name,

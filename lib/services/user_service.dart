@@ -91,13 +91,4 @@ class UserService {
       rethrow;
     }
   }
-
-  Future<void> setRoleIfNeeded(String uid, String role) async {
-    final doc = await _firestore.collection('users').doc(uid).get();
-    final currentRole = doc.data()?['role'] as String? ?? 'user';
-    if (currentRole != role) {
-      await _firestore.collection('users').doc(uid).set({'role': role}, SetOptions(merge: true));
-    }
-    await CacheService.invalidateUser(uid);
-  }
 }
