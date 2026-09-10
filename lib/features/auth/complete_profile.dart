@@ -110,9 +110,10 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
 
   Future<void> _saveProfile() async {
     final name = _nameController.text.trim();
-    if (name.isEmpty) {
+    final phone = _phoneController.text.trim();
+    if (name.isEmpty || phone.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('الاسم مطلوب'), backgroundColor: Colors.orange),
+        const SnackBar(content: Text('الاسم ورقم الهاتف مطلوبان'), backgroundColor: Colors.orange),
       );
       return;
     }
@@ -302,13 +303,14 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                         controller: _phoneController,
                         keyboardType: TextInputType.phone,
                         decoration: InputDecoration(
-                          labelText: 'رقم الهاتف',
-                          hintText: 'مثال: 05xxxxxxxx',
+                          labelText: 'رقم الهاتف *',
+                          hintText: 'مثال: 01xxxxxxxxx',
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                           enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5))),
                           focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.6))),
                           prefixIcon: Icon(Icons.phone_rounded, color: theme.colorScheme.primary),
                         ),
+                        validator: (value) => value == null || value.trim().isEmpty ? 'رقم الهاتف مطلوب' : null,
                       ),
                       const SizedBox(height: 24),
                       SizedBox(
