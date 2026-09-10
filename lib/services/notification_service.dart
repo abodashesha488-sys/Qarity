@@ -52,12 +52,65 @@ class NotificationService {
     FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
     FirebaseMessaging.onMessageOpenedApp.listen(_handleNotificationOpen);
 
+    // التشغيل البارد: التطبيق كان مغلقاً تماماً وفُتح بالضغط على إشعار.
+    try {
+      final initialMessage =
+          await FirebaseMessaging.instance.getInitialMessage();
+      if (initialMessage != null) {
+        _openRoute(initialMessage.data['route'] as String?);
+      }
+    } catch (_) {}
+
     final token = await FirebaseMessaging.instance.getToken();
     if (token != null) {
       await _saveTokenToFirestore(token);
     }
 
     FirebaseMessaging.instance.onTokenRefresh.listen(_saveTokenToFirestore);
+  }
+
+  // ───────────────── فتح المسار القادم من إشعار ─────────────────
+  // قد يصل الطلب قبل أن يصبح الـ Navigator جاهزاً (أثناء الإقلاع)، لذا
+  // نخزّن المسار المبدئي ونحاول الانتقال بإعادة محاولات قصيرة.
+  static String? _pendingRoute;
+  static bool _navigating = false;
+
+  static void _openRoute(String? route) {
+    if (route == null || route.isEmpty || route == '/') return;
+    _pendingRoute = route;
+    _drainPendingRoute();
+  }
+
+  static void _drainPendingRoute() {
+    if (_navigating) return;
+    if (_pendingRoute == null) return;
+    _navigating = true;
+    _tryNavigate(_pendingRoute!, 0);
+  }
+
+  static Future<void> _tryNavigate(String route, int attempt) async {
+    // انتظر حتى يتوفّر Navigator (يحدث بعد runApp بلمحة).
+    final context = navigatorKey.currentContext;
+    if (context == null) {
+      if (attempt >= 20) {
+        _pendingRoute = null;
+        _navigating = false;
+        return;
+      }
+      await Future.delayed(const Duration(milliseconds: 300));
+      _tryNavigate(route, attempt + 1);
+      return;
+    }
+    // إن كان المسار ما زال معلّقاً (لم يُلغَ أو يُستبدل) انتقل إليه مرة واحدة.
+    if (_pendingRoute == route) {
+      _pendingRoute = null;
+      try {
+        Navigator.pushNamed(context, route);
+      } catch (_) {
+        // مسار غير معروف — تجاهل بأمان.
+      }
+    }
+    _navigating = false;
   }
 
   static Future<void> _saveTokenToFirestore(String token) async {
@@ -102,20 +155,11 @@ class NotificationService {
   }
 
   static Future<void> _handleNotificationOpen(RemoteMessage message) async {
-    final route = message.data['route'];
-    if (route == null) return;
-    final context = navigatorKey.currentContext;
-    if (context == null) return;
-    // ignore: use_build_context_synchronously
-    Navigator.pushNamed(context, route);
+    _openRoute(message.data['route'] as String?);
   }
 
   static void _onNotificationTapped(NotificationResponse response) {
-    final route = response.payload;
-    if (route == null) return;
-    final context = navigatorKey.currentContext;
-    if (context == null) return;
-    Navigator.pushNamed(context, route);
+    _openRoute(response.payload);
   }
 
   static Future<void> subscribeToTopic(String topic) async {
