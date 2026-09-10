@@ -26,6 +26,7 @@ import '../features/medical/medical_home_screen.dart';
 import '../features/news/add.dart';
 import '../features/news/list.dart';
 import '../features/news/view.dart';
+import '../features/notifications/notifications_inbox_screen.dart';
 import '../features/obituaries/add.dart';
 import '../features/obituaries/detail.dart';
 import '../features/obituaries/list.dart';
@@ -87,6 +88,7 @@ static const String marketProducts = '/market';
   static const String serviceRequest = '/services';
   static const String serviceDetail = '/services/detail';
   static const String medical = '/medical';
+  static const String notificationsInbox = '/notifications';
 
   static final routes = <String, Widget Function(BuildContext)>{
     splash: (_) => const SplashScreen(),
@@ -124,6 +126,7 @@ static const String marketProducts = '/market';
     serviceRequest: (_) => const ServicesScreen(),
     serviceDetail: (_) => const ServiceDetailScreen(),
     medical: (_) => const MedicalHomeScreen(),
+    notificationsInbox: (_) => const NotificationsInboxScreen(),
   };
 
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {

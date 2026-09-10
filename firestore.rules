@@ -67,7 +67,10 @@ service cloud.firestore {
       allow list, get: if true;
       // كل خبر جديد يجب أن يبدأ غير موافق عليه
       allow create: if isSignedIn() && request.resource.data.isApproved == false;
-      allow update: if isAdmin() || interactionOnly();
+      // المالك يستطيع مزامنة اسمه المعروض فقط (cascade تغيير الملف الشخصي)
+      allow update: if isAdmin() || interactionOnly()
+        || (isSignedIn() && resource.data.authorId == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['authorName']));
       allow delete: if isAdmin();
 
       match /comments/{commentId} {
@@ -81,7 +84,10 @@ service cloud.firestore {
     match /market_products/{docId} {
       allow list, get: if true;
       allow create: if isSignedIn() && request.resource.data.isApproved == false;
-      allow update: if isAdmin() || interactionOnly();
+      // البائع: تفاعل + مزامنة اسمه المعروض
+      allow update: if isAdmin() || interactionOnly()
+        || (isSignedIn() && resource.data.sellerId == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['sellerName','sellerType']));
       allow delete: if isAdmin();
 
       match /likes/{userId} {
@@ -115,7 +121,9 @@ service cloud.firestore {
     match /forum_posts/{docId} {
       allow list, get: if true;
       allow create: if isSignedIn() && request.resource.data.isApproved == false;
-      allow update: if isAdmin() || interactionOnly();
+      allow update: if isAdmin() || interactionOnly()
+        || (isSignedIn() && resource.data.userId == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['userName','userPhotoUrl']));
       allow delete: if isAdmin();
 
       match /comments/{commentId} {
@@ -177,7 +185,10 @@ service cloud.firestore {
       // الإنشاء يتحقق من request.resource، والحذف يتحقق من resource (الوثيقة القائمة)
       allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
       allow delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow update: if isAdmin();
+      // مزامنة اسم الحاضر عند تغيير اسمه
+      allow update: if isAdmin()
+        || (isSignedIn() && resource.data.userId == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['userName']));
     }
 
     // ───────────────────────── مراجعات المنتجات ─────────────────────────
@@ -298,22 +309,28 @@ service cloud.firestore {
       allow create: if isSignedIn()
                     && request.auth.uid == request.resource.data.userId
                     && request.resource.data.isApproved == false;
+      // غير المعتمد: تعديله كامل. المعتمد: صاحبُه يحدّث بياناته الشخصية فقط (بما فيها الاسم).
       allow update: if isMedicalAdmin()
                     || (isSignedIn() && resource.data.userId == request.auth.uid
-                        && request.resource.data.isApproved == false);
+                        && request.resource.data.isApproved == false)
+                    || (isSignedIn() && resource.data.userId == request.auth.uid
+                        && request.resource.data.diff(resource.data).affectedKeys()
+                             .hasOnly(['name','phone','age','gender','address','isAvailable','lastDonation','bloodType']));
       allow delete: if isMedicalAdmin()
                     || (isSignedIn() && resource.data.userId == request.auth.uid);
     }
 
-    // طلبات التبرع بالدم: المالك ينشئ/يغلق طلبه، والموافقة والنشر للأدمن/مدير المركز.
+    // طلبات التبرع بالدم: المالك ينشئ/يغلق/يحدّث بيانات طلبه، والموافقة والنشر للأدمن/مدير المركز.
     match /blood_requests/{docId} {
       allow list, get: if true;
       allow create: if isSignedIn()
                     && request.auth.uid == request.resource.data.userId
                     && request.resource.data.isApproved == false;
+      // المالك: الإغلاق (status) أو مزامنة اسم مقدم الطلب؛ ولا يلمس isApproved.
       allow update: if isMedicalAdmin()
                     || (isSignedIn() && resource.data.userId == request.auth.uid
-                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']));
+                        && request.resource.data.diff(resource.data).affectedKeys()
+                             .hasOnly(['status','requesterName','phone']));
       allow delete: if isMedicalAdmin();
     }
   }

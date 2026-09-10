@@ -80,30 +80,32 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: 'forbidden_role' });
   }
 
-  // 3) التحقق من الحمولة ثم الإرسال إلى topic
+  // 3) التحقق من الحمولة ثم الإرسال: إلى topic (جماعي) أو token (شخصي)
   const body = req.body || {};
-  const { topic, title, route, data } = body;
+  const { topic, token, title, route, data } = body;
   const text = (body.body || '').toString();
-  if (!topic || !title) {
-    return res.status(400).json({ error: 'topic_and_title_required' });
+  if ((!topic && !token) || !title) {
+    return res.status(400).json({ error: 'topic_or_token_and_title_required' });
   }
-  if (!/^village_[a-z_]+$/.test(String(topic))) {
+  if (topic && !/^village_[a-z_]+$/.test(String(topic))) {
     return res.status(400).json({ error: 'invalid_topic' });
   }
 
+  const base = {
+    notification: { title: String(title), body: String(text).slice(0, 400) },
+    data: {
+      ...(data || {}),
+      route: route ? String(route) : '',
+    },
+    android: {
+      priority: 'high',
+      notification: { channelId: 'qarity_channel', color: '#1B5E20' },
+    },
+  };
+
   try {
-    const id = await admin.messaging().send({
-      topic,
-      notification: { title: String(title), body: String(text).slice(0, 400) },
-      data: {
-        ...(data || {}),
-        route: route ? String(route) : '',
-      },
-      android: {
-        priority: 'high',
-        notification: { channelId: 'qarity_channel', color: '#1B5E20' },
-      },
-    });
+    const target = token ? { token: String(token) } : { topic };
+    const id = await admin.messaging().send({...base, ...target});
     return res.status(200).json({ ok: true, id });
   } catch (e) {
     return res.status(500).json({ error: 'fcm_failed', message: e?.message || String(e) });

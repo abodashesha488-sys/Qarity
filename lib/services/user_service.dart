@@ -41,17 +41,38 @@ class UserService {
   Future<void> saveUserToFirestore(firebase_auth.User user) async {
     final existingUser = await getUser(user.uid);
     if (existingUser != null) {
-      final needsUpdate = existingUser.name != user.displayName || existingUser.photoUrl != user.photoURL;
-      if (needsUpdate) {
-        await _firestore.collection('users').doc(user.uid).set({
-          'name': user.displayName ?? '',
-          'photoUrl': user.photoURL,
-          'lastLogin': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true)).timeout(const Duration(seconds: 10));
-      } else {
-        await _firestore.collection('users').doc(user.uid).set({
-          'lastLogin': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true)).timeout(const Duration(seconds: 10));
+      // لا نكتب فوق اسم/صورة اختارها المستخدم داخل التطبيق —
+      // قيم Google تُستخدم فقط لملء الحقول الفارغة أول مرة.
+      final updates = <String, dynamic>{
+        'lastLogin': FieldValue.serverTimestamp(),
+      };
+      var identityChanged = false;
+      if ((existingUser.name.trim().isEmpty) &&
+          (user.displayName?.trim().isNotEmpty ?? false)) {
+        updates['name'] = user.displayName!.trim();
+        identityChanged = true;
+      }
+      if ((existingUser.photoUrl?.trim().isEmpty ?? true) &&
+          (user.photoURL?.isNotEmpty ?? false)) {
+        updates['photoUrl'] = user.photoURL;
+        identityChanged = true;
+      }
+      if ((existingUser.email.trim().isEmpty) && (user.email?.isNotEmpty ?? false)) {
+        updates['email'] = user.email;
+        identityChanged = true;
+      }
+      await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .set(updates, SetOptions(merge: true))
+          .timeout(const Duration(seconds: 10));
+      if (identityChanged) {
+        final merged = existingUser.copyWith(
+          name: updates['name'] as String?,
+          photoUrl: updates['photoUrl'] as String?,
+          email: updates['email'] as String?,
+        );
+        await CacheService.saveUser(user.uid, merged.toJson());
       }
       return;
     }
@@ -76,8 +97,9 @@ class UserService {
       final docRef = _firestore.collection('users').doc(user.id);
       final data = user.toJson();
       final existingDoc = await docRef.get();
-      if (existingDoc.exists) {
-        final existing = existingDoc.data() ?? <String, dynamic>{};
+      final existing =
+          existingDoc.exists ? (existingDoc.data() ?? <String, dynamic>{}) : null;
+      if (existing != null) {
         // Preserve sensitive fields that callers may not supply, so we never
         // accidentally demote an admin or reset account state on a partial update.
         data['role'] = existing['role'] ?? data['role'];
@@ -86,9 +108,96 @@ class UserService {
       }
       await docRef.set(data, SetOptions(merge: true));
       await CacheService.saveUser(user.id, data);
+      // إذا تغيّر الاسم أو الصورة → حدّث كل المحتوى المنسوب للمستخدم.
+      if (existing != null) {
+        final oldName = (existing['name'] ?? '').toString();
+        final oldPhoto = (existing['photoUrl'] ?? '').toString();
+        final nameChanged = user.name.trim().isNotEmpty &&
+            user.name.trim() != oldName.trim();
+        final photoChanged = (user.photoUrl ?? '') != oldPhoto;
+        if (nameChanged || photoChanged) {
+          unawaited(syncIdentityToContent(
+            user.id,
+            name: nameChanged ? user.name.trim() : null,
+            photoUrl: photoChanged ? user.photoUrl : null,
+          ));
+        }
+      }
     } catch (e) {
       debugPrint('updateUser failed: $e');
       rethrow;
     }
+  }
+
+  /// ينشر الاسم/الصورة الجديدين على كل المحتوى المنسوب للمستخدم
+  /// (منشورات، تعليقات، مراجعات، منتجات، أخبار، محلات، طلبات دم…).
+  /// best-effort: أخطاء أي مجموعة لا توقف الباقي.
+  Future<void> syncIdentityToContent(String uid,
+      {String? name, String? photoUrl}) async {
+    if (name == null && photoUrl == null) return;
+    Future<void> fanOut(String collection, String ownerField,
+        Map<String, dynamic> values) async {
+      try {
+        final q = await _firestore
+            .collection(collection)
+            .where(ownerField, isEqualTo: uid)
+            .get();
+        if (q.docs.isEmpty) return;
+        final batch = _firestore.batch();
+        for (final d in q.docs) {
+          batch.update(d.reference, values);
+        }
+        await batch.commit();
+      } catch (e) {
+        debugPrint('syncIdentityToContent $collection failed: $e');
+      }
+    }
+
+    final nameFields = <String, (String, String)>{
+      'forum_posts': ('userId', 'userName'),
+      'news': ('authorId', 'authorName'),
+      'market_products': ('sellerId', 'sellerName'),
+      'shops': ('ownerUid', 'ownerName'),
+      'condolences': ('userId', 'userName'),
+      'occasion_attendees': ('userId', 'userName'),
+      'product_reviews': ('userId', 'userName'),
+      'reviews': ('userId', 'userName'),
+      'buy_requests': ('userId', 'userName'),
+      'donations': ('userId', 'userName'),
+      'blood_requests': ('userId', 'requesterName'),
+      'blood_donors': ('userId', 'name'),
+    };
+    final jobs = <Future<void>>[];
+    if (name != null) {
+      nameFields.forEach((col, map) {
+        jobs.add(fanOut(col, map.$1, {map.$2: name}));
+      });
+    }
+    if (photoUrl != null) {
+      for (final col in ['forum_posts', 'product_reviews']) {
+        jobs.add(fanOut(col, 'userId', {'userPhotoUrl': photoUrl}));
+      }
+    }
+    // التعليقات داخل المجموعات الفرعية collectionGroup
+    try {
+      final q = await _firestore
+          .collectionGroup('comments')
+          .where('userId', isEqualTo: uid)
+          .get();
+      if (q.docs.isNotEmpty) {
+        final batch = _firestore.batch();
+        for (final d in q.docs) {
+          final v = <String, dynamic>{
+            if (name != null) 'userName': name,
+            if (photoUrl != null) 'userPhotoUrl': photoUrl,
+          };
+          batch.update(d.reference, v);
+        }
+        await batch.commit();
+      }
+    } catch (e) {
+      debugPrint('syncIdentityToContent comments failed: $e');
+    }
+    await Future.wait(jobs);
   }
 }

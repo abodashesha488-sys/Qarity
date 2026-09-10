@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -59,6 +61,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     super.initState();
     _loadStats();
     _loadPendingCounts();
+    // إصلاح تأسيسي للمنتجات القديمة غير المصنّفة بنوع بائع.
+    unawaited(_adminService.backfillSellerTypes());
   }
 
   Future<void> _loadStats() async {

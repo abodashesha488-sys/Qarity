@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+﻿import 'dart:typed_data';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -29,7 +29,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _phoneController = TextEditingController();
 
   UserModel? _user;
-  File? _profileImage;
+  Uint8List? _profileBytes;
   String? _uploadedImageUrl;
   bool _isLoading = true;
   bool _isSaving = false;
@@ -69,26 +69,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _refresh() async => _fetchData();
 
   ImageProvider? _avatarImage() {
-    if (_profileImage != null) return FileImage(_profileImage!);
+    if (_profileBytes != null) return MemoryImage(_profileBytes!);
     if (_uploadedImageUrl != null) return CachedNetworkImageProvider(_uploadedImageUrl!);
     if (_user?.photoUrl?.isNotEmpty == true) return CachedNetworkImageProvider(_user!.photoUrl!);
     return null;
   }
 
   Future<String?> _uploadProfileImage() async {
-    if (_profileImage == null) return null;
-    final bytes = await _profileImage!.readAsBytes();
-    return _imageUploadService.uploadImage(bytes);
+    if (_profileBytes == null) return null;
+    return _imageUploadService.uploadImage(_profileBytes!);
   }
 
   Future<void> _pickProfileImage() async {
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-    if (image != null && mounted) {
-      setState(() {
-        _profileImage = File(image.path);
-        _uploadedImageUrl = null;
-      });
-    }
+    final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery, maxWidth: 800, maxHeight: 800, imageQuality: 85);
+    if (image == null) return;
+    final bytes = await image.readAsBytes();
+    if (!mounted) return;
+    setState(() {
+      _profileBytes = bytes;
+      _uploadedImageUrl = null;
+    });
   }
 
   Future<void> _saveProfile() async {
@@ -99,24 +100,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       String? newPhotoUrl = _user!.photoUrl;
 
-      if (_profileImage != null) {
+      if (_profileBytes != null) {
         newPhotoUrl = await _uploadProfileImage();
       }
 
       final updatedUser = _user!.copyWith(
-        name: _nameController.text,
+        name: _nameController.text.trim(),
         photoUrl: newPhotoUrl,
         phone: _phoneController.text.isEmpty ? null : _phoneController.text,
       );
 
       await _userService.updateUser(updatedUser);
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تم حفظ الملف الشخصي بنجاح')),
-        );
-        await _fetchData();
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تم حفظ الملف الشخصي بنجاح')),
+      );
+      setState(() {
+        _profileBytes = null;
+        _uploadedImageUrl = null;
+      });
+      await _fetchData();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

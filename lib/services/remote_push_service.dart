@@ -26,7 +26,23 @@ class RemotePushService {
     required String title,
     required String body,
     String? route,
-  }) async {
+  }) =>
+      _post({'topic': topic}, title, body, route);
+
+  /// إشعار شخصي لجهاز محدد عبر FCM registration token
+  /// (مثلاً: إخطار صاحب المحتوى عند الموافقة على منشوره أو رفضه).
+  static Future<void> sendToDevice({
+    required String fcmToken,
+    required String title,
+    required String body,
+    String? route,
+  }) {
+    if (fcmToken.isEmpty) return Future.value();
+    return _post({'token': fcmToken}, title, body, route);
+  }
+
+  static Future<void> _post(
+      Map<String, dynamic> target, String title, String body, String? route) async {
     if (endpoint.isEmpty) return;
     try {
       final user = FirebaseAuth.instance.currentUser;
@@ -41,7 +57,7 @@ class RemotePushService {
               'authorization': 'Bearer $idToken',
             },
             body: jsonEncode({
-              'topic': topic,
+              ...target,
               'title': title,
               'body': body,
               if (route != null) 'route': route,
