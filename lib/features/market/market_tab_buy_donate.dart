@@ -92,6 +92,20 @@ class _BuyRequestsTabState extends State<_BuyRequestsTab> {
                                         fontWeight: FontWeight.w800,
                                         color: r.statusColor)),
                               ),
+                              IconButton(
+                                tooltip: 'مشاركة الطلب',
+                                visualDensity: VisualDensity.compact,
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(
+                                    minWidth: 32, minHeight: 32),
+                                icon: const Icon(Icons.share_rounded, size: 17),
+                                onPressed: () => ShareService.shareText(
+                                    title: '🔍 مطلوب: ${r.title}',
+                                    body: [
+                                      if (r.details.isNotEmpty) r.details,
+                                      if (r.budget.isNotEmpty) 'الميزانية: ${r.budget}',
+                                    ].join('\n')),
+                              ),
                             ],
                           ),
                           if (r.details.isNotEmpty) ...[
@@ -225,11 +239,31 @@ class _DonationsTabState extends State<_DonationsTab> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(d.title,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w900, fontSize: 15),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(d.title,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w900, fontSize: 15),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis),
+                              ),
+                              IconButton(
+                                tooltip: 'مشاركة التبرع',
+                                visualDensity: VisualDensity.compact,
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(
+                                    minWidth: 32, minHeight: 32),
+                                icon: const Icon(Icons.share_rounded, size: 17),
+                                onPressed: () => ShareService.shareText(
+                                    title: '🎁 تبرّع: ${d.title}',
+                                    body: [
+                                      'تصنيف: ${d.category}',
+                                      if (d.description.isNotEmpty) d.description,
+                                    ].join('\n')),
+                              ),
+                            ],
+                          ),
                           const SizedBox(height: 3),
                           Text('تبرع • ${d.category}',
                               style: TextStyle(

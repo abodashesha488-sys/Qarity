@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -219,8 +220,11 @@ floatingActionButton: FloatingActionButton.extended(
         child: ExpansionTile(
           leading: CircleAvatar(
             backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
+            foregroundImage: entry.photoUrl != null && entry.photoUrl!.isNotEmpty
+                ? CachedNetworkImageProvider(entry.photoUrl!)
+                : null,
             child: Text(
-              entry.name.isNotEmpty ? entry.name[0] : '',
+              (entry.photoUrl != null && entry.photoUrl!.isNotEmpty) ? '' : (entry.name.isNotEmpty ? entry.name[0] : ''),
               style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.w800),
             ),
           ),
@@ -519,8 +523,11 @@ class _PendingEntryCardState extends State<_PendingEntryCard> {
               children: [
                 CircleAvatar(
                   backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
+                  foregroundImage: widget.entry.photoUrl != null && widget.entry.photoUrl!.isNotEmpty
+                      ? CachedNetworkImageProvider(widget.entry.photoUrl!)
+                      : null,
                   child: Text(
-                    widget.entry.name.isNotEmpty ? widget.entry.name[0] : '',
+                    (widget.entry.photoUrl != null && widget.entry.photoUrl!.isNotEmpty) ? '' : (widget.entry.name.isNotEmpty ? widget.entry.name[0] : ''),
                     style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.w800),
                   ),
                 ),

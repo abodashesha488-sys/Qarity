@@ -8,6 +8,7 @@ import '../../core/utils/role_style.dart';
 import '../../core/widgets/shared_cards.dart';
 import '../../models/data_models.dart';
 import '../../services/forum_service.dart';
+import '../../services/share_service.dart';
 import '../../services/user_service.dart';
 import '../../widgets/common_appbar_actions.dart';
 
@@ -127,7 +128,20 @@ class _ForumPostDetailScreenState extends State<ForumPostDetailScreen> {
         elevation: 0,
         shadowColor: Colors.transparent,
         surfaceTintColor: theme.colorScheme.surface,
-        actions: CommonAppBarActions.actions(context),
+        actions: [
+          if (passedPost != null)
+            IconButton(
+              tooltip: 'مشاركة',
+              icon: const Icon(Icons.share_rounded),
+              onPressed: () => ShareService.shareText(
+                title: passedPost.title.isNotEmpty
+                    ? passedPost.title
+                    : 'منشور من ${passedPost.userName}',
+                body: passedPost.content,
+              ),
+            ),
+          ...CommonAppBarActions.actions(context),
+        ],
       ),
       body: passedPost == null
           ? const Padding(

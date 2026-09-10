@@ -599,6 +599,7 @@ class PhoneDirectoryEntry implements BaseModel {
   final String? job;
   final String? address;
   final String? email;
+  final String? photoUrl;
   final bool isPublic;
   final bool isApproved;
 
@@ -611,6 +612,7 @@ class PhoneDirectoryEntry implements BaseModel {
     this.job,
     this.address,
     this.email,
+    this.photoUrl,
     this.isPublic = true,
     this.isApproved = false,
   });
@@ -626,6 +628,7 @@ class PhoneDirectoryEntry implements BaseModel {
       job: json['job'] as String?,
       address: json['address'] as String?,
       email: json['email'] as String?,
+      photoUrl: json['photoUrl'] as String?,
       isPublic: json['isPublic'] as bool? ?? true,
       isApproved: json['isApproved'] as bool? ?? false,
     );
@@ -641,6 +644,7 @@ class PhoneDirectoryEntry implements BaseModel {
       'job': job,
       'address': address,
       'email': email,
+      if (photoUrl != null) 'photoUrl': photoUrl,
       'isPublic': isPublic,
       'isApproved': isApproved,
     };

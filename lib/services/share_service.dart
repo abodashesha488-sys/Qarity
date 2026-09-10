@@ -14,6 +14,35 @@ class ShareService {
 
   static const Size _cardSize = Size(800, 1100);
 
+  static const String appSignature =
+      '📲 تمت المشاركة من خلال تطبيق قرية أبوديشيشة';
+
+  /// مشاركة نصية موحّدة لأي محتوى (خبر/منتج/منشور/مناسبة/عيادة/صيدلية/طلب…)
+  /// مع توقيع التطبيق في نهاية النص.
+  static Future<void> shareText({
+    required String title,
+    String? body,
+    String? link,
+  }) async {
+    final buffer = StringBuffer(title.trim());
+    if (body != null && body.trim().isNotEmpty) {
+      buffer
+        ..write('\n\n')
+        ..write(body.trim());
+    }
+    if (link != null && link.trim().isNotEmpty) {
+      buffer
+        ..write('\n\n')
+        ..write(link.trim());
+    }
+    buffer
+      ..write('\n\n')
+      ..write(appSignature);
+    await SharePlus.instance.share(
+      ShareParams(text: buffer.toString(), subject: title.trim()),
+    );
+  }
+
   /// يرسم بطاقة التعزية ويعيدها كـ PNG bytes
   static Future<Uint8List> generateMemorialCard(Obituary obituary) async {
     final recorder = ui.PictureRecorder();

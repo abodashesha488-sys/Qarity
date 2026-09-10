@@ -1,19 +1,91 @@
 ﻿import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../services/notification_service.dart';
 import '../../widgets/common_appbar_actions.dart';
 
+/// إعدادات الإشعارات — كل الخدمات مفعّلة افتراضياً، والتبديل محفوظ محلياً
+/// ويرتبط فعلياً بالاشتراك/الإلغاء في موضوع FCM الخاص بالخدمة.
 class NotificationsSettingsScreen extends StatefulWidget {
   const NotificationsSettingsScreen({super.key});
 
   @override
-  State<NotificationsSettingsScreen> createState() => _NotificationsSettingsScreenState();
+  State<NotificationsSettingsScreen> createState() =>
+      _NotificationsSettingsScreenState();
 }
 
-class _NotificationsSettingsScreenState extends State<NotificationsSettingsScreen> {
-  bool _newsNotifications = true;
-  bool _occasionsNotifications = true;
-  bool _marketNotifications = false;
-  bool _emergencyNotifications = true;
+class _Service {
+  final String topic;
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+  const _Service(this.topic, this.title, this.subtitle, this.icon, this.color);
+}
+
+class _NotificationsSettingsScreenState
+    extends State<NotificationsSettingsScreen> {
+  static const _services = <_Service>[
+    _Service('village_news', 'إشعارات الأخبار', 'أحدث أخبار ومستجدات القرية',
+        Icons.newspaper_rounded, Colors.indigo),
+    _Service('village_obituaries', 'إشعارات العزاء', 'النعياء والتعازي الجديدة',
+        Icons.volunteer_activism_rounded, Colors.blueGrey),
+    _Service('village_occasions', 'إشعارات المناسبات',
+        'المناسبات القادمة في القرية', Icons.celebration_rounded, Colors.purple),
+    _Service('village_market', 'إشعارات السوق', 'المنتجات والمحلات الجديدة',
+        Icons.shopping_bag_rounded, Colors.deepOrange),
+    _Service('village_forum', 'إشعارات المنتدى', 'المنشورات والنقاشات الجديدة',
+        Icons.forum_rounded, Colors.brown),
+    _Service('village_services', 'إشعارات الخدمات', 'طلبات وتحديثات الخدمات',
+        Icons.support_agent_rounded, Colors.teal),
+    _Service('village_medical', 'الإشعارات الطبية',
+        'المركز الطبي وعياداته والصيدليات وبنك الدم',
+        Icons.medical_services_rounded, Color(0xFF00897B)),
+  ];
+
+  final Map<String, bool> _states = {};
+  bool _loading = true;
+
+  static String _key(String topic) => 'notif_pref_$topic';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPrefs();
+  }
+
+  Future<void> _loadPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      for (final s in _services) {
+        // افتراضي: مفعّل
+        _states[s.topic] = prefs.getBool(_key(s.topic)) ?? true;
+      }
+      _loading = false;
+    });
+  }
+
+  Future<void> _toggle(_Service s, bool value) async {
+    setState(() => _states[s.topic] = value);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_key(s.topic), value);
+    try {
+      if (value) {
+        await NotificationService.subscribeToTopic(s.topic);
+      } else {
+        await NotificationService.unsubscribeFromTopic(s.topic);
+      }
+    } catch (_) {}
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content:
+          Text(value ? 'تم تفعيل ${s.title}' : 'تم إيقاف ${s.title}'),
+      duration: const Duration(seconds: 2),
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    ));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,119 +99,66 @@ class _NotificationsSettingsScreenState extends State<NotificationsSettingsScree
         surfaceTintColor: theme.colorScheme.surface,
         actions: CommonAppBarActions.actions(context),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Card(
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-              side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primaryContainer.withValues(alpha: 0.35),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
+                      Icon(Icons.info_outline_rounded,
+                          size: 18, color: theme.colorScheme.primary),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'جميع الإشعارات مفعّلة افتراضياً — يمكنك إيقاف أي خدمة منها في أي وقت وستبقى اختيارك محفوظاً.',
+                          style: theme.textTheme.bodySmall,
                         ),
-                        child: Icon(Icons.notifications_active_rounded, color: theme.colorScheme.primary, size: 20),
                       ),
-                      const SizedBox(width: 12),
-                      Text('الإشعارات', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  _buildNotificationTile(
-                    theme,
-                    icon: Icons.newspaper_rounded,
-                    title: 'إشعارات الأخبار',
-                    subtitle: 'تلقي إشعارات عند نشر أخبار جديدة',
-                    value: _newsNotifications,
-                    onChanged: (v) => setState(() => _newsNotifications = v),
-                    color: Colors.indigo,
-                  ),
-                  const Divider(height: 24),
-                  _buildNotificationTile(
-                    theme,
-                    icon: Icons.celebration_rounded,
-                    title: 'إشعارات المناسبات',
-                    subtitle: 'تلقي إشعارات عن المناسبات القادمة',
-                    value: _occasionsNotifications,
-                    onChanged: (v) => setState(() => _occasionsNotifications = v),
-                    color: Colors.purple,
-                  ),
-                  const Divider(height: 24),
-                  _buildNotificationTile(
-                    theme,
-                    icon: Icons.shopping_bag_rounded,
-                    title: 'إشعارات السوق',
-                    subtitle: 'تلقي إشعارات عن المنتجات الجديدة',
-                    value: _marketNotifications,
-                    onChanged: (v) => setState(() => _marketNotifications = v),
-                    color: Colors.deepOrange,
-                  ),
-                  const Divider(height: 24),
-                  _buildNotificationTile(
-                    theme,
-                    icon: Icons.emergency_rounded,
-                    title: 'إشعارات الطوارئ',
-                    subtitle: 'تلقي إشعارات الطوارئ المهمة',
-                    value: _emergencyNotifications,
-                    onChanged: (v) => setState(() => _emergencyNotifications = v),
-                    color: Colors.red,
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 12),
+                ..._services.map((s) => Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Card(
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                          side: BorderSide(
+                              color: theme.colorScheme.outlineVariant
+                                  .withValues(alpha: 0.4)),
+                        ),
+                        child: SwitchListTile(
+                          contentPadding:
+                              const EdgeInsets.symmetric(horizontal: 16),
+                          value: _states[s.topic] ?? true,
+                          onChanged: (v) => _toggle(s, v),
+                          secondary: Container(
+                            padding: const EdgeInsets.all(9),
+                            decoration: BoxDecoration(
+                                color: s.color.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(12)),
+                            child:
+                                Icon(s.icon, color: s.color, size: 20),
+                          ),
+                          title: Text(s.title,
+                              style: theme.textTheme.titleSmall
+                                  ?.copyWith(fontWeight: FontWeight.w800)),
+                          subtitle: Text(s.subtitle,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant)),
+                        ),
+                      ),
+                    )),
+              ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNotificationTile(
-    ThemeData theme, {
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-    required Color color,
-  }) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(icon, color: color, size: 20),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-              const SizedBox(height: 2),
-              Text(subtitle, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-            ],
-          ),
-        ),
-        Switch(
-          value: value,
-          onChanged: onChanged,
-          activeThumbColor: theme.colorScheme.primary,
-        ),
-      ],
     );
   }
 }

@@ -67,7 +67,7 @@ class _OccasionDetailScreenState extends State<OccasionDetailScreen> {
         shadowColor: Colors.transparent,
         surfaceTintColor: theme.colorScheme.surface,
         actions: [
-          if (_occasion != null)
+          if (_occasion != null && !_isPastOccasion(_occasion!))
             IconButton(
               tooltip: 'مشاركة الدعوة',
               icon: const Icon(Icons.share_rounded),
@@ -202,7 +202,9 @@ class _OccasionDetailContent extends StatelessWidget {
           ),
         ],
         const SizedBox(height: 24),
-        _AttendanceSection(occasionId: occasion.id, occasionTitle: occasion.title),
+        if (!_isPastOccasion(occasion))
+          _AttendanceSection(
+              occasionId: occasion.id, occasionTitle: occasion.title),
       ],
     );
   }
@@ -235,7 +237,7 @@ class _AttendanceSectionState extends State<_AttendanceSection> {
         await _engagement.cancelAttendance(occasionId: widget.occasionId, userId: user.uid);
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تم إلغاء المشاركة'), backgroundColor: Colors.orange),
+          const SnackBar(content: Text('تم إلغاء الحضور'), backgroundColor: Colors.orange),
         );
       } else {
         await _engagement.attendOccasion(
@@ -245,7 +247,7 @@ class _AttendanceSectionState extends State<_AttendanceSection> {
         );
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تم تسجيل مشاركتك'), backgroundColor: Colors.green),
+          const SnackBar(content: Text('تم تسجيل حضورك 🎉'), backgroundColor: Colors.green),
         );
       }
     } catch (e) {
@@ -260,8 +262,8 @@ class _AttendanceSectionState extends State<_AttendanceSection> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('تأكيد المشاركة'),
-        content: Text('هل تود المشاركة في "${widget.occasionTitle}"؟'),
+        title: const Text('تأكيد الحضور'),
+        content: Text('هل تود حضور "${widget.occasionTitle}"؟'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
           FilledButton(
@@ -269,9 +271,75 @@ class _AttendanceSectionState extends State<_AttendanceSection> {
               Navigator.pop(ctx);
               _toggle(false);
             },
-            child: const Text('تأكيد'),
+            child: const Text('سأحضر'),
           ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _showAttendees() async {
+    final user = FirebaseAuth.instance.currentUser;
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.only(bottom: 8),
+              child: Text('الحاضرون',
+                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
+            ),
+            Flexible(
+              child: StreamBuilder<List<String>>(
+                stream: _engagement.attendeeNames(widget.occasionId),
+                builder: (context, snapshot) {
+                  final names = snapshot.data ?? [];
+                  if (names.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Text('لا أحد حاضر حتى الآن — كن الأول 🌟'),
+                    );
+                  }
+                  return ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: names.length,
+                    itemBuilder: (context, i) => ListTile(
+                      dense: true,
+                      leading: CircleAvatar(
+                        radius: 14,
+                        backgroundColor: Theme.of(ctx).colorScheme.primaryContainer,
+                        child: Text('${i + 1}',
+                            style: const TextStyle(
+                                fontSize: 11, fontWeight: FontWeight.w800)),
+                      ),
+                      title: Text(names[i]),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const Divider(height: 1),
+            if (user != null)
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+                    onPressed: () async {
+                      Navigator.pop(ctx);
+                      await _toggle(true);
+                    },
+                    icon: const Icon(Icons.event_busy_rounded, size: 18),
+                    label: const Text('إلغاء الحضور'),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -292,8 +360,8 @@ class _AttendanceSectionState extends State<_AttendanceSection> {
             final attending = attSnap.data ?? false;
             return DetailActionButton(
               icon: attending ? Icons.check_circle_rounded : Icons.event_available_rounded,
-              label: attending ? 'إلغاء المشاركة ($count)' : 'المشاركة بالحفل ($count)',
-              onPressed: attending ? () => _toggle(true) : _confirm,
+              label: attending ? 'حاضر ✓ ($count)' : 'حضور ($count)',
+              onPressed: attending ? _showAttendees : _confirm,
             );
           },
         );
@@ -541,4 +609,13 @@ class _ErrorStateView extends StatelessWidget {
       ],
     );
   }
+}
+
+/// هل انقضت المناسبة؟ (تاريخها بصيغة yyyy/MM/dd)
+bool _isPastOccasion(Occasion o) {
+  final raw = o.date.trim();
+  if (raw.isEmpty) return false;
+  final d = DateTime.tryParse(raw.replaceAll('/', '-'));
+  if (d == null) return false;
+  return d.isBefore(DateTime.now());
 }

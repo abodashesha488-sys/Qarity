@@ -9,6 +9,7 @@ import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
 import '../../services/market_service.dart';
 import '../../services/product_interaction_service.dart';
+import '../../services/share_service.dart';
 import '../../widgets/common_appbar_actions.dart';
 
 class ProductDetailScreen extends StatefulWidget {
@@ -550,16 +551,20 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 
+  String get _productShareText =>
+      'تحقق من هذا المنتج: ${_product!.name}\n${_product!.description}\n'
+      'السعر: ${_product!.effectivePrice.toStringAsFixed(0)} ج.م\n'
+      'بائع: ${_product!.sellerName}\n\n'
+      '${ShareService.appSignature}';
+
   void _shareProduct() async {
-    final text =
-        'تحقق من هذا المنتج: ${_product!.name}\n${_product!.description}\nالسعر: ${_product!.effectivePrice.toStringAsFixed(0)} ج.م';
-    await SharePlus.instance.share(ShareParams(text: text, subject: _product!.name));
+    await SharePlus.instance.share(
+        ShareParams(text: _productShareText, subject: _product!.name));
   }
 
   void _shareToWhatsApp() async {
-    final text =
-        'تحقق من هذا المنتج: ${_product!.name}\n${_product!.description}\nالسعر: ${_product!.effectivePrice.toStringAsFixed(0)} ج.م';
-    final url = 'https://wa.me/?text=${Uri.encodeComponent(text)}';
+    final url =
+        'https://wa.me/?text=${Uri.encodeComponent(_productShareText)}';
     final Uri launchUri = Uri.parse(url);
     if (await canLaunchUrl(launchUri)) {
       await launchUrl(launchUri, mode: LaunchMode.externalApplication);

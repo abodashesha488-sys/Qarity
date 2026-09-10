@@ -92,6 +92,17 @@ class EngagementService {
         .snapshots()
         .map((snapshot) => snapshot.docs.length);
   }
+
+  /// قائمة أسماء الحاضرين في مناسبة.
+  Stream<List<String>> attendeeNames(String occasionId) {
+    return _firestore
+        .collection('occasion_attendees')
+        .where('occasionId', isEqualTo: occasionId)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((d) => (d.data()['userName'] ?? 'مستخدم').toString())
+            .toList());
+  }
 }
 
 class Condolence {

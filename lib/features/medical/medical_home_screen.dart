@@ -9,6 +9,7 @@ import '../../models/medical_models.dart';
 import '../../services/admin_service.dart';
 import '../../services/image_upload_service.dart';
 import '../../services/medical_service.dart';
+import '../../services/share_service.dart';
 import '../../widgets/common_appbar_actions.dart';
 import 'medical_admin_screen.dart';
 
@@ -625,6 +626,22 @@ class _OpenRequestsList extends StatelessWidget {
                       child: Wrap(
                         spacing: 8,
                         children: [
+                          OutlinedButton.icon(
+                            onPressed: () => ShareService.shareText(
+                                title:
+                                    '🩸 طلب تبرع بالدم — فصيلة ${r.bloodType.code}',
+                                body: [
+                                  if (r.patientName.isNotEmpty)
+                                    'المريض: ${r.patientName}',
+                                  'الوحدات المطلوبة: ${r.units}',
+                                  if (r.hospital.isNotEmpty)
+                                    'المكان: ${r.hospital}',
+                                  if (r.phone.isNotEmpty)
+                                    'للتواصل: ${r.phone}',
+                                ].join('\n')),
+                            icon: const Icon(Icons.share_rounded, size: 16),
+                            label: const Text('مشاركة الطلب'),
+                          ),
                           if (r.phone.isNotEmpty)
                             OutlinedButton.icon(
                               onPressed: () => _call(r.phone),
@@ -887,6 +904,30 @@ class _ClinicCard extends StatelessWidget {
                     ),
                   ),
                 ],
+                const SizedBox(height: 8),
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF00897B)),
+                    onPressed: () => ShareService.shareText(
+                        title: '🏥 ${clinic.name}',
+                        body: [
+                          if (clinic.specialty.isNotEmpty)
+                            'التخصص: ${clinic.specialty}',
+                          if (clinic.ownerName.isNotEmpty)
+                            'الطبيب: ${clinic.ownerName}',
+                          if (clinic.workingHours.isNotEmpty)
+                            'المواعيد: ${clinic.workingHours}',
+                          if (clinic.address.isNotEmpty)
+                            'العنوان: ${clinic.address}',
+                          if (clinic.phone.isNotEmpty)
+                            'هاتف: ${clinic.phone}',
+                        ].join('\n')),
+                    icon: const Icon(Icons.share_rounded, size: 16),
+                    label: const Text('مشاركة العيادة'),
+                  ),
+                ),
               ],
             ),
           ),
@@ -1074,6 +1115,30 @@ class _PharmacyCard extends StatelessWidget {
                 ),
               ),
             ],
+            const SizedBox(height: 8),
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(foregroundColor: Colors.green),
+                onPressed: () => ShareService.shareText(
+                    title: '💊 ${pharmacy.name}',
+                    body: [
+                      if (pharmacy.ownerName.isNotEmpty)
+                        'المسؤول: ${pharmacy.ownerName}',
+                      pharmacy.is24Hours
+                          ? 'تعمل على مدار ٢٤ ساعة'
+                          : (pharmacy.workingHours.isNotEmpty
+                              ? 'المواعيد: ${pharmacy.workingHours}'
+                              : ''),
+                      if (pharmacy.address.isNotEmpty)
+                        'العنوان: ${pharmacy.address}',
+                      if (pharmacy.phone.isNotEmpty)
+                        'هاتف: ${pharmacy.phone}',
+                    ].where((e) => e.isNotEmpty).join('\n')),
+                icon: const Icon(Icons.share_rounded, size: 16),
+                label: const Text('مشاركة الصيدلية'),
+              ),
+            ),
           ],
         ),
       ),

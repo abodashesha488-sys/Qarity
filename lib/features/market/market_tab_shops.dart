@@ -129,6 +129,19 @@ class _ShopDetailScreen extends StatelessWidget {
         title: Text(shop.name),
         centerTitle: true,
         actions: [
+          IconButton(
+            tooltip: 'مشاركة المحل',
+            icon: const Icon(Icons.share_rounded),
+            onPressed: () => ShareService.shareText(
+              title: '🏬 ${shop.name}',
+              body: [
+                'التصنيف: ${shop.category}',
+                'يديره: ${shop.ownerName}',
+                if (shop.description.isNotEmpty) shop.description,
+                if (shop.whatsapp.isNotEmpty) 'واتساب: ${shop.whatsapp}',
+              ].join('\n'),
+            ),
+          ),
           if (shop.whatsapp.isNotEmpty)
             IconButton(
               tooltip: 'تواصل واتساب',

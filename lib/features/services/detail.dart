@@ -2,6 +2,7 @@
 
 import '../../models/data_models.dart';
 import '../../services/service_request_service.dart';
+import '../../services/share_service.dart';
 import '../../widgets/common_appbar_actions.dart';
 
 class ServiceDetailScreen extends StatefulWidget {
@@ -105,7 +106,20 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
         elevation: 0,
         shadowColor: Colors.transparent,
         surfaceTintColor: theme.colorScheme.surface,
-        actions: CommonAppBarActions.actions(context),
+        actions: [
+          IconButton(
+            tooltip: 'مشاركة',
+            icon: const Icon(Icons.share_rounded),
+            onPressed: () => ShareService.shareText(
+                title: '🔔 ${request.type}',
+                body: [
+                  if (request.location.isNotEmpty)
+                    'الموقع: ${request.location}',
+                  if (request.description.isNotEmpty) request.description,
+                ].join('\n')),
+          ),
+          ...CommonAppBarActions.actions(context),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),

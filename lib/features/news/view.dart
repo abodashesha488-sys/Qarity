@@ -2,13 +2,13 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/utils/helpers.dart';
 import '../../core/utils/role_style.dart';
 import '../../core/widgets/shared_cards.dart';
 import '../../models/data_models.dart';
 import '../../services/news_service.dart';
+import '../../services/share_service.dart';
 import '../../widgets/common_appbar_actions.dart';
 
 /// Full article reader. Opened with a [NewsItem] as route argument
@@ -89,17 +89,7 @@ class _NewsViewScreenState extends State<NewsViewScreen> {
   }
 
   Future<void> _shareNews(NewsItem item) async {
-    final text = '${item.title}\n${item.subtitle}';
-    try {
-      final uri = Uri.parse('https://t.me/share/url?url=${Uri.encodeComponent(text)}');
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else if (mounted) {
-        AppHelpers.showSnackBar(context, 'لا يمكن فتح تطبيق المشاركة', isError: true);
-      }
-    } catch (_) {
-      if (mounted) AppHelpers.showSnackBar(context, 'تعذر مشاركة الخبر', isError: true);
-    }
+    await ShareService.shareText(title: item.title, body: item.subtitle);
   }
 
   @override

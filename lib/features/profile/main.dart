@@ -8,7 +8,6 @@ import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
 import '../../services/image_upload_service.dart';
 import '../../services/market_service.dart';
-import '../../services/order_service.dart';
 import '../../services/theme_service.dart';
 import '../../services/user_service.dart';
 import '../../widgets/common_appbar_actions.dart';
@@ -24,7 +23,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final UserService _userService = UserService();
   final ImageUploadService _imageUploadService = ImageUploadService();
   final ImagePicker _picker = ImagePicker();
-  final OrderService _orderService = OrderService();
   final MarketService _marketService = MarketService();
   final ThemeService _themeService = ThemeService();
   final _nameController = TextEditingController();
@@ -306,8 +304,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 16),
             _buildSettingsSection(theme),
             if (_isSeller) ...[
-              const SizedBox(height: 16),
-              _buildSellerOrdersSection(theme),
               const SizedBox(height: 16),
               _buildSellerProductsSection(theme),
             ],
@@ -662,208 +658,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
     );
-  }
-
-  void _showOrderDetails(AppOrder order, ThemeData theme) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(16),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Text(order.productName, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800, fontSize: 18)),
-          const SizedBox(height: 12),
-          ListTile(title: Text('العميل: ${order.buyerName}'), leading: const Icon(Icons.person)),
-          ListTile(title: Text('هاتف العميل: ${order.buyerPhone}'), leading: const Icon(Icons.phone)),
-          ListTile(title: Text('الكمية: ${order.quantity} قطعة'), leading: const Icon(Icons.numbers)),
-          ListTile(title: Text('السعر: ${order.price.toStringAsFixed(0)} ج.م'), leading: const Icon(Icons.money)),
-          ListTile(title: Text('الحالة: ${order.statusLabel}'), leading: Icon(Icons.info, color: order.statusColor)),
-        ]),
-      ),
-    );
-  }
-
-  void _showCompleteDialog(AppOrder order) {
-    final navigator = Navigator.of(context);
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('إنهاء الطلب؟'),
-        content: const Text('هل أنت متأكد أنك أنهيت هذا الطلب؟'),
-        actions: [
-          TextButton(onPressed: () => navigator.pop(), child: const Text('إلغاء')),
-          TextButton(
-            onPressed: () {
-              _orderService
-                  .updateOrderStatus(order.id, 'delivered')
-                  .then((_) => navigator.pop());
-            },
-            child: const Text('إنهاء'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSellerOrdersSection(ThemeData theme) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.receipt_long, color: theme.colorScheme.primary),
-                const SizedBox(width: 8),
-                Text('طلباتي', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800, fontSize: 16)),
-              ],
-            ),
-            const SizedBox(height: 12),
-            DefaultTabController(
-              length: 2,
-              child: Column(
-                children: [
-                  TabBar(
-                    tabs: [
-                      Tab(child: _buildCountTab('جديدة', _pendingCount(theme), theme.colorScheme.error)),
-                      Tab(child: _buildCountTab('منفذة', _deliveredCount(theme), Colors.green)),
-                    ],
-                    labelColor: theme.colorScheme.primary,
-                    unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
-                  ),
-                  SizedBox(
-                    height: 300,
-                    child: TabBarView(
-                      children: [
-                        _buildOrdersList('pending', theme),
-                        _buildOrdersList('delivered', theme),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOrdersList(String status, ThemeData theme) {
-    return StreamBuilder<List<AppOrder>>(
-      stream: _orderService.getSellerOrdersStream(_user?.id ?? ''),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator(strokeWidth: 2));
-        }
-        if (snapshot.hasError) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error_outline_rounded, color: theme.colorScheme.error, size: 32),
-                  const SizedBox(height: 8),
-                  Text('خطأ في تحميل الطلبات', style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.error)),
-                  const SizedBox(height: 8),
-                  Text(snapshot.error.toString(), style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-                ],
-              ),
-            ),
-          );
-        }
-        final orders = (snapshot.data ?? []).where((o) => o.status == status).toList();
-        if (orders.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.inbox_rounded, size: 40, color: theme.colorScheme.onSurfaceVariant),
-                const SizedBox(height: 8),
-                Text(status == 'pending' ? 'لا توجد طلبات جديدة' : 'لا توجد طلبات منفذة',
-                    style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-              ],
-            ),
-          );
-        }
-        return ListView.builder(
-          itemCount: orders.length,
-          itemBuilder: (context, index) {
-            final order = orders[index];
-            return Card(
-              elevation: 0,
-              margin: const EdgeInsets.only(bottom: 8),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
-              ),
-              child: ListTile(
-                title: Text(
-                  order.productName,
-                  style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800, fontSize: 13),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 4),
-                    Text('من ${order.buyerName} • ${order.quantity} قطعة',
-                        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-                    if (order.buyerPhone.isNotEmpty)
-                      Text('هاتف: ${order.buyerPhone}', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-                    Text(order.statusLabel, style: theme.textTheme.bodySmall?.copyWith(color: order.statusColor)),
-                  ],
-                ),
-                isThreeLine: true,
-                trailing: status == 'pending'
-                    ? IconButton(icon: const Icon(Icons.check_circle_rounded, color: Colors.green), onPressed: () => _showCompleteDialog(order))
-                    : null,
-                onTap: () => _showOrderDetails(order, theme),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _pendingCount(ThemeData theme) {
-    return StreamBuilder<List<AppOrder>>(
-      stream: _orderService.getSellerOrdersStream(_user?.id ?? ''),
-      builder: (context, snapshot) {
-        if (snapshot.hasError) return Icon(Icons.error_outline_rounded, size: 16, color: theme.colorScheme.error);
-        if (!snapshot.hasData) return const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2));
-        final count = (snapshot.data ?? []).where((o) => o.status == 'pending').length;
-        return Text('$count', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error, fontWeight: FontWeight.bold, fontSize: 14));
-      },
-    );
-  }
-
-  Widget _deliveredCount(ThemeData theme) {
-    return StreamBuilder<List<AppOrder>>(
-      stream: _orderService.getSellerOrdersStream(_user?.id ?? ''),
-      builder: (context, snapshot) {
-        if (snapshot.hasError) return Icon(Icons.error_outline_rounded, size: 16, color: theme.colorScheme.error);
-        if (!snapshot.hasData) return const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2));
-        final count = (snapshot.data ?? []).where((o) => o.status == 'delivered').length;
-        return Text('$count', style: theme.textTheme.bodySmall?.copyWith(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 14));
-      },
-    );
-  }
-
-  Widget _buildCountTab(String label, Widget countWidget, Color color) {
-    return Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-      Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w700)),
-      const SizedBox(width: 4),
-      countWidget,
-    ]);
   }
 
   Widget _buildSellerProductsSection(ThemeData theme) {

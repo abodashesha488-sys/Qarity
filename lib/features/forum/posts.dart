@@ -11,6 +11,7 @@ import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
 import '../../services/cache_service.dart';
 import '../../services/forum_service.dart';
+import '../../services/share_service.dart';
 import '../../services/user_service.dart';
 import '../../widgets/common_appbar_actions.dart';
 import '../../widgets/offline_stream_builder.dart';
@@ -37,7 +38,6 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
   static const String _latestFilter = 'الأحدث';
   static const String _allFilter = 'الكل';
   static const String _topFilter = 'الأكثر إعجاباً';
-  static const List<String> _filters = [_latestFilter, _allFilter, _topFilter];
 
   static const List<String> _topics = [
     'الكل',
@@ -158,6 +158,39 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
     );
   }
 
+  Widget _sortPill(ThemeData theme, String value, IconData icon, String short) {
+    final selected = _selectedFilter == value;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedFilter = value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+        decoration: BoxDecoration(
+          color: selected ? theme.colorScheme.primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(11),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon,
+                size: 14,
+                color: selected
+                    ? theme.colorScheme.onPrimary
+                    : theme.colorScheme.onSurfaceVariant),
+            const SizedBox(width: 4),
+            Text(short,
+                style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: selected
+                        ? theme.colorScheme.onPrimary
+                        : theme.colorScheme.onSurface)),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildFilterHeader(ThemeData theme) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
@@ -170,61 +203,55 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          TextField(
-            controller: _searchController,
-            textInputAction: TextInputAction.search,
-            decoration: InputDecoration(
-              hintText: 'ابحث في المواضيع...',
-              hintStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
-              prefixIcon: Icon(Icons.search_rounded, color: theme.colorScheme.primary),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: Icon(Icons.clear_rounded, color: theme.colorScheme.primary, size: 18),
-                      onPressed: _searchController.clear,
-                    )
-                  : null,
-              filled: true,
-              fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.4), width: 1.5),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  textInputAction: TextInputAction.search,
+                  decoration: InputDecoration(
+                    hintText: 'ابحث في المواضيع...',
+                    hintStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
+                    prefixIcon: Icon(Icons.search_rounded, color: theme.colorScheme.primary),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: Icon(Icons.clear_rounded, color: theme.colorScheme.primary, size: 18),
+                            onPressed: _searchController.clear,
+                          )
+                        : null,
+                    filled: true,
+                    fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.4), width: 1.5),
+                    ),
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(width: 10),
+              // أزرار الترتيب الحديثة بجانب البحث
+              Container(
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                      color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _sortPill(theme, _latestFilter, Icons.schedule_rounded, 'الأحدث'),
+                    _sortPill(theme, _allFilter, Icons.apps_rounded, 'الكل'),
+                    _sortPill(theme, _topFilter, Icons.favorite_rounded, 'إعجاب'),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 40,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: _filters.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (context, index) {
-                final filter = _filters[index];
-                final selected = filter == _selectedFilter;
-                return ChoiceChip(
-                  label: Text(filter),
-                  selected: selected,
-                  showCheckmark: false,
-                  onSelected: (_) => setState(() => _selectedFilter = filter),
-                  selectedColor: theme.colorScheme.primary,
-                  backgroundColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
-                  side: BorderSide(
-                    color: selected
-                        ? Colors.transparent
-                        : theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
-                  ),
-                  labelStyle: theme.textTheme.labelLarge?.copyWith(
-                    color: selected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface,
-                    fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                  ),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           SizedBox(
             height: 36,
             child: ListView.separated(
@@ -400,6 +427,20 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
                   ),
                   if (post.isPinned)
                     Icon(Icons.push_pin_rounded, size: 18, color: theme.colorScheme.primary),
+                  IconButton(
+                    tooltip: 'مشاركة المنشور',
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+                    icon: Icon(Icons.share_rounded,
+                        size: 17, color: theme.colorScheme.onSurfaceVariant),
+                    onPressed: () => ShareService.shareText(
+                      title: post.title.isNotEmpty
+                          ? post.title
+                          : 'منشور من ${post.userName}',
+                      body: post.content,
+                    ),
+                  ),
                 ],
               ),
               if (post.isPinned)

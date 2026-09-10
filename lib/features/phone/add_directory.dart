@@ -1,83 +1,88 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+
 import '../../models/data_models.dart';
+import '../../services/image_upload_service.dart';
 import '../../services/phone_directory_service.dart';
-import '../../services/user_service.dart';
 import '../../widgets/common_appbar_actions.dart';
 
+/// إضافة جهة اتصال — الاسم + رقم الهاتف + الوظيفة (اختياري) + صورة اختيارية.
 class AddPhoneDirectoryScreen extends StatefulWidget {
   const AddPhoneDirectoryScreen({super.key});
 
   @override
-  State<AddPhoneDirectoryScreen> createState() => _AddPhoneDirectoryScreenState();
+  State<AddPhoneDirectoryScreen> createState() =>
+      _AddPhoneDirectoryScreenState();
 }
 
 class _AddPhoneDirectoryScreenState extends State<AddPhoneDirectoryScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _titleController = TextEditingController();
   final _phoneController = TextEditingController();
-  final _secondaryPhoneController = TextEditingController();
   final _jobController = TextEditingController();
-  final _addressController = TextEditingController();
-  final _emailController = TextEditingController();
   final PhoneDirectoryService _service = PhoneDirectoryService();
-  final UserService _userService = UserService();
+  final ImagePicker _picker = ImagePicker();
   bool _isSaving = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadUser();
-  }
-
-  Future<void> _loadUser() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      await _userService.getUser(user.uid);
-      if (!mounted) return;
-    }
-  }
+  bool _uploadingPhoto = false;
+  String? _photoUrl;
 
   @override
   void dispose() {
     _nameController.dispose();
-    _titleController.dispose();
     _phoneController.dispose();
-    _secondaryPhoneController.dispose();
     _jobController.dispose();
-    _addressController.dispose();
-    _emailController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickPhoto() async {
+    setState(() => _uploadingPhoto = true);
+    try {
+      final XFile? image = await _picker.pickImage(
+          source: ImageSource.gallery,
+          imageQuality: 85,
+          maxWidth: 600,
+          maxHeight: 600);
+      if (image == null) return;
+      final bytes = await image.readAsBytes();
+      final url = await ImageUploadService().uploadImage(bytes);
+      if (!mounted) return;
+      setState(() => _photoUrl = url);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('خطأ في رفع الصورة: $e'), backgroundColor: Colors.red));
+      }
+    } finally {
+      if (mounted) setState(() => _uploadingPhoto = false);
+    }
   }
 
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _isSaving = true);
     try {
+      final job = _jobController.text.trim();
       final entry = PhoneDirectoryEntry(
         id: '',
         name: _nameController.text.trim(),
-        title: _titleController.text.trim(),
+        title: job,
         phone: _phoneController.text.trim(),
-        secondaryPhone: _secondaryPhoneController.text.trim().isNotEmpty
-            ? _secondaryPhoneController.text.trim()
-            : null,
-        job: _jobController.text.trim().isNotEmpty ? _jobController.text.trim() : null,
-        address: _addressController.text.trim().isNotEmpty ? _addressController.text.trim() : null,
-        email: _emailController.text.trim().isNotEmpty ? _emailController.text.trim() : null,
+        job: job.isNotEmpty ? job : null,
+        photoUrl: _photoUrl,
       );
       await _service.addPhoneDirectoryEntry(entry);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم إرسال الطلب للمراجعة'), backgroundColor: Colors.green),
+        const SnackBar(
+            content: Text('تم إرسال الطلب للمراجعة'),
+            backgroundColor: Colors.green),
       );
       Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ: $e'), backgroundColor: Colors.red),
-      );
+          SnackBar(content: Text('خطأ: $e'), backgroundColor: Colors.red));
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -104,19 +109,83 @@ class _AddPhoneDirectoryScreenState extends State<AddPhoneDirectoryScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildTextField(theme, _nameController, 'الاسم', Icons.person_rounded, required: true),
+                // صورة جهة الاتصال
+                Center(
+                  child: GestureDetector(
+                    onTap: _uploadingPhoto ? null : _pickPhoto,
+                    child: Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 48,
+                          backgroundColor: theme.colorScheme.primary
+                              .withValues(alpha: 0.1),
+                          backgroundImage: _photoUrl != null
+                              ? CachedNetworkImageProvider(_photoUrl!)
+                              : null,
+                          child: _photoUrl == null
+                              ? Icon(Icons.person_rounded,
+                                  size: 44,
+                                  color: theme.colorScheme.primary)
+                              : null,
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primary,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                  color: theme.colorScheme.surface, width: 2),
+                            ),
+                            child: _uploadingPhoto
+                                ? const SizedBox(
+                                    width: 14,
+                                    height: 14,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2, color: Colors.white))
+                                : const Icon(Icons.camera_alt_rounded,
+                                    size: 14, color: Colors.white),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Center(
+                  child: Text(
+                    _photoUrl == null
+                        ? 'إضافة صورة (اختياري)'
+                        : 'المصورة جاهزة — اضغط للتغيير',
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                TextFormField(
+                  controller: _nameController,
+                  decoration: _input(theme, 'الاسم', Icons.person_rounded),
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'الاسم مطلوب'
+                      : null,
+                ),
                 const SizedBox(height: 12),
-                _buildTextField(theme, _titleController, 'الوظيفية أو الاسم الوظيفي', Icons.badge_rounded),
+                TextFormField(
+                  controller: _phoneController,
+                  keyboardType: TextInputType.phone,
+                  decoration: _input(theme, 'رقم الهاتف', Icons.phone_rounded),
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'رقم الهاتف مطلوب'
+                      : null,
+                ),
                 const SizedBox(height: 12),
-                _buildTextField(theme, _phoneController, 'رقم الهاتف', Icons.phone_rounded, required: true),
-                const SizedBox(height: 12),
-                _buildTextField(theme, _secondaryPhoneController, 'هاتف إضافي (اختياري)', Icons.phone_iphone),
-                const SizedBox(height: 12),
-                _buildTextField(theme, _jobController, 'الوظيفية', Icons.work_rounded),
-                const SizedBox(height: 12),
-                _buildTextField(theme, _addressController, 'العنوان', Icons.location_on_rounded),
-                const SizedBox(height: 12),
-                _buildTextField(theme, _emailController, 'البريد الإلكتروني', Icons.email_rounded),
+                TextFormField(
+                  controller: _jobController,
+                  decoration:
+                      _input(theme, 'الوظيفة (اختياري)', Icons.work_rounded),
+                ),
                 const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.all(14),
@@ -126,12 +195,14 @@ class _AddPhoneDirectoryScreenState extends State<AddPhoneDirectoryScreen> {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.info_outline_rounded, size: 20, color: theme.colorScheme.primary),
+                      Icon(Icons.info_outline_rounded,
+                          size: 20, color: theme.colorScheme.primary),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           'سيتم مراجعة الإدخال من قبل الإدارة قبل نشره في الدليل',
-                          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurface),
                         ),
                       ),
                     ],
@@ -143,10 +214,14 @@ class _AddPhoneDirectoryScreenState extends State<AddPhoneDirectoryScreen> {
                   child: FilledButton.icon(
                     onPressed: _isSaving ? null : _submit,
                     icon: _isSaving
-                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2))
                         : const Icon(Icons.send_rounded),
                     label: Text(_isSaving ? 'جاري الإرسال...' : 'إرسال للمراجعة'),
-                    style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+                    style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16)),
                   ),
                 ),
               ],
@@ -157,20 +232,14 @@ class _AddPhoneDirectoryScreenState extends State<AddPhoneDirectoryScreen> {
     );
   }
 
-  Widget _buildTextField(ThemeData theme, TextEditingController controller, String label, IconData prefixIcon,
-      {bool required = false}) {
-    return TextFormField(
-      controller: controller,
-      decoration: InputDecoration(
+  InputDecoration _input(ThemeData theme, String label, IconData icon) =>
+      InputDecoration(
         labelText: label,
-        prefixIcon: Icon(prefixIcon, color: theme.colorScheme.primary),
+        prefixIcon: Icon(icon, color: theme.colorScheme.primary),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-      validator: required
-          ? (v) => (v == null || v.trim().isEmpty) ? 'هذا الحقل مطلوب' : null
-          : null,
-    );
-  }
+        enabledBorder:
+            OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        focusedBorder:
+            OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      );
 }
