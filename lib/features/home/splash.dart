@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/navigator_key.dart';
+import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
 import '../../services/user_service.dart';
 
@@ -61,27 +62,39 @@ class _SplashScreenState extends State<SplashScreen>
       _safeNavigate(AppRoutes.login);
       return;
     }
-    // فحص حالة الحساب من الكاش المحلي (يعمل دون إنترنت). حساب معطّل → تسجيل خروج.
+
+    // قراءة محليّة أولوية (تعمل أوفلاين من الكاش) لتقرير المسار دون انتظار الشبكة.
+    UserModel? model;
     try {
-      final model = await UserService().getUser(currentUser.uid);
-      if (model != null && !model.isActive) {
-        await firebase_auth.FirebaseAuth.instance.signOut();
-        if (!mounted) return;
-        _safeNavigate(AppRoutes.login);
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          final ctx = navigatorKey.currentContext;
-          if (ctx != null) {
-            ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
-              content: Text('تم تعطيل حسابك — يرجى التواصل مع إدارة القرية'),
-              backgroundColor: Colors.red,
-            ));
-          }
-        });
-        return;
-      }
+      model = await UserService().getUser(currentUser.uid);
     } catch (_) {
-      // تعذّر الفحص (أوفلاين/غير محفوظ) → لا نمنع الدخول.
+      model = null;
     }
+
+    // حساب معطّل → تسجيل خروج.
+    if (model != null && !model.isActive) {
+      await firebase_auth.FirebaseAuth.instance.signOut();
+      if (!mounted) return;
+      _safeNavigate(AppRoutes.login);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final ctx = navigatorKey.currentContext;
+        if (ctx != null) {
+          ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
+            content: Text('تم تعطيل حسابك — يرجى التواصل مع إدارة القرية'),
+            backgroundColor: Colors.red,
+          ));
+        }
+      });
+      return;
+    }
+
+    // مستخدم جديد/غير مكتمل البيانات (اسم أو هاتف فارغ) → شاشة الإكمال.
+    // لا نوجّه إن تعذّرت القراءة (أوفلاين بلا كاش) حتى لا نُغلِق الوصول.
+    if (model != null && !UserService.isProfileComplete(model)) {
+      _safeNavigate(AppRoutes.completeProfile, arguments: currentUser.uid);
+      return;
+    }
+
     _safeNavigate(AppRoutes.home);
   }
 

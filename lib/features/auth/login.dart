@@ -8,6 +8,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/helpers.dart';
+import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
 import '../../services/user_service.dart';
 
@@ -67,9 +68,20 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
 
-      // Always go to home after successful auth
-      // Profile completion will be checked in splash screen
-      Navigator.pushReplacementNamed(context, AppRoutes.home);
+      // مستخدم جديد/غير مكتمل البيانات → شاشة إكمال الملف، غير ذلك → الرئيسية.
+      UserModel? profile;
+      try {
+        profile = await UserService().getUser(currentUser.uid);
+      } catch (_) {
+        profile = null;
+      }
+      if (!mounted) return;
+      if (profile != null && !UserService.isProfileComplete(profile)) {
+        Navigator.pushReplacementNamed(context, AppRoutes.completeProfile,
+            arguments: currentUser.uid);
+      } else {
+        Navigator.pushReplacementNamed(context, AppRoutes.home);
+      }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
         AppHelpers.showSnackBar(

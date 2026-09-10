@@ -36,6 +36,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isSeller = false;
   SellerRequest? _sellerRequest;
   bool _checkingRequest = false;
+  String? _loadError;
 
   @override
   void initState() {
@@ -45,10 +46,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _fetchData() async {
     final user = await _userService.getCurrentUser();
-    final isSeller = user != null ? await _marketService.isUserSeller(user.id) : false;
+    var isSeller = false;
     SellerRequest? request;
-    if (user != null && !isSeller) {
-      request = await _marketService.getUserSellerRequest(user.id);
+    try {
+      if (user != null) isSeller = await _marketService.isUserSeller(user.id);
+      if (user != null && !isSeller) {
+        request = await _marketService.getUserSellerRequest(user.id);
+      }
+    } catch (_) {
+      // لا نُفشل الشاشة إذا تعذّر جلب حالة البائع (أوفلاين مثلاً).
     }
     if (!mounted) return;
     setState(() {
@@ -57,13 +63,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _phoneController.text = user?.phone ?? '';
       _isSeller = isSeller;
       _sellerRequest = request;
+      _loadError = null;
     });
   }
 
   Future<void> _loadUser() async {
-    setState(() => _isLoading = true);
-    await _fetchData();
-    if (mounted) setState(() => _isLoading = false);
+    if (!mounted) return;
+    setState(() {
+      _isLoading = true;
+      _loadError = null;
+    });
+    try {
+      await _fetchData();
+    } catch (e) {
+      if (mounted) setState(() => _loadError = e.toString());
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   Future<void> _refresh() async => _fetchData();
@@ -285,6 +301,46 @@ class _ProfileScreenState extends State<ProfileScreen> {
           actions: CommonAppBarActions.actions(context),
         ),
         body: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      );
+    }
+
+    if (_loadError != null && _user == null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('الملف الشخصي'),
+          centerTitle: true,
+          elevation: 0,
+          shadowColor: Colors.transparent,
+          surfaceTintColor: theme.colorScheme.surface,
+          actions: CommonAppBarActions.actions(context),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.wifi_off_rounded,
+                    size: 60, color: Colors.grey[400]),
+                const SizedBox(height: 14),
+                Text('تعذّر تحميل الملف الشخصي',
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w800)),
+                const SizedBox(height: 6),
+                Text('تحقق من الاتصال ثم أعد المحاولة',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                const SizedBox(height: 18),
+                FilledButton.icon(
+                  onPressed: _loadUser,
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: const Text('إعادة المحاولة'),
+                ),
+              ],
+            ),
+          ),
+        ),
       );
     }
 

@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -27,7 +27,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
 
-  File? _profileImage;
+  Uint8List? _profileBytes;
   bool _isSaving = false;
   bool _isLoading = true;
   String? _errorMessage;
@@ -98,12 +98,14 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
   }
 
   Future<void> _pickProfileImage() async {
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-    if (image != null) {
-      setState(() {
-        _profileImage = File(image.path);
-      });
-    }
+    final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery, maxWidth: 800, maxHeight: 800, imageQuality: 85);
+    if (image == null) return;
+    final bytes = await image.readAsBytes();
+    if (!mounted) return;
+    setState(() {
+      _profileBytes = bytes;
+    });
   }
 
   Future<void> _saveProfile() async {
@@ -120,9 +122,8 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
     setState(() => _isSaving = true);
     try {
       String? newPhotoUrl = _user?.photoUrl;
-      if (_profileImage != null) {
-        final bytes = await _profileImage!.readAsBytes();
-        newPhotoUrl = await _imageUploadService.uploadImage(bytes);
+      if (_profileBytes != null) {
+        newPhotoUrl = await _imageUploadService.uploadImage(_profileBytes!);
       }
 
       final now = DateTime.now();
@@ -172,7 +173,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
   }
 
   ImageProvider<Object>? _getImageProvider() {
-    if (_profileImage != null) return FileImage(_profileImage!);
+    if (_profileBytes != null) return MemoryImage(_profileBytes!);
     if (_user != null && _user!.photoUrl?.isNotEmpty == true) return CachedNetworkImageProvider(_user!.photoUrl!);
     return null;
   }

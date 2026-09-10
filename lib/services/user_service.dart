@@ -20,6 +20,13 @@ class UserService {
     return getUser(user.uid);
   }
 
+  /// هل أكمل المستخدم بياناته الأساسية (اسم + هاتف)؟
+  /// يُستخدم في شاشة الإقلاع وبعد تسجيل الدخول لتوجيه المستخدم لإكمال الملف.
+  static bool isProfileComplete(UserModel? u) =>
+      u != null &&
+      u.name.trim().isNotEmpty &&
+      (u.phone?.trim().isNotEmpty ?? false);
+
   Future<UserModel?> getUser(String uid) async {
     final cached = await CacheService.getUser(uid);
     if (cached != null) {
@@ -32,10 +39,12 @@ class UserService {
         await CacheService.saveUser(uid, user.toJson());
         return user;
       }
-    } on TimeoutException {
+      return null;
+    } catch (e) {
+      // لا نُعلّق الواجهة بسبب شبكة/صلاحيات — نرجع null ويتعامل كل شاشة معه.
+      debugPrint('getUser($uid) failed: $e');
       return null;
     }
-    return null;
   }
 
   Future<void> saveUserToFirestore(firebase_auth.User user) async {
