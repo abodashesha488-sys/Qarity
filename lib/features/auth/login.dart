@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -20,26 +21,38 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
 
+  Future<UserCredential?> _googleCredentialFlow() async {
+    if (kIsWeb) {
+      // على الويب: signInWithPopup هو المسار الرسمي لـ Firebase Auth
+      // (يتجنب أخطاء client/origin في حزمة google_sign_in على الويب).
+      final provider = GoogleAuthProvider()
+        ..addScope('email')
+        ..addScope('profile');
+      return FirebaseAuth.instance.signInWithPopup(provider);
+    }
+    final GoogleSignInAccount? googleUser = await GoogleSignIn(
+      scopes: const <String>['openid', 'email', 'profile'],
+    ).signIn();
+    if (googleUser == null) return null; // أُلغيت العملية
+    final GoogleSignInAuthentication googleAuth =
+        await googleUser.authentication;
+    final credential = GoogleAuthProvider.credential(
+      accessToken: googleAuth.accessToken,
+      idToken: googleAuth.idToken,
+    );
+    return FirebaseAuth.instance.signInWithCredential(credential);
+  }
+
   Future<void> _signInWithGoogle() async {
     if (_isLoading) return;
     setState(() => _isLoading = true);
     try {
-      final GoogleSignInAccount? googleUser = await GoogleSignIn(
-        scopes: const <String>['openid', 'email', 'profile'],
-      ).signIn().timeout(const Duration(seconds: 30));
-
-      if (googleUser == null) {
+      final userCredential =
+          await _googleCredentialFlow().timeout(const Duration(seconds: 60));
+      if (userCredential == null) {
         if (mounted) setState(() => _isLoading = false);
         return;
       }
-
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      final userCredential = await FirebaseAuth.instance.signInWithCredential(credential).timeout(const Duration(seconds: 20));
 
       if (!mounted) return;
       final currentUser = userCredential.user!;
@@ -64,6 +77,12 @@ class _LoginScreenState extends State<LoginScreen> {
           'خطأ في المصادقة: ${_mapFirebaseAuthError(e.code)}',
           isError: true,
         );
+      }
+    } on TimeoutException {
+      if (mounted) {
+        AppHelpers.showSnackBar(context,
+            'انتهت مهلة تسجيل الدخول — تحقق من اتصالك وأعد المحاولة',
+            isError: true);
       }
     } on FirebaseException catch (e) {
       if (mounted) {
@@ -94,6 +113,15 @@ class _LoginScreenState extends State<LoginScreen> {
         return 'محاولات كثيرة، حاول لاحقاً';
       case 'account-exists-with-different-credential':
         return 'الحساب موجود بوسيلة تسجيل أخرى';
+      case 'unauthorized-domain':
+        return 'هذا النطاق غير معتمد — أضِفه من Firebase Console ← Authentication ← Settings ← Authorized domains';
+      case 'operation-not-allowed':
+        return 'طريقة تسجيل Google غير مفعّلة في مشروع Firebase';
+      case 'popup-closed-by-user':
+      case 'closed-by-window':
+      case 'cancelled':
+      case 'google-sign-in-cancelled':
+        return 'أُلغيت عملية تسجيل الدخول';
       default:
         return code;
     }
