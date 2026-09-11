@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:google_fonts/google_fonts.dart';
 import './firebase_options.dart';
 import 'core/network/connectivity_manager.dart';
 import 'core/theme/app_theme.dart';
@@ -72,8 +73,11 @@ class QarityApp extends StatelessWidget {
           ],
           supportedLocales: const [Locale('ar', 'EG')],
           locale: const Locale('ar', 'EG'),
-          // شريط «غير متصل» يظهر على كل الشاشات تلقائياً.
-          builder: (context, child) => ConnectivityOverlay(child: child ?? const SizedBox.shrink()),
+          // الأساس الموحَّد لكل نصوص التطبيق: خط Tajawal.
+          builder: (context, child) => DefaultTextStyle(
+            style: GoogleFonts.tajawal(),
+            child: ConnectivityOverlay(child: child ?? const SizedBox.shrink()),
+          ),
           initialRoute: AppRoutes.splash,
           onGenerateRoute: AppRoutes.onGenerateRoute,
         );

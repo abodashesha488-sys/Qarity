@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -300,7 +300,7 @@ class HomeContent extends StatelessWidget {
                     child: Text(latest[index].title,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.cairo(
+                        style: GoogleFonts.tajawal(
                             fontSize: 11.5, fontWeight: FontWeight.w700)),
                   ),
                 ],
@@ -379,12 +379,12 @@ class HomeContent extends StatelessWidget {
                               name: post.userName,
                               role: post.userRole,
                               sellerType: post.userSellerType,
-                              style: GoogleFonts.cairo(
+                              style: GoogleFonts.tajawal(
                                   fontWeight: FontWeight.bold, fontSize: 11),
                               iconSize: 11),
                           const SizedBox(height: 3),
                           Text(post.content,
-                              style: GoogleFonts.cairo(fontSize: 10.5),
+                              style: GoogleFonts.tajawal(fontSize: 10.5),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis),
                         ],
@@ -787,7 +787,7 @@ class ModernServiceGrid extends StatelessWidget {
               const SizedBox(height: 9),
               Text(service.title,
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.cairo(
+                  style: GoogleFonts.tajawal(
                       fontWeight: FontWeight.w800, fontSize: 10.5),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis),
@@ -872,7 +872,7 @@ class _ProductCard extends StatelessWidget {
                   Text(product.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.cairo(
+                      style: GoogleFonts.tajawal(
                           fontSize: 11, fontWeight: FontWeight.w800)),
                   const SizedBox(height: 5),
                   Row(

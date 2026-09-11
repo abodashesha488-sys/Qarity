@@ -36,8 +36,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               _buildSectionCard(theme, 'المظهر', Icons.palette_rounded, [
                 SwitchListTile(
-                  title: Text('الوضع الليلي', style: GoogleFonts.cairo(fontWeight: FontWeight.w700)),
-                  subtitle: Text('تفعيل المظهر الداكن للتطبيق', style: GoogleFonts.cairo()),
+                  title: Text('الوضع الليلي', style: GoogleFonts.tajawal(fontWeight: FontWeight.w700)),
+                  subtitle: Text('تفعيل المظهر الداكن للتطبيق', style: GoogleFonts.tajawal()),
                   value: _themeService.isDarkMode,
                   onChanged: (value) => _themeService.setDarkMode(value),
                   secondary: Container(
@@ -67,7 +67,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _SettingsTile(
                   icon: Icons.translate_rounded,
                   title: 'تغيير اللغة',
-                  trailing: Text('العربية', style: GoogleFonts.cairo(color: theme.colorScheme.primary, fontWeight: FontWeight.w700)),
+                  trailing: Text('العربية', style: GoogleFonts.tajawal(color: theme.colorScheme.primary, fontWeight: FontWeight.w700)),
                   onTap: () {},
                 ),
               ]),
