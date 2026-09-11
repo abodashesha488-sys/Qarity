@@ -138,6 +138,9 @@ class ServiceProvider {
   final String description;
   final String? photoUrl;
   final bool isApproved;
+  final bool isFeatured; // بيان مميز من الأدمن — لون ذهبي وشارة «مميز»
+  final double rating; // متوسط التقييمات (يُحدَّث ذرياً عند إضافة تقييم)
+  final int ratingCount;
   final String? submittedBy;
   final String? submittedByName;
   final DateTime? createdAt;
@@ -153,6 +156,9 @@ class ServiceProvider {
     this.description = '',
     this.photoUrl,
     this.isApproved = false,
+    this.isFeatured = false,
+    this.rating = 0,
+    this.ratingCount = 0,
     this.submittedBy,
     this.submittedByName,
     this.createdAt,
@@ -170,6 +176,9 @@ class ServiceProvider {
       description: json['description'] as String? ?? '',
       photoUrl: json['photoUrl'] as String?,
       isApproved: json['isApproved'] as bool? ?? false,
+      isFeatured: json['isFeatured'] as bool? ?? false,
+      rating: (json['rating'] as num?)?.toDouble() ?? 0,
+      ratingCount: (json['ratingCount'] as num?)?.toInt() ?? 0,
       submittedBy: json['submittedBy'] as String?,
       submittedByName: json['submittedByName'] as String?,
       createdAt: _parseTsOrNull(json['createdAt']),
@@ -186,6 +195,9 @@ class ServiceProvider {
         'description': description,
         if (photoUrl != null && photoUrl!.isNotEmpty) 'photoUrl': photoUrl,
         'isApproved': isApproved,
+        'isFeatured': isFeatured,
+        'rating': rating,
+        'ratingCount': ratingCount,
         'submittedBy': submittedBy,
         'submittedByName': submittedByName,
         'createdAt': createdAt != null
@@ -200,4 +212,72 @@ class ServiceProvider {
           : specialty;
 
   bool get hasContact => phone.trim().isNotEmpty;
+
+  /// اللون المميّز (ذهبي) للبيان المميز، ولون الفئة للعادي.
+  Color get accentColor =>
+      isFeatured ? const Color(0xFFB8860B) : ServiceCategory.color(category);
+
+  ServiceProvider copyWith({bool? isFeatured}) => ServiceProvider(
+        id: id,
+        category: category,
+        specialty: specialty,
+        stage: stage,
+        name: name,
+        phone: phone,
+        address: address,
+        description: description,
+        photoUrl: photoUrl,
+        isApproved: isApproved,
+        isFeatured: isFeatured ?? this.isFeatured,
+        rating: rating,
+        ratingCount: ratingCount,
+        submittedBy: submittedBy,
+        submittedByName: submittedByName,
+        createdAt: createdAt,
+      );
+}
+
+// ═══════════════════════ تعليق/تقييم على مقدّم خدمة ═══════════════════════
+class ServiceProviderComment {
+  final String id;
+  final String providerId;
+  final String userId;
+  final String userName;
+  final int rating; // من 1 إلى 5
+  final String text;
+  final DateTime? createdAt;
+
+  const ServiceProviderComment({
+    required this.id,
+    required this.providerId,
+    required this.userId,
+    required this.userName,
+    this.rating = 0,
+    this.text = '',
+    this.createdAt,
+  });
+
+  factory ServiceProviderComment.fromJson(
+      Map<String, dynamic> json, String docId) {
+    return ServiceProviderComment(
+      id: docId,
+      providerId: json['providerId'] as String? ?? '',
+      userId: json['userId'] as String? ?? '',
+      userName: json['userName'] as String? ?? '',
+      rating: (json['rating'] as num?)?.toInt() ?? 0,
+      text: json['text'] as String? ?? '',
+      createdAt: _parseTsOrNull(json['createdAt']),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'providerId': providerId,
+        'userId': userId,
+        'userName': userName,
+        'rating': rating,
+        'text': text,
+        'createdAt': createdAt != null
+            ? Timestamp.fromDate(createdAt!)
+            : FieldValue.serverTimestamp(),
+      };
 }

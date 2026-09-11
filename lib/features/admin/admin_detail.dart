@@ -141,6 +141,19 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
             ),
           ),
           const SizedBox(height: 16),
+          if (widget.collection == 'service_providers') ...[
+            _FeaturedToggle(
+              collection: widget.collection,
+              docId: widget.docId,
+              value: item['isFeatured'] == true,
+              onChanged: (v) {
+                setState(() => item['isFeatured'] = v);
+                _adminService.updateItem(widget.collection, widget.docId,
+                    {'isFeatured': v});
+              },
+            ),
+            const SizedBox(height: 16),
+          ],
           for (final entry in imageEntries) ...[
             _buildImages(theme, entry.value),
             const SizedBox(height: 16),
@@ -354,15 +367,72 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
   Widget _buildActionFilled(ThemeData theme, String label, IconData icon, Color color, VoidCallback? onPressed) {
     final isLoading = onPressed == null;
     return FilledButton.icon(
+      onPressed: onPressed,
       style: FilledButton.styleFrom(
         backgroundColor: color.withValues(alpha: 0.12),
         foregroundColor: color,
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: color.withValues(alpha: 0.25))),
       ),
-      onPressed: isLoading ? null : onPressed,
       icon: isLoading ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : Icon(icon, size: 18),
       label: Text(label),
+    );
+  }
+}
+
+/// مفتاح «بيان مميز / عادي» لمقدمي الخدمات — المميز يظهر ذهبيًا وفي المقدمة.
+class _FeaturedToggle extends StatelessWidget {
+  const _FeaturedToggle(
+      {required this.collection,
+      required this.docId,
+      required this.value,
+      required this.onChanged});
+  final String collection;
+  final String docId;
+  final bool value;
+  final void Function(bool) onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: value
+            ? const Color(0xFFF1C40F).withValues(alpha: 0.12)
+            : Theme.of(context)
+                .colorScheme
+                .surfaceContainerHighest
+                .withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+            color: value
+                ? const Color(0xFFB8860B)
+                : Theme.of(context).colorScheme.outlineVariant),
+      ),
+      child: Row(
+        children: [
+          Icon(value ? Icons.star_rounded : Icons.star_border_rounded,
+              color: value ? const Color(0xFFB8860B) : Colors.grey),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              value
+                  ? 'هذا البيان مميز — يظهر باللون الذهبي وفي مقدمة القوائم'
+                  : 'هذا البيان عادي — يمكنك تمييزه ليظهر ذهبيًا وفي المقدمة',
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(fontWeight: FontWeight.w700),
+            ),
+          ),
+          Switch(
+            value: value,
+            activeThumbColor: Colors.white,
+            activeTrackColor: const Color(0xFFB8860B),
+            onChanged: (v) => onChanged(v),
+          ),
+        ],
+      ),
     );
   }
 }

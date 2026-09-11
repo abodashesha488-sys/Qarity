@@ -207,6 +207,7 @@ class _AdminEditScreenState extends State<AdminEditScreen> {
           _FieldSpec('phone', 'الهاتف'),
           _FieldSpec('address', 'العنوان'),
           _FieldSpec('description', 'نبذة', multiline: true),
+          _FieldSpec('isFeatured', 'بيان مميز (يظهر ذهبيًا وفي المقدمة)', boolean: true),
         ];
       case 'medical_center_clinics':
         return const [

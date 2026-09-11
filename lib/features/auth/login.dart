@@ -180,10 +180,13 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ],
                       ),
-                      child: const Icon(
-                        Icons.villa_rounded,
-                        size: 56,
-                        color: AppColors.primary,
+                      child: ClipOval(
+                        child: Image.asset(
+                          'assets/images/Qurity.png',
+                          fit: BoxFit.cover,
+                          width: 110,
+                          height: 110,
+                        ),
                       ),
                     )
                         .animate()

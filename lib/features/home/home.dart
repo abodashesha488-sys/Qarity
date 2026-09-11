@@ -544,14 +544,24 @@ class _HeroHeaderState extends State<_HeroHeader> {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.all(11),
+                    width: 48,
+                    height: 48,
                     decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
+                        color: Colors.white,
                         shape: BoxShape.circle,
                         border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.25))),
-                    child: const Icon(Icons.villa_rounded,
-                        color: Colors.white, size: 26),
+                            color: Colors.white.withValues(alpha: 0.35),
+                            width: 2),
+                        boxShadow: [
+                          BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.18),
+                              blurRadius: 10,
+                              offset: const Offset(0, 3))
+                        ]),
+                    child: ClipOval(
+                      child: Image.asset('assets/images/Qurity.png',
+                          fit: BoxFit.cover),
+                    ),
                   ).animate().fadeIn(duration: 500.ms).scale(begin: const Offset(0.6, 0.6)),
                 ],
               ),
@@ -714,7 +724,6 @@ class ModernServiceGrid extends StatelessWidget {
     _ServiceItem('المناسبات', Icons.card_giftcard_rounded, AppRoutes.occasionsList),
     _ServiceItem('المنتدى', Icons.forum_rounded, AppRoutes.forumPosts),
     _ServiceItem('دليل الخدمات', Icons.category_rounded, AppRoutes.serviceRequest),
-    _ServiceItem('دليل الهاتف', Icons.phone_rounded, AppRoutes.phoneDirectory),
     _ServiceItem('الطوارئ', Icons.contact_phone_rounded, AppRoutes.emergencyContacts, Color(0xFFD32F2F)),
     _ServiceItem('حول التطبيق', Icons.info_rounded, AppRoutes.aboutApp),
   ];

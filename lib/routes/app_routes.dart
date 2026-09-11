@@ -38,6 +38,7 @@ import '../features/phone/add_directory.dart';
 import '../features/phone/directory.dart';
 import '../features/profile/main.dart';
 import '../features/services/service_directory_screen.dart';
+import '../features/services/service_provider_detail_screen.dart';
 import '../features/settings/index.dart';
 import '../features/settings/notifications.dart';
 import '../features/village/about.dart';
@@ -86,6 +87,7 @@ static const String marketProducts = '/market';
   static const String settingsIndex = '/settings';
   static const String notificationsSettings = '/settings/notifications';
   static const String serviceRequest = '/services';
+  static const String serviceProviderDetail = '/services/detail';
   static const String medicalClinicDetail = '/medical/clinic-detail';
   static const String medicalPharmacyDetail = '/medical/pharmacy-detail';
   static const String medical = '/medical';
@@ -125,6 +127,7 @@ static const String marketProducts = '/market';
     settingsIndex: (_) => const SettingsScreen(),
     notificationsSettings: (_) => const NotificationsSettingsScreen(),
     serviceRequest: (_) => const ServiceDirectoryScreen(),
+    serviceProviderDetail: (_) => const ServiceProviderDetailScreen(),
     medicalClinicDetail: (_) => const VillageClinicDetailScreen(),
     medicalPharmacyDetail: (_) => const PharmacyDetailScreen(),
     medical: (_) => const MedicalHomeScreen(),

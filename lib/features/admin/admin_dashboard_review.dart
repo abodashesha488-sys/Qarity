@@ -244,6 +244,9 @@ class _ReviewCard extends StatelessWidget {
     return null;
   }
 
+  bool get _isFeatured =>
+      cat.collection == 'service_providers' && item['isFeatured'] == true;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -255,7 +258,10 @@ class _ReviewCard extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
         side: BorderSide(
-            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.35)),
+            color: _isFeatured
+                ? const Color(0xFFB8860B)
+                : theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
+            width: _isFeatured ? 1.4 : 1),
       ),
       child: InkWell(
         onTap: () async {
@@ -286,20 +292,50 @@ class _ReviewCard extends StatelessWidget {
                             style: theme.textTheme.titleSmall
                                 ?.copyWith(fontWeight: FontWeight.w800)),
                         const SizedBox(height: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 3),
-                          decoration: BoxDecoration(
-                              color: statusColor.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                  color: statusColor.withValues(alpha: 0.3))),
-                          child: Text(
-                              _isApproved ? 'موافق عليه' : 'بانتظار المراجعة',
-                              style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w800,
-                                  color: statusColor)),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 3),
+                              decoration: BoxDecoration(
+                                  color: statusColor.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                      color: statusColor.withValues(alpha: 0.3))),
+                              child: Text(
+                                  _isApproved ? 'موافق عليه' : 'بانتظار المراجعة',
+                                  style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w800,
+                                      color: statusColor)),
+                            ),
+                            if (_isFeatured) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(colors: [
+                                    Color(0xFFF1C40F),
+                                    Color(0xFFB8860B)
+                                  ]),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.star_rounded,
+                                        size: 12, color: Colors.white),
+                                    Text('مميز',
+                                        style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w900,
+                                            color: Colors.white)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       ],
                     ),

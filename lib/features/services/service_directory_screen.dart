@@ -245,117 +245,171 @@ class _ProviderCard extends StatelessWidget {
   final ServiceProvider provider;
   final Color accent;
 
-  Future<void> _call() async {
-    final uri = Uri(scheme: 'tel', path: provider.phone);
-    if (await canLaunchUrl(uri)) await launchUrl(uri);
+  Future<void> _openDetail(BuildContext context) {
+    return Navigator.pushNamed(context, '/services/detail',
+        arguments: provider);
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final color = provider.isFeatured
+        ? const Color(0xFFB8860B)
+        : accent;
     return Card(
       elevation: 0,
       margin: const EdgeInsets.only(top: 6),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: accent.withValues(alpha: 0.22)),
+        side: BorderSide(
+            color: color.withValues(alpha: provider.isFeatured ? 0.6 : 0.22)),
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        child: Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: SizedBox(
-                width: 46,
-                height: 46,
-                child: provider.photoUrl != null &&
-                        provider.photoUrl!.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: provider.photoUrl!,
-                        fit: BoxFit.cover,
-                        errorWidget: (_, __, ___) => _avatar(theme),
-                      )
-                    : _avatar(theme),
+      color: provider.isFeatured
+          ? const Color(0xFFB8860B).withValues(alpha: 0.06)
+          : null,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => _openDetail(context),
+        child: Padding(
+          padding:
+              const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: SizedBox(
+                  width: 46,
+                  height: 46,
+                  child: provider.photoUrl != null &&
+                          provider.photoUrl!.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: provider.photoUrl!,
+                          fit: BoxFit.cover,
+                          errorWidget: (_, __, ___) => _avatar(theme, color),
+                        )
+                      : _avatar(theme, color),
+                ),
               ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(provider.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w900, fontSize: 13.5)),
-                  if (provider.displaySpecialty.isNotEmpty)
-                    Text(provider.displaySpecialty,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: accent)),
-                  if (provider.description.isNotEmpty)
-                    Text(provider.description,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                            fontSize: 11,
-                            color: theme.colorScheme.onSurfaceVariant)),
-                  if (provider.address.isNotEmpty)
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Row(
                       children: [
-                        const Icon(Icons.location_on_rounded,
-                            size: 12, color: Colors.grey),
-                        const SizedBox(width: 3),
-                        Expanded(
-                          child: Text(provider.address,
+                        Flexible(
+                          child: Text(provider.name,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
-                                  fontSize: 10.5, color: Colors.grey)),
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 13.5)),
                         ),
+                        if (provider.isFeatured) ...[
+                          const SizedBox(width: 5),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 5, vertical: 1),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(colors: [
+                                Color(0xFFF1C40F),
+                                Color(0xFFB8860B)
+                              ]),
+                              borderRadius:
+                                  BorderRadius.circular(6),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.star_rounded,
+                                    size: 10, color: Colors.white),
+                                Text('مميز',
+                                    style: TextStyle(
+                                        fontSize: 8,
+                                        fontWeight: FontWeight.w900,
+                                        color: Colors.white)),
+                              ],
+                            ),
+                          ),
+                        ],
                       ],
                     ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 6),
-            if (provider.hasContact)
-              IconButton.filledTonal(
-                tooltip: 'اتصال',
-                onPressed: _call,
-                icon: const Icon(Icons.call_rounded, size: 17),
-                style: IconButton.styleFrom(
-                    backgroundColor: accent.withValues(alpha: 0.14),
-                    foregroundColor: accent),
-              ),
-            IconButton(
-              tooltip: 'مشاركة',
-              onPressed: () => ShareService.shareText(
-                  title: '🛠️ ${provider.name}',
-                  body: [
+                    if (provider.ratingCount > 0) ...[
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          const Icon(Icons.star_rounded,
+                              size: 13, color: Colors.amber),
+                          const SizedBox(width: 2),
+                          Text(
+                              '${provider.rating.toStringAsFixed(1)} (${provider.ratingCount})',
+                              style: const TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.amber)),
+                        ],
+                      ),
+                    ],
                     if (provider.displaySpecialty.isNotEmpty)
-                      'التخصص: ${provider.displaySpecialty}',
+                      Text(provider.displaySpecialty,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: color)),
                     if (provider.description.isNotEmpty)
-                      provider.description,
-                    if (provider.address.isNotEmpty)
-                      'العنوان: ${provider.address}',
-                    if (provider.phone.isNotEmpty)
-                      'هاتف: ${provider.phone}',
-                  ].join('\n')),
-              icon: const Icon(Icons.share_rounded,
-                  size: 16, color: Colors.grey),
-            ),
-          ],
+                      Text(provider.description,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                              fontSize: 11,
+                              color: theme.colorScheme.onSurfaceVariant)),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 6),
+              if (provider.hasContact)
+                IconButton.filledTonal(
+                  tooltip: 'اتصال',
+                  onPressed: () async {
+                    final uri =
+                        Uri(scheme: 'tel', path: provider.phone);
+                    if (await canLaunchUrl(uri)) await launchUrl(uri);
+                  },
+                  icon: const Icon(Icons.call_rounded, size: 17),
+                  style: IconButton.styleFrom(
+                      backgroundColor: color.withValues(alpha: 0.14),
+                      foregroundColor: color),
+                ),
+              IconButton(
+                tooltip: 'مشاركة',
+                onPressed: () => ShareService.shareText(
+                    title: '🛠️ ${provider.name}',
+                    body: [
+                      if (provider.displaySpecialty.isNotEmpty)
+                        'التخصص: ${provider.displaySpecialty}',
+                      if (provider.description.isNotEmpty)
+                        provider.description,
+                      if (provider.address.isNotEmpty)
+                        'العنوان: ${provider.address}',
+                      if (provider.phone.isNotEmpty)
+                        'هاتف: ${provider.phone}',
+                    ].join('\n')),
+                icon: const Icon(Icons.share_rounded,
+                    size: 16, color: Colors.grey),
+              ),
+              Icon(Icons.chevron_left_rounded,
+                  size: 18,
+                  color: theme.colorScheme.onSurfaceVariant),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _avatar(ThemeData theme) => Container(
+  Widget _avatar(ThemeData theme, Color accent) => Container(
         color: accent.withValues(alpha: 0.1),
         alignment: Alignment.center,
         child: Text(
