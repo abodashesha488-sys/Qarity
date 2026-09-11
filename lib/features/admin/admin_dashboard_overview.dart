@@ -30,6 +30,8 @@ class _OverviewPage extends StatelessWidget {
         children: [
           _WelcomeHeader(isLoading: isLoading, users: stats['users'] ?? 0),
           const SizedBox(height: 16),
+          const _AlertControlCard(),
+          const SizedBox(height: 16),
           if (totalPending > 0)
             _PendingAlert(
                     count: totalPending, onTap: () => onOpenReview('news'))
@@ -128,6 +130,247 @@ class _OverviewPage extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// بطاقة «التنبيه العاجل» — يديرها الأدمن من لوحة التحكم:
+/// نص حر + تفعيل/إيقاف. عند التفعيل يُرسَل إشعار فوري لجميع المشتركين
+/// في `village_alerts`، وتعود الشاشة الرئيسية لعرض «حكمة اليوم» عند الإيقاف.
+class _AlertControlCard extends StatefulWidget {
+  const _AlertControlCard();
+
+  @override
+  State<_AlertControlCard> createState() => _AlertControlCardState();
+}
+
+class _AlertControlCardState extends State<_AlertControlCard> {
+  final AlertService _service = AlertService();
+  final TextEditingController _controller = TextEditingController();
+  VillageAlert _alert = const VillageAlert();
+  bool _loading = true;
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final alert = await _service.getAlert();
+      if (!mounted) return;
+      setState(() {
+        _alert = alert;
+        _controller.text = alert.message;
+        _loading = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _enable() async {
+    if (_busy) return;
+    if (_controller.text.trim().isEmpty) {
+      setState(() {});
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(const SnackBar(
+          content: Text('اكتب نص التنبيه أولاً'),
+          backgroundColor: Colors.orange));
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      await _service.enableAlert(_controller.text);
+      await _load();
+      if (!mounted) return;
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(const SnackBar(
+          content: Text('✅ التنبيه مفعّل وأُرسل إشعاراً لجميع المستخدمين'),
+          backgroundColor: Colors.green));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
+            content: Text('خطأ: $e'), backgroundColor: Colors.red));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _disable() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await _service.disableAlert();
+      await _load();
+      if (!mounted) return;
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(const SnackBar(
+          content: Text('تم إيقاف التنبيه — عادت «حكمة اليوم» للظهور'),
+          backgroundColor: Colors.blueGrey));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
+            content: Text('خطأ: $e'), backgroundColor: Colors.red));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    const red = Color(0xFFC62828);
+    if (_loading) {
+      return const SizedBox(
+          height: 90,
+          child: Center(child: CircularProgressIndicator(strokeWidth: 2)));
+    }
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+          colors: [
+            red.withValues(alpha: _alert.isActive ? 0.16 : 0.06),
+            theme.colorScheme.surface,
+          ],
+        ),
+        border: Border.all(
+            color: red.withValues(alpha: _alert.isActive ? 0.5 : 0.25),
+            width: _alert.isActive ? 1.4 : 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                    color: red.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10)),
+                child: const Icon(Icons.campaign_rounded,
+                    color: red, size: 18),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text('تنبيه القرية العاجل',
+                    style: theme.textTheme.titleSmall
+                        ?.copyWith(fontWeight: FontWeight.w900)),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                    color: _alert.isActive
+                        ? red
+                        : theme.colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(20)),
+                child: Text(
+                  _alert.isActive ? 'مُفعَّل الآن' : 'غير مُفعَّل',
+                  style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w800,
+                      color: _alert.isActive
+                          ? Colors.white
+                          : theme.colorScheme.onSurfaceVariant),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            _alert.isActive
+                ? 'يظهر أعلى الشاشة الرئيسية لكل المستخدمين + أُرسل كإشعار فوري.'
+                : 'عند عدم وجود تنبيه يظهر «حكمة اليوم» تلقائياً أعلى الرئيسية.',
+            style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant, height: 1.5),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _controller,
+            maxLines: 3,
+            minLines: 2,
+            maxLength: 240,
+            enabled: !_busy,
+            onChanged: (_) {
+              if (_alert.isActive) setState(() {});
+            },
+            decoration: InputDecoration(
+              hintText: 'مثال: انقطاع المياه غدًا من 8 ص حتى 12 ظ — ادخروا حاجتكم',
+              hintStyle:
+                  theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+              counterText: '',
+              filled: true,
+              fillColor: theme.colorScheme.surface,
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide:
+                      BorderSide(color: red.withValues(alpha: 0.4))),
+              enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide:
+                      BorderSide(color: red.withValues(alpha: 0.4))),
+              contentPadding: const EdgeInsets.all(12),
+            ),
+          ),
+          if (_alert.isActive &&
+              _controller.text.trim() != _alert.message) ...[
+            const SizedBox(height: 6),
+            Text('النص المُفعَّل حالياً: «${_alert.message}»',
+                style: theme.textTheme.labelSmall
+                    ?.copyWith(color: red, fontWeight: FontWeight.w700)),
+          ],
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                      backgroundColor: red,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 13)),
+                  onPressed: _busy ? null : _enable,
+                  icon: _busy
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
+                      : Icon(_alert.isActive
+                          ? Icons.refresh_rounded
+                          : Icons.notifications_active_rounded,
+                          size: 18),
+                  label: Text(_alert.isActive ? 'تحديث وإعادة إرسال' : 'تفعيل وإرسال إشعار',
+                      style: const TextStyle(fontWeight: FontWeight.w800)),
+                ),
+              ),
+              if (_alert.isActive) ...[
+                const SizedBox(width: 8),
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.blueGrey,
+                      side: const BorderSide(color: Colors.blueGrey),
+                      padding: const EdgeInsets.symmetric(vertical: 13)),
+                  onPressed: _busy ? null : _disable,
+                  icon: const Icon(Icons.notifications_off_rounded, size: 17),
+                  label: const Text('إيقاف'),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    ).animate().fadeIn(duration: 250.ms);
   }
 }
 

@@ -1,10 +1,13 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/constants/app_colors.dart';
-import '../../core/utils/helpers.dart';
 import '../../core/utils/role_style.dart';
 import '../../features/forum/posts.dart';
 import '../../features/market/market_tabs_screen.dart';
@@ -16,6 +19,8 @@ import '../../services/cache_service.dart';
 import '../../services/forum_service.dart';
 import '../../services/market_service.dart';
 import '../../services/news_service.dart';
+import '../../services/notification_service.dart';
+import '../../widgets/alert_wisdom_bar.dart';
 import '../../widgets/common_appbar_actions.dart';
 import '../../widgets/offline_stream_builder.dart';
 
@@ -37,8 +42,20 @@ class _HomeScreenState extends State<HomeScreen> {
     const ProfileScreen(),
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    // اشتراك إضافي بقناة التنبيهات العاجلة — يشمل كل من يفتح التطبيق
+    // (يُشترك بها أيضاً عند إكمال الملف الشخصي للمستخدمين الجدد).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (FirebaseAuth.instance.currentUser != null) {
+        unawaited(NotificationService.subscribeToTopic('village_alerts'));
+      }
+    });
+  }
+
   void _onItemTapped(int index) {
-    AppHelpers.hapticLight();
+    HapticFeedback.lightImpact();
     setState(() => _selectedIndex = index);
   }
 
@@ -136,215 +153,485 @@ class HomeDrawer extends StatelessWidget {
 class HomeContent extends StatelessWidget {
   const HomeContent({super.key});
 
+  static String _greeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'صباح الخير ☀️';
+    if (hour < 17) return 'نهارك سعيد 🌤️';
+    return 'مساء الخير 🌙';
+  }
+
+  static String _dateLabel() {
+    const days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+    const months = [
+      'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+      'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر',
+    ];
+    final n = DateTime.now();
+    return '${days[n.weekday % 7]} • ${n.day} ${months[n.month - 1]} ${n.year}';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return RefreshIndicator(
-      onRefresh: () async {},
-      child: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          const SliverToBoxAdapter(child: CustomHeader()),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('مرحباً بك في', style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7))),
-                const SizedBox(height: 4),
-                Text('قرية أبوديشيشة', style: Theme.of(context).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.w900, color: Theme.of(context).colorScheme.primary)),
-              ]),
-            ).animate().fade(delay: 100.ms).slideY(begin: 0.2, delay: 100.ms),
+    return Column(
+      children: [
+        _HeroHeader(greeting: _greeting(), dateLabel: _dateLabel()),        const AlertWisdomBar(),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: () async {},
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(
+                  parent: BouncingScrollPhysics()),
+              slivers: [
+                const SliverToBoxAdapter(
+                    child: _SectionHead(
+                        title: 'خدمات القرية',
+                        subtitle: 'كل ما تحتاجه أبوديشيشة في مكان واحد',
+                        icon: Icons.apps_rounded)),
+                const SliverToBoxAdapter(child: ModernServiceGrid()),
+                const SliverToBoxAdapter(
+                    child: _SectionHead(
+                        title: 'آخر المنتجات',
+                        subtitle: 'أحدث ما عرضه بائعو القرية',
+                        icon: Icons.bolt_rounded,
+                        actionRoute: AppRoutes.marketProducts)),
+                SliverToBoxAdapter(child: _buildLatestProducts(context)),
+                const SliverToBoxAdapter(
+                    child: _SectionHead(
+                        title: 'أخبار القرية',
+                        subtitle: 'مستجدات أبوديشيشة أولاً بأول',
+                        icon: Icons.newspaper_rounded,
+                        actionRoute: AppRoutes.newsList)),
+                SliverToBoxAdapter(child: _buildLiveNews(context)),
+                const SliverToBoxAdapter(
+                    child: _SectionHead(
+                        title: 'من المنتدى',
+                        subtitle: 'نقاشات أهل القرية وآخر المنشورات',
+                        icon: Icons.forum_rounded,
+                        actionRoute: AppRoutes.forumPosts)),
+                SliverToBoxAdapter(child: _buildLivePosts(context)),
+                const SliverToBoxAdapter(child: _HomeFooter()),
+              ],
+            ),
           ),
-          SliverToBoxAdapter(
-            child: Padding(padding: const EdgeInsets.fromLTRB(20, 24, 20, 16), child: Text('الخدمات الرئيسية', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold))),
-          ),
-          const SliverToBoxAdapter(child: ModernServiceGrid()),
-          SliverToBoxAdapter(
-            child: Padding(padding: const EdgeInsets.fromLTRB(20, 32, 20, 16), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('المنتجات المميزة', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)), Text('(مباشر)', style: TextStyle(color: theme.colorScheme.primary, fontSize: 12, fontWeight: FontWeight.w600))])),
-          ),
-          SliverToBoxAdapter(child: _buildLiveProducts(context)),
-          SliverToBoxAdapter(
-            child: Padding(padding: const EdgeInsets.fromLTRB(20, 32, 20, 16), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('أحدث الأخبار', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)), TextButton(onPressed: () => Navigator.pushNamed(context, AppRoutes.newsList), child: Text('عرض الكل', style: TextStyle(color: Theme.of(context).colorScheme.primary)))])),
-          ),
-          SliverToBoxAdapter(child: _buildLiveNews(context)),
-          SliverToBoxAdapter(
-            child: Padding(padding: const EdgeInsets.fromLTRB(20, 32, 20, 16), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('أحدث المنشورات', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)), TextButton(onPressed: () => Navigator.pushNamed(context, AppRoutes.forumPosts), child: Text('عرض الكل', style: TextStyle(color: Theme.of(context).colorScheme.primary)))])),
-          ),
-          SliverToBoxAdapter(child: _buildLivePosts(context)),
-          const SliverPadding(padding: EdgeInsets.only(bottom: 32)),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
-  Widget _buildLiveProducts(BuildContext context) {
-    final theme = Theme.of(context);
+  Widget _buildLatestProducts(BuildContext context) {
+    Widget list(List<MarketProduct> products) {
+      final latest = [...products]
+        ..sort((a, b) => (b.createdAt ?? DateTime(1970))
+            .compareTo(a.createdAt ?? DateTime(1970)));
+      final items = latest.take(8).toList();
+      if (items.isEmpty) return const SizedBox(height: 170);
+      return SizedBox(
+        height: 205,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          itemCount: items.length,
+          separatorBuilder: (_, __) => const SizedBox(width: 12),
+          itemBuilder: (context, index) => _ProductCard(product: items[index]),
+        ),
+      );
+    }
+
     return OfflineStreamBuilder<List<MarketProduct>>(
       stream: MarketService().getProductsStream(),
-      onlineBuilder: (context, snapshot) {
-        final products = snapshot.data ?? [];
-        final featured = products.where((p) => p.isFeatured).take(6).toList();
-        if (featured.isEmpty) return const SizedBox(height: 160);
-        return _buildProductList(theme, featured);
-      },
+      onlineBuilder: (context, snapshot) => list(snapshot.data ?? []),
       cacheBuilder: (context) => FutureBuilder(
         future: CacheService.getProducts(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) return const SizedBox(height: 160);
-          final all = (snapshot.data ?? []).map((j) => MarketProduct.fromJson(j, 'cache')).toList();
-          final featured = all.where((p) => p.isFeatured).take(6).toList();
-          if (featured.isEmpty) return const SizedBox(height: 160);
-          return _buildProductList(theme, featured);
+          if (!snapshot.hasData) return const SizedBox(height: 170);
+          final all = (snapshot.data ?? [])
+              .map((j) => MarketProduct.fromJson(j, 'cache'))
+              .toList();
+          return list(all);
         },
-      ),
-    );
-  }
-
-  Widget _buildProductList(ThemeData theme, List<MarketProduct> featured) {
-    return SizedBox(
-      height: 160,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        itemCount: featured.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
-        itemBuilder: (context, index) => GestureDetector(
-          onTap: () => Navigator.pushNamed(context, AppRoutes.marketProductDetail, arguments: featured[index]),
-          child: SizedBox(
-            width: 120,
-            child: Card(elevation: 6, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), child: Column(mainAxisSize: MainAxisSize.min, children: [
-              ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(16)), child: SizedBox(width: double.infinity, height: 80, child: CachedNetworkImage(imageUrl: featured[index].imageUrl, fit: BoxFit.cover))),
-              Padding(padding: const EdgeInsets.all(8), child: Text(featured[index].name, style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis)),
-            ])),
-          ),
-        ),
       ),
     );
   }
 
   Widget _buildLiveNews(BuildContext context) {
     final theme = Theme.of(context);
+    Widget list(List<NewsItem> news) {
+      final sorted = [...news]
+        ..sort((a, b) => (b.createdAt ?? DateTime(1970))
+            .compareTo(a.createdAt ?? DateTime(1970)));
+      final latest = sorted.take(6).toList();
+      if (latest.isEmpty) return const SizedBox(height: 150);
+      return SizedBox(
+        height: 158,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          itemCount: latest.length,
+          separatorBuilder: (_, __) => const SizedBox(width: 12),
+          itemBuilder: (context, index) => GestureDetector(
+            onTap: () => Navigator.pushNamed(
+                context, AppRoutes.newsView, arguments: latest[index]),
+            child: Container(
+              width: 150,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                    color: theme.colorScheme.outlineVariant
+                        .withValues(alpha: 0.35)),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                      height: 78,
+                      width: double.infinity,
+                      child: CachedNetworkImage(
+                          imageUrl: latest[index].imageUrl,
+                          fit: BoxFit.cover,
+                          errorWidget: (_, __, ___) => ColoredBox(
+                              color: theme
+                                  .colorScheme.surfaceContainerHighest,
+                              child: const Icon(Icons.newspaper_rounded))),
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.all(9),
+                    child: Text(latest[index].title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.cairo(
+                            fontSize: 11.5, fontWeight: FontWeight.w700)),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     return OfflineStreamBuilder<List<NewsItem>>(
       stream: NewsService().getNewsStream(),
-      onlineBuilder: (context, snapshot) {
-        final news = snapshot.data ?? [];
-        final latest = news.take(3).toList();
-        if (latest.isEmpty) return const SizedBox(height: 120);
-        return _buildNewsList(theme, latest);
-      },
+      onlineBuilder: (context, snapshot) => list(snapshot.data ?? []),
       cacheBuilder: (context) => FutureBuilder(
         future: CacheService.getNews(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) return const SizedBox(height: 120);
-          final all = (snapshot.data ?? []).map((j) => NewsItem.fromJson(j, 'cache')).toList()
-            ..sort((a, b) => (b.createdAt ?? DateTime(1970)).compareTo(a.createdAt ?? DateTime(1970)));
-          final latest = all.take(3).toList();
-          if (latest.isEmpty) return const SizedBox(height: 120);
-          return _buildNewsList(theme, latest);
+          if (!snapshot.hasData) return const SizedBox(height: 150);
+          final all = (snapshot.data ?? [])
+              .map((j) => NewsItem.fromJson(j, 'cache'))
+              .toList();
+          return list(all);
         },
-      ),
-    );
-  }
-
-  Widget _buildNewsList(ThemeData theme, List<NewsItem> latest) {
-    return SizedBox(
-      height: 120,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        itemCount: latest.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
-        itemBuilder: (context, index) => GestureDetector(
-          onTap: () => Navigator.pushNamed(context, AppRoutes.newsView, arguments: latest[index]),
-          child: SizedBox(
-            width: 140,
-            child: Card(elevation: 4, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), child: Column(mainAxisSize: MainAxisSize.min, children: [
-              ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(16)), child: SizedBox(width: double.infinity, height: 70, child: CachedNetworkImage(imageUrl: latest[index].imageUrl, fit: BoxFit.cover))),
-              Padding(padding: const EdgeInsets.all(6), child: Text(latest[index].title, style: theme.textTheme.labelSmall, maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center)),
-            ])),
-          ),
-        ),
       ),
     );
   }
 
   Widget _buildLivePosts(BuildContext context) {
     final theme = Theme.of(context);
+    Widget list(List<ForumPost> posts) {
+      final latest = posts.take(5).toList();
+      if (latest.isEmpty) return const SizedBox(height: 185);
+      return SizedBox(
+        height: 192,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          itemCount: latest.length,
+          separatorBuilder: (_, __) => const SizedBox(width: 12),
+          itemBuilder: (context, index) {
+            final post = latest[index];
+            return GestureDetector(
+              onTap: () => Navigator.pushNamed(
+                  context, AppRoutes.forumPostDetail, arguments: post),
+              child: Container(
+                width: 152,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                      color: theme.colorScheme.outlineVariant
+                          .withValues(alpha: 0.35)),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                        height: 82,
+                        width: double.infinity,
+                        child: post.imageUrl != null &&
+                                post.imageUrl!.isNotEmpty
+                            ? CachedNetworkImage(
+                                imageUrl: post.imageUrl!,
+                                fit: BoxFit.cover,
+                                errorWidget: (_, __, ___) =>
+                                    _postIcon(theme))
+                            : _postIcon(theme)),
+                    Padding(
+                      padding: const EdgeInsets.all(9),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          RoleNameText(
+                              name: post.userName,
+                              role: post.userRole,
+                              sellerType: post.userSellerType,
+                              style: GoogleFonts.cairo(
+                                  fontWeight: FontWeight.bold, fontSize: 11),
+                              iconSize: 11),
+                          const SizedBox(height: 3),
+                          Text(post.content,
+                              style: GoogleFonts.cairo(fontSize: 10.5),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      );
+    }
+
     return OfflineStreamBuilder<List<ForumPost>>(
       stream: ForumService().getPostsStream(),
-      onlineBuilder: (context, snapshot) {
-        final posts = snapshot.data ?? [];
-        final latest = posts.take(5).toList();
-        if (latest.isEmpty) return const SizedBox(height: 180);
-        return _buildPostsList(theme, latest);
-      },
+      onlineBuilder: (context, snapshot) => list(snapshot.data ?? []),
       cacheBuilder: (context) => FutureBuilder(
         future: CacheService.getForumPosts(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) return const SizedBox(height: 180);
-          final all = (snapshot.data ?? []).map((j) => ForumPost.fromJson(j, 'cache')).toList();
-          final latest = all.take(5).toList();
-          if (latest.isEmpty) return const SizedBox(height: 180);
-          return _buildPostsList(theme, latest);
+          if (!snapshot.hasData) return const SizedBox(height: 185);
+          final all = (snapshot.data ?? [])
+              .map((j) => ForumPost.fromJson(j, 'cache'))
+              .toList();
+          return list(all);
         },
       ),
     );
   }
 
-  Widget _buildPostsList(ThemeData theme, List<ForumPost> latest) {
-    return SizedBox(
-      height: 180,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        itemCount: latest.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
-        itemBuilder: (context, index) {
-          final post = latest[index];
-          return GestureDetector(
-            onTap: () => Navigator.pushNamed(context, AppRoutes.forumPostDetail, arguments: post),
-            child: Container(
-              width: 140,
-              decoration: BoxDecoration(color: theme.colorScheme.surface, borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8)]),
-              child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Container(height: 80, decoration: BoxDecoration(color: theme.colorScheme.surfaceContainerHighest, borderRadius: const BorderRadius.vertical(top: Radius.circular(16))), child: post.imageUrl != null && post.imageUrl!.isNotEmpty ? ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(16)), child: CachedNetworkImage(imageUrl: post.imageUrl!, fit: BoxFit.cover, width: double.infinity, height: 80, errorWidget: (context, url, error) => Center(child: Icon(Icons.forum, color: theme.colorScheme.onSurfaceVariant)))) : Center(child: Icon(Icons.forum, color: theme.colorScheme.onSurfaceVariant))),
-                Padding(padding: const EdgeInsets.all(8), child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [RoleNameText(name: post.userName, role: post.userRole, sellerType: post.userSellerType, style: GoogleFonts.cairo(fontWeight: FontWeight.bold, fontSize: 12), iconSize: 12), Text(post.content, style: GoogleFonts.cairo(fontSize: 11), maxLines: 2, overflow: TextOverflow.ellipsis)])),
-              ]),
-            ),
-          );
-        },
-      ),
-    );
-  }
+  static Widget _postIcon(ThemeData theme) => ColoredBox(
+      color: theme.colorScheme.surfaceContainerHighest,
+      child: Center(
+          child: Icon(Icons.forum_rounded,
+              color: theme.colorScheme.onSurfaceVariant)));
 }
 
-class CustomHeader extends StatelessWidget {
-  const CustomHeader({super.key});
+// ═══════════════════ هيدر عصري ثابت أعلى الشاشة ═══════════════════
+class _HeroHeader extends StatelessWidget {
+  const _HeroHeader({required this.greeting, required this.dateLabel});
+  final String greeting;
+  final String dateLabel;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 56, 20, 40),
-      decoration: BoxDecoration(borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(32), bottomRight: Radius.circular(32)), gradient: AppColors.primaryGradient, boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, 8))]),
-      child: SafeArea(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Builder(builder: (context) => IconButton(icon: const Icon(Icons.menu_rounded, color: Colors.white), onPressed: () => Scaffold.of(context).openEndDrawer())),
-          Row(children: [
-            IconButton(icon: const Icon(Icons.person_outline, color: Colors.white), onPressed: () => Navigator.pushNamed(context, AppRoutes.profileMain)),
-            IconButton(icon: const Icon(Icons.settings_outlined, color: Colors.white), onPressed: () => Navigator.pushNamed(context, AppRoutes.settingsIndex)),
-            ...CommonAppBarActions.actions(context).map((w) => IconTheme(data: const IconThemeData(color: Colors.white), child: w)),
-          ]),
-        ]),
-        const SizedBox(height: 20),
-        const Text('خدمات القرية', style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900, height: 1.2)),
-        const SizedBox(height: 8),
-        Text('منصة شاملة لخدمات المجتمع المحلي', style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 16, height: 1.4)),
-      ])),
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: AppColors.primaryGradient,
+        borderRadius:
+            BorderRadius.only(bottomLeft: Radius.circular(30), bottomRight: Radius.circular(30)),
+        boxShadow: [
+          BoxShadow(
+              color: Color(0x331565C0),
+              blurRadius: 18,
+              offset: Offset(0, 6)),
+        ],
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Builder(builder: (context) => _GlassIconButton(
+                      icon: Icons.menu_rounded,
+                      onTap: () => Scaffold.of(context).openEndDrawer())),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('قرية أبوديشيشة',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 15)),
+                        Text(dateLabel,
+                            style: TextStyle(
+                                color:
+                                    Colors.white.withValues(alpha: 0.75),
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ),
+                  ...CommonAppBarActions.actions(context)
+                      .map((w) => IconTheme(
+                          data: const IconThemeData(color: Colors.white),
+                          child: w)),
+                  const SizedBox(width: 2),
+                  _GlassIconButton(
+                      icon: Icons.person_outline_rounded,
+                      onTap: () =>
+                          Navigator.pushNamed(context, AppRoutes.profileMain)),
+                  _GlassIconButton(
+                      icon: Icons.settings_outlined,
+                      onTap: () =>
+                          Navigator.pushNamed(context, AppRoutes.settingsIndex)),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(greeting,
+                            style: TextStyle(
+                                color: Colors.white
+                                    .withValues(alpha: 0.85),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 2),
+                        const Text('خدمات قريتك',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 26,
+                                fontWeight: FontWeight.w900,
+                                height: 1.25)),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(11),
+                    decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.25))),
+                    child: const Icon(Icons.villa_rounded,
+                        color: Colors.white, size: 26),
+                  ).animate().fadeIn(duration: 500.ms).scale(begin: const Offset(0.6, 0.6)),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
 
+class _GlassIconButton extends StatelessWidget {
+  const _GlassIconButton({required this.icon, required this.onTap});
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white.withValues(alpha: 0.14),
+      shape: const CircleBorder(),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(8.5),
+          child: Icon(icon, color: Colors.white, size: 19),
+        ),
+      ),
+    );
+  }
+}
+
+// ═══════════════════ عناوين الأقسام ═══════════════════
+class _SectionHead extends StatelessWidget {
+  const _SectionHead({
+    required this.title,
+    required this.icon,
+    this.subtitle,
+    this.actionRoute,
+  });
+  final String title;
+  final String? subtitle;
+  final IconData icon;
+  final String? actionRoute;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 22, 16, 12),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                  begin: Alignment.topRight,
+                  end: Alignment.bottomLeft,
+                  colors: [
+                    theme.colorScheme.primary,
+                    theme.colorScheme.primary.withValues(alpha: 0.7),
+                  ]),
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: Icon(icon, color: Colors.white, size: 17),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w900)),
+                if (subtitle != null)
+                  Text(subtitle!,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant)),
+              ],
+            ),
+          ),
+          if (actionRoute != null)
+            InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () => Navigator.pushNamed(context, actionRoute!),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 10, vertical: 6),
+                child: Row(
+                  children: [
+                    Text('عرض الكل',
+                        style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w800,
+                            color: theme.colorScheme.primary)),
+                    const SizedBox(width: 2),
+                    Icon(Icons.chevron_left_rounded,
+                        size: 16, color: theme.colorScheme.primary),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// ═══════════════════ شبكة الخدمات ═══════════════════
 class ModernServiceGrid extends StatelessWidget {
   const ModernServiceGrid({super.key});
 
@@ -358,35 +645,77 @@ class ModernServiceGrid extends StatelessWidget {
     _ServiceItem('المنتدى', Icons.forum_rounded, AppRoutes.forumPosts),
     _ServiceItem('دليل الخدمات', Icons.category_rounded, AppRoutes.serviceRequest),
     _ServiceItem('دليل الهاتف', Icons.phone_rounded, AppRoutes.phoneDirectory),
-    _ServiceItem('الطوارئ', Icons.contact_phone_rounded, AppRoutes.emergencyContacts),
+    _ServiceItem('الطوارئ', Icons.contact_phone_rounded, AppRoutes.emergencyContacts, Color(0xFFD32F2F)),
     _ServiceItem('حول التطبيق', Icons.info_rounded, AppRoutes.aboutApp),
   ];
 
   @override
   Widget build(BuildContext context) {
     return GridView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: _services.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, mainAxisSpacing: 12, crossAxisSpacing: 12),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          childAspectRatio: 0.98),
       itemBuilder: (context, index) => _buildServiceCard(context, _services[index], index),
     );
   }
 
   Widget _buildServiceCard(BuildContext context, _ServiceItem service, int index) {
+    final theme = Theme.of(context);
     return Card(
-      elevation: 6,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 0,
+      color: theme.colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(color: service.color.withValues(alpha: 0.22)),
+      ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         onTap: () => Navigator.pushNamed(context, service.route),
-        child: Padding(padding: const EdgeInsets.all(10), child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Container(width: 44, height: 44, decoration: BoxDecoration(color: service.color.withValues(alpha: 0.15), shape: BoxShape.circle), child: Center(child: Icon(service.icon, color: service.color, size: 22))),
-          const SizedBox(height: 8),
-          Text(service.title, textAlign: TextAlign.center, style: GoogleFonts.cairo(fontWeight: FontWeight.w600, fontSize: 11), maxLines: 2, overflow: TextOverflow.ellipsis),
-        ])),
-      ).animate(delay: (index * 50).ms).fade(duration: 400.ms).scale(begin: const Offset(0.9, 0.9)),
+        child: Padding(
+          padding: const EdgeInsets.all(10),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
+                      colors: [
+                        service.color,
+                        service.color.withValues(alpha: 0.72)
+                      ]),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                        color: service.color.withValues(alpha: 0.35),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4)),
+                  ],
+                ),
+                child: Center(
+                    child:
+                        Icon(service.icon, color: Colors.white, size: 21)),
+              ),
+              const SizedBox(height: 9),
+              Text(service.title,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.cairo(
+                      fontWeight: FontWeight.w800, fontSize: 10.5),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis),
+            ],
+          ),
+        ),
+      ).animate(delay: (index * 40).ms).fadeIn(duration: 400.ms).scale(begin: const Offset(0.92, 0.92)),
     );
   }
 }
@@ -398,4 +727,132 @@ class _ServiceItem {
   final Color color;
   const _ServiceItem(this.title, this.icon, this.route,
       [this.color = AppColors.primary]);
+}
+
+// ═══════════════════ بطاقة منتج ═══════════════════
+class _ProductCard extends StatelessWidget {
+  const _ProductCard({required this.product});
+  final MarketProduct product;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return GestureDetector(
+      onTap: () => Navigator.pushNamed(context,
+          AppRoutes.marketProductDetail, arguments: product),
+      child: Container(
+        width: 136,
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+              color: theme.colorScheme.outlineVariant
+                  .withValues(alpha: 0.35)),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
+              children: [
+                SizedBox(
+                  height: 100,
+                  width: double.infinity,
+                  child: CachedNetworkImage(
+                      imageUrl: product.imageUrl,
+                      fit: BoxFit.cover,
+                      errorWidget: (_, __, ___) => ColoredBox(
+                          color: theme.colorScheme.surfaceContainerHighest,
+                          child: const Icon(Icons.image_rounded))),
+                ),
+                if (product.isOnOffer)
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                          color: Colors.red.shade700,
+                          borderRadius: BorderRadius.circular(7)),
+                      child: const Text('عرض',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 8.5,
+                              fontWeight: FontWeight.w900)),
+                    ),
+                  ),
+              ],
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 7, 8, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(product.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.cairo(
+                          fontSize: 11, fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 5),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${((product.isOnOffer && product.offerPrice != null) ? product.offerPrice! : product.price).toStringAsFixed(0)} ج.م',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w900,
+                              color: theme.colorScheme.primary),
+                        ),
+                      ),
+                      if (product.isOnOffer && product.offerPrice != null)
+                        Text(
+                          product.price.toStringAsFixed(0),
+                          style: const TextStyle(
+                              fontSize: 8.5,
+                              color: Colors.grey,
+                              decoration: TextDecoration.lineThrough),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeFooter extends StatelessWidget {
+  const _HomeFooter();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 28, 16, 28),
+      child: Column(
+        children: [
+          Container(
+            height: 3,
+            width: 44,
+            decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withValues(alpha: 0.35),
+                borderRadius: BorderRadius.circular(2)),
+          ),
+          const SizedBox(height: 12),
+          Text('قريتك بين يديك — صُنع بحب لأهل أبوديشيشة 💙',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.labelMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w700)),
+        ],
+      ),
+    );
+  }
 }

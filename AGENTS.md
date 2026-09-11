@@ -6,8 +6,8 @@ Qarity is a comprehensive digital platform for village community services (قر�
 ## Build Status
 - **Errors:** 0
 - **Warnings:** 0
-- **Info:** 35 (pre-existing lint suggestions)
-- **Status:** Compiles successfully · `flutter test`: 50/50 passing
+- **Info:** 0
+- **Status:** Compiles successfully · `flutter test`: 65/65 passing
 
 ## Firebase Configuration
 
@@ -76,7 +76,8 @@ If the user isn't signed in, `RemotePushService` silently no-ops.
 
 ### Topics subscribed by every user on profile completion
 `village_news`, `village_obituaries`, `village_occasions`, `village_market`,
-`village_forum`, `village_services`, `village_medical`.
+`village_forum`, `village_services`, `village_medical`, `village_alerts`
+(also re-subscribed on every Home open so existing installs join the alert channel).
 Approval fan-out (`AdminService._pushMessageFor`) + `kPushTopicForCollection`
 cover: news, obituaries, occasions, products, **shops**, forum, **service_providers**
 (`village_services`, route `/services`), and medical (`village_clinics`, `pharmacies`,
@@ -95,7 +96,8 @@ to Blaze and run `firebase deploy --only functions`.
 - Public read for content collections: `news`, `market_products`, `obituaries`,
   `occasions`, `forum_posts`, `village_clinics`, `pharmacies`, `blood_requests`,
   `blood_donors`, `medical_center_clinics`, `shops`, `buy_requests`, `donations`,
-  `price_history`, `phone_directory`, `emergency_contacts`, `village_info`
+  `price_history`, `phone_directory`, `emergency_contacts`, `village_info`,
+  `village_alerts/current` (urgent home alert; admin-only write)
 - Authenticated create access for content collections (starts `isApproved: false`)
 - **Service Directory (`service_providers`)**: public read; owner create only with `isApproved: false`; owner may update their own *unapproved* entry without touching `isApproved`; admin full access.
 - ** Important:** Firestore rules are versioned in `firestore.rules` and published via `firebase.json`
@@ -197,6 +199,8 @@ lib/
 - Service Directory (`/services`, route `serviceRequest` → `ServiceDirectoryScreen`): tabs الفنيون/خدمات زراعية/خدمات تعليمية (user-submitted `service_providers`, admin-approved, dropdown-grouped lists) + دليل الهاتف (`PhoneDirectoryScreen(embedded: true)` keeps its own design/logic). Replaced the old "طلب الخدمة" request screens (`request.dart`/`detail.dart` deleted; `service_requests` collection kept for legacy stats).
 
 ## Recent Updates
+- Home screen full modern redesign (`features/home/home.dart`): fixed `_HeroHeader` (gradient, greeting + date, glass icon buttons), pinned `AlertWisdomBar` strip directly under it, sectioned scroller (`_SectionHead` with "عرض الكل" routes), gradient-circle `ModernServiceGrid`, and **"المنتجات المميزة" → "آخر المنتجات"** (newest-first). `_buildLiveProducts`/`_buildLiveNews` sort by `createdAt` desc client-side.
+- Urgent village alert: `village_alerts/current` doc (`VillageAlert` model + `AlertService`) shown in `AlertWisdomBar` when active (red pulsing banner, tap = full dialog); when inactive/empty the strip shows rotating **"حكمة اليوم"** (`lib/core/constants/wisdoms.dart`, deterministic daily pick + tap to cycle). Admin dashboard overview has an `_AlertControlCard` (text box + تفعيل/إيقاف/تحديث); enabling writes the doc and fires a topic push to `village_alerts` (subscribed on profile completion + every Home open). Rules: `village_alerts` public read, admin-only write.
 - Service Directory (دليل الخدمات): new `service_providers` collection + `ServiceProvider` model + `ServiceProviderService`; `ServiceDirectoryScreen` at `/services` with dropdown-grouped tabs الفنيون/خدمات زراعية/خدمات تعليمية (Egypt-education stages & subjects presets) + embedded `PhoneDirectoryScreen(embedded:true)`; submissions start `isApproved:false` and go through the new admin review chip with FCM fan-out (`village_services`). Old request screens `features/services/request.dart` + `detail.dart` deleted.
 - Admin review gained chips for **المحلات** (`shops` — fixes: created shops never appeared for approval), **دليل الخدمات** (`service_providers`), and **عيادات المركز الخيري** (`medical_center_clinics`); personal approve/reject notifications + routes extended for all three.
 - Charity Medical Center approval flow: `MedicalCenterClinic.isApproved` (legacy/seeded default approved), new center clinics from `medical_admin` wait for admin approval, public list filters approved+active.

@@ -172,6 +172,13 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    // ─────────────────────── التنبيه العاجل للقرية ───────────────────────
+    // قراءة عامة لكل الشاشات؛ الإنشاء/التعديل/الحذف للمدير العام فقط.
+    match /village_alerts/{docId} {
+      allow list, get: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
     // ───────────────────────── التعازي (مجموعة مستقلة) ─────────────────────────
     match /condolences/{docId} {
       allow list, get: if isSignedIn();
