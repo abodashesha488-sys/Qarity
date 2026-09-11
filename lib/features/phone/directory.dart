@@ -10,7 +10,11 @@ import '../../services/phone_directory_service.dart';
 import '../../widgets/common_appbar_actions.dart';
 
 class PhoneDirectoryScreen extends StatefulWidget {
-  const PhoneDirectoryScreen({super.key});
+  const PhoneDirectoryScreen({super.key, this.embedded = false});
+
+  /// عند التضمين داخل تبويب (دليل الخدمات) يُخفى الـAppBar الخاص بالشاشة
+  /// مع الإبقاء على كامل التصميم والبرمجة كما هي.
+  final bool embedded;
 
   @override
   State<PhoneDirectoryScreen> createState() => _PhoneDirectoryScreenState();
@@ -101,25 +105,28 @@ class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('دليل الهاتف'),
-        centerTitle: true,
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        surfaceTintColor: theme.colorScheme.surface,
-        actions: _isAdmin
-            ? [
-                IconButton(
-                  icon: Icon(_pendingCount > 0 ? Icons.pending_rounded : Icons.check_rounded,
-                      color: _pendingCount > 0 ? Colors.orange : Colors.green),
-                  tooltip: 'طلباتpending',
-                  onPressed: _pendingCount > 0
-                      ? () => _showPendingBottomSheet()
-                      : null,
-                ),
-              ]
-            : CommonAppBarActions.actions(context),
-      ),
+      backgroundColor: widget.embedded ? Colors.transparent : null,
+      appBar: widget.embedded
+          ? null
+          : AppBar(
+              title: const Text('دليل الهاتف'),
+              centerTitle: true,
+              elevation: 0,
+              shadowColor: Colors.transparent,
+              surfaceTintColor: theme.colorScheme.surface,
+              actions: _isAdmin
+                  ? [
+                      IconButton(
+                        icon: Icon(_pendingCount > 0 ? Icons.pending_rounded : Icons.check_rounded,
+                            color: _pendingCount > 0 ? Colors.orange : Colors.green),
+                        tooltip: 'طلباتpending',
+                        onPressed: _pendingCount > 0
+                            ? () => _showPendingBottomSheet()
+                            : null,
+                      ),
+                    ]
+                  : CommonAppBarActions.actions(context),
+            ),
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: Column(

@@ -38,6 +38,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   static const List<_Cat> _cats = [
     _Cat('news', 'الأخبار', Icons.newspaper_rounded, Colors.blue),
     _Cat('market_products', 'المنتجات', Icons.store_rounded, Colors.deepPurple),
+    _Cat('shops', 'المحلات', Icons.storefront_rounded, Colors.amber),
     _Cat('obituaries', 'العزاء', Icons.volunteer_activism_rounded,
         Colors.indigo),
     _Cat('occasions', 'المناسبات', Icons.celebration_rounded, Colors.teal),
@@ -45,6 +46,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     _Cat('seller_requests', 'طلبات المتاجر', Icons.storefront_rounded,
         Colors.orange),
     _Cat('phone_directory', 'دليل الهاتف', Icons.phone_rounded, Colors.cyan),
+    _Cat('service_providers', 'دليل الخدمات', Icons.category_rounded,
+        Color(0xFF6D4C41)),
+    _Cat('medical_center_clinics', 'عيادات المركز الخيري',
+        Icons.local_hospital_rounded, Color(0xFF00695C)),
     _Cat('village_clinics', 'عيادات القرية', Icons.add_business_rounded,
         Color(0xFF00897B)),
     _Cat('pharmacies', 'الصيدليات', Icons.local_pharmacy_rounded, Colors.green),

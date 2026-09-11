@@ -7,6 +7,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:qurity/firebase_options.dart';
 import 'package:qurity/main.dart' as app;
 import 'package:qurity/models/data_models.dart';
+import 'package:qurity/models/medical_models.dart';
 import 'package:qurity/routes/app_routes.dart';
 
 /// End-to-end smoke test. Runs on a real device/emulator via:
@@ -76,14 +77,16 @@ void main() {
       content: 'محتوى',
       createdAt: DateTime(2020),
     );
-    final serviceRequest = ServiceRequest(
-      id: 's1',
-      userId: 'u1',
-      userName: 'مستخدم',
-      type: 'كهرباء',
-      description: 'وصف',
-      location: 'مكان',
-      createdAt: DateTime(2020),
+    final villageClinic = VillageClinic(
+      id: 'c1',
+      name: 'عيادة',
+      specialty: 'باطنة',
+      phone: '123',
+    );
+    final pharmacy = Pharmacy(
+      id: 'ph1',
+      name: 'صيدلية',
+      phone: '123',
     );
     final obituary = Obituary(
       id: 'o1',
@@ -123,7 +126,8 @@ void main() {
       _Entry(AppRoutes.marketSellerReviews, <String, String>{'name': 'بائع', 'phone': '123'}),
       _Entry(AppRoutes.marketSellerGallery, <String, String>{'name': 'بائع', 'sellerId': ''}),
       _Entry(AppRoutes.serviceRequest),
-      _Entry(AppRoutes.serviceDetail, serviceRequest),
+      _Entry(AppRoutes.medicalClinicDetail, villageClinic),
+      _Entry(AppRoutes.medicalPharmacyDetail, pharmacy),
       _Entry(AppRoutes.emergencyContacts),
       _Entry(AppRoutes.phoneDirectory),
       _Entry(AppRoutes.about),

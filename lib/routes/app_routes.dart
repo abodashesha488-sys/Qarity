@@ -22,6 +22,7 @@ import '../features/market/seller_gallery.dart';
 import '../features/market/seller_profile.dart';
 import '../features/market/seller_reviews.dart';
 import '../features/market/sellers_list.dart';
+import '../features/medical/clinic_detail_screen.dart';
 import '../features/medical/medical_home_screen.dart';
 import '../features/news/add.dart';
 import '../features/news/list.dart';
@@ -36,8 +37,7 @@ import '../features/occasions/list.dart';
 import '../features/phone/add_directory.dart';
 import '../features/phone/directory.dart';
 import '../features/profile/main.dart';
-import '../features/services/detail.dart';
-import '../features/services/request.dart';
+import '../features/services/service_directory_screen.dart';
 import '../features/settings/index.dart';
 import '../features/settings/notifications.dart';
 import '../features/village/about.dart';
@@ -86,7 +86,8 @@ static const String marketProducts = '/market';
   static const String settingsIndex = '/settings';
   static const String notificationsSettings = '/settings/notifications';
   static const String serviceRequest = '/services';
-  static const String serviceDetail = '/services/detail';
+  static const String medicalClinicDetail = '/medical/clinic-detail';
+  static const String medicalPharmacyDetail = '/medical/pharmacy-detail';
   static const String medical = '/medical';
   static const String notificationsInbox = '/notifications';
 
@@ -123,8 +124,9 @@ static const String marketProducts = '/market';
     profileMain: (_) => const ProfileScreen(),
     settingsIndex: (_) => const SettingsScreen(),
     notificationsSettings: (_) => const NotificationsSettingsScreen(),
-    serviceRequest: (_) => const ServicesScreen(),
-    serviceDetail: (_) => const ServiceDetailScreen(),
+    serviceRequest: (_) => const ServiceDirectoryScreen(),
+    medicalClinicDetail: (_) => const VillageClinicDetailScreen(),
+    medicalPharmacyDetail: (_) => const PharmacyDetailScreen(),
     medical: (_) => const MedicalHomeScreen(),
     notificationsInbox: (_) => const NotificationsInboxScreen(),
   };

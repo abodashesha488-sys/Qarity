@@ -66,6 +66,7 @@ class MedicalCenterClinic {
   final String workingHours; // '9 ص - 2 م'
   final double fees; // أجر رمزي
   final bool isActive;
+  final bool isApproved; // وثائق المركز القديمة تُعتبر معتمدة ضمناً
   final DateTime? updatedAt;
 
   const MedicalCenterClinic({
@@ -78,6 +79,7 @@ class MedicalCenterClinic {
     this.workingHours = '',
     this.fees = 0,
     this.isActive = true,
+    this.isApproved = true,
     this.updatedAt,
   });
 
@@ -96,6 +98,7 @@ class MedicalCenterClinic {
       workingHours: json['workingHours'] as String? ?? '',
       fees: (json['fees'] as num?)?.toDouble() ?? 0,
       isActive: json['isActive'] as bool? ?? true,
+      isApproved: json['isApproved'] as bool? ?? true,
       updatedAt: _parseTsOrNull(json['updatedAt']),
     );
   }
@@ -109,6 +112,7 @@ class MedicalCenterClinic {
         'workingHours': workingHours,
         'fees': fees,
         'isActive': isActive,
+        'isApproved': isApproved,
         'updatedAt': FieldValue.serverTimestamp(),
       };
 

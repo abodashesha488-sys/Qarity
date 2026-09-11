@@ -198,6 +198,26 @@ class _AdminEditScreenState extends State<AdminEditScreen> {
           _FieldSpec('address', 'العنوان'),
           _FieldSpec('isAvailable', 'متبرع متاح', boolean: true),
         ];
+      case 'service_providers':
+        return const [
+          _FieldSpec('name', 'الاسم / اسم الورشة', required: true),
+          _FieldSpec('category', 'الفئة (technicians/agricultural/educational)'),
+          _FieldSpec('specialty', 'الحرفة / الخدمة / المادة'),
+          _FieldSpec('stage', 'المرحلة الدراسية (للخدمات التعليمية)'),
+          _FieldSpec('phone', 'الهاتف'),
+          _FieldSpec('address', 'العنوان'),
+          _FieldSpec('description', 'نبذة', multiline: true),
+        ];
+      case 'medical_center_clinics':
+        return const [
+          _FieldSpec('name', 'اسم العيادة', required: true),
+          _FieldSpec('specialty', 'التخصص'),
+          _FieldSpec('doctorName', 'اسم الطبيب'),
+          _FieldSpec('workingHours', 'مواعيد العمل'),
+          _FieldSpec('fees', 'الأجر الرمزي', numeric: true),
+          _FieldSpec('description', 'نبذة', multiline: true),
+          _FieldSpec('isActive', 'ظاهرة للجمهور', boolean: true),
+        ];
       case 'service_requests':
         return const [
           _FieldSpec('type', 'نوع الطلب', required: true),

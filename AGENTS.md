@@ -77,8 +77,10 @@ If the user isn't signed in, `RemotePushService` silently no-ops.
 ### Topics subscribed by every user on profile completion
 `village_news`, `village_obituaries`, `village_occasions`, `village_market`,
 `village_forum`, `village_services`, `village_medical`.
-Add more by extending `kPushTopicForCollection` in `remote_push_service.dart` and
-subscribing from `complete_profile.dart`.
+Approval fan-out (`AdminService._pushMessageFor`) + `kPushTopicForCollection`
+cover: news, obituaries, occasions, products, **shops**, forum, **service_providers**
+(`village_services`, route `/services`), and medical (`village_clinics`, `pharmacies`,
+**`medical_center_clinics`**, `blood_requests`, `blood_donors`).
 
 ### Legacy `functions/` folder
 The original Cloud Functions code is still present at `functions/index.js`. It is
@@ -95,6 +97,7 @@ to Blaze and run `firebase deploy --only functions`.
   `blood_donors`, `medical_center_clinics`, `shops`, `buy_requests`, `donations`,
   `price_history`, `phone_directory`, `emergency_contacts`, `village_info`
 - Authenticated create access for content collections (starts `isApproved: false`)
+- **Service Directory (`service_providers`)**: public read; owner create only with `isApproved: false`; owner may update their own *unapproved* entry without touching `isApproved`; admin full access.
 - ** Important:** Firestore rules are versioned in `firestore.rules` and published via `firebase.json`
 
 ## Project Structure
@@ -182,7 +185,7 @@ lib/
 - Use `RoleNameText(name, role, sellerType)` for any user-facing author/seller name.
 
 ## Admin Dashboard
-- 5 real-time tabs: News, Products, Obituaries, Occasions, Forum Posts
+- Review chips (14): News, Products, Shops, Obituaries, Occasions, Forum Posts, Seller Requests, Phone Directory, Service Directory (`service_providers`), Charity Medical Center Clinics (`medical_center_clinics`), Village Clinics, Pharmacies, Blood Requests, Blood Donors.
 - Stats grid with counts
 - Search bar and filter chips (all / pending)
 - Pending count badges on tabs and AppBar
@@ -190,8 +193,16 @@ lib/
 - Action buttons: edit, approve, reject, delete with loading states
 - Tapping a card opens `AdminDetailScreen` showing full request details
 - Admin edit screen supports fields by collection type
+- `medical_center_clinics` approval flow: clinics added by a `medical_admin` start `isApproved:false` (legacy/seeded docs default to approved via `fromJson ?? true`); the public Medical tab shows only approved+active; the admin dashboard gates new ones.
+- Service Directory (`/services`, route `serviceRequest` → `ServiceDirectoryScreen`): tabs الفنيون/خدمات زراعية/خدمات تعليمية (user-submitted `service_providers`, admin-approved, dropdown-grouped lists) + دليل الهاتف (`PhoneDirectoryScreen(embedded: true)` keeps its own design/logic). Replaced the old "طلب الخدمة" request screens (`request.dart`/`detail.dart` deleted; `service_requests` collection kept for legacy stats).
 
 ## Recent Updates
+- Service Directory (دليل الخدمات): new `service_providers` collection + `ServiceProvider` model + `ServiceProviderService`; `ServiceDirectoryScreen` at `/services` with dropdown-grouped tabs الفنيون/خدمات زراعية/خدمات تعليمية (Egypt-education stages & subjects presets) + embedded `PhoneDirectoryScreen(embedded:true)`; submissions start `isApproved:false` and go through the new admin review chip with FCM fan-out (`village_services`). Old request screens `features/services/request.dart` + `detail.dart` deleted.
+- Admin review gained chips for **المحلات** (`shops` — fixes: created shops never appeared for approval), **دليل الخدمات** (`service_providers`), and **عيادات المركز الخيري** (`medical_center_clinics`); personal approve/reject notifications + routes extended for all three.
+- Charity Medical Center approval flow: `MedicalCenterClinic.isApproved` (legacy/seeded default approved), new center clinics from `medical_admin` wait for admin approval, public list filters approved+active.
+- Village clinics & pharmacies: cards redesigned (compact professional rows) and now open full detail screens `VillageClinicDetailScreen`/`PharmacyDetailScreen` (`/medical/clinic-detail`, `/medical/pharmacy-detail`).
+- Firestore rules hardened: `shops` create requires `isApproved:false` + owner-field updates; new `service_providers` block; `phone_directory` create requires `isApproved:false`.
+- Tests: +6 (`test/services/service_directory_test.dart`); suite now 58/58.
 - `navigatorKey` is now wired into `MaterialApp` (`main.dart`), so global toasts (`AppHelpers.showToast`) and notification-tap navigation (`NotificationService._tryNavigate`) actually resolve a context. The bottom nav remains home-only (a global persistent bar was implemented then reverted at user request).
 - Search focus fix: `OfflineStreamBuilder` is now `StatefulWidget` that pins the last valid data across transient re-subscriptions, so the search `TextField` no longer loses focus/remounts after the first keystroke (fixed once, applies to all ~12 pages).
 - News list header: moved search into `SliverAppBar.bottom` to stop the title overlapping the search box.

@@ -208,7 +208,9 @@ class _CenterTab extends StatelessWidget {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-        final clinics = (snapshot.data ?? []).where((c) => c.isActive).toList();
+        final clinics = (snapshot.data ?? [])
+            .where((c) => c.isActive && c.isApproved)
+            .toList();
         return ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
           children: [
@@ -811,24 +813,10 @@ class _ClinicCard extends StatelessWidget {
   const _ClinicCard({required this.clinic});
   final VillageClinic clinic;
 
-  Widget _line(IconData icon, String text) => Padding(
-        padding: const EdgeInsets.only(top: 4),
-        child: Row(
-          children: [
-            Icon(icon, size: 14, color: Colors.grey),
-            const SizedBox(width: 6),
-            Expanded(
-                child: Text(text,
-                    style: const TextStyle(fontSize: 12),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis)),
-          ],
-        ),
-      );
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    const accent = Color(0xFF00897B);
     return Card(
       elevation: 0,
       clipBehavior: Clip.antiAlias,
@@ -837,101 +825,78 @@ class _ClinicCard extends StatelessWidget {
         side:
             BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (clinic.imageUrl.isNotEmpty)
-            SizedBox(
-                height: 130,
-                width: double.infinity,
-                child: _net(clinic.imageUrl, theme)),
-          Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+      child: InkWell(
+        onTap: () =>
+            Navigator.pushNamed(context, '/medical/clinic-detail',
+                arguments: clinic),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Container(
+                width: 62,
+                height: 62,
+                decoration: BoxDecoration(
+                    color: accent.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(14)),
+                clipBehavior: Clip.antiAlias,
+                child: clinic.imageUrl.isNotEmpty
+                    ? CachedNetworkImage(
+                        imageUrl: clinic.imageUrl,
+                        fit: BoxFit.cover,
+                        errorWidget: (_, __, ___) => const Icon(
+                            Icons.add_business_rounded,
+                            color: accent),
+                      )
+                    : const Icon(Icons.add_business_rounded,
+                        color: accent),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Text(clinic.name,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w900, fontSize: 16)),
+                    Text(clinic.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w900, fontSize: 15)),
+                    const SizedBox(height: 4),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        if (clinic.specialty.isNotEmpty)
+                          _Tag(clinic.specialty, accent),
+                        if (clinic.ownerName.isNotEmpty)
+                          _Tag('د. ${clinic.ownerName}',
+                              theme.colorScheme.onSurfaceVariant),
+                      ],
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 3),
-                      decoration: BoxDecoration(
-                          color:
-                              const Color(0xFF00897B).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(10)),
-                      child: Text(clinic.specialty,
-                          style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFF00897B))),
-                    ),
+                    if (clinic.workingHours.isNotEmpty ||
+                        clinic.address.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        [
+                          if (clinic.workingHours.isNotEmpty)
+                            clinic.workingHours,
+                          if (clinic.address.isNotEmpty) clinic.address,
+                        ].join(' • '),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 11.5,
+                            color: theme.colorScheme.onSurfaceVariant),
+                      ),
+                    ],
                   ],
                 ),
-                if (clinic.ownerName.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text('د. ${clinic.ownerName}',
-                        style: const TextStyle(fontSize: 13)),
-                  ),
-                if (clinic.workingHours.isNotEmpty)
-                  _line(Icons.access_time_rounded, clinic.workingHours),
-                if (clinic.address.isNotEmpty)
-                  _line(Icons.location_on_rounded, clinic.address),
-                if (clinic.description.isNotEmpty) ...[
-                  const SizedBox(height: 6),
-                  Text(clinic.description,
-                      style: TextStyle(
-                          fontSize: 12, color: theme.colorScheme.onSurfaceVariant)),
-                ],
-                if (clinic.phone.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: FilledButton.icon(
-                      style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFF00897B)),
-                      onPressed: () async {
-                        final uri = Uri(scheme: 'tel', path: clinic.phone);
-                        if (await canLaunchUrl(uri)) await launchUrl(uri);
-                      },
-                      icon: const Icon(Icons.call_rounded, size: 16),
-                      label: const Text('اتصال بالعيادة'),
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 8),
-                Align(
-                  alignment: AlignmentDirectional.centerStart,
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF00897B)),
-                    onPressed: () => ShareService.shareText(
-                        title: '🏥 ${clinic.name}',
-                        body: [
-                          if (clinic.specialty.isNotEmpty)
-                            'التخصص: ${clinic.specialty}',
-                          if (clinic.ownerName.isNotEmpty)
-                            'الطبيب: ${clinic.ownerName}',
-                          if (clinic.workingHours.isNotEmpty)
-                            'المواعيد: ${clinic.workingHours}',
-                          if (clinic.address.isNotEmpty)
-                            'العنوان: ${clinic.address}',
-                          if (clinic.phone.isNotEmpty)
-                            'هاتف: ${clinic.phone}',
-                        ].join('\n')),
-                    icon: const Icon(Icons.share_rounded, size: 16),
-                    label: const Text('مشاركة العيادة'),
-                  ),
-                ),
-              ],
-            ),
+              ),
+              Icon(Icons.chevron_left_rounded,
+                  color: theme.colorScheme.onSurfaceVariant),
+            ],
           ),
-        ],
+        ),
       ),
     ).animate().fadeIn(duration: 200.ms);
   }
@@ -1020,154 +985,131 @@ class _PharmacyCard extends StatelessWidget {
   const _PharmacyCard({required this.pharmacy});
   final Pharmacy pharmacy;
 
-  Widget _line(IconData icon, String text) => Padding(
-        padding: const EdgeInsets.only(top: 4),
-        child: Row(
-          children: [
-            Icon(icon, size: 14, color: Colors.grey),
-            const SizedBox(width: 6),
-            Expanded(
-                child: Text(text,
-                    style: const TextStyle(fontSize: 12),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis)),
-          ],
-        ),
-      );
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    const accent = Color(0xFF2E7D32);
     return Card(
       elevation: 0,
+      clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
         side:
             BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(9),
-                  decoration: BoxDecoration(
-                      color: Colors.green.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(12)),
-                  child: const Icon(Icons.local_pharmacy_rounded,
-                      color: Colors.green),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(pharmacy.name,
+      child: InkWell(
+        onTap: () =>
+            Navigator.pushNamed(context, '/medical/pharmacy-detail',
+                arguments: pharmacy),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Container(
+                width: 62,
+                height: 62,
+                decoration: BoxDecoration(
+                    color: accent.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(14)),
+                clipBehavior: Clip.antiAlias,
+                child: pharmacy.imageUrl.isNotEmpty
+                    ? CachedNetworkImage(
+                        imageUrl: pharmacy.imageUrl,
+                        fit: BoxFit.cover,
+                        errorWidget: (_, __, ___) => const Icon(
+                            Icons.local_pharmacy_rounded, color: accent),
+                      )
+                    : const Icon(Icons.local_pharmacy_rounded, color: accent),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(pharmacy.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 15)),
+                        ),
+                        if (pharmacy.is24Hours)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                                color: accent.withValues(alpha: 0.14),
+                                borderRadius: BorderRadius.circular(8)),
+                            child: const Text('٢٤ ساعة',
+                                style: TextStyle(
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: accent)),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    if (pharmacy.ownerName.isNotEmpty)
+                      Text(pharmacy.ownerName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: theme.colorScheme.onSurfaceVariant)),
+                    if (pharmacy.workingHours.isNotEmpty ||
+                        pharmacy.address.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          [
+                            if (pharmacy.workingHours.isNotEmpty)
+                              pharmacy.workingHours,
+                            if (pharmacy.address.isNotEmpty)
+                              pharmacy.address,
+                          ].join(' • '),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                              fontWeight: FontWeight.w900, fontSize: 15)),
-                      if (pharmacy.ownerName.isNotEmpty)
-                        Text(pharmacy.ownerName,
-                            style: const TextStyle(fontSize: 12)),
-                    ],
-                  ),
-                ),
-                if (pharmacy.is24Hours)
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                        color: Colors.green.withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(8)),
-                    child: const Text('٢٤ ساعة',
-                        style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.green)),
-                  ),
-              ],
-            ),
-            if (pharmacy.workingHours.isNotEmpty)
-              _line(Icons.access_time_rounded, pharmacy.workingHours),
-            if (pharmacy.address.isNotEmpty)
-              _line(Icons.location_on_rounded, pharmacy.address),
-            if (pharmacy.description.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              Text(pharmacy.description,
-                  style: TextStyle(
-                      fontSize: 12, color: theme.colorScheme.onSurfaceVariant)),
-            ],
-            if (pharmacy.phone.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                      backgroundColor: Colors.green.shade700),
-                  onPressed: () async {
-                    final uri = Uri(scheme: 'tel', path: pharmacy.phone);
-                    if (await canLaunchUrl(uri)) await launchUrl(uri);
-                  },
-                  icon: const Icon(Icons.call_rounded, size: 16),
-                  label: const Text('اتصال'),
+                              fontSize: 11.5, color: Colors.grey),
+                        ),
+                      ),
+                  ],
                 ),
               ),
+              Icon(Icons.chevron_left_rounded,
+                  color: theme.colorScheme.onSurfaceVariant),
             ],
-            const SizedBox(height: 8),
-            Align(
-              alignment: AlignmentDirectional.centerStart,
-              child: OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(foregroundColor: Colors.green),
-                onPressed: () => ShareService.shareText(
-                    title: '💊 ${pharmacy.name}',
-                    body: [
-                      if (pharmacy.ownerName.isNotEmpty)
-                        'المسؤول: ${pharmacy.ownerName}',
-                      pharmacy.is24Hours
-                          ? 'تعمل على مدار ٢٤ ساعة'
-                          : (pharmacy.workingHours.isNotEmpty
-                              ? 'المواعيد: ${pharmacy.workingHours}'
-                              : ''),
-                      if (pharmacy.address.isNotEmpty)
-                        'العنوان: ${pharmacy.address}',
-                      if (pharmacy.phone.isNotEmpty)
-                        'هاتف: ${pharmacy.phone}',
-                    ].where((e) => e.isNotEmpty).join('\n')),
-                icon: const Icon(Icons.share_rounded, size: 16),
-                label: const Text('مشاركة الصيدلية'),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     ).animate().fadeIn(duration: 200.ms);
   }
 }
 
-// ═══════════════════════ Shared helpers ═══════════════════════
-Widget _net(String url, ThemeData theme) {
-  if (url.isEmpty) {
-    return ColoredBox(
-        color: theme.colorScheme.surfaceContainerHighest,
-        child:
-            Icon(Icons.image_rounded, color: theme.colorScheme.onSurfaceVariant));
+/// وسم صغير مشترك (تخصص/اسم طبيب).
+class _Tag extends StatelessWidget {
+  const _Tag(this.text, this.color);
+  final String text;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(8)),
+      child: Text(text,
+          style: TextStyle(
+              fontSize: 10.5, fontWeight: FontWeight.w800, color: color)),
+    );
   }
-  return CachedNetworkImage(
-    imageUrl: url,
-    fit: BoxFit.cover,
-    placeholder: (_, __) => ColoredBox(
-        color: theme.colorScheme.surfaceContainerHighest,
-        child:
-            const Center(child: CircularProgressIndicator(strokeWidth: 2))),
-    errorWidget: (_, __, ___) => ColoredBox(
-        color: theme.colorScheme.surfaceContainerHighest,
-        child: Icon(Icons.broken_image_rounded,
-            color: theme.colorScheme.onSurfaceVariant)),
-  );
 }
 
+// ═══════════════════════ Shared helpers ═══════════════════════
 class _MedEmpty extends StatelessWidget {
   const _MedEmpty({required this.icon, required this.message});
   final IconData icon;

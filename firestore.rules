@@ -241,15 +241,39 @@ service cloud.firestore {
     // ───────────────────────── دليل الهاتف ─────────────────────────
     match /phone_directory/{docId} {
       allow list, get: if true;
-      allow create: if isSignedIn();
+      // لا يُنشئ المستخدم جهة اتصال معتمدة ذاتياً — تبدأ غير موافق عليها
+      allow create: if isAdmin() || (isSignedIn() && request.resource.data.isApproved == false);
       allow update, delete: if isAdmin();
     }
 
-    // محلات القرية — الإنشاء لصاحب المحل، والتعديل لصاحبه أو الأدمن
+    // ───────────────────────── دليل الخدمات (فنيون/زراعية/تعليمية) ─────────────────────────
+    match /service_providers/{docId} {
+      allow list, get: if true;
+      // كل إدخال جديد يبدأ غير موافق عليه، ومن مقدم الطلب نفسه
+      allow create: if isSignedIn()
+                    && request.auth.uid == request.resource.data.submittedBy
+                    && request.resource.data.isApproved == false;
+      // الأدمن: مراجعة كاملة. المالك: تعديل مدخلاته غير المعتمدة فقط دون لمس حالة الموافقة.
+      allow update: if isAdmin()
+                    || (isSignedIn() && resource.data.submittedBy == request.auth.uid
+                        && resource.data.isApproved == false
+                        && !request.resource.data.diff(resource.data)
+                             .affectedKeys().hasAny(['isApproved']));
+      allow delete: if isAdmin();
+    }
+
+    // محلات القرية — الإنشاء لصاحب المحل (يبدأ غير معتمد)، والتعديل لصاحبه أو الأدمن
     match /shops/{docId} {
       allow list, get: if true;
-      allow create: if isSignedIn() && request.auth.uid == request.resource.data.ownerUid;
-      allow update: if isAdmin() || resource.data.ownerUid == request.auth.uid;
+      allow create: if isAdmin()
+          || (isSignedIn()
+              && request.auth.uid == request.resource.data.ownerUid
+              && request.resource.data.isApproved == false);
+      // المالك يحدّث بيانات محله دون المساس بحالة الموافقة
+      allow update: if isAdmin()
+          || (resource.data.ownerUid == request.auth.uid
+              && !request.resource.data.diff(resource.data)
+                   .affectedKeys().hasAny(['isApproved']));
       allow delete: if isAdmin();
     }
 

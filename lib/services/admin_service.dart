@@ -410,6 +410,7 @@ class AdminService {
     'donations': 'userId',
     'village_clinics': 'submittedBy',
     'pharmacies': 'submittedBy',
+    'service_providers': 'submittedBy',
     'blood_requests': 'userId',
     'blood_donors': 'userId',
     'service_requests': 'userId',
@@ -468,8 +469,11 @@ class AdminService {
         return '/occasions';
       case 'forum_posts':
         return '/forum';
+      case 'service_providers':
+        return '/services';
       case 'village_clinics':
       case 'pharmacies':
+      case 'medical_center_clinics':
       case 'blood_requests':
       case 'blood_donors':
         return '/medical';
@@ -494,6 +498,10 @@ class AdminService {
         return 'المحل';
       case 'village_clinics':
         return 'العيادة';
+      case 'medical_center_clinics':
+        return 'عيادة المركز الخيري';
+      case 'service_providers':
+        return 'الإضافة في دليل الخدمات';
       case 'pharmacies':
         return 'الصيدلية';
       case 'blood_requests':
@@ -533,8 +541,14 @@ class AdminService {
       'market_products' => ('🛒 منتج جديد', preview, '/market'),
       'forum_posts' => ('💬 منشور جديد', preview, '/forum'),
       'service_requests' => ('🔔 طلب خدمة', preview, '/services'),
+      'service_providers' => ('🧰 خدمة جديدة في الدليل', preview, '/services'),
       'shops' => ('🏬 محل جديد في السوق', preview, '/market'),
-      'village_clinics' || 'pharmacies' || 'medical_center_clinics' || 'blood_requests' || 'blood_donors' =>
+      'medical_center_clinics' => (
+            '🏥 عيادة جديدة بالمركز الطبي الخيري',
+            preview,
+            '/medical'
+          ),
+      'village_clinics' || 'pharmacies' || 'blood_requests' || 'blood_donors' =>
         ('🩺 خدمات طبية', preview, '/medical'),
       _ => ('محتوى جديد', preview, '/'),
     };
@@ -638,6 +652,9 @@ class AdminService {
       _pendingCount('pharmacies').first,
       _pendingCount('blood_requests').first,
       _pendingCount('blood_donors').first,
+      _pendingCount('shops').first,
+      _pendingCount('service_providers').first,
+      _pendingCount('medical_center_clinics').first,
     ]);
     return {
       'news': results[0],
@@ -651,6 +668,9 @@ class AdminService {
       'pharmacies': results[8],
       'blood_requests': results[9],
       'blood_donors': results[10],
+      'shops': results[11],
+      'service_providers': results[12],
+      'medical_center_clinics': results[13],
     };
   }
 

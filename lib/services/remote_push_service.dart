@@ -79,6 +79,7 @@ const Map<String, String> kPushTopicForCollection = {
   'market_products': 'village_market',
   'forum_posts': 'village_forum',
   'service_requests': 'village_services',
+  'service_providers': 'village_services',
   'shops': 'village_market',
   'village_clinics': 'village_medical',
   'pharmacies': 'village_medical',

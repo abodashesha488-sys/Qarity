@@ -142,11 +142,25 @@ class _MedicalCenterAdminScreenState extends State<MedicalCenterAdminScreen> {
                   ),
                   title: Text(c.name,
                       style: const TextStyle(fontWeight: FontWeight.w800)),
-                  subtitle: Text(
-                      '${c.specialty} • ${c.scheduleLabel}'
-                      '${c.fees > 0 ? ' • ${c.fees.toStringAsFixed(0)} ج.م' : ''}',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis),
+                   subtitle: Column(
+                     crossAxisAlignment: CrossAxisAlignment.start,
+                     children: [
+                       Text(
+                           '${c.specialty} • ${c.scheduleLabel}'
+                           '${c.fees > 0 ? ' • ${c.fees.toStringAsFixed(0)} ج.م' : ''}',
+                           maxLines: 2,
+                           overflow: TextOverflow.ellipsis),
+                       if (!c.isApproved)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 2),
+                          child: Text('⏳ بانتظار موافقة المدير العام',
+                              style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.orange)),
+                        ),
+                     ],
+                   ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -324,6 +338,8 @@ class _ClinicEditFormState extends State<_ClinicEditForm> {
                   workingHours: _hoursC.text.trim(),
                   fees: double.tryParse(_feesC.text) ?? 0,
                   isActive: _active,
+                  // الإضافة الجديدة تنتظر موافقة المدير العام؛ التعديل يحافظ على الحالة.
+                  isApproved: widget.existing?.isApproved ?? false,
                 ),
               );
             },
