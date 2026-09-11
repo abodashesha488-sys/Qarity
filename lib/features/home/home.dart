@@ -20,6 +20,7 @@ import '../../services/forum_service.dart';
 import '../../services/market_service.dart';
 import '../../services/news_service.dart';
 import '../../services/notification_service.dart';
+import '../../services/user_service.dart';
 import '../../widgets/alert_wisdom_bar.dart';
 import '../../widgets/common_appbar_actions.dart';
 import '../../widgets/offline_stream_builder.dart';
@@ -423,13 +424,33 @@ class HomeContent extends StatelessWidget {
 }
 
 // ═══════════════════ هيدر عصري ثابت أعلى الشاشة ═══════════════════
-class _HeroHeader extends StatelessWidget {
+class _HeroHeader extends StatefulWidget {
   const _HeroHeader({required this.greeting, required this.dateLabel});
   final String greeting;
   final String dateLabel;
 
   @override
+  State<_HeroHeader> createState() => _HeroHeaderState();
+}
+
+class _HeroHeaderState extends State<_HeroHeader> {
+  UserModel? _user;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+  }
+
+  Future<void> _loadUser() async {
+    final u = await UserService().getCurrentUser();
+    if (mounted) setState(() => _user = u);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final photo = _user?.photoUrl ?? '';
+    final name = (_user?.name ?? '').trim();
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
@@ -465,7 +486,7 @@ class _HeroHeader extends StatelessWidget {
                                 color: Colors.white,
                                 fontWeight: FontWeight.w900,
                                 fontSize: 15)),
-                        Text(dateLabel,
+                        Text(widget.dateLabel,
                             style: TextStyle(
                                 color:
                                     Colors.white.withValues(alpha: 0.75),
@@ -479,10 +500,14 @@ class _HeroHeader extends StatelessWidget {
                           data: const IconThemeData(color: Colors.white),
                           child: w)),
                   const SizedBox(width: 2),
-                  _GlassIconButton(
-                      icon: Icons.person_outline_rounded,
-                      onTap: () =>
-                          Navigator.pushNamed(context, AppRoutes.profileMain)),
+                  _ProfileAvatarButton(
+                      photoUrl: photo,
+                      // إعادة جلب البيانات بعد العودة من الملف الشخصي (ربما تغيّرت الصورة/الاسم).
+                      onTap: () async {
+                        await Navigator.pushNamed(
+                            context, AppRoutes.profileMain);
+                        if (mounted) _loadUser();
+                      }),
                   _GlassIconButton(
                       icon: Icons.settings_outlined,
                       onTap: () =>
@@ -497,17 +522,22 @@ class _HeroHeader extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(greeting,
+                        Text(widget.greeting,
                             style: TextStyle(
                                 color: Colors.white
                                     .withValues(alpha: 0.85),
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600)),
                         const SizedBox(height: 2),
-                        const Text('خدمات قريتك',
-                            style: TextStyle(
+                        Text(
+                            name.isEmpty
+                                ? 'أهلاً وسهلاً'
+                                : 'أهلاً وسهلاً، $name',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 26,
+                                fontSize: 22,
                                 fontWeight: FontWeight.w900,
                                 height: 1.25)),
                       ],
@@ -549,6 +579,46 @@ class _GlassIconButton extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(8.5),
           child: Icon(icon, color: Colors.white, size: 19),
+        ),
+      ),
+    );
+  }
+}
+
+/// زر الملف الشخصي في الهيدر — صورة المستخدم المسجلة، وبديل أنيق بغيابها.
+class _ProfileAvatarButton extends StatelessWidget {
+  const _ProfileAvatarButton({required this.photoUrl, required this.onTap});
+  final String photoUrl;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(start: 2, end: 2),
+      child: Material(
+        color: Colors.white.withValues(alpha: 0.14),
+        shape: const CircleBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: SizedBox(
+            width: 35,
+            height: 35,
+            child: photoUrl.isEmpty
+                ? const Icon(Icons.person_outline_rounded,
+                    color: Colors.white, size: 19)
+                : CachedNetworkImage(
+                    imageUrl: photoUrl,
+                    fit: BoxFit.cover,
+                    placeholder: (_, __) => const Icon(
+                        Icons.person_outline_rounded,
+                        color: Colors.white, size: 19),
+                    errorWidget: (_, __, ___) => const Icon(
+                        Icons.person_outline_rounded,
+                        color: Colors.white, size: 19),
+                  ),
+          ),
         ),
       ),
     );
