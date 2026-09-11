@@ -24,6 +24,7 @@ import '../../services/user_service.dart';
 import '../../widgets/alert_wisdom_bar.dart';
 import '../../widgets/common_appbar_actions.dart';
 import '../../widgets/offline_stream_builder.dart';
+import '../../widgets/qurity_logo.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -80,7 +81,7 @@ class _HomeScreenState extends State<HomeScreen> {
         animationDuration: const Duration(milliseconds: 400),
         destinations: const [
           NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'الرئيسية'),
-          NavigationDestination(icon: Icon(Icons.villa_outlined), selectedIcon: Icon(Icons.villa_rounded), label: 'عن القرية'),
+          NavigationDestination(icon: QurityLogo(size: 24, withBorder: false, withShadow: false), selectedIcon: QurityLogo(size: 24, withBorder: false, withShadow: false), label: 'عن القرية'),
           NavigationDestination(icon: Icon(Icons.store_outlined), selectedIcon: Icon(Icons.store_rounded), label: 'السوق'),
           NavigationDestination(icon: Icon(Icons.forum_outlined), selectedIcon: Icon(Icons.forum_rounded), label: 'المنتدى'),
           NavigationDestination(icon: Icon(Icons.person_outlined), selectedIcon: Icon(Icons.person_rounded), label: 'الملف'),
@@ -104,12 +105,7 @@ class HomeDrawer extends StatelessWidget {
             DrawerHeader(
               decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 12)]),
-                  child: const Icon(Icons.villa_rounded, color: AppColors.primary, size: 32),
-                ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack),
+                const QurityLogo(size: 56),
                 const SizedBox(height: 16),
                 const Text('قرية أبوديشيشة', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 4),
@@ -118,7 +114,8 @@ class HomeDrawer extends StatelessWidget {
             ),
             _buildDrawerItem(context, 'الرئيسية', Icons.home_rounded, AppRoutes.home),
             _buildDrawerItem(context, 'عن التطبيق', Icons.info_rounded, AppRoutes.aboutApp),
-            _buildDrawerItem(context, 'عن القرية', Icons.villa_rounded, AppRoutes.about),
+            _buildDrawerItem(context, 'عن القرية', Icons.villa_rounded, AppRoutes.about,
+                leading: const QurityLogo(size: 28, withBorder: false, withShadow: false)),
             _buildDrawerItem(context, 'أخبار القرية', Icons.newspaper_rounded, AppRoutes.newsList),
             _buildDrawerItem(context, 'سجل العزاء', Icons.grade_rounded, AppRoutes.obituariesList),
             _buildDrawerItem(context, 'المناسبات', Icons.card_giftcard_rounded, AppRoutes.occasionsList),
@@ -138,9 +135,11 @@ class HomeDrawer extends StatelessWidget {
     );
   }
 
-  Widget _buildDrawerItem(BuildContext context, String title, IconData icon, String route) {
+  Widget _buildDrawerItem(BuildContext context, String title, IconData icon,
+      String route, {Widget? leading}) {
     return ListTile(
-      leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
+      leading: leading ??
+          Icon(icon, color: Theme.of(context).colorScheme.primary),
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       onTap: () {
@@ -562,8 +561,7 @@ class _HeroHeaderState extends State<_HeroHeader> {
                       child: Image.asset('assets/images/Qurity.png',
                           fit: BoxFit.cover),
                     ),
-                  ).animate().fadeIn(duration: 500.ms).scale(begin: const Offset(0.6, 0.6)),
-                ],
+                  ).animate().fadeIn(duration: 500.ms).scale(begin: const Offset(0.6, 0.6)),                ],
               ),
             ],
           ),
@@ -716,15 +714,15 @@ class ModernServiceGrid extends StatelessWidget {
   const ModernServiceGrid({super.key});
 
   static const _services = [
-    _ServiceItem('عن القرية', Icons.villa_rounded, AppRoutes.about),
+    _ServiceItem('عن القرية', Icons.villa_rounded, AppRoutes.about, logo: true),
     _ServiceItem('أخبار القرية', Icons.newspaper_rounded, AppRoutes.newsList),
     _ServiceItem('سوق القرية', Icons.store_rounded, AppRoutes.marketProducts),
-    _ServiceItem('الخدمات الطبية', Icons.medical_services_rounded, AppRoutes.medical, Color(0xFF00897B)),
+    _ServiceItem('الخدمات الطبية', Icons.medical_services_rounded, AppRoutes.medical, color: Color(0xFF00897B)),
     _ServiceItem('سجل العزاء', Icons.grade_rounded, AppRoutes.obituariesList),
     _ServiceItem('المناسبات', Icons.card_giftcard_rounded, AppRoutes.occasionsList),
     _ServiceItem('المنتدى', Icons.forum_rounded, AppRoutes.forumPosts),
     _ServiceItem('دليل الخدمات', Icons.category_rounded, AppRoutes.serviceRequest),
-    _ServiceItem('الطوارئ', Icons.contact_phone_rounded, AppRoutes.emergencyContacts, Color(0xFFD32F2F)),
+    _ServiceItem('الطوارئ', Icons.contact_phone_rounded, AppRoutes.emergencyContacts, color: Color(0xFFD32F2F)),
     _ServiceItem('حول التطبيق', Icons.info_rounded, AppRoutes.aboutApp),
   ];
 
@@ -761,29 +759,31 @@ class ModernServiceGrid extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                      begin: Alignment.topRight,
-                      end: Alignment.bottomLeft,
-                      colors: [
-                        service.color,
-                        service.color.withValues(alpha: 0.72)
-                      ]),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                        color: service.color.withValues(alpha: 0.35),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4)),
-                  ],
-                ),
-                child: Center(
-                    child:
-                        Icon(service.icon, color: Colors.white, size: 21)),
-              ),
+              service.logo
+                  ? const QurityLogo(size: 46, withShadow: false)
+                  : Container(
+                      width: 46,
+                      height: 46,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                            begin: Alignment.topRight,
+                            end: Alignment.bottomLeft,
+                            colors: [
+                              service.color,
+                              service.color.withValues(alpha: 0.72)
+                            ]),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                              color: service.color.withValues(alpha: 0.35),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4)),
+                        ],
+                      ),
+                      child: Center(
+                          child: Icon(service.icon,
+                              color: Colors.white, size: 21)),
+                    ),
               const SizedBox(height: 9),
               Text(service.title,
                   textAlign: TextAlign.center,
@@ -804,8 +804,9 @@ class _ServiceItem {
   final IconData icon;
   final String route;
   final Color color;
+  final bool logo;
   const _ServiceItem(this.title, this.icon, this.route,
-      [this.color = AppColors.primary]);
+      {this.color = AppColors.primary, this.logo = false});
 }
 
 // ═══════════════════ بطاقة منتج ═══════════════════
