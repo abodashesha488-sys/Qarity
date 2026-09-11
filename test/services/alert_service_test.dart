@@ -66,7 +66,7 @@ void main() {
     });
 
     test('inventory is broad and non-duplicated', () {
-      expect(TodayWisdom.items.length, greaterThanOrEqualTo(40));
+      expect(TodayWisdom.items.length, greaterThanOrEqualTo(140));
       expect(TodayWisdom.items.toSet().length, TodayWisdom.items.length);
     });
   });
