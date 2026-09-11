@@ -216,63 +216,62 @@ class _NewsScreenState extends State<NewsScreen>
   }
 
   Widget _buildAppBar(ThemeData theme) {
+    const gradient = LinearGradient(
+      begin: Alignment.topRight,
+      end: Alignment.bottomLeft,
+      colors: [Color(0xFF1565C0), Color(0xFF0D47A1)],
+    );
     return SliverAppBar(
       pinned: true,
-      expandedHeight: 150,
+      expandedHeight: 132,
       elevation: 0,
       scrolledUnderElevation: 0,
       backgroundColor: theme.colorScheme.primary,
       foregroundColor: Colors.white,
+      centerTitle: false,
+      title: const Text('أخبار القرية',
+          style: TextStyle(
+              fontWeight: FontWeight.w900, color: Colors.white, fontSize: 18)),
       actions: CommonAppBarActions.actions(context),
-      flexibleSpace: FlexibleSpaceBar(
-        title: const Text('أخبار القرية',
-            style: TextStyle(
-                fontWeight: FontWeight.w900, color: Colors.white, fontSize: 18)),
-        background: DecoratedBox(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topRight,
-              end: Alignment.bottomLeft,
-              colors: [Color(0xFF1565C0), Color(0xFF0D47A1)],
-            ),
-          ),
-          child: SafeArea(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                  child: TextField(
-                    controller: _searchController,
-                    style: const TextStyle(color: Colors.black87),
-                    decoration: InputDecoration(
-                      hintText: 'ابحث في الأخبار...',
-                      hintStyle:
-                          TextStyle(color: Colors.grey.shade600, fontSize: 14),
-                      prefixIcon:
-                          const Icon(Icons.search_rounded, color: Colors.grey),
-                      suffixIcon: _searchQuery.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear_rounded),
-                              onPressed: _searchController.clear,
-                            )
-                          : null,
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ),
+      flexibleSpace: const DecoratedBox(decoration: BoxDecoration(gradient: gradient)),
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(74),
+        child: DecoratedBox(
+          decoration: const BoxDecoration(gradient: gradient),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+            child: TextField(
+              controller: _searchController,
+              style: const TextStyle(color: Colors.black87),
+              decoration: InputDecoration(
+                hintText: 'ابحث في الأخبار...',
+                hintStyle: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                prefixIcon: const Icon(Icons.search_rounded, color: Colors.grey),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear_rounded),
+                        onPressed: _clearSearch,
+                      )
+                    : null,
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
                 ),
-              ],
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ),
             ),
           ),
         ),
       ),
     );
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+    if (mounted) setState(() => _searchQuery = '');
   }
 
   Widget _buildCategoryChips(ThemeData theme) {

@@ -169,7 +169,7 @@ lib/
 - `AdminService.isMedicalAdmin()` grants access to the Medical Center management when role is `medical_admin` or `admin`.
 
 ### User & seller role management (admin dashboard → المستخدمون)- Search by name/email + role filter chips (الكل/مستخدمون/بائعون/مشرفون/مدير طبي/مدراء/معطّلون) + live counters.
-- Each account opens a management sheet: role (with per-role permission hints), seller type (image limits 3/7/15/15), enable/disable account (`setUserActive`), and delete.
+- Each account opens a management sheet: role (with per-role permission hints), seller type (image limits 1/3/5/10), enable/disable account (`setUserActive`), and delete.
 - Self-protection: the signed-in admin sees the role controls disabled for their own account.
 - `UserModel.roleLabel`/`canAccessAdminPanel` expose unified Arabic role labels; the profile header shows the role badge (+ seller type with image limit) and a panel shortcut for admin/medical_admin.
 - Seller conversion flow: user request (`seller_requests`) → admin approval (`approveSellerRequest`) → creates `seller_profiles/{uid}` + sets `role:'seller'` + `sellerType` from `requestedSellerType` + invalidates user cache.
@@ -192,6 +192,11 @@ lib/
 - Admin edit screen supports fields by collection type
 
 ## Recent Updates
+- Persistent global bottom navigation: `GlobalBottomNavShell` + `GlobalNav` (shared tab/route `ValueNotifier`s + a `NavigatorObserver`) is wrapped in `MaterialApp.builder`, so the village nav bar now appears on every page except splash/login/complete-profile. Tapping a destination restores the home root (`popUntil(isFirst)`) and selects the matching tab via the shared notifier. `HomeScreen` reads the tab from `GlobalNav.tab` instead of owning its own bar. `navigatorKey` is now wired into `MaterialApp` so `GlobalNav.select` can navigate globally.
+- Search focus fix: `OfflineStreamBuilder` is now `StatefulWidget` that pins the last valid data across transient re-subscriptions, so the search `TextField` no longer loses focus/remounts after the first keystroke (fixed once, applies to all ~12 pages).
+- News list header: moved search into `SliverAppBar.bottom` to stop the title overlapping the search box.
+- Seller image limits set to regular 1 / super 3 / premium 5 / gold 10 (all derived from `SellerType.maxImages`, so no per-screen changes).
+
 - Removed dead code: `features/market/products.dart` (was unused, ~1178 lines).
 - Removed unused l10n: `lib/l10n/*` and `l10n.yaml` and `generate: true` in pubspec (all strings hardcoded Arabic).
 - Fixed latent bug: `AdminService.getPendingSellerRequestsCount` now uses `status == 'pending'` (was `isApproved == false` which never matched).

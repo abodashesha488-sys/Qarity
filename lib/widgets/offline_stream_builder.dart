@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../core/network/connectivity_manager.dart';
 
-class OfflineStreamBuilder<T> extends StatelessWidget {
+/// Builder يعمل أثناء الاتصال وعند انقطاعه (يعرض الكاش)، مع **تثبيت آخر محتوى
+/// صالح** أثناء إعادة الاشتراك المؤقتة للـ Stream — حتى لا تُعاد بناء شجرة
+/// النتائج (ومنها مربع البحث) عند كل ضغطة، وهو ما كان يفقده التركيز بعد أول حرف.
+class OfflineStreamBuilder<T> extends StatefulWidget {
   const OfflineStreamBuilder({
     super.key,
     required this.stream,
@@ -21,53 +24,58 @@ class OfflineStreamBuilder<T> extends StatelessWidget {
   final bool cacheFirst;
 
   @override
+  State<OfflineStreamBuilder<T>> createState() => _OfflineStreamBuilderState<T>();
+}
+
+class _OfflineStreamBuilderState<T> extends State<OfflineStreamBuilder<T>> {
+  bool _gotData = false;
+  T? _lastData;
+
+  Widget _onlineView(BuildContext context, AsyncSnapshot<T> snapshot) {
+    if (snapshot.hasData && !snapshot.hasError) {
+      _gotData = true;
+      _lastData = snapshot.data;
+      return widget.onlineBuilder(context, snapshot);
+    }
+    if (_gotData) {
+      // لا توجد بيانات الآن (إعادة اشتراك/تحميل) لكن عندنا آخر نتيجة صالحة.
+      return widget.onlineBuilder(
+        context,
+        AsyncSnapshot<T>.withData(ConnectionState.active, _lastData as T),
+      );
+    }
+    if (snapshot.hasError && widget.errorBuilder != null) {
+      return widget.errorBuilder!(context, snapshot.error!, snapshot.stackTrace);
+    }
+    if (widget.progressBuilder != null) return widget.progressBuilder!(context);
+    return widget.cacheBuilder(context);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (cacheFirst) {
-      return StreamBuilder<bool>(
-        stream: ConnectivityManager.instance.onlineStream,
-        builder: (context, connectivitySnapshot) {
-          final isOnline = connectivitySnapshot.data ?? ConnectivityManager.instance.lastKnownOnline;
-
-          if (!isOnline) {
-            return cacheBuilder(context);
+    if (!widget.cacheFirst) {
+      return StreamBuilder<T>(
+        stream: widget.stream,
+        builder: (context, snapshot) {
+          if (snapshot.hasError && !_gotData && widget.errorBuilder != null) {
+            return widget.errorBuilder!(context, snapshot.error!, snapshot.stackTrace);
           }
-
-          return StreamBuilder<T>(
-            stream: stream,
-            builder: (context, snapshot) {
-              if (snapshot.hasData && !snapshot.hasError) {
-                return onlineBuilder(context, snapshot);
-              }
-              if (snapshot.hasError && !snapshot.hasData) {
-                if (errorBuilder != null) return errorBuilder!(context, snapshot.error!, snapshot.stackTrace);
-                return cacheBuilder(context);
-              }
-              if (snapshot.connectionState == ConnectionState.waiting || !snapshot.hasData) {
-                if (progressBuilder != null) return progressBuilder!(context);
-                return cacheBuilder(context);
-              }
-              return onlineBuilder(context, snapshot);
-            },
-          );
+          return _onlineView(context, snapshot);
         },
       );
     }
-
-    return StreamBuilder<T>(
-      stream: stream,
-      builder: (context, snapshot) {
-        if (snapshot.hasData && !snapshot.hasError) {
-          return onlineBuilder(context, snapshot);
+    return StreamBuilder<bool>(
+      stream: ConnectivityManager.instance.onlineStream,
+      builder: (context, connectivitySnapshot) {
+        final isOnline =
+            connectivitySnapshot.data ?? ConnectivityManager.instance.lastKnownOnline;
+        if (!isOnline) {
+          return widget.cacheBuilder(context);
         }
-        if (snapshot.hasError && !snapshot.hasData) {
-          if (errorBuilder != null) return errorBuilder!(context, snapshot.error!, snapshot.stackTrace);
-          return cacheBuilder(context);
-        }
-        if (snapshot.connectionState == ConnectionState.waiting || !snapshot.hasData) {
-          if (progressBuilder != null) return progressBuilder!(context);
-          return cacheBuilder(context);
-        }
-        return onlineBuilder(context, snapshot);
+        return StreamBuilder<T>(
+          stream: widget.stream,
+          builder: (context, snapshot) => _onlineView(context, snapshot),
+        );
       },
     );
   }

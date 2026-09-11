@@ -842,10 +842,10 @@ class DonationItem implements BaseModel {
 // RELATIVE MODEL (أقارب المتوفى)
 // ═══════════════════════════════════════════════════════════════
 enum SellerType {
-  regular('بائع عادي', Icons.store_rounded, 3),
-  superSeller('بائع سوبر', Icons.storefront_rounded, 7),
-  goldSeller('بائع ذهبي', Icons.star_rounded, 15),
-  premiumSeller('بائع متميز', Icons.emergency_rounded, 15);
+  regular('بائع عادي', Icons.store_rounded, 1),
+  superSeller('بائع سوبر', Icons.storefront_rounded, 3),
+  goldSeller('بائع ذهبي', Icons.star_rounded, 10),
+  premiumSeller('بائع متميز', Icons.emergency_rounded, 5);
 
   final String label;
   final IconData icon;

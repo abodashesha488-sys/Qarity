@@ -7,10 +7,12 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import './firebase_options.dart';
 import 'core/network/connectivity_manager.dart';
 import 'core/theme/app_theme.dart';
+import 'core/utils/navigator_key.dart';
 import 'routes/app_routes.dart';
 import 'services/notification_service.dart';
 import 'services/theme_service.dart';
 import 'widgets/connectivity_overlay.dart';
+import 'widgets/global_bottom_nav.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -59,6 +61,8 @@ class QarityApp extends StatelessWidget {
         return MaterialApp(
           title: 'قرية أبوديشيشة',
           debugShowCheckedModeBanner: false,
+          navigatorKey: navigatorKey,
+          navigatorObservers: [GlobalNav.observer],
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: ThemeService().themeMode,
@@ -69,8 +73,10 @@ class QarityApp extends StatelessWidget {
           ],
           supportedLocales: const [Locale('ar', 'EG')],
           locale: const Locale('ar', 'EG'),
-          // شريط «غير متصل» يظهر على كل الشاشات تلقائياً.
-          builder: (context, child) => ConnectivityOverlay(child: child ?? const SizedBox.shrink()),
+          // شريط «غير متصل» يظهر على كل الشاشات + الشريط السفلي مثبت في كل الصفحات.
+          builder: (context, child) => ConnectivityOverlay(
+            child: GlobalBottomNavShell(child: child ?? const SizedBox.shrink()),
+          ),
           initialRoute: AppRoutes.splash,
           onGenerateRoute: AppRoutes.onGenerateRoute,
         );
