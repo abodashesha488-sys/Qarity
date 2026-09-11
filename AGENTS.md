@@ -192,7 +192,7 @@ lib/
 - Admin edit screen supports fields by collection type
 
 ## Recent Updates
-- Persistent global bottom navigation: `GlobalBottomNavShell` + `GlobalNav` (shared tab/route `ValueNotifier`s + a `NavigatorObserver`) is wrapped in `MaterialApp.builder`, so the village nav bar now appears on every page except splash/login/complete-profile. Tapping a destination restores the home root (`popUntil(isFirst)`) and selects the matching tab via the shared notifier. `HomeScreen` reads the tab from `GlobalNav.tab` instead of owning its own bar. `navigatorKey` is now wired into `MaterialApp` so `GlobalNav.select` can navigate globally.
+- `navigatorKey` is now wired into `MaterialApp` (`main.dart`), so global toasts (`AppHelpers.showToast`) and notification-tap navigation (`NotificationService._tryNavigate`) actually resolve a context. The bottom nav remains home-only (a global persistent bar was implemented then reverted at user request).
 - Search focus fix: `OfflineStreamBuilder` is now `StatefulWidget` that pins the last valid data across transient re-subscriptions, so the search `TextField` no longer loses focus/remounts after the first keystroke (fixed once, applies to all ~12 pages).
 - News list header: moved search into `SliverAppBar.bottom` to stop the title overlapping the search box.
 - Seller image limits set to regular 1 / super 3 / premium 5 / gold 10 (all derived from `SellerType.maxImages`, so no per-screen changes).

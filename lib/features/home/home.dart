@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/utils/helpers.dart';
 import '../../core/utils/role_style.dart';
 import '../../features/forum/posts.dart';
 import '../../features/market/market_tabs_screen.dart';
@@ -16,7 +17,6 @@ import '../../services/forum_service.dart';
 import '../../services/market_service.dart';
 import '../../services/news_service.dart';
 import '../../widgets/common_appbar_actions.dart';
-import '../../widgets/global_bottom_nav.dart';
 import '../../widgets/offline_stream_builder.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -27,6 +27,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  int _selectedIndex = 0;
+
   final List<Widget> _pages = [
     const HomeContent(),
     const VillageScreen(),
@@ -35,35 +37,37 @@ class _HomeScreenState extends State<HomeScreen> {
     const ProfileScreen(),
   ];
 
+  void _onItemTapped(int index) {
+    AppHelpers.hapticLight();
+    setState(() => _selectedIndex = index);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<int>(
-      valueListenable: GlobalNav.tab,
-      builder: (context, selectedIndex, _) => Scaffold(
-        endDrawer: const HomeDrawer(),
-        body: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
-          transitionBuilder: (child, animation) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-          child: KeyedSubtree(
-            key: ValueKey<int>(selectedIndex),
-            child: _pages[selectedIndex],
-          ),
+    return Scaffold(
+      endDrawer: const HomeDrawer(),
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 300),
+        transitionBuilder: (child, animation) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        child: KeyedSubtree(
+          key: ValueKey<int>(_selectedIndex),
+          child: _pages[_selectedIndex],
         ),
-        bottomNavigationBar: DecoratedBox(decoration: BoxDecoration(boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 16, offset: const Offset(0, -4))]), child: NavigationBar(
-          selectedIndex: selectedIndex,
-          onDestinationSelected: GlobalNav.select,
-          animationDuration: const Duration(milliseconds: 400),
-          destinations: const [
-            NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'الرئيسية'),
-            NavigationDestination(icon: Icon(Icons.villa_outlined), selectedIcon: Icon(Icons.villa_rounded), label: 'عن القرية'),
-            NavigationDestination(icon: Icon(Icons.store_outlined), selectedIcon: Icon(Icons.store_rounded), label: 'السوق'),
-            NavigationDestination(icon: Icon(Icons.forum_outlined), selectedIcon: Icon(Icons.forum_rounded), label: 'المنتدى'),
-            NavigationDestination(icon: Icon(Icons.person_outlined), selectedIcon: Icon(Icons.person_rounded), label: 'الملف'),
-          ],
-        ),
-        ),
+      ),
+      bottomNavigationBar: DecoratedBox(decoration: BoxDecoration(boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 16, offset: const Offset(0, -4))]), child: NavigationBar(
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: _onItemTapped,
+        animationDuration: const Duration(milliseconds: 400),
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'الرئيسية'),
+          NavigationDestination(icon: Icon(Icons.villa_outlined), selectedIcon: Icon(Icons.villa_rounded), label: 'عن القرية'),
+          NavigationDestination(icon: Icon(Icons.store_outlined), selectedIcon: Icon(Icons.store_rounded), label: 'السوق'),
+          NavigationDestination(icon: Icon(Icons.forum_outlined), selectedIcon: Icon(Icons.forum_rounded), label: 'المنتدى'),
+          NavigationDestination(icon: Icon(Icons.person_outlined), selectedIcon: Icon(Icons.person_rounded), label: 'الملف'),
+        ],
+      ),
       ),
     );
   }
