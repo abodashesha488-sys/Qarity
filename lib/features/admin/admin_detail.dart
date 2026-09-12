@@ -340,12 +340,22 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
         return Icons.newspaper_rounded;
       case 'market_products':
         return Icons.store_rounded;
+      case 'shops':
+        return Icons.storefront_rounded;
       case 'obituaries':
         return Icons.grade_rounded;
       case 'occasions':
         return Icons.card_giftcard_rounded;
       case 'forum_posts':
         return Icons.forum_rounded;
+      case 'service_providers':
+        return Icons.category_rounded;
+      case 'medical_labs':
+        return Icons.science_rounded;
+      case 'village_clinics':
+        return Icons.add_business_rounded;
+      case 'pharmacies':
+        return Icons.local_pharmacy_rounded;
       default:
         return Icons.description_rounded;
     }
@@ -357,12 +367,22 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
         return 'خبر';
       case 'market_products':
         return 'منتج';
+      case 'shops':
+        return 'محل';
       case 'obituaries':
         return 'عزاء';
       case 'occasions':
         return 'مناسبة';
       case 'forum_posts':
         return 'منشور';
+      case 'service_providers':
+        return 'بيان في دليل الخدمات';
+      case 'medical_labs':
+        return 'معمل تحاليل';
+      case 'village_clinics':
+        return 'عيادة';
+      case 'pharmacies':
+        return 'صيدلية';
       default:
         return 'عنصر';
     }
