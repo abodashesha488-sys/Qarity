@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
-import '../../core/constants/wisdoms.dart';
+import '../../core/constants/wisdom_calendar.dart';
 import '../../models/village_alert.dart';
 import '../../services/alert_service.dart';
+import '../../services/share_service.dart';
 
 /// الشريط الثابت أسفل هيدر الرئيسية:
 /// — تنبيه عاجل أحمر نابض عند تفعيله من لوحة الأدمن (يضغط لعرض النص كاملاً).
-/// — «حكمة اليوم» المتغيرة يومياً عندما لا يوجد تنبيه (تضغط لتنتقل لحكمة أخرى).
+/// — «حكمة اليوم» من تقويم القرية اليومي (365 حكمة بالتاريخ)، والضغط يفتح
+///   حوار اليوم مع شارات التصنيف/المناسبة وتصفّح أيام السنة ومشاركة.
 class AlertWisdomBar extends StatefulWidget {
   const AlertWisdomBar({super.key});
 
@@ -17,12 +19,16 @@ class AlertWisdomBar extends StatefulWidget {
 
 class _AlertWisdomBarState extends State<AlertWisdomBar> {
   late final Stream<VillageAlert?> _stream = AlertService().watchLiveAlert();
-  int _wisdomOffset = 0;
 
-  String get _wisdom {
-    if (_wisdomOffset == 0) return TodayWisdom.pick();
-    return TodayWisdom.pick(offset: _wisdomOffset);
-  }
+  static const _weekdayNames = [
+    'الأحد',
+    'الاثنين',
+    'الثلاثاء',
+    'الأربعاء',
+    'الخميس',
+    'الجمعة',
+    'السبت'
+  ];
 
   void _showAlertDialog(VillageAlert alert) {
     showDialog<void>(
@@ -50,6 +56,13 @@ class _AlertWisdomBarState extends State<AlertWisdomBar> {
           ),
         ],
       ),
+    );
+  }
+
+  void _openWisdomDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (_) => const _WisdomDayDialog(),
     );
   }
 
@@ -150,14 +163,17 @@ class _AlertWisdomBarState extends State<AlertWisdomBar> {
             ),
           ).animate().fadeIn(duration: 350.ms);
         }
+        final now = DateTime.now();
+        final wisdom = WisdomCalendar.of(now);
+        final dateLabel =
+            '${_weekdayNames[now.weekday % 7]} ${now.day} ${WisdomCalendar.monthNames[now.month - 1]}';
         return Padding(
           padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
           child: Material(
             color: Colors.transparent,
             child: InkWell(
               borderRadius: BorderRadius.circular(16),
-              onTap: () =>
-                  setState(() => _wisdomOffset = (_wisdomOffset + 1) % 7),
+              onTap: _openWisdomDialog,
               child: Container(
                 constraints: const BoxConstraints(minHeight: 58),
                 padding:
@@ -182,7 +198,8 @@ class _AlertWisdomBarState extends State<AlertWisdomBar> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                        color:
+                            theme.colorScheme.primary.withValues(alpha: 0.12),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(Icons.format_quote_rounded,
@@ -190,36 +207,61 @@ class _AlertWisdomBarState extends State<AlertWisdomBar> {
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 400),
-                        child: Column(
-                          key: ValueKey(_wisdom),
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text('حكمة اليوم • ${_todayLabel()}',
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                    color: theme.colorScheme.primary,
-                                    fontWeight: FontWeight.w800)),
-                            const SizedBox(height: 2),
-                            Text(_wisdom,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                    fontSize: 12.5,
-                                    fontWeight: FontWeight.w700,
-                                    fontStyle: FontStyle.italic,
-                                    height: 1.4,
-                                    color: theme.colorScheme.onSurface
-                                        .withValues(alpha: 0.85))),
-                          ],
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                    'حكمة اليوم • $dateLabel',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: theme.textTheme.labelSmall
+                                        ?.copyWith(
+                                            color: theme.colorScheme.primary,
+                                            fontWeight: FontWeight.w800)),
+                              ),
+                              if (wisdom.isSpecial) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(colors: [
+                                      Color(0xFFF1C40F),
+                                      Color(0xFFB8860B)
+                                    ]),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(wisdom.occasion,
+                                      style: const TextStyle(
+                                          fontSize: 8.5,
+                                          fontWeight: FontWeight.w900,
+                                          color: Colors.white)),
+                                ),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(wisdom.text,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w700,
+                                  fontStyle: FontStyle.italic,
+                                  height: 1.4,
+                                  color: theme.colorScheme.onSurface
+                                      .withValues(alpha: 0.85))),
+                        ],
                       ),
                     ),
                     Icon(Icons.auto_awesome_rounded,
                         size: 16,
-                        color: theme.colorScheme.primary
-                            .withValues(alpha: 0.6)),
+                        color:
+                            theme.colorScheme.primary.withValues(alpha: 0.6)),
                   ],
                 ),
               ),
@@ -229,18 +271,132 @@ class _AlertWisdomBarState extends State<AlertWisdomBar> {
       },
     );
   }
+}
 
-  String _todayLabel() {
-    final now = DateTime.now();
-    const days = [
-      'الأحد',
-      'الاثنين',
-      'الثلاثاء',
-      'الأربعاء',
-      'الخميس',
-      'الجمعة',
-      'السبت'
-    ];
-    return days[now.weekday % 7];
+/// حوار حكمة اليوم — نص كامل + شارات + تصفح أيام السنة + مشاركة.
+class _WisdomDayDialog extends StatefulWidget {
+  const _WisdomDayDialog();
+
+  @override
+  State<_WisdomDayDialog> createState() => _WisdomDayDialogState();
+}
+
+class _WisdomDayDialogState extends State<_WisdomDayDialog> {
+  DateTime _date = DateTime.now();
+
+  void _shift(int days) =>
+      setState(() => _date = _date.add(Duration(days: days)));
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final wisdom = WisdomCalendar.of(_date);
+    final today = DateTime.now();
+    final isToday = _date.year == today.year &&
+        _date.month == today.month &&
+        _date.day == today.day;
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+      contentPadding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+      content: SizedBox(
+        width: 400,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                IconButton(
+                    tooltip: 'اليوم السابق',
+                    onPressed: () => _shift(-1),
+                    icon: const Icon(Icons.arrow_forward_ios_rounded,
+                        size: 16)),
+                Expanded(
+                  child: Column(
+                    children: [
+                      Text('حكمة اليوم',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w900,
+                              color: theme.colorScheme.primary)),
+                      Text(
+                          '${WisdomCalendar.label(_date)}'
+                          '${isToday ? '  •  اليوم' : ''}',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant)),
+                    ],
+                  ),
+                ),
+                IconButton(
+                    tooltip: 'اليوم التالي',
+                    onPressed: () => _shift(1),
+                    icon: const Icon(Icons.arrow_back_ios_rounded, size: 16)),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primaryContainer.withValues(alpha: 0.35),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Text('«${wisdom.text}»',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      fontStyle: FontStyle.italic,
+                      height: 1.7)),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                _chip(theme, Icons.category_rounded, wisdom.category,
+                    theme.colorScheme.primary),
+                if (wisdom.isSpecial)
+                  _chip(theme, Icons.emoji_events_rounded, wisdom.occasion,
+                      const Color(0xFFB8860B)),
+              ],
+            ),
+            const SizedBox(height: 6),
+          ],
+        ),
+      ),
+      actionsAlignment: MainAxisAlignment.spaceBetween,
+      actions: [
+        IconButton(
+          tooltip: 'مشاركة الحكمة',
+          onPressed: () => ShareService.shareText(
+              title: '💡 حكمة اليوم من قرية أبودشيشة',
+              body: '«${wisdom.text}»\n${WisdomCalendar.label(_date)}'
+                  '${wisdom.isSpecial ? ' — ${wisdom.occasion}' : ''}'),
+          icon: Icon(Icons.share_rounded,
+              color: theme.colorScheme.primary, size: 20),
+        ),
+        TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('إغلاق')),
+      ],
+    );
   }
+
+  Widget _chip(ThemeData theme, IconData icon, String label, Color color) =>
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: color.withValues(alpha: 0.3))),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 13, color: color),
+            const SizedBox(width: 5),
+            Text(label,
+                style: TextStyle(
+                    fontSize: 11, fontWeight: FontWeight.w800, color: color)),
+          ],
+        ),
+      );
 }
