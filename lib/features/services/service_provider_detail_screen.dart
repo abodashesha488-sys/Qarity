@@ -10,7 +10,10 @@ import '../medical/clinic_detail_screen.dart';
 
 /// شاشة تفاصيل بيان في دليل الخدمات — عرض منسق + تقييم 5 نجوم + تعليقات.
 class ServiceProviderDetailScreen extends StatefulWidget {
-  const ServiceProviderDetailScreen({super.key});
+  const ServiceProviderDetailScreen({super.key, this.provider, this.service});
+
+  final ServiceProvider? provider;
+  final ServiceProviderService? service;
 
   @override
   State<ServiceProviderDetailScreen> createState() =>
@@ -19,10 +22,11 @@ class ServiceProviderDetailScreen extends StatefulWidget {
 
 class _ServiceProviderDetailScreenState
     extends State<ServiceProviderDetailScreen> {
-  late final ServiceProvider _initial =
-      (ModalRoute.of(context)!.settings.arguments as ServiceProvider?) ??
-          const ServiceProvider(id: '', category: 'technicians', name: 'خدمة');
-  final ServiceProviderService _service = ServiceProviderService();
+  late final ServiceProvider _initial = widget.provider ??
+      (ModalRoute.of(context)?.settings.arguments as ServiceProvider?) ??
+      const ServiceProvider(id: '', category: 'technicians', name: 'خدمة');
+  late final ServiceProviderService _service =
+      widget.service ?? ServiceProviderService();
   final TextEditingController _textC = TextEditingController();
 
   double _myRating = 0;
@@ -37,8 +41,11 @@ class _ServiceProviderDetailScreenState
   @override
   void initState() {
     super.initState();
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid != null) {
+    String? uid;
+    try {
+      uid = FirebaseAuth.instance.currentUser?.uid;
+    } catch (_) {}
+    if (uid != null && _initial.id.isNotEmpty) {
       _service.getUserComment(_initial.id, uid).then((c) {
         if (mounted && c != null) setState(() => _myRating = c.rating.toDouble());
       }).catchError((_) {});
@@ -92,7 +99,9 @@ class _ServiceProviderDetailScreenState
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return StreamBuilder<ServiceProvider?>(
-      stream: _service.watchProvider(_initial.id),
+      stream: _initial.id.isEmpty
+          ? Stream<ServiceProvider?>.value(null)
+          : _service.watchProvider(_initial.id),
       builder: (context, snap) {
         final provider = snap.data ?? _initial;
         final accent = provider.isFeatured
@@ -325,7 +334,9 @@ class _ServiceProviderDetailScreenState
 
   Widget _commentsSection(ThemeData theme, Color accent) {
     return StreamBuilder<List<ServiceProviderComment>>(
-      stream: _service.getCommentsStream(_initial.id),
+      stream: _initial.id.isEmpty
+          ? Stream<List<ServiceProviderComment>>.value(const [])
+          : _service.getCommentsStream(_initial.id),
       builder: (context, snap) {
         final comments = snap.data ?? [];
         return MedSection(

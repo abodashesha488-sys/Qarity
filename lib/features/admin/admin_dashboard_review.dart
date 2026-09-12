@@ -133,6 +133,9 @@ class _ReviewPageState extends State<_ReviewPage> {
                     it['userName'],
                     it['authorName'],
                     it['phone'],
+                    it['specialty'],
+                    it['stage'],
+                    it['category'],
                   ].whereType<String>().join(' ').toLowerCase();
                   return text.contains(q);
                 }).toList();
@@ -333,6 +336,25 @@ class _ReviewCard extends StatelessWidget {
                                             color: Colors.white)),
                                   ],
                                 ),
+                              ),
+                            ],
+                            if (cat.collection == 'service_providers') ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                    color: ServiceCategory.color(
+                                            '${item['category'] ?? ''}')
+                                        .withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(10)),
+                                child: Text(
+                                    'تبويب: ${ServiceCategory.label('${item['category'] ?? ''}')}',
+                                    style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w800,
+                                        color: ServiceCategory.color(
+                                            '${item['category'] ?? ''}'))),
                               ),
                             ],
                           ],

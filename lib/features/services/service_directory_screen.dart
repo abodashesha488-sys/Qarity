@@ -13,7 +13,7 @@ import '../../widgets/common_appbar_actions.dart';
 import '../phone/directory.dart';
 
 /// دليل الخدمات — تبويبات: الفنيون، خدمات زراعية، خدمات تعليمية، دليل الهاتف.
-/// العروض داخل التبويبات الأولى تُعرض في قوائم منسدلة حسب الحرفة/الخدمة/المادة.
+/// كل تبويب: بحث بالفئات ← المميزة (من الأدمن) ← الأكثر تقييماً ← القوائم المنسدلة.
 class ServiceDirectoryScreen extends StatefulWidget {
   const ServiceDirectoryScreen({super.key});
 
@@ -137,105 +137,308 @@ class _ServiceDirectoryScreenState extends State<ServiceDirectoryScreen>
   }
 }
 
-// ═══════════════ تبويب فئة (قوائم منسدلة حسب الحرفة/الخدمة/المادة) ═══════════════
-class _ProvidersTab extends StatelessWidget {
+// ═══════════ تبويب فئة: بحث بالفئات → مميز → الأعلى تقييماً → منسدلات ═══════════
+class _ProvidersTab extends StatefulWidget {
   const _ProvidersTab({required this.category});
   final String category;
 
   @override
+  State<_ProvidersTab> createState() => _ProvidersTabState();
+}
+
+class _ProvidersTabState extends State<_ProvidersTab> {
+  late final Stream<List<ServiceProvider>> _stream =
+      ServiceProviderService().getApprovedByCategory(widget.category);
+  final TextEditingController _search = TextEditingController();
+  String _query = '';
+
+  String _groupKeyOf(ServiceProvider p) =>
+      widget.category == ServiceCategory.educational
+          ? (p.stage.isEmpty ? 'مراحل أخرى' : p.stage)
+          : (p.specialty.isEmpty ? 'غير مصنّف' : p.specialty);
+
+  bool _matchesGroup(String key) {
+    final q = _query;
+    return key.toLowerCase().contains(q) ||
+        ServiceCategory.label(widget.category).toLowerCase().contains(q);
+  }
+
+  bool _matches(ServiceProvider p) {
+    if (_query.isEmpty) return true;
+    final haystack = [
+      p.name,
+      p.specialty,
+      p.stage,
+      p.address,
+      p.description,
+      _groupKeyOf(p),
+      ServiceCategory.label(widget.category),
+    ].join(' ').toLowerCase();
+    return haystack.contains(_query) || _matchesGroup(_groupKeyOf(p));
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _search.addListener(() => setState(() => _query = _search.text.trim().toLowerCase()));
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = ServiceCategory.color(category);
+    final color = ServiceCategory.color(widget.category);
     return StreamBuilder<List<ServiceProvider>>(
-      stream: ServiceProviderService().getApprovedByCategory(category),
+      stream: _stream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-        final items = snapshot.data ?? [];
-        if (items.isEmpty) {
-          return _EmptyCategory(category: category);
+        final all = snapshot.data ?? [];
+        if (all.isEmpty) {
+          return _EmptyCategory(category: widget.category);
         }
-        // التجميع: تعليمي → حسب المرحلة، وغيره → حسب الحرفة/الخدمة.
+
+        final searchActive = _query.isNotEmpty;
+        final visible =
+            searchActive ? all.where(_matches).toList() : all;
+        final featured = visible.where((p) => p.isFeatured).toList();
+        final topRated = visible
+            .where((p) => !p.isFeatured && p.ratingCount > 0)
+            .toList()
+          ..sort((a, b) => b.rating.compareTo(a.rating));
+        final top5 = topRated.take(5).toList();
+        final topIds = top5.map((p) => p.id).toSet();
+
+        // المجموعة: كل ما ليس مميزاً ولا ضمن الأعلى تقييماً.
+        final groupedItems = visible
+            .where((p) => !p.isFeatured && !topIds.contains(p.id))
+            .toList();
         final groups = <String, List<ServiceProvider>>{};
-        for (final p in items) {
-          final key = category == ServiceCategory.educational
-              ? (p.stage.isEmpty ? 'مراحل أخرى' : p.stage)
-              : (p.specialty.isEmpty ? 'غير مصنّف' : p.specialty);
-          groups.putIfAbsent(key, () => []).add(p);
+        for (final p in groupedItems) {
+          groups.putIfAbsent(_groupKeyOf(p), () => []).add(p);
         }
         final keys = groups.keys.toList()..sort();
+
         return ListView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 110),
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            // 1) البحث في فئات التبويب
+            DecoratedBox(
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: color.withValues(alpha: 0.2)),
-              ),
-              child: Row(
-                children: [
-                  Icon(ServiceCategory.icon(category), size: 18, color: color),
-                  const SizedBox(width: 8),
-                  Text(
-                    '${ServiceCategory.label(category)} — ${items.length} خدمة معتمدة',
-                    style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 12.5,
-                        color: color),
-                  ),
+                boxShadow: [
+                  BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3)),
                 ],
               ),
+              child: TextField(
+                controller: _search,
+                decoration: InputDecoration(
+                  hintText: switch (widget.category) {
+                    ServiceCategory.technicians =>
+                      'ابحث: نجارة، حدادة، سباكة، كهرباء…',
+                    ServiceCategory.agricultural =>
+                      'ابحث: حرث، حصاد، ري، جرارات…',
+                    _ => 'ابحث: مرحلة أو مادة…',
+                  },
+                  prefixIcon:
+                      Icon(Icons.search_rounded, color: color, size: 20),
+                  suffixIcon: _query.isNotEmpty
+                      ? IconButton(
+                          tooltip: 'مسح',
+                          icon: const Icon(Icons.clear_rounded, size: 18),
+                          onPressed: () => _search.clear(),
+                        )
+                      : null,
+                  filled: true,
+                  fillColor: theme.colorScheme.surface,
+                  isDense: true,
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(color: color.withValues(alpha: 0.35))),
+                  enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(color: color.withValues(alpha: 0.35))),
+                  focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(color: color, width: 1.4)),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
             ),
-            const SizedBox(height: 12),
-            for (final key in keys)
+            if (searchActive && visible.isEmpty)
               Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: Material(
-                    color: theme.colorScheme.surface,
-                    child: Theme(
-                      data: theme
-                          .copyWith(dividerColor: Colors.transparent),
-                      child: ExpansionTile(
-                        shape: const Border(),
-                        tilePadding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 2),
-                        childrenPadding:
-                            const EdgeInsets.fromLTRB(10, 0, 10, 10),
-                        leading: CircleAvatar(
-                          radius: 17,
-                          backgroundColor: color.withValues(alpha: 0.12),
-                          child: Icon(
-                            category == ServiceCategory.educational
-                                ? Icons.school_rounded
-                                : Icons.category_rounded,
-                            size: 17,
-                            color: color,
+                padding: const EdgeInsets.only(top: 40),
+                child: Column(
+                  children: [
+                    Icon(Icons.search_off_rounded,
+                        size: 52, color: Colors.grey.shade400),
+                    const SizedBox(height: 10),
+                    Text('لا نتائج مطابقة لبحثك',
+                        style: theme.textTheme.titleSmall
+                            ?.copyWith(fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 4),
+                    Text('جرّب اسماً أو فئة أخرى',
+                        style: theme.textTheme.bodySmall
+                            ?.copyWith(color: Colors.grey)),
+                  ],
+                ),
+              )
+            else ...[
+              const SizedBox(height: 6),
+              // 2) الفئات/البيانات المميزة من الأدمن
+              if (featured.isNotEmpty) ...[
+                _MiniHead(
+                    title: 'البيانات المميزة',
+                    subtitle: 'اختيار إدارة القرية',
+                    icon: Icons.workspace_premium_rounded,
+                    color: const Color(0xFFB8860B),
+                    count: featured.length),
+                for (final p in featured)
+                  _ProviderCard(provider: p, accent: color),
+                const SizedBox(height: 8),
+              ],
+              // 3) الأكثر تقييماً من المستخدمين
+              if (top5.isNotEmpty) ...[
+                _MiniHead(
+                    title: 'الأكثر تقييماً',
+                    subtitle: 'الأعلى بتقييم المستخدمين',
+                    icon: Icons.star_rounded,
+                    color: Colors.amber.shade700,
+                    count: top5.length),
+                for (final p in top5)
+                  _ProviderCard(provider: p, accent: color),
+                const SizedBox(height: 8),
+              ],
+              // 4) القوائم المنسدلة حسب فئات التبويب
+              if (keys.isNotEmpty || searchActive) ...[
+                _MiniHead(
+                    title: searchActive ? 'نتائج البحث مجمّعة' : 'كل الخدمات',
+                    subtitle: switch (widget.category) {
+                      ServiceCategory.technicians => 'مجمّعة حسب الحرفة',
+                      ServiceCategory.agricultural => 'مجمّعة حسب الخدمة',
+                      _ => 'مجمّعة حسب المرحلة الدراسية',
+                    },
+                    icon: Icons.list_alt_rounded,
+                    color: color,
+                    count: groupedItems.length),
+                for (final key in keys)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Material(
+                        color: theme.colorScheme.surface,
+                        child: Theme(
+                          data: theme
+                              .copyWith(dividerColor: Colors.transparent),
+                          child: ExpansionTile(
+                            shape: const Border(),
+                            initiallyExpanded: searchActive,
+                            tilePadding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 2),
+                            childrenPadding:
+                                const EdgeInsets.fromLTRB(10, 0, 10, 10),
+                            leading: CircleAvatar(
+                              radius: 17,
+                              backgroundColor: color.withValues(alpha: 0.12),
+                              child: Icon(
+                                widget.category ==
+                                        ServiceCategory.educational
+                                    ? Icons.school_rounded
+                                    : Icons.category_rounded,
+                                size: 17,
+                                color: color,
+                              ),
+                            ),
+                            title: Text(key,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 14)),
+                            subtitle: Text('${groups[key]!.length} تقديم',
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                    color: theme
+                                        .colorScheme.onSurfaceVariant)),
+                            children: [
+                              for (final p in groups[key]!)
+                                _ProviderCard(provider: p, accent: color),
+                            ],
                           ),
                         ),
-                        title: Text(key,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w800, fontSize: 14)),
-                        subtitle: Text('${groups[key]!.length} تقديم',
-                            style: theme.textTheme.labelSmall?.copyWith(
-                                color:
-                                    theme.colorScheme.onSurfaceVariant)),
-                        children: [
-                          for (final p in groups[key]!)
-                            _ProviderCard(provider: p, accent: color),
-                        ],
                       ),
                     ),
-                  ),
-                ),
-              ).animate().fadeIn(duration: 200.ms),
+                  ).animate().fadeIn(duration: 200.ms),
+              ],
+            ],
           ],
         );
       },
+    );
+  }
+}
+
+/// عنوان قسم مصغّر (داخل التبويب).
+class _MiniHead extends StatelessWidget {
+  const _MiniHead({
+    required this.title,
+    required this.icon,
+    required this.color,
+    this.subtitle,
+    this.count,
+  });
+  final String title;
+  final String? subtitle;
+  final IconData icon;
+  final Color color;
+  final int? count;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(2, 10, 2, 6),
+      child: Row(
+        children: [
+          Icon(icon, size: 17, color: color),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(title,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w900, color: color)),
+                if (subtitle != null)
+                  Text(subtitle!,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant)),
+              ],
+            ),
+          ),
+          if (count != null)
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10)),
+              child: Text('$count',
+                  style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                      color: color)),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -271,8 +474,7 @@ class _ProviderCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         onTap: () => _openDetail(context),
         child: Padding(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           child: Row(
             children: [
               ClipRRect(
@@ -315,8 +517,7 @@ class _ProviderCard extends StatelessWidget {
                                 Color(0xFFF1C40F),
                                 Color(0xFFB8860B)
                               ]),
-                              borderRadius:
-                                  BorderRadius.circular(6),
+                              borderRadius: BorderRadius.circular(6),
                             ),
                             child: const Row(
                               mainAxisSize: MainAxisSize.min,
@@ -364,7 +565,8 @@ class _ProviderCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.bodySmall?.copyWith(
                               fontSize: 11,
-                              color: theme.colorScheme.onSurfaceVariant)),
+                              color: theme
+                                  .colorScheme.onSurfaceVariant)),
                   ],
                 ),
               ),
@@ -400,8 +602,7 @@ class _ProviderCard extends StatelessWidget {
                     size: 16, color: Colors.grey),
               ),
               Icon(Icons.chevron_left_rounded,
-                  size: 18,
-                  color: theme.colorScheme.onSurfaceVariant),
+                  size: 18, color: theme.colorScheme.onSurfaceVariant),
             ],
           ),
         ),

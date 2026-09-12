@@ -316,6 +316,8 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
       'category': 'التصنيف',
       'specialty': 'التخصص',
       'stage': 'المرحلة',
+      'submittedByName': 'مقدّم البيان',
+      'isFeatured': 'بيان مميز',
       'doctorName': 'الطبيب',
       'workingHours': 'مواعيد العمل',
       'fees': 'الأجر',

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../models/data_models.dart';
+import '../../models/service_provider_model.dart';
 import '../../models/village_alert.dart';
 import '../../routes/app_routes.dart';
 import '../../services/admin_service.dart';

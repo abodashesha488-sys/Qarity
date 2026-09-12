@@ -49,12 +49,11 @@ class _OverviewPage extends StatelessWidget {
                   child: Center(child: CircularProgressIndicator()),
                 )
               : GridView.count(
-                  crossAxisCount: 2,
+                  crossAxisCount: 3,
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  childAspectRatio: 1.7,
+                  mainAxisSpacing: 10,
+                  crossAxisSpacing: 10,
                   children: [
                     _StatCard(
                         label: 'المستخدمون',
@@ -486,9 +485,9 @@ class _StatCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(color: color.withValues(alpha: 0.25)),
             gradient: LinearGradient(
               begin: Alignment.topLeft,
@@ -504,18 +503,25 @@ class _StatCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
                     color: color.withValues(alpha: 0.16),
-                    borderRadius: BorderRadius.circular(10)),
-                child: Icon(icon, color: color, size: 18),
+                    borderRadius: BorderRadius.circular(9)),
+                child: Icon(icon, color: color, size: 14),
               ),
-              Text('$value',
-                  style: theme.textTheme.headlineSmall
-                      ?.copyWith(fontWeight: FontWeight.w900, color: color)),
-              Text(label,
-                  style: theme.textTheme.labelMedium
-                      ?.copyWith(fontWeight: FontWeight.w700)),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('$value',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w900, color: color)),
+                  Text(label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelSmall
+                          ?.copyWith(fontWeight: FontWeight.w700)),
+                ],
+              ),
             ],
           ),
         ),
