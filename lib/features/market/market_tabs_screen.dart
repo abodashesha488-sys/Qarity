@@ -41,6 +41,7 @@ class _MarketTabsScreenState extends State<MarketTabsScreen>
   final UserService _userService = UserService();
   SellerType _sellerType = SellerType.regular;
   String _userRole = 'user';
+  UserModel? _profile;
 
   /// تصنيفات المحلات — تشمل المحلات التجارية والخدمية (ورش، مخازن، حرف يدوية…)
   static const List<String> _shopCats = [
@@ -96,10 +97,18 @@ class _MarketTabsScreenState extends State<MarketTabsScreen>
     final u = await _userService.getCurrentUser();
     if (mounted) {
       setState(() {
+        _profile = u;
         _sellerType = u?.sellerType ?? SellerType.regular;
         _userRole = u?.role ?? 'user';
       });
     }
+  }
+
+  String _userName() {
+    final pname = (_profile?.name ?? '').trim();
+    if (pname.isNotEmpty) return pname;
+    final u = FirebaseAuth.instance.currentUser;
+    return u?.displayName ?? u?.email ?? 'مستخدم';
   }
 
   @override
@@ -183,11 +192,6 @@ class _MarketTabsScreenState extends State<MarketTabsScreen>
       return null;
     }
     return user.uid;
-  }
-
-  String _userName() {
-    final u = FirebaseAuth.instance.currentUser;
-    return u?.displayName ?? u?.email ?? 'مستخدم';
   }
 
   void _snack(String msg) {

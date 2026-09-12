@@ -484,8 +484,22 @@ class _HeroHeaderState extends State<_HeroHeader> {
   }
 
   Future<void> _loadUser() async {
-    final u = await UserService().getCurrentUser();
+    final svc = UserService();
+    final u = await svc.getCurrentUser();
     if (mounted) setState(() => _user = u);
+    if (u == null) return;
+    final name = u.name.trim();
+    if (name.isEmpty) return;
+    final photo = (u.photoUrl ?? '').trim();
+    // إصلاح ذاتي مرة واحدة لكل هوية جديدة: يحدّث المحتوى والتعليقات
+    // التي أُنشئت قديماً باسم Google قبل تعديل الاسم في الملف الشخصي.
+    final prefs = await SharedPreferences.getInstance();
+    final stamp = '$name|$photo';
+    if (prefs.getString('identity_repair_v1_${u.id}') != stamp) {
+      await prefs.setString('identity_repair_v1_${u.id}', stamp);
+      unawaited(svc.syncIdentityToContent(u.id,
+          name: name, photoUrl: photo.isEmpty ? null : photo));
+    }
   }
 
   @override

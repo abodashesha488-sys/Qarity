@@ -7,6 +7,7 @@ import '../../models/data_models.dart';
 import '../../services/engagement_service.dart';
 import '../../services/occasion_service.dart';
 import '../../services/share_service.dart';
+import '../../services/user_service.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/common_appbar_actions.dart';
 
@@ -231,7 +232,7 @@ class _AttendanceSectionState extends State<_AttendanceSection> {
       );
       return;
     }
-    final name = user.displayName ?? user.email?.split('@').first ?? 'مستخدم';
+    final name = (await UserService().resolveAuthor()).name;
     try {
       if (attending) {
         await _engagement.cancelAttendance(occasionId: widget.occasionId, userId: user.uid);

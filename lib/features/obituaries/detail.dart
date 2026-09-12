@@ -8,6 +8,7 @@ import '../../models/data_models.dart';
 import '../../services/engagement_service.dart';
 import '../../services/obituary_service.dart';
 import '../../services/share_service.dart';
+import '../../services/user_service.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/common_appbar_actions.dart';
 
@@ -495,6 +496,7 @@ class _CondolenceSectionState extends State<_CondolenceSection> {
     }
     setState(() => _submitting = true);
     try {
+      final identity = await UserService().resolveAuthor();
       if (await _engagement.hasCondolenced(widget.obituaryId, user.uid)) {
         if (!mounted) return;
         setState(() => _submitting = false);
@@ -506,8 +508,7 @@ class _CondolenceSectionState extends State<_CondolenceSection> {
       await _engagement.addCondolence(
         obituaryId: widget.obituaryId,
         userId: user.uid,
-        userName:
-            user.displayName ?? user.email?.split('@').first ?? 'مستخدم',
+        userName: identity.name,
         message: message,
       );
       if (!mounted) return;

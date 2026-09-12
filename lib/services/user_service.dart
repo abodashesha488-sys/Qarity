@@ -197,6 +197,10 @@ class UserService {
       'donations': ('userId', 'userName'),
       'blood_requests': ('userId', 'requesterName'),
       'blood_donors': ('userId', 'name'),
+      'village_clinics': ('submittedBy', 'submittedByName'),
+      'pharmacies': ('submittedBy', 'submittedByName'),
+      'medical_labs': ('submittedBy', 'submittedByName'),
+      'service_providers': ('submittedBy', 'submittedByName'),
     };
     final jobs = <Future<void>>[];
     if (name != null) {

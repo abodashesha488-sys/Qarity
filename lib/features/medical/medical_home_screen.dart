@@ -10,6 +10,7 @@ import '../../services/admin_service.dart';
 import '../../services/image_upload_service.dart';
 import '../../services/medical_service.dart';
 import '../../services/share_service.dart';
+import '../../services/user_service.dart';
 import '../../widgets/common_appbar_actions.dart';
 import 'medical_admin_screen.dart';
 
@@ -159,6 +160,7 @@ class _MedicalSectionScreenState extends State<MedicalSectionScreen> {
   final MedicalLabService _labService = MedicalLabService();
   final AdminService _adminService = AdminService();
   bool _isMedicalAdmin = false;
+  String _profileName = '';
 
   Color get _color => MedicalHomeScreen.colors[widget.index];
   String get _title => switch (widget.index) {
@@ -172,7 +174,13 @@ class _MedicalSectionScreenState extends State<MedicalSectionScreen> {
   @override
   void initState() {
     super.initState();
+    _loadProfile();
     if (widget.index == 0) _checkMedicalAdmin();
+  }
+
+  Future<void> _loadProfile() async {
+    final u = await UserService().getCurrentUser();
+    if (mounted) setState(() => _profileName = (u?.name ?? '').trim());
   }
 
   Future<void> _checkMedicalAdmin() async {
@@ -184,6 +192,7 @@ class _MedicalSectionScreenState extends State<MedicalSectionScreen> {
   }
 
   String _userName() {
+    if (_profileName.isNotEmpty) return _profileName;
     final u = FirebaseAuth.instance.currentUser;
     return u?.displayName ?? u?.email ?? 'مستخدم';
   }
