@@ -42,7 +42,7 @@ class ServiceDirectoryScreen extends StatelessWidget {
         crossAxisCount: 2,
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
-        childAspectRatio: 1.12,
+        childAspectRatio: 0.98,
         children: [
           for (final c in _categories) _CategoryTile(category: c),
           const _PhoneBookTile(),
@@ -72,12 +72,12 @@ class _CategoryTile extends StatelessWidget {
         onTap: () => Navigator.pushNamed(context, AppRoutes.serviceCategory,
             arguments: category),
         child: Padding(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(10),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(colors: [
                     color,
@@ -92,14 +92,16 @@ class _CategoryTile extends StatelessWidget {
                   ],
                 ),
                 child: Icon(ServiceCategory.icon(category),
-                    color: Colors.white, size: 30),
+                    color: Colors.white, size: 26),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               Text(ServiceCategory.label(category),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                       fontWeight: FontWeight.w900,
-                      fontSize: 15,
+                      fontSize: 14,
                       color: color)),
               const SizedBox(height: 3),
               Text(
@@ -108,9 +110,12 @@ class _CategoryTile extends StatelessWidget {
                   ServiceCategory.agricultural => 'آلات وخدمات المزارعين',
                   _ => 'مدرّسون لكل المراحل والمواد',
                 },
+                maxLines: 2,
                 textAlign: TextAlign.center,
-                style: theme.textTheme.labelSmall
-                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.labelSmall?.copyWith(
+                    fontSize: 10,
+                    color: theme.colorScheme.onSurfaceVariant),
               ),
             ],
           ),
@@ -138,12 +143,12 @@ class _PhoneBookTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         onTap: () => Navigator.pushNamed(context, AppRoutes.phoneDirectory),
         child: Padding(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(10),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(12),
                 decoration: const BoxDecoration(
                   gradient:
                       LinearGradient(colors: [color, Color(0xFF4DD0E1)]),
@@ -156,19 +161,24 @@ class _PhoneBookTile extends StatelessWidget {
                   ],
                 ),
                 child: const Icon(Icons.phone_rounded,
-                    color: Colors.white, size: 30),
+                    color: Colors.white, size: 26),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               const Text('دليل الهاتف',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                       fontWeight: FontWeight.w900,
-                      fontSize: 15,
+                      fontSize: 14,
                       color: color)),
               const SizedBox(height: 3),
               Text('أرقام أهالي القرية وجهاتها',
+                  maxLines: 2,
                   textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.labelSmall?.copyWith(
+                      fontSize: 10,
                       color: theme.colorScheme.onSurfaceVariant)),
             ],
           ),

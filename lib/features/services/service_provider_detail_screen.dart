@@ -24,15 +24,19 @@ class ServiceProviderDetailScreen extends StatefulWidget {
 
 class _ServiceProviderDetailScreenState
     extends State<ServiceProviderDetailScreen> {
-  late final ServiceProvider _initial = widget.provider ??
-      (ModalRoute.of(context)?.settings.arguments as ServiceProvider?) ??
-      const ServiceProvider(id: '', category: 'technicians', name: 'خدمة');
   late final ServiceProviderService _service =
       widget.service ?? ServiceProviderService();
   final TextEditingController _textC = TextEditingController();
 
+  ServiceProvider? _resolved;
+  bool _bootstrapped = false;
   double _myRating = 0;
   bool _submitting = false;
+
+  static const _fallbackProvider =
+      ServiceProvider(id: '', category: 'technicians', name: 'خدمة');
+
+  ServiceProvider get _initial => _resolved ?? _fallbackProvider;
 
   @override
   void dispose() {
@@ -41,8 +45,14 @@ class _ServiceProviderDetailScreenState
   }
 
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_bootstrapped) return;
+    _bootstrapped = true;
+    // قراءة المعطيات من الـroute هنا وليست في initState — السياق آمن الآن.
+    _resolved = widget.provider ??
+        (ModalRoute.of(context)?.settings.arguments as ServiceProvider?) ??
+        _fallbackProvider;
     String? uid;
     try {
       uid = FirebaseAuth.instance.currentUser?.uid;
