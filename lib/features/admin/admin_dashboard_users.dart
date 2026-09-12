@@ -37,6 +37,9 @@ class _UsersPageState extends State<_UsersPage> {
     ('disabled', 'معطّلون'),
   ];
 
+  late final Stream<List<Map<String, dynamic>>> _usersStream =
+      widget.adminService.getAllUsersStream();
+
   @override
   void dispose() {
     _search.dispose();
@@ -47,7 +50,7 @@ class _UsersPageState extends State<_UsersPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return StreamBuilder<List<Map<String, dynamic>>>(
-      stream: widget.adminService.getAllUsersStream(),
+      stream: _usersStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());

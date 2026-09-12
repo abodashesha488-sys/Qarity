@@ -215,7 +215,7 @@ lib/
 - Firestore rules hardened: `shops` create requires `isApproved:false` + owner-field updates; new `service_providers` block; `phone_directory` create requires `isApproved:false`.
 - Tests: +6 (`test/services/service_directory_test.dart`); suite now 58/58.
 - `navigatorKey` is now wired into `MaterialApp` (`main.dart`), so global toasts (`AppHelpers.showToast`) and notification-tap navigation (`NotificationService._tryNavigate`) actually resolve a context. The bottom nav remains home-only (a global persistent bar was implemented then reverted at user request).
-- Search focus fix: `OfflineStreamBuilder` is now `StatefulWidget` that pins the last valid data across transient re-subscriptions, so the search `TextField` no longer loses focus/remounts after the first keystroke (fixed once, applies to all ~12 pages).
+- Search focus fix: `OfflineStreamBuilder` is now `StatefulWidget` that pins the last valid data across transient re-subscriptions, so the search `TextField` no longer loses focus/remounts after the first keystroke (fixed once, applies to all ~12 pages). Second wave of the same class of bug — raw `StreamBuilder`s that rebuilt their stream inside `build` while their search box sat inside the builder — fixed by pinning one stream instance per state/widget: medical عيادات/صيدليات/بنك الدم/المركز tabs, admin المستخدمين page, admin المراجعة page (memoized per collection+pendingOnly), and `AlertWisdomBar`.
 - News list header: moved search into `SliverAppBar.bottom` to stop the title overlapping the search box.
 - Seller image limits set to regular 1 / super 3 / premium 5 / gold 10 (all derived from `SellerType.maxImages`, so no per-screen changes).
 

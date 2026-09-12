@@ -16,6 +16,7 @@ class AlertWisdomBar extends StatefulWidget {
 }
 
 class _AlertWisdomBarState extends State<AlertWisdomBar> {
+  late final Stream<VillageAlert?> _stream = AlertService().watchLiveAlert();
   int _wisdomOffset = 0;
 
   String get _wisdom {
@@ -56,7 +57,7 @@ class _AlertWisdomBarState extends State<AlertWisdomBar> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return StreamBuilder<VillageAlert?>(
-      stream: AlertService().watchLiveAlert(),
+      stream: _stream,
       builder: (context, snapshot) {
         final alert = snapshot.data;
         if (alert != null) {

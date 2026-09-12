@@ -198,12 +198,14 @@ class _CenterTab extends StatelessWidget {
   final bool isMedicalAdmin;
   final VoidCallback onOpenAdmin;
 
+  static final Stream<List<MedicalCenterClinic>> _stream =
+      MedicalCenterService().getClinicsStream();
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final service = MedicalCenterService();
     return StreamBuilder<List<MedicalCenterClinic>>(
-      stream: service.getClinicsStream(),
+      stream: _stream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -397,6 +399,8 @@ class _BloodBankTab extends StatefulWidget {
 
 class _BloodBankTabState extends State<_BloodBankTab> {
   final BloodBankService _service = BloodBankService();
+  late final Stream<List<BloodDonor>> _donorsStream =
+      _service.getApprovedDonorsStream();
   String? _filterType;
 
   Future<void> _showDonorDialog() async {
@@ -445,7 +449,7 @@ class _BloodBankTabState extends State<_BloodBankTab> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return StreamBuilder<List<BloodDonor>>(
-      stream: _service.getApprovedDonorsStream(),
+      stream: _donorsStream,
       builder: (context, donorSnap) {
         final donors = (donorSnap.data ?? [])
             .where((d) => _filterType == null || d.bloodType.code == _filterType)
@@ -532,6 +536,9 @@ class _BloodBankTabState extends State<_BloodBankTab> {
 class _OpenRequestsList extends StatelessWidget {
   const _OpenRequestsList({required this.onSnackbar});
   final void Function(String) onSnackbar;
+  // Stream واحد يُبنى lazily مرة فقط — لا يُعاد الاشتراك مع كل rebuild للأب.
+  static final Stream<List<BloodRequest>> _requestsStream =
+      BloodBankService().getOpenApprovedRequestsStream();
 
   Future<void> _call(String phone) async {
     final uri = Uri(scheme: 'tel', path: phone);
@@ -544,7 +551,7 @@ class _OpenRequestsList extends StatelessWidget {
     final service = BloodBankService();
     final uid = FirebaseAuth.instance.currentUser?.uid;
     return StreamBuilder<List<BloodRequest>>(
-      stream: service.getOpenApprovedRequestsStream(),
+      stream: _requestsStream,
       builder: (context, snapshot) {
         final list = snapshot.data ?? [];
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -743,6 +750,8 @@ class _ClinicsTab extends StatefulWidget {
 class _ClinicsTabState extends State<_ClinicsTab> {
   final VillageClinicService _service = VillageClinicService();
   final TextEditingController _search = TextEditingController();
+  // تدفّق واحد مثبّت — إعادة بنائها كل ضغطة كانت تفقد مربع البحث التركيز.
+  late final Stream<List<VillageClinic>> _stream = _service.getApprovedStream();
 
   @override
   void dispose() {
@@ -754,7 +763,7 @@ class _ClinicsTabState extends State<_ClinicsTab> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return StreamBuilder<List<VillageClinic>>(
-      stream: _service.getApprovedStream(),
+      stream: _stream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -914,6 +923,7 @@ class _PharmaciesTab extends StatefulWidget {
 class _PharmaciesTabState extends State<_PharmaciesTab> {
   final PharmacyService _service = PharmacyService();
   final TextEditingController _search = TextEditingController();
+  late final Stream<List<Pharmacy>> _stream = _service.getApprovedStream();
 
   @override
   void dispose() {
@@ -925,7 +935,7 @@ class _PharmaciesTabState extends State<_PharmaciesTab> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return StreamBuilder<List<Pharmacy>>(
-      stream: _service.getApprovedStream(),
+      stream: _stream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());

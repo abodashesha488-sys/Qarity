@@ -32,6 +32,21 @@ class _ReviewPageState extends State<_ReviewPage> {
   bool _pendingOnly = true;
   final _search = TextEditingController();
 
+  // تثبيت الـStream لكل (مجموعة، وضع) — إعادة إنشائه مع كل ضغطة كتابة
+  // كانت تعيد الاشتراك وتومض القائمة.
+  Stream<List<Map<String, dynamic>>>? _itemsStream;
+  String? _itemsStreamKey;
+
+  Stream<List<Map<String, dynamic>>> _streamFor(String collection, bool pendingOnly) {
+    final key = '${collection}_$pendingOnly';
+    if (_itemsStreamKey != key || _itemsStream == null) {
+      _itemsStreamKey = key;
+      _itemsStream =
+          AdminService().itemsStream(collection, pendingOnly: pendingOnly);
+    }
+    return _itemsStream!;
+  }
+
   @override
   void dispose() {
     _search.dispose();
@@ -114,8 +129,7 @@ class _ReviewPageState extends State<_ReviewPage> {
         ),
         Expanded(
           child: StreamBuilder<List<Map<String, dynamic>>>(
-            stream: AdminService()
-                .itemsStream(_cat.collection, pendingOnly: _pendingOnly),
+            stream: _streamFor(_cat.collection, _pendingOnly),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
