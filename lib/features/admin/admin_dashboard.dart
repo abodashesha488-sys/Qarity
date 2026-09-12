@@ -56,6 +56,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     _Cat('village_clinics', 'عيادات القرية', Icons.add_business_rounded,
         Color(0xFF00897B)),
     _Cat('pharmacies', 'الصيدليات', Icons.local_pharmacy_rounded, Colors.green),
+    _Cat('medical_labs', 'معامل التحاليل', Icons.science_rounded,
+        Color(0xFF6A1B9A)),
     _Cat('blood_requests', 'طلبات التبرع بالدم', Icons.bloodtype_rounded,
         Colors.red),
     _Cat('blood_donors', 'المتبرعون بالدم', Icons.favorite_rounded,

@@ -163,6 +163,44 @@ void main() {
     });
   });
 
+  group('MedicalLabService', () {
+    test('create persists unapproved lab with homeCollection', () async {
+      final fake = FakeFirebaseFirestore();
+      final svc = MedicalLabService(fake);
+      await svc.create(const MedicalLab(
+        id: '',
+        name: 'معمل النور',
+        category: 'تحاليل هرمونات',
+        homeCollection: true,
+        phone: '0100',
+        submittedBy: 'u1',
+      ));
+      final snap = await fake.collection('medical_labs').get();
+      final data = snap.docs.single.data();
+      expect(data['isApproved'], false);
+      expect(data['homeCollection'], true);
+      expect(data['category'], 'تحاليل هرمونات');
+    });
+
+    test('getApprovedStream shows only approved, home-collection first',
+        () async {
+      final fake = FakeFirebaseFirestore();
+      final svc = MedicalLabService(fake);
+      await fake.collection('medical_labs').add({
+        'name': 'ب معتمد منزلي', 'isApproved': true, 'homeCollection': true,
+      });
+      await fake.collection('medical_labs').add({
+        'name': 'أ معتمد', 'isApproved': true, 'homeCollection': false,
+      });
+      await fake.collection('medical_labs').add({
+        'name': 'معلق', 'isApproved': false, 'homeCollection': true,
+      });
+      final list = await svc.getApprovedStream().first;
+      expect(list.length, 2);
+      expect(list.first.name, 'ب معتمد منزلي');
+    });
+  });
+
   group('MedicalCenterClinic approval field', () {
     test('legacy docs without isApproved parse as approved', () {
       final c = MedicalCenterClinic.fromJson({'name': 'عيادة'}, 'x');

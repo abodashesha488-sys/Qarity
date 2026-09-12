@@ -410,6 +410,7 @@ class AdminService {
     'donations': 'userId',
     'village_clinics': 'submittedBy',
     'pharmacies': 'submittedBy',
+    'medical_labs': 'submittedBy',
     'service_providers': 'submittedBy',
     'blood_requests': 'userId',
     'blood_donors': 'userId',
@@ -473,6 +474,7 @@ class AdminService {
         return '/services';
       case 'village_clinics':
       case 'pharmacies':
+      case 'medical_labs':
       case 'medical_center_clinics':
       case 'blood_requests':
       case 'blood_donors':
@@ -498,6 +500,8 @@ class AdminService {
         return 'المحل';
       case 'village_clinics':
         return 'العيادة';
+      case 'medical_labs':
+        return 'المعمل';
       case 'medical_center_clinics':
         return 'عيادة المركز الخيري';
       case 'service_providers':
@@ -548,6 +552,7 @@ class AdminService {
             preview,
             '/medical'
           ),
+      'medical_labs' => ('🧪 معمل تحاليل جديد', preview, '/medical'),
       'village_clinics' || 'pharmacies' || 'blood_requests' || 'blood_donors' =>
         ('🩺 خدمات طبية', preview, '/medical'),
       _ => ('محتوى جديد', preview, '/'),
@@ -659,6 +664,7 @@ class AdminService {
       _pendingCount('shops').first,
       _pendingCount('service_providers').first,
       _pendingCount('medical_center_clinics').first,
+      _pendingCount('medical_labs').first,
     ]);
     return {
       'news': results[0],
@@ -675,6 +681,7 @@ class AdminService {
       'shops': results[11],
       'service_providers': results[12],
       'medical_center_clinics': results[13],
+      'medical_labs': results[14],
     };
   }
 

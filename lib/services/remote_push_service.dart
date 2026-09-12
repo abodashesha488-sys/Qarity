@@ -83,6 +83,7 @@ const Map<String, String> kPushTopicForCollection = {
   'shops': 'village_market',
   'village_clinics': 'village_medical',
   'pharmacies': 'village_medical',
+  'medical_labs': 'village_medical',
   'medical_center_clinics': 'village_medical',
   'blood_requests': 'village_medical',
   'blood_donors': 'village_medical',

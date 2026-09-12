@@ -479,3 +479,174 @@ class PharmacyDetailScreen extends StatelessWidget {
     );
   }
 }
+
+/// شاشة تفاصيل معمل التحاليل.
+class MedicalLabDetailScreen extends StatelessWidget {
+  const MedicalLabDetailScreen({super.key});
+
+  static const _purple = Color(0xFF6A1B9A);
+  static const _purpleDark = Color(0xFF4A148C);
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final lab = ModalRoute.of(context)?.settings.arguments as MedicalLab? ??
+        const MedicalLab(id: '', name: '');
+
+    return Scaffold(
+      backgroundColor: theme.colorScheme.surface,
+      body: CustomScrollView(
+        slivers: [
+          MedDetailHeader(
+            title: lab.name,
+            accent: _purple,
+            accentDark: _purpleDark,
+            imageUrl: lab.imageUrl,
+            icon: Icons.science_rounded,
+            onShare: () => ShareService.shareText(
+                title: '🧪 ${lab.name}',
+                body: [
+                  if (lab.category.isNotEmpty)
+                    'نوع التحاليل: ${lab.category}',
+                  if (lab.homeCollection) '✅ يتوفر سحب عينة بالمنزل',
+                  if (lab.ownerName.isNotEmpty)
+                    'المسؤول: ${lab.ownerName}',
+                  if (lab.workingHours.isNotEmpty)
+                    'المواعيد: ${lab.workingHours}',
+                  if (lab.address.isNotEmpty) 'العنوان: ${lab.address}',
+                  if (lab.phone.isNotEmpty) 'هاتف: ${lab.phone}',
+                ].join('\n')),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 18, 16, 32),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(lab.name,
+                            style: theme.textTheme.headlineSmall
+                                ?.copyWith(fontWeight: FontWeight.w900)),
+                      ),
+                      if (lab.category.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 5),
+                          decoration: BoxDecoration(
+                              color: _purple.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                  color: _purple.withValues(alpha: 0.3))),
+                          child: Text(lab.category,
+                              style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  color: _purple)),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  MedSection(
+                    title: 'بيانات المعمل',
+                    accent: _purple,
+                    child: Column(
+                      children: [
+                        if (lab.ownerName.isNotEmpty)
+                          MedInfoRow(
+                              icon: Icons.person_rounded,
+                              label: 'مدير المعمل',
+                              value: lab.ownerName,
+                              accent: _purple),
+                        if (lab.phone.isNotEmpty)
+                          MedInfoRow(
+                              icon: Icons.phone_rounded,
+                              label: 'الهاتف',
+                              value: lab.phone,
+                              accent: _purple),
+                        if (lab.workingHours.isNotEmpty)
+                          MedInfoRow(
+                              icon: Icons.access_time_rounded,
+                              label: 'مواعيد العمل',
+                              value: lab.workingHours,
+                              accent: _purple),
+                        if (lab.address.isNotEmpty)
+                          MedInfoRow(
+                              icon: Icons.location_on_rounded,
+                              label: 'العنوان',
+                              value: lab.address,
+                              accent: _purple),
+                        MedInfoRow(
+                            icon: Icons.home_work_rounded,
+                            label: 'سحب العينات بالمنزل',
+                            value: lab.homeCollection
+                                ? 'متوفر — اتصل للترتيب'
+                                : 'غير متوفر',
+                            accent: _purple),
+                      ],
+                    ),
+                  ),
+                  if (lab.description.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    MedSection(
+                      title: 'عن المعمل وتحاليله',
+                      accent: _purple,
+                      child: Text(lab.description,
+                          style: theme.textTheme.bodyMedium
+                              ?.copyWith(height: 1.6)),
+                    ),
+                  ],
+                  if (lab.imageUrls.length > 1) ...[
+                    const SizedBox(height: 16),
+                    MedSection(
+                      title: 'صور المعمل',
+                      accent: _purple,
+                      child: SizedBox(
+                        height: 130,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: lab.imageUrls.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(width: 10),
+                          itemBuilder: (_, i) => ClipRRect(
+                            borderRadius: BorderRadius.circular(14),
+                            child: CachedNetworkImage(
+                                imageUrl: lab.imageUrls[i],
+                                width: 180,
+                                fit: BoxFit.cover,
+                                errorWidget: (_, __, ___) => Container(
+                                    width: 180,
+                                    color: theme
+                                        .colorScheme.surfaceContainerHighest,
+                                    child: const Icon(
+                                        Icons.broken_image_rounded))),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 22),
+                  if (lab.phone.isNotEmpty)
+                    FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                          backgroundColor: _purple,
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 16)),
+                      onPressed: () async {
+                        final uri = Uri(scheme: 'tel', path: lab.phone);
+                        if (await canLaunchUrl(uri)) await launchUrl(uri);
+                      },
+                      icon: const Icon(Icons.call_rounded),
+                      label: const Text('اتصال بالمعمل',
+                          style: TextStyle(fontWeight: FontWeight.w800)),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

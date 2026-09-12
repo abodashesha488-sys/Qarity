@@ -177,6 +177,17 @@ class _AdminEditScreenState extends State<AdminEditScreen> {
           _FieldSpec('description', 'نبذة', multiline: true),
           _FieldSpec('is24Hours', '٢٤ ساعة', boolean: true),
         ];
+      case 'medical_labs':
+        return const [
+          _FieldSpec('name', 'اسم المعمل', required: true),
+          _FieldSpec('category', 'نوع التحاليل'),
+          _FieldSpec('ownerName', 'المسؤول / مدير المعمل'),
+          _FieldSpec('phone', 'الهاتف'),
+          _FieldSpec('address', 'العنوان'),
+          _FieldSpec('workingHours', 'مواعيد العمل'),
+          _FieldSpec('homeCollection', 'سحب عينات بالمنزل', boolean: true),
+          _FieldSpec('description', 'نبذة', multiline: true),
+        ];
       case 'blood_requests':
         return const [
           _FieldSpec('patientName', 'اسم المريض', required: true),

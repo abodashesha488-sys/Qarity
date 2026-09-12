@@ -288,6 +288,99 @@ class Pharmacy {
   String get imageUrl => imageUrls.isNotEmpty ? imageUrls.first : '';
 }
 
+// ═══════════════════════ معامل التحاليل (مدخل مستخدمين + موافقة) ═══════════════════════
+/// تصنيفات المعامل الشائعة.
+const List<String> kLabCategories = [
+  'تحاليل دم عامة',
+  'تحاليل كيمياء',
+  'تحاليل هرمونات',
+  'ميكروبيولوجي ودقات',
+  'أمصال ومناعة',
+  'طفيليات وفطريات',
+  'أنسجة وباثولوجي',
+  'تحاليل ما قبل الزواج',
+  'فحوصات حمل ومتابعة',
+  'سكر ودهون وكوليسترول',
+  'فيروسات (B - C - HIV)',
+  'هرمونات غدة درقية',
+  'تحاليل أطفال ANA وعوامل مناعة',
+  'غير ذلك',
+];
+
+class MedicalLab {
+  final String id;
+  final String name;
+  final String category;
+  final String ownerName;
+  final String phone;
+  final String address;
+  final String workingHours;
+  final bool homeCollection; // سحب عينات بالمنزل
+  final String description;
+  final List<String> imageUrls;
+  final bool isApproved;
+  final String? submittedBy;
+  final String? submittedByName;
+  final DateTime? createdAt;
+
+  const MedicalLab({
+    required this.id,
+    required this.name,
+    this.category = 'غير ذلك',
+    this.ownerName = '',
+    this.phone = '',
+    this.address = '',
+    this.workingHours = '',
+    this.homeCollection = false,
+    this.description = '',
+    this.imageUrls = const [],
+    this.isApproved = false,
+    this.submittedBy,
+    this.submittedByName,
+    this.createdAt,
+  });
+
+  factory MedicalLab.fromJson(Map<String, dynamic> json, String docId) {
+    return MedicalLab(
+      id: docId,
+      name: json['name'] as String? ?? '',
+      category: json['category'] as String? ?? 'غير ذلك',
+      ownerName: json['ownerName'] as String? ?? '',
+      phone: json['phone'] as String? ?? '',
+      address: json['address'] as String? ?? '',
+      workingHours: json['workingHours'] as String? ?? '',
+      homeCollection: json['homeCollection'] as bool? ?? false,
+      description: json['description'] as String? ?? '',
+      imageUrls:
+          (json['imageUrls'] as List<dynamic>?)?.cast<String>() ?? const [],
+      isApproved: json['isApproved'] as bool? ?? false,
+      submittedBy: json['submittedBy'] as String?,
+      submittedByName: json['submittedByName'] as String?,
+      createdAt: _parseTsOrNull(json['createdAt']),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'name': name,
+        'category': category,
+        'ownerName': ownerName,
+        'phone': phone,
+        'address': address,
+        'workingHours': workingHours,
+        'homeCollection': homeCollection,
+        'description': description,
+        'imageUrls': imageUrls,
+        'isApproved': isApproved,
+        'submittedBy': submittedBy,
+        'submittedByName': submittedByName,
+        'createdAt': createdAt != null
+            ? Timestamp.fromDate(createdAt!)
+            : FieldValue.serverTimestamp(),
+      };
+
+  String get imageUrl => imageUrls.isNotEmpty ? imageUrls.first : '';
+}
+
 // ═══════════════════════ متبرع بالدم ═══════════════════════
 class BloodDonor {
   final String id;

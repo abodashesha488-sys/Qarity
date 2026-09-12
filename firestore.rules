@@ -352,6 +352,15 @@ service cloud.firestore {
                                 && resource.data.isApproved == false);
     }
 
+    // معامل التحاليل: مدخلات مستخدمين (تبدأ غير موافق عليها) + موافقة الأدمن/مدير المركز.
+    match /medical_labs/{docId} {
+      allow list, get: if true;
+      allow create: if isSignedIn() && request.resource.data.isApproved == false;
+      allow update, delete: if isMedicalAdmin()
+                            || (isSignedIn() && resource.data.submittedBy == request.auth.uid
+                                && resource.data.isApproved == false);
+    }
+
     // متبرعو الدم: إضافة من المالك، ظهور عام بعد الموافقة، تعديل المالك لبياناته.
     match /blood_donors/{docId} {
       allow get: if true;

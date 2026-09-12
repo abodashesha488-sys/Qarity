@@ -268,6 +268,7 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
   String _formatValue(String key, dynamic value) {
     if (value == null) return 'لا يوجد';
     if (key == 'isApproved') return value == true ? 'معتمد' : 'قيد المراجعة';
+    if (value is bool) return value ? 'نعم' : 'لا';
     if (value is List) {
       // قائمة أقارب المتوفى: كائنات فيها name/type
       if (key == 'relatives') {
@@ -316,6 +317,7 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
       'category': 'التصنيف',
       'specialty': 'التخصص',
       'stage': 'المرحلة',
+      'homeCollection': 'سحب منزلي',
       'submittedByName': 'مقدّم البيان',
       'isFeatured': 'بيان مميز',
       'doctorName': 'الطبيب',

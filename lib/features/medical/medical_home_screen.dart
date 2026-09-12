@@ -26,6 +26,8 @@ class MedicalHomeScreen extends StatelessWidget {
         'عيادات الأهالي المعتمدة وتخصصاتها'),
     ('صيدليات القرية', Icons.local_pharmacy_rounded, Color(0xFF2E7D32),
         'صيدليات القرية ومواعيدها'),
+    ('معامل التحاليل', Icons.science_rounded, Color(0xFF6A1B9A),
+        'تحاليل معتمدة وسحب عينة بالمنزل'),
   ];
 
   static const List<Color> colors = [
@@ -33,6 +35,7 @@ class MedicalHomeScreen extends StatelessWidget {
     Color(0xFFC62828),
     Color(0xFF00897B),
     Color(0xFF2E7D32),
+    Color(0xFF6A1B9A),
   ];
 
   @override
@@ -153,6 +156,7 @@ class _MedicalSectionScreenState extends State<MedicalSectionScreen> {
   final MedicalCenterService _centerService = MedicalCenterService();
   final VillageClinicService _clinicService = VillageClinicService();
   final PharmacyService _pharmacyService = PharmacyService();
+  final MedicalLabService _labService = MedicalLabService();
   final AdminService _adminService = AdminService();
   bool _isMedicalAdmin = false;
 
@@ -161,7 +165,8 @@ class _MedicalSectionScreenState extends State<MedicalSectionScreen> {
         0 => 'المركز الطبي الخيري',
         1 => 'بنك دم القرية',
         2 => 'عيادات القرية',
-        _ => 'صيدليات القرية',
+        3 => 'صيدليات القرية',
+        _ => 'معامل التحاليل',
       };
 
   @override
@@ -207,8 +212,10 @@ class _MedicalSectionScreenState extends State<MedicalSectionScreen> {
         );
       case 2:
         return _ClinicsTab(snackbar: _snack);
-      default:
+      case 3:
         return _PharmaciesTab(snackbar: _snack);
+      default:
+        return _LabsTab(snackbar: _snack);
     }
   }
 
@@ -242,6 +249,16 @@ class _MedicalSectionScreenState extends State<MedicalSectionScreen> {
           onPressed: _addPharmacy,
           icon: const Icon(Icons.add_rounded),
           label: const Text('أضف صيدلية',
+              style: TextStyle(fontWeight: FontWeight.w800)),
+          backgroundColor: _color,
+          foregroundColor: Colors.white,
+        );
+      case 4:
+        return FloatingActionButton.extended(
+          heroTag: 'medical_section_fab_4',
+          onPressed: _addLab,
+          icon: const Icon(Icons.science_rounded),
+          label: const Text('أضف معملاً',
               style: TextStyle(fontWeight: FontWeight.w800)),
           backgroundColor: _color,
           foregroundColor: Colors.white,
@@ -286,6 +303,26 @@ class _MedicalSectionScreenState extends State<MedicalSectionScreen> {
     try {
       await _pharmacyService.create(res);
       _snack('تم إرسال بيانات الصيدلية، وستظهر بعد موافقة الإدارة');
+    } catch (e) {
+      _snack('خطأ: $e');
+    }
+  }
+
+  Future<void> _addLab() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      _snack('سجّل الدخول أولاً');
+      return;
+    }
+    final res = await showModalBottomSheet<MedicalLab>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _LabForm(userName: _userName(), userId: uid),
+    );
+    if (res == null || !mounted) return;
+    try {
+      await _labService.create(res);
+      _snack('تم إرسال بيانات المعمل، وسيظهر بعد موافقة الإدارة');
     } catch (e) {
       _snack('خطأ: $e');
     }
@@ -1233,6 +1270,282 @@ class _Tag extends StatelessWidget {
       child: Text(text,
           style: TextStyle(
               fontSize: 10.5, fontWeight: FontWeight.w800, color: color)),
+    );
+  }
+}
+
+// ═══════════════════════ Tab 5: معامل التحاليل ═══════════════════════
+class _LabsTab extends StatefulWidget {
+  const _LabsTab({required this.snackbar});
+  final void Function(String) snackbar;
+
+  @override
+  State<_LabsTab> createState() => _LabsTabState();
+}
+
+class _LabsTabState extends State<_LabsTab> {
+  final MedicalLabService _service = MedicalLabService();
+  final TextEditingController _search = TextEditingController();
+  late final Stream<List<MedicalLab>> _stream = _service.getApprovedStream();
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return StreamBuilder<List<MedicalLab>>(
+      stream: _stream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        var items = snapshot.data ?? [];
+        final q = _search.text.trim().toLowerCase();
+        if (q.isNotEmpty) {
+          items = items
+              .where((l) =>
+                  l.name.toLowerCase().contains(q) ||
+                  l.category.toLowerCase().contains(q) ||
+                  l.ownerName.toLowerCase().contains(q) ||
+                  l.address.toLowerCase().contains(q))
+              .toList();
+        }
+        return Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: TextField(
+                controller: _search,
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  hintText: 'ابحث عن معمل أو نوع تحليل...',
+                  isDense: true,
+                  prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                  filled: true,
+                  fillColor: theme.colorScheme.surfaceContainerHighest
+                      .withValues(alpha: 0.5),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ),
+            Expanded(
+              child: items.isEmpty
+                  ? const _MedEmpty(
+                      icon: Icons.science_rounded,
+                      message: 'لا توجد معامل معتمدة بعد')
+                  : ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 110),
+                      itemCount: items.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      itemBuilder: (context, i) => _LabCard(lab: items[i]),
+                    ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _LabCard extends StatelessWidget {
+  const _LabCard({required this.lab});
+  final MedicalLab lab;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    const accent = Color(0xFF6A1B9A);
+    return Card(
+      elevation: 0,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side:
+            BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
+      ),
+      child: InkWell(
+        onTap: () =>
+            Navigator.pushNamed(context, '/medical/lab-detail', arguments: lab),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Container(
+                width: 62,
+                height: 62,
+                decoration: BoxDecoration(
+                    color: accent.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(14)),
+                clipBehavior: Clip.antiAlias,
+                child: lab.imageUrl.isNotEmpty
+                    ? CachedNetworkImage(
+                        imageUrl: lab.imageUrl,
+                        fit: BoxFit.cover,
+                        errorWidget: (_, __, ___) =>
+                            const Icon(Icons.science_rounded, color: accent),
+                      )
+                    : const Icon(Icons.science_rounded, color: accent),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(lab.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w900, fontSize: 15)),
+                        ),
+                        if (lab.homeCollection)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                                color: accent.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(8)),
+                            child: const Text('سحب منزلي',
+                                style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    color: accent)),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        if (lab.category.isNotEmpty) _Tag(lab.category, accent),
+                        if (lab.ownerName.isNotEmpty)
+                          _Tag(lab.ownerName,
+                              theme.colorScheme.onSurfaceVariant),
+                      ],
+                    ),
+                    if (lab.workingHours.isNotEmpty ||
+                        lab.address.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 5),
+                        child: Text(
+                          [
+                            if (lab.workingHours.isNotEmpty) lab.workingHours,
+                            if (lab.address.isNotEmpty) lab.address,
+                          ].join(' • '),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 11.5, color: Colors.grey),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_left_rounded,
+                  color: theme.colorScheme.onSurfaceVariant),
+            ],
+          ),
+        ),
+      ),
+    ).animate().fadeIn(duration: 200.ms);
+  }
+}
+
+class _LabForm extends StatefulWidget {
+  const _LabForm({required this.userName, required this.userId});
+  final String userName;
+  final String userId;
+  @override
+  State<_LabForm> createState() => _LabFormState();
+}
+
+class _LabFormState extends State<_LabForm> {
+  final _nameC = TextEditingController();
+  final _ownerC = TextEditingController();
+  final _phoneC = TextEditingController();
+  final _addressC = TextEditingController();
+  final _hoursC = TextEditingController();
+  final _descC = TextEditingController();
+  String _category = 'غير ذلك';
+  bool _home = false;
+  final List<String> _images = [];
+
+  @override
+  Widget build(BuildContext context) {
+    return _SheetScaffold(
+      title: 'إضافة معمل تحاليل',
+      onSubmitted: () {
+        if (_nameC.text.trim().isEmpty) return;
+        Navigator.pop(
+          context,
+          MedicalLab(
+            id: '',
+            name: _nameC.text.trim(),
+            category: _category,
+            ownerName: _ownerC.text.trim(),
+            phone: _phoneC.text.trim(),
+            address: _addressC.text.trim(),
+            workingHours: _hoursC.text.trim(),
+            homeCollection: _home,
+            description: _descC.text.trim(),
+            imageUrls: List.from(_images),
+            submittedBy: widget.userId,
+            submittedByName: widget.userName,
+          ),
+        );
+      },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          MedicalImageField(
+              maxImages: 3,
+              onChanged: (l) {
+                _images
+                  ..clear()
+                  ..addAll(l);
+              }),
+          const SizedBox(height: 12),
+          _field(_nameC, 'اسم المعمل', Icons.science_rounded),
+          DropdownButtonFormField<String>(
+            initialValue: _category,
+            decoration: const InputDecoration(labelText: 'نوع التحاليل'),
+            items: kLabCategories
+                .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                .toList(),
+            onChanged: (v) => setState(() => _category = v ?? _category),
+            menuMaxHeight: 360,
+          ),
+          const SizedBox(height: 12),
+          _field(_ownerC, 'المسؤول / مدير المعمل', Icons.person_rounded),
+          const SizedBox(height: 12),
+          _field(_phoneC, 'هاتف التواصل', Icons.phone_rounded,
+              type: TextInputType.phone),
+          const SizedBox(height: 12),
+          _field(_addressC, 'العنوان', Icons.location_on_rounded),
+          const SizedBox(height: 12),
+          _field(_hoursC, 'مواعيد العمل', Icons.access_time_rounded),
+          const SizedBox(height: 12),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('سحب عينات بالمنزل'),
+            value: _home,
+            onChanged: (v) => setState(() => _home = v),
+          ),
+          const SizedBox(height: 4),
+          _field(_descC, 'نبذة وأهم التحاليل المتاحة', Icons.description_rounded,
+              maxLines: 3),
+        ],
+      ),
     );
   }
 }

@@ -212,6 +212,39 @@ class PharmacyService {
   }
 }
 
+/// خدمة معامل التحاليل — مدخلات مستخدمين تحتاج موافقة الأدمن.
+class MedicalLabService {
+  final FirebaseFirestore _firestore;
+  MedicalLabService([FirebaseFirestore? firestore])
+      : _firestore = firestore ?? FirebaseFirestore.instance;
+  CollectionReference<Map<String, dynamic>> get _col =>
+      _firestore.collection('medical_labs');
+
+  Future<String> create(MedicalLab lab) async {
+    final ref = await _col.add(lab.toJson());
+    return ref.id;
+  }
+
+  Stream<List<MedicalLab>> getApprovedStream() {
+    return _col.where('isApproved', isEqualTo: true).snapshots().map((s) {
+      final list =
+          s.docs.map((d) => MedicalLab.fromJson(d.data(), d.id)).toList();
+      list.sort((a, b) {
+        if (a.homeCollection != b.homeCollection) {
+          return a.homeCollection ? -1 : 1;
+        }
+        return a.name.compareTo(b.name);
+      });
+      return list;
+    });
+  }
+
+  Future<List<MedicalLab>> getMine(String userId) async {
+    final snap = await _col.where('submittedBy', isEqualTo: userId).get();
+    return snap.docs.map((d) => MedicalLab.fromJson(d.data(), d.id)).toList();
+  }
+}
+
 /// خدمة بنك الدم — متبرعون وطلبات تبرع (تحتاج موافقة الأدمن للظهور العام).
 class BloodBankService {
   final FirebaseFirestore _firestore;
