@@ -75,18 +75,51 @@ class _HomeScreenState extends State<HomeScreen> {
           child: _pages[_selectedIndex],
         ),
       ),
-      bottomNavigationBar: DecoratedBox(decoration: BoxDecoration(boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 16, offset: const Offset(0, -4))]), child: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: _onItemTapped,
-        animationDuration: const Duration(milliseconds: 400),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'الرئيسية'),
-          NavigationDestination(icon: QurityLogo(size: 24, withBorder: false, withShadow: false), selectedIcon: QurityLogo(size: 24, withBorder: false, withShadow: false), label: 'عن القرية'),
-          NavigationDestination(icon: Icon(Icons.store_outlined), selectedIcon: Icon(Icons.store_rounded), label: 'السوق'),
-          NavigationDestination(icon: Icon(Icons.forum_outlined), selectedIcon: Icon(Icons.forum_rounded), label: 'المنتدى'),
-          NavigationDestination(icon: Icon(Icons.person_outlined), selectedIcon: Icon(Icons.person_rounded), label: 'الملف'),
-        ],
-      ),
+      bottomNavigationBar: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+              begin: Alignment.topRight,
+              end: Alignment.bottomLeft,
+              colors: [AppColors.primary, AppColors.primaryDark]),
+          boxShadow: [
+            BoxShadow(
+                color: AppColors.primaryDark.withValues(alpha: 0.35),
+                blurRadius: 16,
+                offset: const Offset(0, -4))
+          ],
+        ),
+        child: NavigationBarTheme(
+          data: NavigationBarThemeData(
+            iconTheme: WidgetStateProperty.resolveWith((states) =>
+                IconThemeData(
+                    color: states.contains(WidgetState.selected)
+                        ? Colors.white
+                        : Colors.white70)),
+          ),
+          child: NavigationBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          shadowColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
+          indicatorColor: Colors.white.withValues(alpha: 0.22),
+          labelTextStyle: WidgetStateProperty.resolveWith((states) =>
+              states.contains(WidgetState.selected)
+                  ? const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700)
+                  : const TextStyle(color: Colors.white70)),
+          selectedIndex: _selectedIndex,
+          onDestinationSelected: _onItemTapped,
+          animationDuration: const Duration(milliseconds: 400),
+          destinations: const [
+            NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'الرئيسية'),
+            NavigationDestination(icon: QurityLogo(size: 24, withBorder: false, withShadow: false), selectedIcon: QurityLogo(size: 24, withBorder: false, withShadow: false), label: 'عن القرية'),
+            NavigationDestination(icon: Icon(Icons.store_outlined), selectedIcon: Icon(Icons.store_rounded), label: 'السوق'),
+            NavigationDestination(icon: Icon(Icons.forum_outlined), selectedIcon: Icon(Icons.forum_rounded), label: 'المنتدى'),
+            NavigationDestination(icon: Icon(Icons.person_outlined), selectedIcon: Icon(Icons.person_rounded), label: 'الملف'),
+          ],
+        ),
+        ),
       ),
     );
   }
