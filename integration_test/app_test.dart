@@ -138,6 +138,7 @@ void main() {
       _Entry(AppRoutes.profileMain),
       _Entry(AppRoutes.settingsIndex),
       _Entry(AppRoutes.notificationsSettings),
+      _Entry(AppRoutes.weather),
       _Entry(AppRoutes.completeProfile, 'test-user-id'),
       _Entry(AppRoutes.adminDetail, <String, dynamic>{'collection': 'news', 'docId': 'x', 'item': <String, dynamic>{}}),
       _Entry(AppRoutes.adminEdit, <String, dynamic>{'collection': 'news', 'docId': 'x', 'item': <String, dynamic>{}}),

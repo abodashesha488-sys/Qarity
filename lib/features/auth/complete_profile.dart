@@ -153,6 +153,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       await NotificationService.subscribeToTopic('village_services');
       await NotificationService.subscribeToTopic('village_medical');
     await NotificationService.subscribeToTopic('village_alerts');
+    await NotificationService.subscribeToTopic('village_breaking');
 
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, AppRoutes.home);

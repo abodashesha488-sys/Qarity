@@ -1,7 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// تنبيه القرية العاجل — وثيقة واحدة `village_alerts/current`.
-/// عند تفعيله يظهر بدل «حكمة اليوم» أعلى الشاشة الرئيسية ويُرسَل كإشعار فوري.
+/// تنبيه/خبر القرية العاجل — وثيقتان في `village_alerts`:
+/// `current` (تنبيه أحمر يعلو «حكمة اليوم») و`breaking` (خبر أصفر بدل «طقس القرية»).
+/// عند التفعيل يظهر أعلى الشاشة الرئيسية ويُرسَل كإشعار فوري.
 class VillageAlert {
   final String message;
   final bool isActive;

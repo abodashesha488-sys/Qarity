@@ -31,6 +31,8 @@ class _OverviewPage extends StatelessWidget {
           _WelcomeHeader(isLoading: isLoading, users: stats['users'] ?? 0),
           const SizedBox(height: 16),
           const _AlertControlCard(),
+          const SizedBox(height: 12),
+          const _AlertControlCard(breaking: true),
           const SizedBox(height: 16),
           if (totalPending > 0)
             _PendingAlert(
@@ -135,8 +137,10 @@ class _OverviewPage extends StatelessWidget {
 /// بطاقة «التنبيه العاجل» — يديرها الأدمن من لوحة التحكم:
 /// نص حر + تفعيل/إيقاف. عند التفعيل يُرسَل إشعار فوري لجميع المشتركين
 /// في `village_alerts`، وتعود الشاشة الرئيسية لعرض «حكمة اليوم» عند الإيقاف.
+/// تُستخدم أيضاً للخبر العاجل (breaking=true) بألوان صفراء/زرقاء.
 class _AlertControlCard extends StatefulWidget {
-  const _AlertControlCard();
+  const _AlertControlCard({this.breaking = false});
+  final bool breaking;
 
   @override
   State<_AlertControlCard> createState() => _AlertControlCardState();
@@ -149,6 +153,12 @@ class _AlertControlCardState extends State<_AlertControlCard> {
   bool _loading = true;
   bool _busy = false;
 
+  bool get _breaking => widget.breaking;
+  Color get _accent =>
+      _breaking ? const Color(0xFFF9A825) : const Color(0xFFC62828);
+  Color get _onActive =>
+      _breaking ? const Color(0xFF0D47A1) : Colors.white;
+
   @override
   void initState() {
     super.initState();
@@ -157,7 +167,8 @@ class _AlertControlCardState extends State<_AlertControlCard> {
 
   Future<void> _load() async {
     try {
-      final alert = await _service.getAlert();
+      final alert =
+          _breaking ? await _service.getBreaking() : await _service.getAlert();
       if (!mounted) return;
       setState(() {
         _alert = alert;
@@ -180,11 +191,15 @@ class _AlertControlCardState extends State<_AlertControlCard> {
     }
     setState(() => _busy = true);
     try {
-      await _service.enableAlert(_controller.text);
+      if (_breaking) {
+        await _service.enableBreaking(_controller.text);
+      } else {
+        await _service.enableAlert(_controller.text);
+      }
       await _load();
       if (!mounted) return;
       ScaffoldMessenger.maybeOf(context)?.showSnackBar(const SnackBar(
-          content: Text('✅ التنبيه مفعّل وأُرسل إشعاراً لجميع المستخدمين'),
+          content: Text('✅ مُفعَّل وأُرسل إشعاراً لجميع المستخدمين'),
           backgroundColor: Colors.green));
     } catch (e) {
       if (mounted) {
@@ -200,11 +215,15 @@ class _AlertControlCardState extends State<_AlertControlCard> {
     if (_busy) return;
     setState(() => _busy = true);
     try {
-      await _service.disableAlert();
+      if (_breaking) {
+        await _service.disableBreaking();
+      } else {
+        await _service.disableAlert();
+      }
       await _load();
       if (!mounted) return;
       ScaffoldMessenger.maybeOf(context)?.showSnackBar(const SnackBar(
-          content: Text('تم إيقاف التنبيه — عادت «حكمة اليوم» للظهور'),
+          content: Text('تم الإيقاف — عادت المساحة لما قبل التفعيل'),
           backgroundColor: Colors.blueGrey));
     } catch (e) {
       if (mounted) {
@@ -225,7 +244,7 @@ class _AlertControlCardState extends State<_AlertControlCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    const red = Color(0xFFC62828);
+    final red = _accent;
     if (_loading) {
       return const SizedBox(
           height: 90,
@@ -257,12 +276,15 @@ class _AlertControlCardState extends State<_AlertControlCard> {
                 decoration: BoxDecoration(
                     color: red.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10)),
-                child: const Icon(Icons.campaign_rounded,
+                child: Icon(_breaking
+                        ? Icons.bolt_rounded
+                        : Icons.campaign_rounded,
                     color: red, size: 18),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: Text('تنبيه القرية العاجل',
+                child: Text(
+                    _breaking ? 'الخبر العاجل للقرية' : 'تنبيه القرية العاجل',
                     style: theme.textTheme.titleSmall
                         ?.copyWith(fontWeight: FontWeight.w900)),
               ),
@@ -280,7 +302,7 @@ class _AlertControlCardState extends State<_AlertControlCard> {
                       fontSize: 10.5,
                       fontWeight: FontWeight.w800,
                       color: _alert.isActive
-                          ? Colors.white
+                          ? _onActive
                           : theme.colorScheme.onSurfaceVariant),
                 ),
               ),
@@ -290,7 +312,9 @@ class _AlertControlCardState extends State<_AlertControlCard> {
           Text(
             _alert.isActive
                 ? 'يظهر أعلى الشاشة الرئيسية لكل المستخدمين + أُرسل كإشعار فوري.'
-                : 'عند عدم وجود تنبيه يظهر «حكمة اليوم» تلقائياً أعلى الرئيسية.',
+                : (_breaking
+                    ? 'عند عدم وجود خبر يظهر «طقس القرية» أعلى الرئيسية.'
+                    : 'عند عدم وجود تنبيه يظهر «حكمة اليوم» تلقائياً أعلى الرئيسية.'),
             style: theme.textTheme.labelSmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant, height: 1.5),
           ),
@@ -305,7 +329,9 @@ class _AlertControlCardState extends State<_AlertControlCard> {
               if (_alert.isActive) setState(() {});
             },
             decoration: InputDecoration(
-              hintText: 'مثال: انقطاع المياه غدًا من 8 ص حتى 12 ظ — ادخروا حاجتكم',
+              hintText: _breaking
+                  ? 'مثال: سوق الأحد مفتوح غدًا حتى المغرب — الدخول مجاني من الجهة البحرية'
+                  : 'مثال: انقطاع المياه غدًا من 8 ص حتى 12 ظ — ادخروا حاجتكم',
               hintStyle:
                   theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
               counterText: '',
@@ -336,7 +362,7 @@ class _AlertControlCardState extends State<_AlertControlCard> {
                 child: FilledButton.icon(
                   style: FilledButton.styleFrom(
                       backgroundColor: red,
-                      foregroundColor: Colors.white,
+                      foregroundColor: _onActive,
                       padding: const EdgeInsets.symmetric(vertical: 13)),
                   onPressed: _busy ? null : _enable,
                   icon: _busy

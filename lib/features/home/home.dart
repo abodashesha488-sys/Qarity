@@ -25,6 +25,7 @@ import '../../widgets/alert_wisdom_bar.dart';
 import '../../widgets/common_appbar_actions.dart';
 import '../../widgets/offline_stream_builder.dart';
 import '../../widgets/qurity_logo.dart';
+import '../../widgets/village_weather_bar.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -52,6 +53,7 @@ class _HomeScreenState extends State<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (FirebaseAuth.instance.currentUser != null) {
         unawaited(NotificationService.subscribeToTopic('village_alerts'));
+        unawaited(NotificationService.subscribeToTopic('village_breaking'));
       }
     });
   }
@@ -207,7 +209,9 @@ class HomeContent extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        _HeroHeader(greeting: _greeting(), dateLabel: _dateLabel()),        const AlertWisdomBar(),
+        _HeroHeader(greeting: _greeting(), dateLabel: _dateLabel()),
+        const AlertWisdomBar(),
+        const VillageWeatherBar(),
         Expanded(
           child: RefreshIndicator(
             onRefresh: () async {},

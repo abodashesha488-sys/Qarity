@@ -42,6 +42,7 @@ import '../features/services/service_provider_detail_screen.dart';
 import '../features/settings/index.dart';
 import '../features/settings/notifications.dart';
 import '../features/village/about.dart';
+import '../features/weather/weather_detail_screen.dart';
 import '../services/admin_service.dart';
 
 /// 🛣️ Qarity App Routes
@@ -92,6 +93,7 @@ static const String marketProducts = '/market';
   static const String medicalPharmacyDetail = '/medical/pharmacy-detail';
   static const String medical = '/medical';
   static const String notificationsInbox = '/notifications';
+  static const String weather = '/weather';
 
   static final routes = <String, Widget Function(BuildContext)>{
     splash: (_) => const SplashScreen(),
@@ -132,6 +134,7 @@ static const String marketProducts = '/market';
     medicalPharmacyDetail: (_) => const PharmacyDetailScreen(),
     medical: (_) => const MedicalHomeScreen(),
     notificationsInbox: (_) => const NotificationsInboxScreen(),
+    weather: (_) => const WeatherDetailScreen(),
   };
 
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {

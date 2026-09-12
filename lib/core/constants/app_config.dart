@@ -12,4 +12,23 @@ class AppConfig {
   static const String bootstrapAdminEmail = String.fromEnvironment(
     'BOOTSTRAP_ADMIN_EMAIL',
   );
+
+  // مفتاح OpenWeatherMap — يُقرأ من dart-define عند البناء.
+  // مثال: flutter build web --dart-define=OWM_API_KEY=xxxxx
+  static const String openWeatherApiKey = String.fromEnvironment(
+    'OWM_API_KEY',
+    defaultValue: '79ddbbe54f06e4aba33efa74466d8bde',
+  );
+
+  // موقع القرية (خط الطول/العرض) لعرض طقسها — قابل للتحديث من dart-define.
+  static final double weatherLat = double.tryParse(
+          const String.fromEnvironment('WEATHER_LAT', defaultValue: '31.299677')) ??
+      31.299677;
+  static final double weatherLon = double.tryParse(
+          const String.fromEnvironment('WEATHER_LON', defaultValue: '31.354846')) ??
+      31.354846;
+  static const String weatherCityName = String.fromEnvironment(
+    'WEATHER_CITY',
+    defaultValue: 'قرية أبوديشيشة',
+  );
 }

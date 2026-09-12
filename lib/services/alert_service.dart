@@ -5,17 +5,21 @@ import '../models/village_alert.dart';
 import 'notification_service.dart';
 import 'remote_push_service.dart';
 
-/// خدمة التنبيه العاجل — القراءة عامة، والكتابة للأدمن (بقواعد Firestore).
+/// خدمة التنبيه العاجل والخبر العاجل — وثيقتان في `village_alerts`:
+/// `current` للتنبيه الأحمر، و`breaking` للخبر الأصفر. القراءة عامة،
+/// والكتابة للأدمن (بقواعد Firestore). التفعيل يرسل FCM فورياً للموضوع.
 class AlertService {
   final FirebaseFirestore _firestore;
   AlertService([FirebaseFirestore? firestore])
       : _firestore = firestore ?? FirebaseFirestore.instance;
 
   static const String docId = 'current';
+  static const String breakingDocId = 'breaking';
   static const String alertTopic = 'village_alerts';
+  static const String breakingTopic = 'village_breaking';
 
-  DocumentReference<Map<String, dynamic>> get _doc =>
-      _firestore.collection('village_alerts').doc(docId);
+  DocumentReference<Map<String, dynamic>> _doc(String id) =>
+      _firestore.collection('village_alerts').doc(id);
 
   VillageAlert? _map(DocumentSnapshot<Map<String, dynamic>> doc) {
     if (!doc.exists) return null;
@@ -23,47 +27,83 @@ class AlertService {
     return alert.isLive ? alert : null;
   }
 
-  /// التدفق الحي للتنبيه الفعّال (null عند عدم وجود تنبيه → حكمة اليوم).
-  Stream<VillageAlert?> watchLiveAlert() =>
-      _doc.snapshots().map(_map);
+  // ─────────── التنبيه العاجل (الأحمر) ───────────
+  Stream<VillageAlert?> watchLiveAlert() => _doc(docId).snapshots().map(_map);
 
-  Future<VillageAlert?> getLiveAlert() async {
-    final doc = await _doc.get();
-    return _map(doc);
-  }
+  Future<VillageAlert?> getLiveAlert() async => _map(await _doc(docId).get());
 
-  /// حالة التنبيه كما هي في Firestore (مع المعطّل) — لإدارة اللوحة.
   Future<VillageAlert> getAlert() async {
-    final doc = await _doc.get();
-    return doc.exists ? VillageAlert.fromJson(doc.data()!) : const VillageAlert();
+    final doc = await _doc(docId).get();
+    return doc.exists
+        ? VillageAlert.fromJson(doc.data()!)
+        : const VillageAlert();
   }
 
-  /// تفعيل التنبيه: حفظ + إرسال FCM فوري لجميع مشتركين `village_alerts`.
-  Future<void> enableAlert(String message) async {
+  Future<void> enableAlert(String message) => _enable(
+        doc: docId,
+        topic: alertTopic,
+        message: message,
+        pushTitle: '🚨 تنبيه عاجل — قرية أبوديشيشة',
+        localTitle: '🚨 تم تفعيل تنبيه القرية العاجل',
+      );
+
+  Future<void> disableAlert() => _disable(docId);
+
+  // ─────────── الخبر العاجل (الأصفر) ───────────
+  Stream<VillageAlert?> watchLiveBreaking() =>
+      _doc(breakingDocId).snapshots().map(_map);
+
+  Future<VillageAlert?> getLiveBreaking() async =>
+      _map(await _doc(breakingDocId).get());
+
+  Future<VillageAlert> getBreaking() async {
+    final doc = await _doc(breakingDocId).get();
+    return doc.exists
+        ? VillageAlert.fromJson(doc.data()!)
+        : const VillageAlert();
+  }
+
+  Future<void> enableBreaking(String message) => _enable(
+        doc: breakingDocId,
+        topic: breakingTopic,
+        message: message,
+        pushTitle: '🟨 خبر عاجل — قرية أبوديشيشة',
+        localTitle: '🟨 تم تفعيل خبر عاجل للقرية',
+      );
+
+  Future<void> disableBreaking() => _disable(breakingDocId);
+
+  // ─────────── آلية مشتركة ───────────
+  Future<void> _enable({
+    required String doc,
+    required String topic,
+    required String message,
+    required String pushTitle,
+    required String localTitle,
+  }) async {
     final text = message.trim();
-    if (text.isEmpty) throw Exception('اكتب نص التنبيه أولاً');
-    await _doc.set({
+    if (text.isEmpty) throw Exception('اكتب النص أولاً');
+    await _doc(doc).set({
       'message': text,
       'isActive': true,
       'updatedBy': FirebaseAuth.instance.currentUser?.uid,
       'updatedAt': FieldValue.serverTimestamp(),
     });
     RemotePushService.send(
-      topic: alertTopic,
-      title: '🚨 تنبيه عاجل — قرية أبوديشيشة',
+      topic: topic,
+      title: pushTitle,
       body: text,
       route: '/',
     );
     NotificationService.showLocalNotification(
-      title: '🚨 تم تفعيل تنبيه القرية العاجل',
+      title: localTitle,
       body: text,
       payload: '/',
     );
   }
 
-  /// إيقاف التنبيه — تعود المساحة تلقائياً لعرض «حكمة اليوم».
-  Future<void> disableAlert() async {
-    await _doc.set({
+  Future<void> _disable(String doc) async {
+    await _doc(doc).set({
       'isActive': false,
       'updatedBy': FirebaseAuth.instance.currentUser?.uid,
       'updatedAt': FieldValue.serverTimestamp(),
