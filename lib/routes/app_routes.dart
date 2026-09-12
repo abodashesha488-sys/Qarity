@@ -93,6 +93,7 @@ static const String marketProducts = '/market';
   static const String medicalClinicDetail = '/medical/clinic-detail';
   static const String medicalPharmacyDetail = '/medical/pharmacy-detail';
   static const String medical = '/medical';
+  static const String medicalSection = '/medical/section';
   static const String notificationsInbox = '/notifications';
   static const String weather = '/weather';
 
@@ -176,6 +177,13 @@ static const String marketProducts = '/market';
       final sellerId = settings.arguments as String? ?? '';
       return _buildSlideRoute(
         (_) => SellerProfileScreen(sellerId: sellerId),
+        settings,
+      );
+    }
+    if (settings.name == medicalSection) {
+      final index = settings.arguments is int ? settings.arguments as int : 0;
+      return _buildSlideRoute(
+        (_) => MedicalSectionScreen(index: index),
         settings,
       );
     }

@@ -13,28 +13,161 @@ import '../../services/share_service.dart';
 import '../../widgets/common_appbar_actions.dart';
 import 'medical_admin_screen.dart';
 
-/// بوابة الخدمات الطبية — أربع تبويبات.
-class MedicalHomeScreen extends StatefulWidget {
+/// بوابة الخدمات الطبية — شبكة أيقونات، كل أيقونة تفتح شاشة قسمها.
+class MedicalHomeScreen extends StatelessWidget {
   const MedicalHomeScreen({super.key});
 
+  static const List<(String, IconData, Color, String)> _sections = [
+    ('المركز الطبي الخيري', Icons.local_hospital_rounded, Color(0xFF00695C),
+        'عيادات بأجور رمزية ومواعيدها'),
+    ('بنك دم القرية', Icons.bloodtype_rounded, Color(0xFFC62828),
+        'متبرعون وطلبات تبرع بالدم'),
+    ('عيادات القرية', Icons.add_business_rounded, Color(0xFF00897B),
+        'عيادات الأهالي المعتمدة وتخصصاتها'),
+    ('صيدليات القرية', Icons.local_pharmacy_rounded, Color(0xFF2E7D32),
+        'صيدليات القرية ومواعيدها'),
+  ];
+
+  static const List<Color> colors = [
+    Color(0xFF00695C),
+    Color(0xFFC62828),
+    Color(0xFF00897B),
+    Color(0xFF2E7D32),
+  ];
+
   @override
-  State<MedicalHomeScreen> createState() => _MedicalHomeScreenState();
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Scaffold(
+      backgroundColor: theme.colorScheme.surface,
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: const Color(0xFF00897B),
+        foregroundColor: Colors.white,
+        centerTitle: true,
+        title: const Text('الخدمات الطبية',
+            style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20)),
+        actions: CommonAppBarActions.actions(context),
+      ),
+      body: GridView.count(
+        padding: const EdgeInsets.all(16),
+        crossAxisCount: 2,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 0.98,
+        children: [
+          for (var i = 0; i < _sections.length; i++)
+            _MedicalSectionTile(
+              index: i,
+              label: _sections[i].$1,
+              icon: _sections[i].$2,
+              color: _sections[i].$3,
+              subtitle: _sections[i].$4,
+            ),
+        ],
+      ),
+    );
+  }
 }
 
-class _MedicalHomeScreenState extends State<MedicalHomeScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _MedicalSectionTile extends StatelessWidget {
+  const _MedicalSectionTile(
+      {required this.index,
+      required this.label,
+      required this.icon,
+      required this.color,
+      required this.subtitle});
+  final int index;
+  final String label;
+  final IconData icon;
+  final Color color;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      elevation: 0,
+      color: color.withValues(alpha: 0.07),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: color.withValues(alpha: 0.35)),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () =>
+            Navigator.pushNamed(context, '/medical/section', arguments: index),
+        child: Padding(
+          padding: const EdgeInsets.all(10),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                      colors: [color, color.withValues(alpha: 0.72)]),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                        color: color.withValues(alpha: 0.35),
+                        blurRadius: 12,
+                        offset: const Offset(0, 5)),
+                  ],
+                ),
+                child: Icon(icon, color: Colors.white, size: 26),
+              ),
+              const SizedBox(height: 10),
+              Text(label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      fontWeight: FontWeight.w900, fontSize: 14, color: color)),
+              const SizedBox(height: 3),
+              Text(subtitle,
+                  maxLines: 2,
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                      fontSize: 10,
+                      color: theme.colorScheme.onSurfaceVariant)),
+            ],
+          ),
+        ),
+      ),
+    ).animate().fadeIn(duration: 250.ms).scale(begin: const Offset(0.94, 0.94));
+  }
+}
+
+/// شاشة قسم طبي واحد — نفس محتوى التبويب السابق كاملاً مع FABه.
+class MedicalSectionScreen extends StatefulWidget {
+  const MedicalSectionScreen({super.key, required this.index});
+  final int index;
+
+  @override
+  State<MedicalSectionScreen> createState() => _MedicalSectionScreenState();
+}
+
+class _MedicalSectionScreenState extends State<MedicalSectionScreen> {
   final MedicalCenterService _centerService = MedicalCenterService();
   final VillageClinicService _clinicService = VillageClinicService();
   final PharmacyService _pharmacyService = PharmacyService();
   final AdminService _adminService = AdminService();
   bool _isMedicalAdmin = false;
 
+  Color get _color => MedicalHomeScreen.colors[widget.index];
+  String get _title => switch (widget.index) {
+        0 => 'المركز الطبي الخيري',
+        1 => 'بنك دم القرية',
+        2 => 'عيادات القرية',
+        _ => 'صيدليات القرية',
+      };
+
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
-    _checkMedicalAdmin();
+    if (widget.index == 0) _checkMedicalAdmin();
   }
 
   Future<void> _checkMedicalAdmin() async {
@@ -59,96 +192,63 @@ class _MedicalHomeScreenState extends State<MedicalHomeScreen>
     ));
   }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: const Color(0xFF00897B),
-        foregroundColor: Colors.white,
-        centerTitle: false,
-        title: const Text('الخدمات الطبية',
-            style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20)),
-        actions: CommonAppBarActions.actions(context),
-        bottom: TabBar(
-          controller: _tabController,
-          onTap: (_) => setState(() {}),
-          isScrollable: true,
-          tabAlignment: TabAlignment.start,
-          dividerColor: Colors.transparent,
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          labelStyle: const TextStyle(fontWeight: FontWeight.w800),
-          tabs: const [
-            Tab(text: 'المركز الطبي الخيري'),
-            Tab(text: 'بنك دم القرية'),
-            Tab(text: 'عيادات القرية'),
-            Tab(text: 'صيدليات القرية'),
-          ],
-        ),
-      ),
-      floatingActionButton: _buildFab(),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _CenterTab(
-            isMedicalAdmin: _isMedicalAdmin,
-            onOpenAdmin: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const MedicalCenterAdminScreen())),
-          ),
-          _BloodBankTab(
-            userNameProvider: _userName,
-            snackbar: _snack,
-          ),
-          _ClinicsTab(snackbar: _snack),
-          _PharmaciesTab(snackbar: _snack),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFab() {
-    final theme = Theme.of(context);
-    final idx = _tabController.index;
-    late final String label;
-    late final IconData icon;
-    late final VoidCallback onPressed;
-    switch (idx) {
+  Widget _body() {
+    switch (widget.index) {
       case 0:
-        if (!_isMedicalAdmin) return const SizedBox.shrink();
-        label = 'إدارة المركز';
-        icon = Icons.medical_information_rounded;
-        onPressed = () => Navigator.push(context,
-            MaterialPageRoute(builder: (_) => const MedicalCenterAdminScreen()));
+        return _CenterTab(
+          isMedicalAdmin: _isMedicalAdmin,
+          onOpenAdmin: () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const MedicalCenterAdminScreen())),
+        );
       case 1:
-        return const SizedBox.shrink();
+        return _BloodBankTab(
+          userNameProvider: _userName,
+          snackbar: _snack,
+        );
       case 2:
-        label = 'أضف عيادة';
-        icon = Icons.add_business_rounded;
-        onPressed = _addClinic;
+        return _ClinicsTab(snackbar: _snack);
       default:
-        label = 'أضف صيدلية';
-        icon = Icons.add_rounded;
-        onPressed = _addPharmacy;
+        return _PharmaciesTab(snackbar: _snack);
     }
-    return FloatingActionButton.extended(
-      heroTag: 'medical_tab_fab_$idx',
-      onPressed: onPressed,
-      icon: Icon(icon),
-      label: Text(label, style: const TextStyle(fontWeight: FontWeight.w800)),
-      backgroundColor: theme.colorScheme.primary,
-      foregroundColor: theme.colorScheme.onPrimary,
-    );
+  }
+
+  Widget? _fab() {
+    switch (widget.index) {
+      case 0:
+        if (!_isMedicalAdmin) return null;
+        return FloatingActionButton.extended(
+          heroTag: 'medical_section_fab_0',
+          onPressed: () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const MedicalCenterAdminScreen())),
+          icon: const Icon(Icons.medical_information_rounded),
+          label: const Text('إدارة المركز',
+              style: TextStyle(fontWeight: FontWeight.w800)),
+          backgroundColor: _color,
+          foregroundColor: Colors.white,
+        );
+      case 2:
+        return FloatingActionButton.extended(
+          heroTag: 'medical_section_fab_2',
+          onPressed: _addClinic,
+          icon: const Icon(Icons.add_business_rounded),
+          label: const Text('أضف عيادة',
+              style: TextStyle(fontWeight: FontWeight.w800)),
+          backgroundColor: _color,
+          foregroundColor: Colors.white,
+        );
+      case 3:
+        return FloatingActionButton.extended(
+          heroTag: 'medical_section_fab_3',
+          onPressed: _addPharmacy,
+          icon: const Icon(Icons.add_rounded),
+          label: const Text('أضف صيدلية',
+              style: TextStyle(fontWeight: FontWeight.w800)),
+          backgroundColor: _color,
+          foregroundColor: Colors.white,
+        );
+      default:
+        return null;
+    }
   }
 
   Future<void> _addClinic() async {
@@ -189,6 +289,24 @@ class _MedicalHomeScreenState extends State<MedicalHomeScreen>
     } catch (e) {
       _snack('خطأ: $e');
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: _color,
+        foregroundColor: Colors.white,
+        centerTitle: true,
+        title: Text(_title,
+            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+        actions: CommonAppBarActions.actions(context),
+      ),
+      floatingActionButton: _fab(),
+      body: _body(),
+    );
   }
 }
 
