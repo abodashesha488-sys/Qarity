@@ -6,26 +6,17 @@ import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/service_provider_model.dart';
+import '../../routes/app_routes.dart';
 import '../../services/image_upload_service.dart';
 import '../../services/service_provider_service.dart';
 import '../../services/share_service.dart';
 import '../../services/user_service.dart';
 import '../../widgets/common_appbar_actions.dart';
-import '../phone/directory.dart';
 
-/// دليل الخدمات — تبويبات: الفنيون، خدمات زراعية، خدمات تعليمية، دليل الهاتف.
-/// كل تبويب: بحث بالفئات ← المميزة (من الأدمن) ← الأكثر تقييماً ← القوائم المنسدلة.
-class ServiceDirectoryScreen extends StatefulWidget {
+/// دليل الخدمات — شبكة أزرار لفئات قابلة للتوسّع مستقبلاً.
+/// كل زر يفتح شاشة الفئة الخاصة بها (بحث منسدل + مربّع بحث + مميز/الأكثر تقييماً).
+class ServiceDirectoryScreen extends StatelessWidget {
   const ServiceDirectoryScreen({super.key});
-
-  @override
-  State<ServiceDirectoryScreen> createState() => _ServiceDirectoryScreenState();
-}
-
-class _ServiceDirectoryScreenState extends State<ServiceDirectoryScreen>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabController;
-  final ServiceProviderService _service = ServiceProviderService();
 
   static const _categories = [
     ServiceCategory.technicians,
@@ -34,28 +25,213 @@ class _ServiceDirectoryScreenState extends State<ServiceDirectoryScreen>
   ];
 
   @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('دليل الخدمات',
+            style: TextStyle(fontWeight: FontWeight.w900)),
+        centerTitle: true,
+        elevation: 0,
+        shadowColor: Colors.transparent,
+        surfaceTintColor: theme.colorScheme.surface,
+        actions: CommonAppBarActions.actions(context),
+      ),
+      body: GridView.count(
+        padding: const EdgeInsets.all(16),
+        crossAxisCount: 2,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 1.12,
+        children: [
+          for (final c in _categories) _CategoryTile(category: c),
+          const _PhoneBookTile(),
+        ],
+      ),
+    );
+  }
+}
+
+class _CategoryTile extends StatelessWidget {
+  const _CategoryTile({required this.category});
+  final String category;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = ServiceCategory.color(category);
+    return Card(
+      elevation: 0,
+      color: color.withValues(alpha: 0.07),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: color.withValues(alpha: 0.35)),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () => Navigator.pushNamed(context, AppRoutes.serviceCategory,
+            arguments: category),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: [
+                    color,
+                    color.withValues(alpha: 0.72),
+                  ]),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                        color: color.withValues(alpha: 0.35),
+                        blurRadius: 12,
+                        offset: const Offset(0, 5)),
+                  ],
+                ),
+                child: Icon(ServiceCategory.icon(category),
+                    color: Colors.white, size: 30),
+              ),
+              const SizedBox(height: 12),
+              Text(ServiceCategory.label(category),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 15,
+                      color: color)),
+              const SizedBox(height: 3),
+              Text(
+                switch (category) {
+                  ServiceCategory.technicians => 'كل الحرف والورش الفنية',
+                  ServiceCategory.agricultural => 'آلات وخدمات المزارعين',
+                  _ => 'مدرّسون لكل المراحل والمواد',
+                },
+                textAlign: TextAlign.center,
+                style: theme.textTheme.labelSmall
+                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ).animate().fadeIn(duration: 250.ms).scale(begin: const Offset(0.94, 0.94));
+  }
+}
+
+class _PhoneBookTile extends StatelessWidget {
+  const _PhoneBookTile();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    const color = Color(0xFF00838F);
+    return Card(
+      elevation: 0,
+      color: color.withValues(alpha: 0.07),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: color.withValues(alpha: 0.35)),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () => Navigator.pushNamed(context, AppRoutes.phoneDirectory),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: const BoxDecoration(
+                  gradient:
+                      LinearGradient(colors: [color, Color(0xFF4DD0E1)]),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                        color: Color(0x5900838F),
+                        blurRadius: 12,
+                        offset: Offset(0, 5)),
+                  ],
+                ),
+                child: const Icon(Icons.phone_rounded,
+                    color: Colors.white, size: 30),
+              ),
+              const SizedBox(height: 12),
+              const Text('دليل الهاتف',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 15,
+                      color: color)),
+              const SizedBox(height: 3),
+              Text('أرقام أهالي القرية وجهاتها',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant)),
+            ],
+          ),
+        ),
+      ),
+    ).animate().fadeIn(duration: 250.ms).scale(begin: const Offset(0.94, 0.94));
+  }
+}
+
+// ═══════════ شاشة الفئة: قائمة فئات منسدلة + بحث + مميز/الأكثر تقييماً ═══════════
+class ProviderCategoryScreen extends StatefulWidget {
+  const ProviderCategoryScreen({super.key, required this.category});
+  final String category;
+
+  @override
+  State<ProviderCategoryScreen> createState() => _ProviderCategoryScreenState();
+}
+
+class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
+  late final Stream<List<ServiceProvider>> _stream =
+      ServiceProviderService().getApprovedByCategory(widget.category);
+  final TextEditingController _search = TextEditingController();
+  String _group = '';
+  String _query = '';
+
+  bool get _isEdu => widget.category == ServiceCategory.educational;
+
+  List<String> get _groupOptions =>
+      _isEdu ? kEducationalStages : kSubcategoriesFor(widget.category);
+
+  String _groupOf(ServiceProvider p) =>
+      _isEdu ? (p.stage.isEmpty ? 'مراحل أخرى' : p.stage) : p.specialty;
+
+  Color get _color => ServiceCategory.color(widget.category);
+
+  @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _search.addListener(
+        () => setState(() => _query = _search.text.trim().toLowerCase()));
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
+    _search.dispose();
     super.dispose();
   }
 
-  void _snack(String msg, {bool error = false}) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg),
-      backgroundColor: error ? Colors.red : Colors.green,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-    ));
+  bool _matches(ServiceProvider p) {
+    if (_group.isNotEmpty && _groupOf(p) != _group) return false;
+    if (_query.isEmpty) return true;
+    return [
+      p.name,
+      p.specialty,
+      p.stage,
+      p.address,
+      p.description,
+      _groupOf(p),
+      ServiceCategory.label(widget.category),
+    ].join(' ').toLowerCase().contains(_query);
   }
 
-  Future<void> _openForm(String category) async {
+  Future<void> _openForm() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       _snack('سجّل الدخول أولاً', error: true);
@@ -68,327 +244,232 @@ class _ServiceDirectoryScreenState extends State<ServiceDirectoryScreen>
       isScrollControlled: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
       builder: (_) => _ProviderFormSheet(
-        category: category,
+        category: widget.category,
         userId: user.uid,
         userName: identity.name,
       ),
     );
     if (res == null) return;
     try {
-      await _service.create(res);
+      await ServiceProviderService().create(res);
       _snack('تم إرسال الإضافة — تظهر في الدليل بعد موافقة الإدارة');
     } catch (e) {
       _snack('خطأ: $e', error: true);
     }
   }
 
+  void _snack(String msg, {bool error = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg),
+      backgroundColor: error ? Colors.red : Colors.green,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final idx = _tabController.index;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('دليل الخدمات',
-            style: TextStyle(fontWeight: FontWeight.w900)),
+        title: Text(ServiceCategory.label(widget.category),
+            style: const TextStyle(fontWeight: FontWeight.w900)),
         centerTitle: true,
         elevation: 0,
-        shadowColor: Colors.transparent,
-        surfaceTintColor: theme.colorScheme.surface,
+        backgroundColor: _color,
+        foregroundColor: Colors.white,
         actions: CommonAppBarActions.actions(context),
-        bottom: TabBar(
-          controller: _tabController,
-          onTap: (_) => setState(() {}),
-          isScrollable: true,
-          tabAlignment: TabAlignment.start,
-          dividerColor: Colors.transparent,
-          labelStyle: const TextStyle(fontWeight: FontWeight.w800),
-          tabs: const [
-            Tab(text: 'الفنيون'),
-            Tab(text: 'خدمات زراعية'),
-            Tab(text: 'خدمات تعليمية'),
-            Tab(text: 'دليل الهاتف'),
-          ],
-        ),
       ),
-      floatingActionButton: idx < 3
-          ? FloatingActionButton.extended(
-              heroTag: 'service_dir_fab_$idx',
-              onPressed: () => _openForm(_categories[idx]),
-              icon: Icon(ServiceCategory.icon(_categories[idx])),
-              label: Text(
-                switch (_categories[idx]) {
-                  ServiceCategory.technicians => 'أضف حرفياً',
-                  ServiceCategory.agricultural => 'أضف خدمة',
-                  _ => 'أضف مدرساً',
-                },
-                style: const TextStyle(fontWeight: FontWeight.w800),
-              ),
-              backgroundColor: ServiceCategory.color(_categories[idx]),
-              foregroundColor: Colors.white,
-            )
-          : null,
-      body: TabBarView(
-        controller: _tabController,
-        children: const [
-          _ProvidersTab(category: ServiceCategory.technicians),
-          _ProvidersTab(category: ServiceCategory.agricultural),
-          _ProvidersTab(category: ServiceCategory.educational),
-          PhoneDirectoryScreen(embedded: true),
+      floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'svc_cat_fab',
+        onPressed: _openForm,
+        icon: const Icon(Icons.add_rounded),
+        label: Text(
+          switch (widget.category) {
+            ServiceCategory.technicians => 'أضف حرفياً',
+            ServiceCategory.agricultural => 'أضف خدمة',
+            _ => 'أضف مدرساً',
+          },
+          style: const TextStyle(fontWeight: FontWeight.w800),
+        ),
+        backgroundColor: _color,
+        foregroundColor: Colors.white,
+      ),
+      body: Column(
+        children: [
+          // قائمة منسدلة بالفئات + مربع البحث أسفلها
+          Container(
+            color: _color.withValues(alpha: 0.06),
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+            child: Column(
+              children: [
+                DropdownButtonFormField<String>(
+                  initialValue: _group,
+                  isExpanded: true,
+                  menuMaxHeight: 380,
+                  borderRadius: BorderRadius.circular(16),
+                  decoration: InputDecoration(
+                    labelText: 'تصفية حسب الفئة',
+                    prefixIcon:
+                        Icon(Icons.filter_alt_rounded, size: 20, color: _color),
+                    isDense: true,
+                    filled: true,
+                    fillColor: theme.colorScheme.surface,
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide:
+                            BorderSide(color: _color.withValues(alpha: 0.4))),
+                    enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide:
+                            BorderSide(color: _color.withValues(alpha: 0.4))),
+                  ),
+                  items: [
+                    const DropdownMenuItem(
+                        value: '', child: Text('كل الفئات')),
+                    ..._groupOptions.map((g) => DropdownMenuItem(
+                        value: g,
+                        child: Text(g,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis))),
+                    if (_isEdu)
+                      const DropdownMenuItem(
+                          value: 'مراحل أخرى', child: Text('مراحل أخرى')),
+                    if (!_isEdu)
+                      const DropdownMenuItem(
+                          value: 'غير مصنّف', child: Text('غير مصنّف')),
+                  ],
+                  onChanged: (v) => setState(() => _group = v ?? ''),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _search,
+                  decoration: InputDecoration(
+                    hintText: switch (widget.category) {
+                      ServiceCategory.technicians =>
+                        'ابحث في السجلات: اسم أو حرفة…',
+                      ServiceCategory.agricultural =>
+                        'ابحث في السجلات: اسم أو خدمة…',
+                      _ => 'ابحث في السجلات: اسم المدرّس أو المادة…',
+                    },
+                    prefixIcon:
+                        Icon(Icons.search_rounded, color: _color, size: 20),
+                    suffixIcon: _query.isNotEmpty
+                        ? IconButton(
+                            tooltip: 'مسح',
+                            icon: const Icon(Icons.clear_rounded, size: 18),
+                            onPressed: () => _search.clear(),
+                          )
+                        : null,
+                    isDense: true,
+                    filled: true,
+                    fillColor: theme.colorScheme.surface,
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide:
+                            BorderSide(color: _color.withValues(alpha: 0.4))),
+                    enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide:
+                            BorderSide(color: _color.withValues(alpha: 0.4))),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: StreamBuilder<List<ServiceProvider>>(
+              stream: _stream,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final all = snapshot.data ?? [];
+                if (all.isEmpty) {
+                  return _EmptyCategory(category: widget.category);
+                }
+                final visible = all.where(_matches).toList();
+                if (visible.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.search_off_rounded,
+                            size: 52, color: Colors.grey.shade400),
+                        const SizedBox(height: 10),
+                        Text('لا نتائج مطابقة',
+                            style: theme.textTheme.titleSmall
+                                ?.copyWith(fontWeight: FontWeight.w800)),
+                        const SizedBox(height: 4),
+                        Text('جرّب فئة أخرى أو كلمة أبسط',
+                            style: theme.textTheme.bodySmall
+                                ?.copyWith(color: Colors.grey)),
+                      ],
+                    ),
+                  );
+                }
+                final featured = visible.where((p) => p.isFeatured).toList();
+                final topRated = (visible
+                    .where((p) => !p.isFeatured && p.ratingCount > 0)
+                    .toList()
+                  )
+                  ..sort((a, b) => b.rating.compareTo(a.rating));
+                final top5 = topRated.take(5).toList();
+                final topIds = top5.map((p) => p.id).toSet();
+                final rest = visible
+                    .where((p) => !p.isFeatured && !topIds.contains(p.id))
+                    .toList();
+
+                return ListView(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 110),
+                  children: [
+                    if (featured.isNotEmpty) ...[
+                      _MiniHead(
+                          title: 'المميز',
+                          subtitle: 'اختيار إدارة القرية',
+                          icon: Icons.workspace_premium_rounded,
+                          color: const Color(0xFFB8860B),
+                          count: featured.length),
+                      for (final p in featured)
+                        _ProviderCard(provider: p, accent: _color),
+                      const SizedBox(height: 8),
+                    ],
+                    if (top5.isNotEmpty) ...[
+                      _MiniHead(
+                          title: 'الأكثر تقييماً',
+                          subtitle: 'الأعلى بتقييم المستخدمين',
+                          icon: Icons.star_rounded,
+                          color: Colors.amber.shade700,
+                          count: top5.length),
+                      for (final p in top5)
+                        _ProviderCard(provider: p, accent: _color),
+                      const SizedBox(height: 8),
+                    ],
+                    if (rest.isNotEmpty) ...[
+                      _MiniHead(
+                          title: 'جميع السجلات',
+                          subtitle: _group.isNotEmpty
+                              ? _group
+                              : 'المقدّمة من المستخدمين والإدارة',
+                          icon: Icons.list_alt_rounded,
+                          color: _color,
+                          count: rest.length),
+                      for (final p in rest)
+                        _ProviderCard(provider: p, accent: _color),
+                    ],
+                  ],
+                );
+              },
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-// ═══════════ تبويب فئة: بحث بالفئات → مميز → الأعلى تقييماً → منسدلات ═══════════
-class _ProvidersTab extends StatefulWidget {
-  const _ProvidersTab({required this.category});
-  final String category;
-
-  @override
-  State<_ProvidersTab> createState() => _ProvidersTabState();
-}
-
-class _ProvidersTabState extends State<_ProvidersTab> {
-  late final Stream<List<ServiceProvider>> _stream =
-      ServiceProviderService().getApprovedByCategory(widget.category);
-  final TextEditingController _search = TextEditingController();
-  String _query = '';
-
-  String _groupKeyOf(ServiceProvider p) =>
-      widget.category == ServiceCategory.educational
-          ? (p.stage.isEmpty ? 'مراحل أخرى' : p.stage)
-          : (p.specialty.isEmpty ? 'غير مصنّف' : p.specialty);
-
-  bool _matchesGroup(String key) {
-    final q = _query;
-    return key.toLowerCase().contains(q) ||
-        ServiceCategory.label(widget.category).toLowerCase().contains(q);
-  }
-
-  bool _matches(ServiceProvider p) {
-    if (_query.isEmpty) return true;
-    final haystack = [
-      p.name,
-      p.specialty,
-      p.stage,
-      p.address,
-      p.description,
-      _groupKeyOf(p),
-      ServiceCategory.label(widget.category),
-    ].join(' ').toLowerCase();
-    return haystack.contains(_query) || _matchesGroup(_groupKeyOf(p));
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _search.addListener(() => setState(() => _query = _search.text.trim().toLowerCase()));
-  }
-
-  @override
-  void dispose() {
-    _search.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final color = ServiceCategory.color(widget.category);
-    return StreamBuilder<List<ServiceProvider>>(
-      stream: _stream,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        final all = snapshot.data ?? [];
-        if (all.isEmpty) {
-          return _EmptyCategory(category: widget.category);
-        }
-
-        final searchActive = _query.isNotEmpty;
-        final visible =
-            searchActive ? all.where(_matches).toList() : all;
-        final featured = visible.where((p) => p.isFeatured).toList();
-        final topRated = visible
-            .where((p) => !p.isFeatured && p.ratingCount > 0)
-            .toList()
-          ..sort((a, b) => b.rating.compareTo(a.rating));
-        final top5 = topRated.take(5).toList();
-        final topIds = top5.map((p) => p.id).toSet();
-
-        // المجموعة: كل ما ليس مميزاً ولا ضمن الأعلى تقييماً.
-        final groupedItems = visible
-            .where((p) => !p.isFeatured && !topIds.contains(p.id))
-            .toList();
-        final groups = <String, List<ServiceProvider>>{};
-        for (final p in groupedItems) {
-          groups.putIfAbsent(_groupKeyOf(p), () => []).add(p);
-        }
-        final keys = groups.keys.toList()..sort();
-
-        return ListView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 110),
-          children: [
-            // 1) البحث في فئات التبويب
-            DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.06),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3)),
-                ],
-              ),
-              child: TextField(
-                controller: _search,
-                decoration: InputDecoration(
-                  hintText: switch (widget.category) {
-                    ServiceCategory.technicians =>
-                      'ابحث: نجارة، حدادة، سباكة، كهرباء…',
-                    ServiceCategory.agricultural =>
-                      'ابحث: حرث، حصاد، ري، جرارات…',
-                    _ => 'ابحث: مرحلة أو مادة…',
-                  },
-                  prefixIcon:
-                      Icon(Icons.search_rounded, color: color, size: 20),
-                  suffixIcon: _query.isNotEmpty
-                      ? IconButton(
-                          tooltip: 'مسح',
-                          icon: const Icon(Icons.clear_rounded, size: 18),
-                          onPressed: () => _search.clear(),
-                        )
-                      : null,
-                  filled: true,
-                  fillColor: theme.colorScheme.surface,
-                  isDense: true,
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(color: color.withValues(alpha: 0.35))),
-                  enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(color: color.withValues(alpha: 0.35))),
-                  focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(color: color, width: 1.4)),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-            ),
-            if (searchActive && visible.isEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 40),
-                child: Column(
-                  children: [
-                    Icon(Icons.search_off_rounded,
-                        size: 52, color: Colors.grey.shade400),
-                    const SizedBox(height: 10),
-                    Text('لا نتائج مطابقة لبحثك',
-                        style: theme.textTheme.titleSmall
-                            ?.copyWith(fontWeight: FontWeight.w800)),
-                    const SizedBox(height: 4),
-                    Text('جرّب اسماً أو فئة أخرى',
-                        style: theme.textTheme.bodySmall
-                            ?.copyWith(color: Colors.grey)),
-                  ],
-                ),
-              )
-            else ...[
-              const SizedBox(height: 6),
-              // 2) الفئات/البيانات المميزة من الأدمن
-              if (featured.isNotEmpty) ...[
-                _MiniHead(
-                    title: 'البيانات المميزة',
-                    subtitle: 'اختيار إدارة القرية',
-                    icon: Icons.workspace_premium_rounded,
-                    color: const Color(0xFFB8860B),
-                    count: featured.length),
-                for (final p in featured)
-                  _ProviderCard(provider: p, accent: color),
-                const SizedBox(height: 8),
-              ],
-              // 3) الأكثر تقييماً من المستخدمين
-              if (top5.isNotEmpty) ...[
-                _MiniHead(
-                    title: 'الأكثر تقييماً',
-                    subtitle: 'الأعلى بتقييم المستخدمين',
-                    icon: Icons.star_rounded,
-                    color: Colors.amber.shade700,
-                    count: top5.length),
-                for (final p in top5)
-                  _ProviderCard(provider: p, accent: color),
-                const SizedBox(height: 8),
-              ],
-              // 4) القوائم المنسدلة حسب فئات التبويب
-              if (keys.isNotEmpty || searchActive) ...[
-                _MiniHead(
-                    title: searchActive ? 'نتائج البحث مجمّعة' : 'كل الخدمات',
-                    subtitle: switch (widget.category) {
-                      ServiceCategory.technicians => 'مجمّعة حسب الحرفة',
-                      ServiceCategory.agricultural => 'مجمّعة حسب الخدمة',
-                      _ => 'مجمّعة حسب المرحلة الدراسية',
-                    },
-                    icon: Icons.list_alt_rounded,
-                    color: color,
-                    count: groupedItems.length),
-                for (final key in keys)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: Material(
-                        color: theme.colorScheme.surface,
-                        child: Theme(
-                          data: theme
-                              .copyWith(dividerColor: Colors.transparent),
-                          child: ExpansionTile(
-                            shape: const Border(),
-                            initiallyExpanded: searchActive,
-                            tilePadding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 2),
-                            childrenPadding:
-                                const EdgeInsets.fromLTRB(10, 0, 10, 10),
-                            leading: CircleAvatar(
-                              radius: 17,
-                              backgroundColor: color.withValues(alpha: 0.12),
-                              child: Icon(
-                                widget.category ==
-                                        ServiceCategory.educational
-                                    ? Icons.school_rounded
-                                    : Icons.category_rounded,
-                                size: 17,
-                                color: color,
-                              ),
-                            ),
-                            title: Text(key,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 14)),
-                            subtitle: Text('${groups[key]!.length} تقديم',
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                    color: theme
-                                        .colorScheme.onSurfaceVariant)),
-                            children: [
-                              for (final p in groups[key]!)
-                                _ProviderCard(provider: p, accent: color),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ).animate().fadeIn(duration: 200.ms),
-              ],
-            ],
-          ],
-        );
-      },
-    );
-  }
-}
-
-/// عنوان قسم مصغّر (داخل التبويب).
+/// عنوان قسم مصغّر (داخل شاشة الفئة).
 class _MiniHead extends StatelessWidget {
   const _MiniHead({
     required this.title,
@@ -451,11 +532,6 @@ class _ProviderCard extends StatelessWidget {
   final ServiceProvider provider;
   final Color accent;
 
-  Future<void> _openDetail(BuildContext context) {
-    return Navigator.pushNamed(context, '/services/detail',
-        arguments: provider);
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -475,7 +551,8 @@ class _ProviderCard extends StatelessWidget {
           : null,
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
-        onTap: () => _openDetail(context),
+        onTap: () => Navigator.pushNamed(context, AppRoutes.serviceProviderDetail,
+            arguments: provider),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           child: Row(
@@ -568,8 +645,7 @@ class _ProviderCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.bodySmall?.copyWith(
                               fontSize: 11,
-                              color: theme
-                                  .colorScheme.onSurfaceVariant)),
+                              color: theme.colorScheme.onSurfaceVariant)),
                   ],
                 ),
               ),

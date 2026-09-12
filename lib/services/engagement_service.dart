@@ -14,19 +14,35 @@ class EngagementService {
       : _firestore = firestore ?? FirebaseFirestore.instance;
 
   // ───────────────────────── Condolences ─────────────────────────
+  ///uses a deterministic doc id (obituaryId_userId) so each user
+  /// can offer condolences at most once (re-submits overwrite, no dupes).
   Future<void> addCondolence({
     required String obituaryId,
     required String userId,
     required String userName,
     required String message,
   }) async {
-    await _firestore.collection('condolences').add({
+    await _firestore.doc('condolences/${obituaryId}_$userId').set({
       'obituaryId': obituaryId,
       'userId': userId,
       'userName': userName,
       'message': message,
       'createdAt': FieldValue.serverTimestamp(),
-    });
+    }, SetOptions(merge: true));
+  }
+
+  /// هل قدّم هذا المستخدم التعزية بالفعل؟
+  Future<bool> hasCondolenced(String obituaryId, String userId) async {
+    final snap =
+        await _firestore.doc('condolences/${obituaryId}_$userId').get();
+    return snap.exists;
+  }
+
+  Stream<bool> condoledenceStream(String obituaryId, String userId) {
+    return _firestore
+        .doc('condolences/${obituaryId}_$userId')
+        .snapshots()
+        .map((s) => s.exists);
   }
 
   Stream<int> condolencesCount(String obituaryId) {

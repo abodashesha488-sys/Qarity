@@ -22,6 +22,7 @@ import '../../services/market_service.dart';
 import '../../services/news_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/user_service.dart';
+import '../../services/weather_service.dart';
 import '../../widgets/alert_wisdom_bar.dart';
 import '../../widgets/common_appbar_actions.dart';
 import '../../widgets/offline_stream_builder.dart';
@@ -531,8 +532,9 @@ class _HeroHeaderState extends State<_HeroHeader> {
                             style: TextStyle(
                                 color:
                                     Colors.white.withValues(alpha: 0.75),
-                                fontSize: 10.5,
+                                fontSize: 10,
                                 fontWeight: FontWeight.w600)),
+                        const _VillageClock(),
                       ],
                     ),
                   ),
@@ -566,21 +568,41 @@ class _HeroHeaderState extends State<_HeroHeader> {
                         Text(widget.greeting,
                             style: TextStyle(
                                 color: Colors.white
-                                    .withValues(alpha: 0.85),
-                                fontSize: 13,
+                                    .withValues(alpha: 0.8),
+                                fontSize: 11.5,
                                 fontWeight: FontWeight.w600)),
                         const SizedBox(height: 2),
-                        Text(
-                            name.isEmpty
-                                ? 'أهلاً وسهلاً'
-                                : 'أهلاً وسهلاً، $name',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 22,
-                                fontWeight: FontWeight.w900,
-                                height: 1.25)),
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                  name.isEmpty
+                                      ? 'أهلاً وسهلاً'
+                                      : 'أهلاً وسهلاً،',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w700)),
+                            ),
+                            if (name.isNotEmpty) ...[
+                              const SizedBox(width: 5),
+                              Flexible(
+                                child: RoleNameText(
+                                  name: name,
+                                  role: _user?.role,
+                                  sellerType: _user?.sellerType?.name,
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16.5,
+                                      fontWeight: FontWeight.w900),
+                                  iconSize: 14,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                       ],
                     ),
                   ),
@@ -849,6 +871,58 @@ class _ServiceItem {
   final bool logo;
   const _ServiceItem(this.title, this.icon, this.route,
       {this.color = AppColors.primary, this.logo = false});
+}
+
+// ═══════════════ ساعة التوقيت المحلي للقرية (تحت التاريخ) ═══════════════
+class _VillageClock extends StatefulWidget {
+  const _VillageClock();
+
+  @override
+  State<_VillageClock> createState() => _VillageClockState();
+}
+
+class _VillageClockState extends State<_VillageClock> {
+  Timer? _ticker;
+
+  @override
+  void initState() {
+    super.initState();
+    _ticker = Timer.periodic(const Duration(seconds: 15), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final n = WeatherService.villageNow();
+    final h12 = n.hour % 12 == 0 ? 12 : n.hour % 12;
+    final period = n.hour < 12 ? 'ص' : 'م';
+    final text =
+        '${h12.toString().padLeft(2, '0')}:${n.minute.toString().padLeft(2, '0')} $period';
+    return Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: Row(
+        children: [
+          Icon(Icons.schedule_rounded,
+              size: 11, color: Colors.white.withValues(alpha: 0.75)),
+          const SizedBox(width: 4),
+          Text(text,
+              style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.9),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.5,
+                  fontFeatures: const [FontFeature.tabularFigures()])),
+        ],
+      ),
+    );
+  }
 }
 
 // ═══════════════════ بطاقة منتج ═══════════════════

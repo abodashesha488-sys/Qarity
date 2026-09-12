@@ -102,6 +102,17 @@ class _WeatherDetailScreenState extends State<WeatherDetailScreen> {
                       const SizedBox(height: 18),
                       _astroRow(theme),
                       const SizedBox(height: 18),
+                      Text('الأيام القادمة',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white)),
+                      const SizedBox(height: 4),
+                      Text('تجميع يومي من بيانات كل ٣ ساعات (متاح ~٥ أيام من الخدمة المجانية)',
+                          style: theme.textTheme.labelSmall
+                              ?.copyWith(color: Colors.white54)),
+                      const SizedBox(height: 10),
+                      _dailyList(theme),
+                      const SizedBox(height: 18),
                       Text('توقع الساعات القادمة',
                           style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w900,
@@ -303,6 +314,130 @@ class _WeatherDetailScreenState extends State<WeatherDetailScreen> {
                   color: Colors.white, fontWeight: FontWeight.w800)),
         ],
       );
+
+  Widget _dailyList(ThemeData theme) {
+    final list = (_forecast?['list'] as List?) ?? const [];
+    if (list.isEmpty) return const SizedBox.shrink();
+    final tz = (_current?['timezone'] as num?)?.toInt() ?? 0;
+    // تجميع حسب اليوم المحلي للقرية
+    final days = <String, List<Map>>{};
+    for (final e in list) {
+      final m = e as Map;
+      final local = DateTime.fromMillisecondsSinceEpoch(
+          ((m['dt'] as num).toInt() + tz) * 1000,
+          isUtc: true);
+      final key =
+          '${local.year}-${local.month}-${local.day}';
+      days.putIfAbsent(key, () => []).add(m);
+    }
+    final weekdayNames = const [
+      'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت', 'الأحد'
+    ];
+    final monthNames = const [
+      'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+      'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+    ];
+    final rows = days.entries.take(6).toList();
+    return Column(
+      children: [
+        for (final r in rows) _dayRow(theme, r.value, weekdayNames, monthNames),
+      ],
+    );
+  }
+
+  Widget _dayRow(ThemeData theme, List<Map> slots,
+      List<String> weekdayNames, List<String> monthNames) {
+    double min = 999, max = -999;
+    for (final s in slots) {
+      final m = s['main'] as Map;
+      final t = (m['temp'] as num).toDouble();
+      final tmin = (m['temp_min'] as num?)?.toDouble() ?? t;
+      final tmax = (m['temp_max'] as num?)?.toDouble() ?? t;
+      if (tmin < min) min = tmin;
+      if (tmax > max) max = tmax;
+    }
+    // تمثيل اليوم: أقرب مقطع للظهيرة (12 ظ)
+    final tz = (_current?['timezone'] as num?)?.toInt() ?? 0;
+    Map noon = slots.first;
+    var bestDiff = 99;
+    for (final s in slots) {
+      final local = DateTime.fromMillisecondsSinceEpoch(
+          ((s['dt'] as num).toInt() + tz) * 1000,
+          isUtc: true);
+      final diff = (local.hour - 12).abs();
+      if (diff < bestDiff) {
+        bestDiff = diff;
+        noon = s;
+      }
+    }
+    final w = (noon['weather'] as List).first as Map;
+    final localDt = DateTime.fromMillisecondsSinceEpoch(
+        ((noon['dt'] as num).toInt() + tz) * 1000,
+        isUtc: true);
+    final isToday = localDt.day == DateTime.fromMillisecondsSinceEpoch(
+                (((_current?['dt'] as num?)?.toInt() ?? 0) + tz) * 1000,
+                isUtc: true)
+            .day &&
+        localDt.month ==
+            DateTime.fromMillisecondsSinceEpoch(
+                    (((_current?['dt'] as num?)?.toInt() ?? 0) + tz) * 1000,
+                    isUtc: true)
+                .month;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 118,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(isToday ? 'اليوم' : weekdayNames[localDt.weekday - 1],
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 13)),
+                Text('${localDt.day} ${monthNames[localDt.month - 1]}',
+                    style: theme.textTheme.labelSmall
+                        ?.copyWith(color: Colors.white70)),
+              ],
+            ),
+          ),
+          CachedNetworkImage(
+              imageUrl: WeatherFormat.iconUrl(w['icon']),
+              width: 42,
+              height: 42,
+              errorWidget: (_, __, ___) =>
+                  const Icon(Icons.cloud_rounded, color: Colors.white)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text((w['description'] ?? '').toString(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall?.copyWith(
+                    color: Colors.white, fontWeight: FontWeight.w600)),
+          ),
+          Text('${max.round()}°',
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 15)),
+          const SizedBox(width: 8),
+          Text('${min.round()}°',
+              style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.65),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13)),
+        ],
+      ),
+    );
+  }
 
   Widget _forecastList(ThemeData theme) {
     final list = (_forecast?['list'] as List?) ?? const [];

@@ -88,6 +88,7 @@ static const String marketProducts = '/market';
   static const String settingsIndex = '/settings';
   static const String notificationsSettings = '/settings/notifications';
   static const String serviceRequest = '/services';
+  static const String serviceCategory = '/services/category';
   static const String serviceProviderDetail = '/services/detail';
   static const String medicalClinicDetail = '/medical/clinic-detail';
   static const String medicalPharmacyDetail = '/medical/pharmacy-detail';
@@ -175,6 +176,13 @@ static const String marketProducts = '/market';
       final sellerId = settings.arguments as String? ?? '';
       return _buildSlideRoute(
         (_) => SellerProfileScreen(sellerId: sellerId),
+        settings,
+      );
+    }
+    if (settings.name == serviceCategory) {
+      final category = settings.arguments as String? ?? 'technicians';
+      return _buildSlideRoute(
+        (_) => ProviderCategoryScreen(category: category),
         settings,
       );
     }

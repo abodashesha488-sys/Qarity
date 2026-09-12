@@ -1,4 +1,4 @@
-# Qarity Project - Agent Documentation
+﻿# Qarity Project - Agent Documentation
 
 ## Project Overview
 Qarity is a comprehensive digital platform for village community services (قرية أبوديشيشة).
@@ -7,7 +7,7 @@ Qarity is a comprehensive digital platform for village community services (قر�
 - **Errors:** 0
 - **Warnings:** 0
 - **Info:** 0
-- **Status:** Compiles successfully · `flutter test`: 70/70 passing
+- **Status:** Compiles successfully · `flutter test`: 75/75 passing
 
 ## Firebase Configuration
 
@@ -202,6 +202,10 @@ lib/
 - Service Directory (`/services`, route `serviceRequest` → `ServiceDirectoryScreen`): tabs الفنيون/خدمات زراعية/خدمات تعليمية (user-submitted `service_providers`, admin-approved, dropdown-grouped lists) + دليل الهاتف (`PhoneDirectoryScreen(embedded: true)` keeps its own design/logic). Replaced the old "طلب الخدمة" request screens (`request.dart`/`detail.dart` deleted; `service_requests` collection kept for legacy stats).
 
 ## Recent Updates
+- Service Directory re-architected: `/services` is now a GRID OF CATEGORY BUTTONS (each colored, icon + description; extensible for future categories — technicians/agricultural/educational + a phone-book tile that pushes the standalone `/phone-directory`). Each category opens `ProviderCategoryScreen` (`/services/category`, args = category string, handled specially in `onGenerateRoute`) with: a **subcategory dropdown filter** (craft/service/stage lists per category) + **search field** beneath it (matches all record fields), and body sections: **المميز** → **الأكثر تقييماً (top-5)** → **جميع السجلات**. Provider cards open the detail screen via `AppRoutes.serviceProviderDetail` with the model as arguments; a named-route widget test guards the arguments/ModalRoute path (`test/services/provider_detail_route_test.dart`).
+- Condolences are now one-per-user per obituary: deterministic doc id `condolences/{obituaryId}_{userId}` (same trick as attendance), `hasCondolenced`/`condoledenceStream`, and the button flips to a disabled «لقد قدّمت تعازيك» state live via stream.
+- Home/Weather strip changes: `VillageWeatherBar` no longer hides itself when the red alert is live (both strips can show simultaneously) and now exactly matches the wisdom bar's geometry (outer padding 14/10/14/6, minHeight 58). The weather detail screen gained an **الأيام القادمة** section (daily rows grouped from the 5-day/3h feed: day name, date, noon icon/description, min/max). Village local time (`WeatherService.tzOffsetSeconds` from the API, default UTC+2) ticks in the hero header under the date (`_VillageClock`, 15s timer). The welcome line shrank and the user's name now renders through `RoleNameText` (role/seller colors + crown/star badge).
+- Breaking news + urgent alert: both visible at once now (alert strip and breaking/weather strip are independent); admin overview keeps the two `_AlertControlCard`s (red/yellow).
 - Village Weather + Breaking News strip: second pinned strip under the home header (`VillageWeatherBar`). Default shows `طقس القرية` (OpenWeatherMap `/2.5/weather` + `/forecast` via `WeatherService`, 10-min in-memory cache, lang=ar, coordinates/city/API key overridable with `--dart-define=OWM_API_KEY|WEATHER_LAT|WEATHER_LON|WEATHER_CITY`); tap opens `WeatherDetailScreen` (`/weather`) with full current-conditions data + 8-slot forecast. When the admin enables **خبر عاجل** the strip turns yellow with blue text (tap = full dialog); when an urgent alert is active the strip hides itself (the red alert bar owns the space).
 - Breaking news uses the same mechanism as alerts: `village_alerts/breaking` doc + `AlertService.enableBreaking/disableBreaking/getBreaking/watchLiveBreaking`, instant FCM fan-out to topic `village_breaking` (subscribed on profile completion + every Home open, like `village_alerts`). Admin overview now has two `_AlertControlCard`s (red تنبيه / yellow خبر عاجل — same text box + تفعيل/إيقاف/تحديث pattern). `village_alerts` rules (public read, admin write) cover both docs unchanged.
 - Author identity unified everywhere: `UserService.resolveAuthor()` returns the profile name (users/{uid}.name as edited in complete-profile/profile) with Google values only as fallback, plus the profile photo. All comment writers (news/forum/market-product subcollection `comments`, provider comments via `resolveAuthor` in the UI) now persist `userName` + `userPhotoUrl`; `ReviewService._getUserName` prefers the profile name over Google displayName. Comment lists (forum post detail, news view, provider detail) render the user's photo in the avatar.

@@ -21,6 +21,14 @@ class WeatherService {
   Map<String, dynamic>? get cachedCurrent => _currentCache;
   Map<String, dynamic>? get cachedForecast => _forecastCache;
 
+  /// إزاحة منطقة القرية الزمنية (ثوانٍ) من آخر استجابة — للساعة في الهيدر.
+  /// 7200 = UTC+2 (مصر، بلا توقيت صيفي حاليًا) حتى وصول أول رد.
+  static int tzOffsetSeconds = 7200;
+
+  /// وقت القرية المحلي الآن.
+  static DateTime villageNow() =>
+      DateTime.now().toUtc().add(Duration(seconds: tzOffsetSeconds));
+
   Uri _uri(String path) => Uri.parse('$_base$path').replace(queryParameters: {
         'lat': AppConfig.weatherLat.toStringAsFixed(4),
         'lon': AppConfig.weatherLon.toStringAsFixed(4),
@@ -44,6 +52,8 @@ class WeatherService {
         final data = jsonDecode(res.body) as Map<String, dynamic>;
         _currentCache = data;
         _currentAt = DateTime.now();
+        final tz = (data['timezone'] as num?)?.toInt();
+        if (tz != null) tzOffsetSeconds = tz;
         return data;
       }
     } catch (_) {}

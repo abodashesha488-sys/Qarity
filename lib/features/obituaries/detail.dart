@@ -495,6 +495,14 @@ class _CondolenceSectionState extends State<_CondolenceSection> {
     }
     setState(() => _submitting = true);
     try {
+      if (await _engagement.hasCondolenced(widget.obituaryId, user.uid)) {
+        if (!mounted) return;
+        setState(() => _submitting = false);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('لقد قدّمت تعازيك بالفعل لهذا الفقيد — جزاك الله خيراً'),
+            backgroundColor: Colors.blueGrey));
+        return;
+      }
       await _engagement.addCondolence(
         obituaryId: widget.obituaryId,
         userId: user.uid,
@@ -559,24 +567,42 @@ class _CondolenceSectionState extends State<_CondolenceSection> {
           stream: _engagement.condolencesCount(widget.obituaryId),
           builder: (context, snapshot) {
             final count = snapshot.data ?? 0;
-            return SizedBox(
-              height: 50,
-              child: ElevatedButton.icon(
-                onPressed: _openDialog,
-                icon: const Icon(Icons.volunteer_activism_rounded),
-                label: Text(
-                    count > 0 ? 'تقديم التعازي ($count)' : 'تقديم التعازي',
-                    style: theme.textTheme.labelLarge
-                        ?.copyWith(fontWeight: FontWeight.w700)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: theme.colorScheme.primary,
-                  foregroundColor: theme.colorScheme.onPrimary,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
-                  elevation: 0,
-                ),
-              ),
-            ).animate().fadeIn().slideY(begin: 0.1);
+            final uid = FirebaseAuth.instance.currentUser?.uid;
+            return StreamBuilder<bool>(
+              stream: uid == null
+                  ? Stream<bool>.value(false)
+                  : _engagement.condoledenceStream(widget.obituaryId, uid),
+              builder: (context, doneSnap) {
+                final done = doneSnap.data ?? false;
+                return SizedBox(
+                  height: 50,
+                  child: ElevatedButton.icon(
+                    onPressed: done ? null : _openDialog,
+                    icon: Icon(done
+                        ? Icons.check_circle_rounded
+                        : Icons.volunteer_activism_rounded),
+                    label: Text(
+                      done
+                          ? 'لقد قدّمت تعازيك'
+                          : (count > 0 ? 'تقديم التعازي ($count)' : 'تقديم التعازي'),
+                      style: theme.textTheme.labelLarge
+                          ?.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: done
+                          ? theme.colorScheme.surfaceContainerHighest
+                          : theme.colorScheme.primary,
+                      foregroundColor: done
+                          ? theme.colorScheme.onSurfaceVariant
+                          : theme.colorScheme.onPrimary,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
+                      elevation: 0,
+                    ),
+                  ),
+                ).animate().fadeIn().slideY(begin: 0.1);
+              },
+            );
           },
         ),
         const SizedBox(height: 16),
