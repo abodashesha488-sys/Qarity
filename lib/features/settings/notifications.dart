@@ -26,6 +26,12 @@ class _Service {
 class _NotificationsSettingsScreenState
     extends State<NotificationsSettingsScreen> {
   static const _services = <_Service>[
+    _Service('village_alerts', 'إشعارات التنبيهات الطارئة',
+        'التنبيه العاجل الأحمر أعلى الرئيسية — يُنصح بإبقاؤها مفعّلة',
+        Icons.warning_amber_rounded, Color(0xFFC62828)),
+    _Service('village_breaking', 'إشعارات الأخبار العاجلة',
+        'الخبر العاجل الأصفر أعلى الرئيسية — اخبار القرية العاجلة',
+        Icons.bolt_rounded, Color(0xFFF9A825)),
     _Service('village_news', 'إشعارات الأخبار', 'أحدث أخبار ومستجدات القرية',
         Icons.newspaper_rounded, Colors.indigo),
     _Service('village_obituaries', 'إشعارات العزاء', 'النعياء والتعازي الجديدة',

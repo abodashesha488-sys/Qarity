@@ -76,8 +76,11 @@ If the user isn't signed in, `RemotePushService` silently no-ops.
 
 ### Topics subscribed by every user on profile completion
 `village_news`, `village_obituaries`, `village_occasions`, `village_market`,
-`village_forum`, `village_services`, `village_medical`, `village_alerts`
-(also re-subscribed on every Home open so existing installs join the alert channel).
+`village_forum`, `village_services`, `village_medical`, `village_alerts`,
+`village_breaking`
+(the two broadcast channels are re-subscribed on every Home open **only if** the
+user hasn't disabled them in `NotificationsSettingsScreen` — all 9 channels,
+including alerts/breaking, are toggleable there via `notif_pref_<topic>` prefs).
 Approval fan-out (`AdminService._pushMessageFor`) + `kPushTopicForCollection`
 cover: news, obituaries, occasions, products, **shops**, forum, **service_providers**
 (`village_services`, route `/services`), and medical (`village_clinics`, `pharmacies`,

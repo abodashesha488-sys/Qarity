@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/role_style.dart';
@@ -48,11 +49,15 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    // اشتراك إضافي بقناة التنبيهات العاجلة — يشمل كل من يفتح التطبيق
-    // (يُشترك بها أيضاً عند إكمال الملف الشخصي للمستخدمين الجدد).
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (FirebaseAuth.instance.currentUser != null) {
+    // اشتراك بقنوات البث الجماعي عند كل فتح — مع احترام إيقاف المستخدم
+    // لها من «إعدادات الإشعارات» (يُعاد الاشتراك فقط إن كانت مفعّلة).
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (FirebaseAuth.instance.currentUser == null) return;
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.getBool('notif_pref_village_alerts') ?? true) {
         unawaited(NotificationService.subscribeToTopic('village_alerts'));
+      }
+      if (prefs.getBool('notif_pref_village_breaking') ?? true) {
         unawaited(NotificationService.subscribeToTopic('village_breaking'));
       }
     });
