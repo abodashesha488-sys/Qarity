@@ -243,6 +243,7 @@ class ServiceProviderComment {
   final String providerId;
   final String userId;
   final String userName;
+  final String? photoUrl; // صورة كاتب التعليق من ملفه الشخصي
   final int rating; // من 1 إلى 5
   final String text;
   final DateTime? createdAt;
@@ -252,6 +253,7 @@ class ServiceProviderComment {
     required this.providerId,
     required this.userId,
     required this.userName,
+    this.photoUrl,
     this.rating = 0,
     this.text = '',
     this.createdAt,
@@ -264,6 +266,7 @@ class ServiceProviderComment {
       providerId: json['providerId'] as String? ?? '',
       userId: json['userId'] as String? ?? '',
       userName: json['userName'] as String? ?? '',
+      photoUrl: json['userPhotoUrl'] as String?,
       rating: (json['rating'] as num?)?.toInt() ?? 0,
       text: json['text'] as String? ?? '',
       createdAt: _parseTsOrNull(json['createdAt']),
@@ -274,6 +277,7 @@ class ServiceProviderComment {
         'providerId': providerId,
         'userId': userId,
         'userName': userName,
+        if (photoUrl != null && photoUrl!.isNotEmpty) 'userPhotoUrl': photoUrl,
         'rating': rating,
         'text': text,
         'createdAt': createdAt != null

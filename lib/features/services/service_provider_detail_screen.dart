@@ -1,4 +1,5 @@
-﻿import 'package:firebase_auth/firebase_auth.dart';
+﻿import 'package:cached_network_image/cached_network_image.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -6,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../models/service_provider_model.dart';
 import '../../services/service_provider_service.dart';
 import '../../services/share_service.dart';
+import '../../services/user_service.dart';
 import '../medical/clinic_detail_screen.dart';
 
 /// شاشة تفاصيل بيان في دليل الخدمات — عرض منسق + تقييم 5 نجوم + تعليقات.
@@ -64,11 +66,13 @@ class _ServiceProviderDetailScreenState
     }
     setState(() => _submitting = true);
     try {
+      final identity = await UserService().resolveAuthor();
       await _service.addComment(ServiceProviderComment(
         id: '',
         providerId: _initial.id,
         userId: user.uid,
-        userName: user.displayName ?? user.email ?? 'مستخدم',
+        userName: identity.name,
+        photoUrl: identity.photo,
         rating: _myRating.round(),
         text: _textC.text.trim(),
       ));
@@ -369,8 +373,13 @@ class _ServiceProviderDetailScreenState
           CircleAvatar(
             radius: 17,
             backgroundColor: accent.withValues(alpha: 0.12),
+            foregroundImage: c.photoUrl != null && c.photoUrl!.isNotEmpty
+                ? CachedNetworkImageProvider(c.photoUrl!)
+                : null,
             child: Text(
-              c.userName.isNotEmpty ? c.userName.substring(0, 1) : '؟',
+              c.photoUrl != null && c.photoUrl!.isNotEmpty
+                  ? ''
+                  : (c.userName.isNotEmpty ? c.userName.substring(0, 1) : '؟'),
               style: TextStyle(
                   color: accent, fontWeight: FontWeight.w900),
             ),

@@ -351,12 +351,17 @@ class _NewsViewScreenState extends State<NewsViewScreen> {
           separatorBuilder: (_, __) => const SizedBox(height: 10),
           itemBuilder: (context, index) {
             final data = comments[index].data() as Map<String, dynamic>? ?? <String, dynamic>{};
+            final photo = (data['userPhotoUrl'] as String? ?? '').trim();
             return InfoListCard(
               padding: const EdgeInsets.all(14),
               leading: CircleAvatar(
                 radius: 18,
                 backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
-                child: Icon(Icons.person_rounded, size: 16, color: theme.colorScheme.primary),
+                backgroundImage:
+                    photo.isNotEmpty ? CachedNetworkImageProvider(photo) : null,
+                child: photo.isEmpty
+                    ? Icon(Icons.person_rounded, size: 16, color: theme.colorScheme.primary)
+                    : null,
               ),
               title: data['userName'] as String? ?? 'زائر',
               subtitleBuilder: (context) => [

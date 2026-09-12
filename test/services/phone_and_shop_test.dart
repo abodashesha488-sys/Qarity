@@ -42,6 +42,18 @@ void main() {
       expect(list.length, 1);
       expect(list.first.name, 'موافق');
     });
+
+    test('getVisibleEntriesList shows approved + own pending only', () async {
+      final fake = FakeFirebaseFirestore();
+      final svc = PhoneDirectoryService(fake);
+      await fake.collection('phone_directory').add({'name': 'معتمد', 'phone': '1', 'isApproved': true});
+      await fake.collection('phone_directory').add({'name': 'معلق لي', 'phone': '2', 'isApproved': false, 'submittedBy': 'u1'});
+      await fake.collection('phone_directory').add({'name': 'معلق لغيري', 'phone': '3', 'isApproved': false, 'submittedBy': 'u2'});
+      final mine = await svc.getVisibleEntriesList('u1');
+      expect(mine.map((e) => e.name).toSet(), {'معتمد', 'معلق لي'});
+      final anon = await svc.getVisibleEntriesList(null);
+      expect(anon.length, 1);
+    });
   });
 
   group('ShopService', () {

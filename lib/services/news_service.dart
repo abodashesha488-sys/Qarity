@@ -77,10 +77,18 @@ class NewsService {
     final user = _auth.currentUser;
     if (user != null) {
       final userDoc = await _firestore.collection('users').doc(user.uid).get();
-      final name = userDoc.data()?['name'] as String? ?? user.displayName ?? userName;
+      final data = userDoc.data() ?? const <String, dynamic>{};
+      final pname = (data['name'] as String? ?? '').trim();
+      final gname = (user.displayName ?? '').trim();
+      final name = pname.isNotEmpty
+          ? pname
+          : (gname.isNotEmpty ? gname : userName);
+      final mPhoto = (data['photoUrl'] as String? ?? '').trim();
+      final photo = mPhoto.isNotEmpty ? mPhoto : user.photoURL;
       await _firestore.collection('news').doc(newsId).collection('comments').add({
         'userId': user.uid,
         'userName': name,
+        'userPhotoUrl': photo ?? '',
         'text': text,
         'createdAt': Timestamp.now(),
       });

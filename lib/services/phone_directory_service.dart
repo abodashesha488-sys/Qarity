@@ -24,6 +24,16 @@ class PhoneDirectoryService {
     final snapshot = await _firestore.collection('phone_directory').get();
     return snapshot.docs.map((doc) => PhoneDirectoryEntry.fromJson(doc.data(), doc.id)).toList();
   }
+
+  /// المعتمدة للجميع + إدخالات المستخدم نفسه المعلقة (يراها بوسم «قيد المراجعة»).
+  Future<List<PhoneDirectoryEntry>> getVisibleEntriesList(String? userId) async {
+    final all = await getEntriesList();
+    await CacheService.savePhoneDirectory(
+        all.where((e) => e.isApproved).map((e) => e.toJson()).toList());
+    return all
+        .where((e) => e.isApproved || (userId != null && e.submittedBy == userId))
+        .toList();
+  }
   
   Stream<List<PhoneDirectoryEntry>> getApprovedEntriesStream() {
     return _firestore

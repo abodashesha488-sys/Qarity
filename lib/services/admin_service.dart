@@ -604,6 +604,10 @@ class AdminService {
       CacheService.invalidateNews();
     } else if (collection == 'forum_posts') {
       CacheService.invalidateForumPosts();
+    } else if (collection == 'phone_directory') {
+      CacheService.invalidatePhoneDirectory();
+    } else if (collection == 'shops') {
+      CacheService.invalidateShops();
     }
   }
 

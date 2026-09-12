@@ -43,11 +43,18 @@ class ProductInteractionService {
 
   Future<void> addComment({required String productId, required String userName, required String text}) async {
     final auth = FirebaseAuth.instance;
-    final userDoc = await FirebaseFirestore.instance.collection('users').doc(auth.currentUser?.uid).get();
-    final name = userDoc.data()?['name'] as String? ?? auth.currentUser?.displayName ?? userName;
+    final user = auth.currentUser;
+    final userDoc = await FirebaseFirestore.instance.collection('users').doc(user?.uid).get();
+    final data = userDoc.data() ?? const <String, dynamic>{};
+    final pname = (data['name'] as String? ?? '').trim();
+    final gname = (user?.displayName ?? '').trim();
+    final name = pname.isNotEmpty ? pname : (gname.isNotEmpty ? gname : userName);
+    final mPhoto = (data['photoUrl'] as String? ?? '').trim();
+    final photo = mPhoto.isNotEmpty ? mPhoto : (user?.photoURL ?? '');
     await _firestore.collection('market_products').doc(productId).collection('comments').add({
-      'userId': auth.currentUser?.uid ?? '',
+      'userId': user?.uid ?? '',
       'userName': name,
+      'userPhotoUrl': photo,
       'text': text,
       'createdAt': Timestamp.now(),
     });

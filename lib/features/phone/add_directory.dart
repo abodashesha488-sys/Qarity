@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -70,6 +71,7 @@ class _AddPhoneDirectoryScreenState extends State<AddPhoneDirectoryScreen> {
         phone: _phoneController.text.trim(),
         job: job.isNotEmpty ? job : null,
         photoUrl: _photoUrl,
+        submittedBy: FirebaseAuth.instance.currentUser?.uid,
       );
       await _service.addPhoneDirectoryEntry(entry);
       if (!mounted) return;

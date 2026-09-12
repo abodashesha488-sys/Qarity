@@ -63,7 +63,8 @@ class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
 
   Future<void> _loadEntries() async {
     try {
-      final entries = await _service.getApprovedEntriesList();
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      final entries = await _service.getVisibleEntriesList(uid);
       if (!mounted) return;
       setState(() {
         _entries = entries;

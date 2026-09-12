@@ -248,9 +248,17 @@ service cloud.firestore {
     // ───────────────────────── دليل الهاتف ─────────────────────────
     match /phone_directory/{docId} {
       allow list, get: if true;
-      // لا يُنشئ المستخدم جهة اتصال معتمدة ذاتياً — تبدأ غير موافق عليها
-      allow create: if isAdmin() || (isSignedIn() && request.resource.data.isApproved == false);
-      allow update, delete: if isAdmin();
+      // لا يُنشئ المستخدم جهة اتصال معتمدة ذاتياً — تبدأ غير موافق عليه باسمه
+      allow create: if isAdmin() || (isSignedIn()
+          && request.resource.data.isApproved == false
+          && request.auth.uid == request.resource.data.submittedBy);
+      // مقدّم البيان يعدّل إدخاله غير المعتمد فقط دون المساس بالموافقة
+      allow update: if isAdmin()
+          || (isSignedIn() && resource.data.submittedBy == request.auth.uid
+              && resource.data.isApproved == false
+              && !request.resource.data.diff(resource.data)
+                   .affectedKeys().hasAny(['isApproved']));
+      allow delete: if isAdmin();
     }
 
     // ───────────────────────── دليل الخدمات (فنيون/زراعية/تعليمية) ─────────────────────────

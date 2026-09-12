@@ -9,6 +9,7 @@ import '../../models/service_provider_model.dart';
 import '../../services/image_upload_service.dart';
 import '../../services/service_provider_service.dart';
 import '../../services/share_service.dart';
+import '../../services/user_service.dart';
 import '../../widgets/common_appbar_actions.dart';
 import '../phone/directory.dart';
 
@@ -60,6 +61,8 @@ class _ServiceDirectoryScreenState extends State<ServiceDirectoryScreen>
       _snack('سجّل الدخول أولاً', error: true);
       return;
     }
+    final identity = await UserService().resolveAuthor();
+    if (!mounted) return;
     final res = await showModalBottomSheet<ServiceProvider>(
       context: context,
       isScrollControlled: true,
@@ -67,7 +70,7 @@ class _ServiceDirectoryScreenState extends State<ServiceDirectoryScreen>
       builder: (_) => _ProviderFormSheet(
         category: category,
         userId: user.uid,
-        userName: user.displayName ?? user.email ?? 'مستخدم',
+        userName: identity.name,
       ),
     );
     if (res == null) return;

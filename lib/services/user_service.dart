@@ -20,6 +20,28 @@ class UserService {
     return getUser(user.uid);
   }
 
+  /// هوية كاتب المحتوى: الاسم من ملف المستخدم (كما عدّله من الإكمال/الملف
+  /// الشخصي) أولاً، ثم صورة البروفايل — مع رجوع آمن لقيم Google.
+  Future<({String name, String? photo})> resolveAuthor(
+      {String fallback = 'مستخدم'}) async {
+    final u = _auth.currentUser;
+    if (u == null) return (name: fallback, photo: null);
+    UserModel? m;
+    try {
+      m = await getUser(u.uid);
+    } catch (_) {}
+    final pname = (m?.name ?? '').trim();
+    final gname = (u.displayName ?? '').trim();
+    final name = pname.isNotEmpty
+        ? pname
+        : (gname.isNotEmpty
+            ? gname
+            : (u.email?.split('@').first ?? fallback));
+    final mPhoto = (m?.photoUrl ?? '').trim();
+    final photo = mPhoto.isNotEmpty ? mPhoto : u.photoURL;
+    return (name: name, photo: photo);
+  }
+
   /// هل أكمل المستخدم بياناته الأساسية (اسم + هاتف)؟
   /// يُستخدم في شاشة الإقلاع وبعد تسجيل الدخول لتوجيه المستخدم لإكمال الملف.
   static bool isProfileComplete(UserModel? u) =>

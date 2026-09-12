@@ -7,16 +7,22 @@ class ReviewService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   Future<String> _getUserName(String userId) async {
-    final user = _auth.currentUser;
-    if (user != null && user.uid == userId) {
-      return user.displayName ?? user.email?.split('@').first ?? 'مستخدم';
-    }
+    // الاسم من ملف المستخدم (users/{uid}.name) أولاً — كما عدّله المستخدم.
     final doc = await _firestore.collection('users').doc(userId).get();
     if (doc.exists) {
       final data = doc.data() as Map<String, dynamic>;
-      return data['name'] as String? ?? data['email'] as String? ?? 'مستخدم';
+      final pname = (data['name'] as String? ?? '').trim();
+      if (pname.isNotEmpty) return pname;
     }
-    return 'مستخدم';
+    final user = _auth.currentUser;
+    if (user != null && user.uid == userId) {
+      final g = (user.displayName ?? '').trim();
+      if (g.isNotEmpty) return g;
+    }
+    final data = doc.data() ?? const <String, dynamic>{};
+    return (data['email'] as String?)?.trim().isNotEmpty == true
+        ? data['email'] as String
+        : 'مستخدم';
   }
 
   Future<void> addReview({required String sellerId, required int rating, required String comment, required String userId}) async {

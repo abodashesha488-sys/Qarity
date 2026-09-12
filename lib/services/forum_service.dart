@@ -73,9 +73,15 @@ class ForumService {
 
   Future<void> addComment(String postId, String userName, String text) async {
     final auth = FirebaseAuth.instance;
-    final userDoc = await _firestore.collection('users').doc(auth.currentUser?.uid).get();
-    final name = userDoc.data()?['name'] as String? ?? auth.currentUser?.displayName ?? userName;
-    await _firestore.collection('forum_posts').doc(postId).collection('comments').add({'userId': auth.currentUser?.uid ?? '', 'userName': name, 'text': text, 'createdAt': Timestamp.now()});
+    final user = auth.currentUser;
+    final userDoc = await _firestore.collection('users').doc(user?.uid).get();
+    final data = userDoc.data() ?? const <String, dynamic>{};
+    final pname = (data['name'] as String? ?? '').trim();
+    final gname = (user?.displayName ?? '').trim();
+    final name = pname.isNotEmpty ? pname : (gname.isNotEmpty ? gname : userName);
+    final mPhoto = (data['photoUrl'] as String? ?? '').trim();
+    final photo = mPhoto.isNotEmpty ? mPhoto : (user?.photoURL ?? '');
+    await _firestore.collection('forum_posts').doc(postId).collection('comments').add({'userId': auth.currentUser?.uid ?? '', 'userName': name, 'userPhotoUrl': photo, 'text': text, 'createdAt': Timestamp.now()});
     await _firestore.collection('forum_posts').doc(postId).update({'comments': FieldValue.increment(1)});
   }
 

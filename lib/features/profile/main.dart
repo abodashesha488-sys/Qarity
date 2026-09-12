@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../core/utils/role_style.dart';
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
 import '../../services/image_upload_service.dart';
@@ -360,8 +361,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             _buildProfileHeader(theme),
             const SizedBox(height: 16),
-            _buildEditForm(theme),
-            const SizedBox(height: 16),
             _buildSettingsSection(theme),
             if (_isSeller) ...[
               const SizedBox(height: 16),
@@ -388,14 +387,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildProfileHeader(ThemeData theme) {
+    final isAdminRole = _user?.role == 'admin' || _user?.role == 'medical_admin';
+    final isMedicalOnly = _user?.role == 'medical_admin';
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(22),
         side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
         child: Column(
           children: [
             Stack(
@@ -410,7 +411,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       : null,
                 ),
                 GestureDetector(
-                  onTap: _pickProfileImage,
+                  onTap: _onCameraTap,
                   child: Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
@@ -424,8 +425,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ),
             const SizedBox(height: 12),
-            Text(
-              _user?.name.isNotEmpty == true ? _user!.name : 'المستخدم',
+            RoleNameText(
+              name: _user?.name.isNotEmpty == true ? _user!.name : 'المستخدم',
+              role: _user?.role,
+              sellerType: _user?.sellerType?.name,
               style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 4),
@@ -444,19 +447,208 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _sellerTypeBadge(theme, _user!.sellerType!),
               ],
             ),
-            if (_user?.role == 'admin' || _user?.role == 'medical_admin') ...[
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: () => Navigator.pushNamed(
-                    context,
-                    _user!.role == 'admin'
-                        ? AppRoutes.admin
-                        : AppRoutes.medical),
-                icon: const Icon(Icons.admin_panel_settings_rounded, size: 18),
-                label: Text(_user!.role == 'admin' ? 'لوحة التحكم' : 'إدارة المركز الطبي'),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.tonalIcon(
+                onPressed: _openEditSheet,
+                icon: const Icon(Icons.edit_rounded, size: 18),
+                label: const Text('تعديل البيانات الشخصية',
+                    style: TextStyle(fontWeight: FontWeight.w800)),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+              ),
+            ),
+            if (isAdminRole) ...[
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    gradient: LinearGradient(
+                      colors: isMedicalOnly
+                          ? const [Color(0xFF00897B), Color(0xFF4DB6AC)]
+                          : const [Color(0xFF1565C0), Color(0xFFB8860B)],
+                      begin: Alignment.centerRight,
+                      end: Alignment.centerLeft,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: (isMedicalOnly ? const Color(0xFF00897B) : const Color(0xFF1565C0))
+                            .withValues(alpha: 0.35),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(14),
+                      onTap: () => Navigator.pushNamed(
+                          context,
+                          isMedicalOnly ? AppRoutes.medical : AppRoutes.admin),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(isMedicalOnly
+                                ? Icons.medical_services_rounded
+                                : Icons.admin_panel_settings_rounded,
+                                color: Colors.white, size: 19),
+                            const SizedBox(width: 8),
+                            Text(
+                              isMedicalOnly ? 'إدارة المركز الطبي' : 'لوحة تحكم القرية',
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 14),
+                            ),
+                            const SizedBox(width: 6),
+                            const Icon(Icons.chevron_left_rounded,
+                                color: Colors.white70, size: 18),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _onCameraTap() async {
+    await _pickProfileImage();
+    if (_profileBytes != null && mounted) _openEditSheet();
+  }
+
+  Future<void> _openEditSheet() async {
+    final theme = Theme.of(context);
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: theme.colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) => Padding(
+          padding: EdgeInsets.fromLTRB(
+              20, 16, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.manage_accounts_rounded, size: 20),
+                  const SizedBox(width: 8),
+                  Text('تعديل البيانات الشخصية',
+                      style: theme.textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w900)),
+                  const Spacer(),
+                  IconButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      icon: const Icon(Icons.close_rounded)),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Center(
+                child: GestureDetector(
+                  onTap: () async {
+                    await _pickProfileImage();
+                    setSheet(() {});
+                  },
+                  child: Stack(
+                    alignment: Alignment.bottomRight,
+                    children: [
+                      CircleAvatar(
+                        radius: 40,
+                        backgroundColor: theme.colorScheme.primaryContainer,
+                        backgroundImage: _avatarImage(),
+                        child: _avatarImage() == null
+                            ? Icon(Icons.person,
+                                size: 40, color: theme.colorScheme.primary)
+                            : null,
+                      ),
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                              color: theme.colorScheme.surface, width: 2),
+                        ),
+                        child: const Icon(Icons.camera_alt,
+                            size: 14, color: Colors.white),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Center(
+                child: Text(
+                  'اضغط الصورة لتغييرها',
+                  style: theme.textTheme.labelSmall
+                      ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _nameController,
+                decoration: InputDecoration(
+                  labelText: 'الاسم',
+                  prefixIcon: const Icon(Icons.person_rounded),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _phoneController,
+                keyboardType: TextInputType.phone,
+                decoration: InputDecoration(
+                  labelText: 'رقم الهاتف',
+                  prefixIcon: const Icon(Icons.phone_rounded),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 50,
+                child: FilledButton.icon(
+                  onPressed: _isSaving
+                      ? null
+                      : () async {
+                          await _saveProfile();
+                          if (ctx.mounted) Navigator.pop(ctx);
+                        },
+                  icon: _isSaving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.save_rounded, size: 18),
+                  label: Text(
+                      _isSaving ? 'جاري الحفظ...' : 'حفظ التغييرات',
+                      style: const TextStyle(fontWeight: FontWeight.w800)),
+                  style: FilledButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14))),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -507,59 +699,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   fontWeight: FontWeight.w800,
                   color: Colors.brown)),
         ],
-      ),
-    );
-  }
-
-  Widget _buildEditForm(ThemeData theme) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('تعديل الملف الشخصي', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _nameController,
-              decoration: InputDecoration(
-                labelText: 'الاسم',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                prefixIcon: const Icon(Icons.person),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _phoneController,
-              decoration: InputDecoration(
-                labelText: 'رقم الهاتف',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                prefixIcon: const Icon(Icons.phone),
-              ),
-              keyboardType: TextInputType.phone,
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 45,
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isSaving ? null : _saveProfile,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: theme.colorScheme.primary,
-                  foregroundColor: theme.colorScheme.onPrimary,
-                ),
-                child: _isSaving
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : Text('حفظ', style: TextStyle(color: theme.colorScheme.onPrimary, fontWeight: FontWeight.bold)),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

@@ -602,6 +602,7 @@ class PhoneDirectoryEntry implements BaseModel {
   final String? photoUrl;
   final bool isPublic;
   final bool isApproved;
+  final String? submittedBy; // من أدخل البيان — ليرى إدخالاته المعلقة
 
   const PhoneDirectoryEntry({
     required this.id,
@@ -615,6 +616,7 @@ class PhoneDirectoryEntry implements BaseModel {
     this.photoUrl,
     this.isPublic = true,
     this.isApproved = false,
+    this.submittedBy,
   });
 
   factory PhoneDirectoryEntry.fromJson(
@@ -631,6 +633,7 @@ class PhoneDirectoryEntry implements BaseModel {
       photoUrl: json['photoUrl'] as String?,
       isPublic: json['isPublic'] as bool? ?? true,
       isApproved: json['isApproved'] as bool? ?? false,
+      submittedBy: json['submittedBy'] as String?,
     );
   }
 
@@ -647,6 +650,7 @@ class PhoneDirectoryEntry implements BaseModel {
       if (photoUrl != null) 'photoUrl': photoUrl,
       'isPublic': isPublic,
       'isApproved': isApproved,
+      if (submittedBy != null) 'submittedBy': submittedBy,
     };
   }
 

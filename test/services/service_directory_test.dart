@@ -145,6 +145,22 @@ void main() {
       expect(doc.data()!['ratingCount'], 1);
       expect((doc.data()!['rating'] as num).toDouble(), 5.0);
     });
+
+    test('provider comment stores userPhotoUrl and rating', () async {
+      final fake = FakeFirebaseFirestore();
+      final id = await seedProvider(fake);
+      final svc = ServiceProviderService(fake);
+      await svc.addComment(ServiceProviderComment(
+          id: '',
+          providerId: id,
+          userId: 'u1',
+          userName: 'علي',
+          photoUrl: 'https://x/p.jpg',
+          rating: 5));
+      final comments = await svc.getCommentsStream(id).first;
+      expect(comments.single.userName, 'علي');
+      expect(comments.single.photoUrl, 'https://x/p.jpg');
+    });
   });
 
   group('MedicalCenterClinic approval field', () {
