@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/service_provider_model.dart';
+import 'remote_push_service.dart';
 
 /// خدمة دليل الخدمات — فنيون/خدمات زراعية/خدمات تعليمية (مدخلات مستخدمين + موافقة).
 class ServiceProviderService {
@@ -16,6 +19,7 @@ class ServiceProviderService {
 
   Future<String> create(ServiceProvider provider) async {
     final ref = await _col.add(provider.toJson());
+    unawaited(RemotePushService.notifyAdmins('service_providers'));
     return ref.id;
   }
 

@@ -68,7 +68,56 @@ class RemotePushService {
       // لا يُطاح الاستثناء — الإشعارات أفضل-جهد.
     }
   }
+
+  /// إخطار الأدمن (ومدير المركز الطبي للطلبات الطبية) بأن طلباً جديداً
+  /// بانتظار الموافقة. تُرسل المجموعة فقط — النصوص والحد المعدني يحددهما
+  /// الخادم. best-effort: لا يعطّل الإرسال الرئيسي أبداً.
+  static Future<void> notifyAdmins(String collection) async {
+    if (endpoint.isEmpty || !kAdminNotifyCollections.contains(collection)) {
+      return;
+    }
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+      final idToken = await user.getIdToken();
+      if (idToken == null || idToken.isEmpty) return;
+      await http
+          .post(
+            Uri.parse(endpoint),
+            headers: {
+              'content-type': 'application/json',
+              'authorization': 'Bearer $idToken',
+            },
+            body: jsonEncode({
+              'action': 'admin_notify',
+              'collection': collection,
+            }),
+          )
+          .timeout(const Duration(seconds: 8));
+    } catch (_) {}
+  }
 }
+
+/// المجموعات التي تستدعي موافقة الأدمن — أي إرسال منها يفعّل إخطار اللوحة.
+const Set<String> kAdminNotifyCollections = {
+  'news',
+  'market_products',
+  'obituaries',
+  'occasions',
+  'forum_posts',
+  'shops',
+  'buy_requests',
+  'donations',
+  'phone_directory',
+  'service_providers',
+  'seller_requests',
+  'village_clinics',
+  'pharmacies',
+  'medical_labs',
+  'blood_requests',
+  'blood_donors',
+  'medical_center_clinics',
+};
 
 /// خريطة مجموعة Firestore → Topic FCM الخاص بها.
 /// تُستخدم في `AdminService` عند الموافقة/النشر.

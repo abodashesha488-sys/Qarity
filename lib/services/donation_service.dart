@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../models/market_extra_models.dart';
 import 'cache_service.dart';
+import 'remote_push_service.dart';
 
 class DonationService {
   final FirebaseFirestore _firestore;
@@ -13,6 +17,7 @@ class DonationService {
   Future<String> create(Donation donation) async {
     final ref = await _col.add(donation.toJson());
     await CacheService.invalidateDonations();
+    unawaited(RemotePushService.notifyAdmins('donations'));
     return ref.id;
   }
 

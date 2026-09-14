@@ -113,7 +113,7 @@ void main() {
       final forOwner = await svc.getVisibleShopsStream('u1').first;
       expect(forOwner.map((s) => s.name).toSet(), {'معتمد', 'معلق لي'});
       expect(forOwner.first.name, 'معتمد');
-      final anon = await svc.getVisibleShopsStream(null).first;
+      final anon = await svc.getVisibleShopsStream().first;
       expect(anon.length, 1);
     });
   });

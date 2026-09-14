@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../models/data_models.dart';
 import 'cache_service.dart';
 import 'notification_service.dart';
+import 'remote_push_service.dart';
 
 class ObituaryService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -41,6 +45,7 @@ class ObituaryService {
       'isApproved': false,
     });
     await CacheService.invalidateObituaries();
+    unawaited(RemotePushService.notifyAdmins('obituaries'));
     await NotificationService.showLocalNotification(
       title: '⚰️ تعزية',
       body: 'تم إرسال التعزية للمراجعة: ${obituary.name}',

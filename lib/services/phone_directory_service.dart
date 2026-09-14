@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../models/data_models.dart';
 import 'cache_service.dart';
+import 'remote_push_service.dart';
 
 class PhoneDirectoryService {
   final FirebaseFirestore _firestore;
@@ -51,5 +55,6 @@ class PhoneDirectoryService {
   Future<void> addPhoneDirectoryEntry(PhoneDirectoryEntry entry) async {
     await _firestore.collection('phone_directory').add(entry.toJson());
     await CacheService.invalidatePhoneDirectory();
+    unawaited(RemotePushService.notifyAdmins('phone_directory'));
   }
 }

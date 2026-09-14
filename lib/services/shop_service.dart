@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../models/market_extra_models.dart';
 import 'cache_service.dart';
+import 'remote_push_service.dart';
 
 class ShopService {
   final FirebaseFirestore _firestore;
@@ -13,6 +17,7 @@ class ShopService {
   Future<String> createShop(Shop shop) async {
     final ref = await _col.add(shop.toJson());
     await CacheService.invalidateShops();
+    unawaited(RemotePushService.notifyAdmins('shops'));
     return ref.id;
   }
 

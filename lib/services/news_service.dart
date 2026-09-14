@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
 import '../models/data_models.dart';
 import 'cache_service.dart';
 import 'notification_service.dart';
+import 'remote_push_service.dart';
 
 class NewsService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -123,6 +127,7 @@ class NewsService {
       'isApproved': false,
     });
     await CacheService.invalidateNews();
+    unawaited(RemotePushService.notifyAdmins('news'));
     await NotificationService.showLocalNotification(
       title: '📰 خبر جديد',
       body: 'تم إرسال الخبر للمراجعة: ${news.title}',

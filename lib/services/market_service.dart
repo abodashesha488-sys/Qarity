@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../models/data_models.dart';
 import 'cache_service.dart';
 import 'image_upload_service.dart';
 import 'notification_service.dart';
+import 'remote_push_service.dart';
 
 class MarketService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -149,6 +153,7 @@ class MarketService {
       'isApproved': false,
     });
     await CacheService.invalidateProducts();
+    unawaited(RemotePushService.notifyAdmins('market_products'));
     await NotificationService.showLocalNotification(
       title: '🛒 منتج جديد',
       body: 'تم إرسال المنتج للمراجعة: ${product.name}',
@@ -494,6 +499,7 @@ class MarketService {
   // Seller Requests
   Future<void> submitSellerRequest(SellerRequest request) async {
     await _firestore.collection('seller_requests').add(request.toJson());
+    unawaited(RemotePushService.notifyAdmins('seller_requests'));
     await NotificationService.showLocalNotification(
       title: '📝 طلب بائع جديد',
       body: 'تم إرسال طلبك لتصبح بائعاً، سنراجعه قريباً',

@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/medical_models.dart';
+import 'remote_push_service.dart';
 
 /// خدمة المركز الطبي الخيري — عيادات بأجور رمزية مع المواعيد.
 /// يديرها «مدير المركز الطبي» (الدور medical_admin) أو المدير العام، والعام للقراءة.
@@ -13,6 +16,7 @@ class MedicalCenterService {
 
   Future<String> addClinic(MedicalCenterClinic clinic) async {
     final ref = await _col.add(clinic.toJson());
+    unawaited(RemotePushService.notifyAdmins('medical_center_clinics'));
     return ref.id;
   }
 
@@ -159,6 +163,7 @@ class VillageClinicService {
 
   Future<String> create(VillageClinic clinic) async {
     final ref = await _col.add(clinic.toJson());
+    unawaited(RemotePushService.notifyAdmins('village_clinics'));
     return ref.id;
   }
 
@@ -190,6 +195,7 @@ class PharmacyService {
 
   Future<String> create(Pharmacy pharmacy) async {
     final ref = await _col.add(pharmacy.toJson());
+    unawaited(RemotePushService.notifyAdmins('pharmacies'));
     return ref.id;
   }
 
@@ -222,6 +228,7 @@ class MedicalLabService {
 
   Future<String> create(MedicalLab lab) async {
     final ref = await _col.add(lab.toJson());
+    unawaited(RemotePushService.notifyAdmins('medical_labs'));
     return ref.id;
   }
 
@@ -258,6 +265,7 @@ class BloodBankService {
   // ── المتبرعون ──
   Future<String> addDonor(BloodDonor donor) async {
     final ref = await _donors.add(donor.toJson());
+    unawaited(RemotePushService.notifyAdmins('blood_donors'));
     return ref.id;
   }
 
@@ -296,6 +304,7 @@ class BloodBankService {
   // ── طلبات التبرع ──
   Future<String> createRequest(BloodRequest request) async {
     final ref = await _requests.add(request.toJson());
+    unawaited(RemotePushService.notifyAdmins('blood_requests'));
     return ref.id;
   }
 

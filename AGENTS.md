@@ -202,6 +202,18 @@ lib/
 - Service Directory (`/services`, route `serviceRequest` → `ServiceDirectoryScreen`): tabs الفنيون/خدمات زراعية/خدمات تعليمية (user-submitted `service_providers`, admin-approved, dropdown-grouped lists) + دليل الهاتف (`PhoneDirectoryScreen(embedded: true)` keeps its own design/logic). Replaced the old "طلب الخدمة" request screens (`request.dart`/`detail.dart` deleted; `service_requests` collection kept for legacy stats).
 
 ## Recent Updates
+- Admin submission alerts: any user-side creation that needs approval now calls
+  `RemotePushService.notifyAdmins(collection)` (fire-and-forget, `unawaited`) — wired into
+  news/products/obituaries/occasions/forum posts/shops/buy requests/donations/phone directory/
+  service providers/seller requests/village clinics/pharmacies/medical labs/blood donors+requests/
+  center clinics (17 collections, `kAdminNotifyCollections`). Worker (`api/push.js`) gains an
+  `action:'admin_notify'` mode: any **signed-in** sender is accepted (role gate stays for topic
+  sends), only whitelisted collection keys are honored, title/body text is built SERVER-side
+  (no injection), a 3-minute per-collection rate limit doc in `push_rate/admin_notify_<col>`
+  throttles spam, and the worker queries `users` by role (`admin`, plus `medical_admin` for
+  medical collections), sending individually to each admin's stored `fcmToken` (dedup) with
+  route `/admin` (`/medical` for medical admins on medical kinds). Requires Vercel redeploy
+  (happens automatically on `git push` to main).
 - Wisdom-of-the-day strategy switched from rotating pool to the village's **dated 365-wisdom calendar**: `lib/core/constants/wisdom_calendar.dart` (`DayWisdom{ text, category, occasion }` grouped by 12 month-lists; lookup `WisdomCalendar.of(date)` with Feb-29→28 fallback; texts kept verbatim incl. the village's own spelling «أبودشيشة»). `AlertWisdomBar` now shows today's wisdom by calendar date with the date + weekday in its label, a gold **occasion badge** whenever the day isn't «عامة» (عيد الشرطة، عيد الأم، أبودشيشة…) — tapping opens `_WisdomDayDialog`: full text, category/occasion chips, previous/next day browsing across the year, and share. The old `wisdoms.dart` pool remains only as an unused legacy file.
 - Identity hardening (comments everywhere = profile name + photo): remaining Google-name write paths converted to `UserService.resolveAuthor()` / cached profile name — condolences (obituaries), occasion attendance, market shop/buy/donation author names, medical clinic/pharmacy/lab `submittedByName`. `syncIdentityToContent` now also fans name changes to `village_clinics/pharmacies/medical_labs/service_providers` (`submittedByName`). Additionally, the Home hero performs a one-time **self-heal backfill per identity** (`identity_repair_v1_<uid>` pref stamp): opening Home after this update rewrites all legacy content/comments that were stored under the Google name before the profile existed.
 - Medical services relocated: the `/medical` page itself is unchanged (icon grid + `/medical/section` screens), but its entry moved from the Home service grid/drawer into the Service Directory launcher (`/services` now shows 6 tiles: technicians/agricultural/educational + phone book + Medical Services teal tile that pushes `AppRoutes.medical`). All deep links (`/medical` route kept in `onGenerateRoute`, admin notification `_routeForCollection`/`_pushMessageFor` routes, profile medical-admin button) still resolve directly to the medical content.
