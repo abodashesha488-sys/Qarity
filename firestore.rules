@@ -92,7 +92,8 @@ service cloud.firestore {
 
       match /likes/{userId} {
         allow read: if true;
-        allow write: if isOwner(userId);
+        // المالك يكتب إعجابه — والأدمن يستطيع مسحها عند تنظيف منتج محذوف
+        allow write: if isOwner(userId) || isAdmin();
       }
       match /comments/{commentId} {
         allow read: if true;
@@ -233,7 +234,8 @@ service cloud.firestore {
     match /stock_alerts/{docId} {
       allow list, get: if isSignedIn() && request.auth.uid == resource.data.userId;
       allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
-      allow delete: if isSignedIn() && request.auth.uid == resource.data.userId;
+      // الأدمن يحذفها ضمن تنظيف منتج محذوف
+      allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.userId);
     }
 
     // ───────────────────────── الإشعارات ─────────────────────────

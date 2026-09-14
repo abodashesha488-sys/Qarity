@@ -6,6 +6,8 @@ import 'package:flutter/foundation.dart';
 
 import '../core/utils/notification_deeplink.dart';
 import 'cache_service.dart';
+import 'content_cleanup_service.dart';
+import 'image_upload_service.dart';
 import 'notification_inbox_service.dart';
 import 'notification_service.dart';
 import 'remote_push_service.dart';
@@ -611,7 +613,26 @@ class AdminService {
         doc.data()?['name'] as String? ??
         doc.data()?['content'] as String? ??
         doc.id;
+    // تنظيف الأيتام أولاً (تعليقات/إعجابات/تقييمات/تنبيهات مخزون/تعازي/حضور)
+    // ثم حذف الوثيقة نفسها، فصور ImgBB للمنتجات.
+    await ContentCleanupService.cleanupForDeleted(
+        _firestore, collection, docId);
     await _firestore.collection(collection).doc(docId).delete();
+    if (collection == 'market_products') {
+      final urls = <String>[
+        ...((doc.data()?['imageUrls'] as List?)?.whereType<String>() ??
+            const <String>[]),
+        if ((doc.data()?['imageUrl'] ?? '') is String &&
+            (doc.data()?['imageUrl'] as String?)?.isNotEmpty == true)
+          doc.data()!['imageUrl'] as String,
+      ];
+      final uploader = ImageUploadService();
+      for (final url in urls.toSet()) {
+        try {
+          await uploader.deleteImage(url);
+        } catch (_) {}
+      }
+    }
     _invalidateContentCache(collection);
     try {
       await _logActivity(

@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/data_models.dart';
 import 'cache_service.dart';
+import 'content_cleanup_service.dart';
 import 'image_upload_service.dart';
 import 'notification_service.dart';
 import 'remote_push_service.dart';
@@ -168,6 +169,8 @@ class MarketService {
         await uploader.deleteImage(url);
       } catch (_) {}
     }
+    await ContentCleanupService.cleanupForDeleted(
+        _firestore, 'market_products', productId);
     await _firestore.collection('market_products').doc(productId).delete();
     await CacheService.invalidateProducts();
   }
