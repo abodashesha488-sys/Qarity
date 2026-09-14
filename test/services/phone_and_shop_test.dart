@@ -97,5 +97,24 @@ void main() {
       await svc.createShop(const Shop(id: '', ownerUid: 'u1', ownerName: 'x', name: 'y'));
       expect(await svc.hasShop('u1'), isTrue);
     });
+
+    test('getVisibleShopsStream shows approved for all + owner pending', () async {
+      final fake = FakeFirebaseFirestore();
+      final svc = ShopService(fake);
+      await fake.collection('shops').add({
+        'ownerUid': 'u2', 'name': 'معتمد', 'isApproved': true, 'isActive': true,
+      });
+      await fake.collection('shops').add({
+        'ownerUid': 'u1', 'name': 'معلق لي', 'isApproved': false, 'isActive': true,
+      });
+      await fake.collection('shops').add({
+        'ownerUid': 'u3', 'name': 'معلق لغيري', 'isApproved': false, 'isActive': true,
+      });
+      final forOwner = await svc.getVisibleShopsStream('u1').first;
+      expect(forOwner.map((s) => s.name).toSet(), {'معتمد', 'معلق لي'});
+      expect(forOwner.first.name, 'معتمد');
+      final anon = await svc.getVisibleShopsStream(null).first;
+      expect(anon.length, 1);
+    });
   });
 }

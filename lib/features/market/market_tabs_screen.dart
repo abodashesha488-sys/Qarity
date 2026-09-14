@@ -279,6 +279,32 @@ class _MarketTabsScreenState extends State<MarketTabsScreen>
                         labelText: 'واتساب للتواصل',
                         prefixIcon: Icon(Icons.chat_rounded)),
                     keyboardType: TextInputType.phone),
+                const SizedBox(height: 14),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                      color: Colors.orange.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                          color: Colors.orange.withValues(alpha: 0.4))),
+                  child: const Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.info_outline_rounded,
+                          size: 18, color: Colors.orange),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'بعد الإنشاء سيظهر محلك هنا مباشرة بوسم «بانتظار موافقة الإدارة»، ولن يراه بقية أهالي القرية إلا بعد موافقة الأدمن من لوحة التحكم. ستصلك رسالة فور الموافقة.',
+                          style: TextStyle(
+                              fontSize: 11.5,
+                              height: 1.5,
+                              fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),

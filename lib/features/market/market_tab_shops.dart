@@ -8,8 +8,9 @@ class _ShopsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final service = ShopService();
+    final uid = FirebaseAuth.instance.currentUser?.uid;
     return OfflineStreamBuilder<List<Shop>>(
-      stream: service.getShopsStream(),
+      stream: service.getVisibleShopsStream(uid),
       onlineBuilder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -18,7 +19,7 @@ class _ShopsTab extends StatelessWidget {
         if (shops.isEmpty) {
           return const _TabEmpty(
             icon: Icons.storefront_rounded,
-            message: 'لا توجد محلات بعد',
+            message: 'لا توجد محلات بعد — أنشئ محلك من زر «إنشاء محل»',
           );
         }
         return _buildShopsList(theme, shops);
@@ -85,6 +86,32 @@ class _ShopsTab extends StatelessWidget {
                                     fontWeight: FontWeight.w900, fontSize: 15),
                                 iconSize: 14),
                             const SizedBox(height: 3),
+                            if (!s.isApproved)
+                              Container(
+                                margin: const EdgeInsets.only(bottom: 4),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                    color:
+                                        Colors.orange.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                        color: Colors.orange
+                                            .withValues(alpha: 0.4))),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.hourglass_top_rounded,
+                                        size: 12, color: Colors.orange),
+                                    SizedBox(width: 4),
+                                    Text('بانتظار موافقة الإدارة',
+                                        style: TextStyle(
+                                            fontSize: 10.5,
+                                            fontWeight: FontWeight.w800,
+                                            color: Colors.orange)),
+                                  ],
+                                ),
+                              ),
                             Text(s.category,
                                 style: TextStyle(
                                     fontSize: 12,

@@ -26,6 +26,32 @@ class ShopService {
             s.docs.map((d) => Shop.fromJson(d.data(), d.id)).toList());
   }
 
+  /// للمالك: المعتمدة النشطة أولاً، ثم محلاته هو غير المعتمدة (بوسم «قيد المراجعة»)
+  /// حتى يرى المستخدم نتيجة إنشائه فوراً بدل أن يختفي.
+  Stream<List<Shop>> getVisibleShopsStream([String? ownerUid]) {
+    return _col.snapshots().map((s) {
+      final all =
+          s.docs.map((d) => Shop.fromJson(d.data(), d.id)).toList();
+      final visible = all
+          .where((sh) =>
+              (sh.isApproved && sh.isActive) ||
+              (ownerUid != null && sh.ownerUid == ownerUid))
+          .toList();
+      int rank(Shop sh) {
+        if (sh.isApproved && sh.isActive) return 0;
+        if (sh.ownerUid == ownerUid && !sh.isApproved) return 1;
+        return 2;
+      }
+      visible.sort((a, b) {
+        final r = rank(a).compareTo(rank(b));
+        if (r != 0) return r;
+        return (b.createdAt ?? DateTime(1970))
+            .compareTo(a.createdAt ?? DateTime(1970));
+      });
+      return visible;
+    });
+  }
+
   /// محلات مستخدم معيّن (لوحتي).
   Future<List<Shop>> getMyShops(String ownerUid) async {
     final snap =
