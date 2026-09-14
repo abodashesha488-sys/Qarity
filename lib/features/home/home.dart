@@ -527,12 +527,28 @@ class _HeroHeaderState extends State<_HeroHeader> {
                     BoxDecoration(gradient: AppColors.primaryGradient)),
           ),
           Positioned.fill(
-            child: Opacity(
-              opacity: 0.28,
-              child: Image.asset(
-                'assets/images/heder.jpg',
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+            child: Image.asset(
+              'assets/images/heder.jpg',
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+            ),
+          ),
+          // فينييت: الصورة مشرقة وواضحة في الوسط، وتعتّم تدريجياً عند الحواف
+          // حتى تذوب في أخضر الهيدر.
+          const Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: RadialGradient(
+                  center: Alignment(0.0, -0.12),
+                  radius: 1.08,
+                  colors: [
+                    Color(0x001B5E20),
+                    Color(0x2E1B5E20),
+                    Color(0xA61B5E20),
+                    Color(0xE01B5E20),
+                  ],
+                  stops: [0.0, 0.55, 0.82, 1.0],
+                ),
               ),
             ),
           ),
