@@ -509,7 +509,6 @@ class _HeroHeaderState extends State<_HeroHeader> {
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
-        gradient: AppColors.primaryGradient,
         borderRadius:
             BorderRadius.only(bottomLeft: Radius.circular(30), bottomRight: Radius.circular(30)),
         boxShadow: [
@@ -519,7 +518,25 @@ class _HeroHeaderState extends State<_HeroHeader> {
               offset: Offset(0, 6)),
         ],
       ),
-      child: SafeArea(
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        children: [
+          const Positioned.fill(
+            child: DecoratedBox(
+                decoration:
+                    BoxDecoration(gradient: AppColors.primaryGradient)),
+          ),
+          Positioned.fill(
+            child: Opacity(
+              opacity: 0.28,
+              child: Image.asset(
+                'assets/images/heder.jpg',
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+              ),
+            ),
+          ),
+          SafeArea(
         bottom: false,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 20),
@@ -643,6 +660,8 @@ class _HeroHeaderState extends State<_HeroHeader> {
             ],
           ),
         ),
+      ),
+        ],
       ),
     );
   }
