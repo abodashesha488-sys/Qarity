@@ -13,15 +13,7 @@ class _MarketTabState extends State<_MarketTab> {
   final TextEditingController _search = TextEditingController();
   String _cat = 'الكل';
 
-  static const _cats = [
-    'الكل',
-    'مواد غذائية',
-    'خضار وفواكه',
-    'إلكترونيات وهواتف',
-    'ملابس وأحذية',
-    'أثاث ومفروشات',
-    'سوق المستعمل'
-  ];
+  static const _cats = ['الكل', ...kProductCategories];
 
   @override
   void dispose() {

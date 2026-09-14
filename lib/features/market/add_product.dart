@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../core/constants/product_categories.dart';
 import '../../core/network/network_info.dart';
 import '../../core/utils/helpers.dart';
 import '../../models/data_models.dart';
@@ -26,24 +27,9 @@ class _AddMarketProductScreenState extends State<AddMarketProductScreen> {
   final ImagePicker _picker = ImagePicker();
 
   SellerType _sellerType = SellerType.regular;
-  final List<String> _categories = [
-    'مواد غذائية',
-    'خضار وفواكه',
-    'لحوم وطيور وأسماك',
-    'ألبان وخير البلد',
-    'حلويات ومخبوزات',
-    'مشروبات ومقاهي',
-    'أدوات منزلية ومنظفات',
-    'إلكترونيات وهواتف',
-    'أثاث ومفروشات',
-    'ملابس وأحذية',
-    'مستلزمات زراعة وأعلاف',
-    'سوق المستعمل',
-    'ورش وصيانة',
-    'مخازن ومستودعات',
-    'حرف يدوية',
-    'خدمات أخرى',
-  ];
+  // نفس قوائم التصنيف في تبويب «السوق» — مصدر واحد مشترك.
+  final List<String> _categories =
+      kProductCategories.where((c) => c != 'عام').toList();
   String _selectedCategory = 'مواد غذائية';
   final List<String> _uploadedImageUrls = [];
   String _sellerName = 'عام';
