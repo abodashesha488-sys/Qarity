@@ -522,7 +522,7 @@ class _HeroHeaderState extends State<_HeroHeader> {
     }
 
     Widget glassPill({required Widget child}) => Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.13),
             borderRadius: BorderRadius.circular(999),
@@ -573,31 +573,43 @@ class _HeroHeaderState extends State<_HeroHeader> {
               ),
             ),
           ),
-          // 3) صورة القرية مدمجة بشفافية خفيفة (هوية، لا ازدحام)
+          // 3) صورة القرية واضحة 90% فوق القاعدة الذهبية
           Positioned.fill(
             child: Opacity(
-              opacity: 0.38,
+              opacity: 0.9,
               child: Image.asset('assets/images/heder.jpg',
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => const SizedBox.shrink()),
             ),
           ),
+          // 3b) حجاب تدرجي سفلي خفيف يضمن بقاء النصوص البيضاء مقروءة فوق الصورة
+          const Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0x2E0B2A10), Color(0x730B2A10)],
+                    stops: [0.0, 1.0]),
+              ),
+            ),
+          ),
           SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 22),
+              padding: const EdgeInsets.fromLTRB(16, 6, 16, 14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // ── الصف العلوي: الهوية + الإجراءات (شريط زجاجي واحد) ──
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 6, vertical: 5),
+                        horizontal: 6, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.12),
+                      color: Colors.white.withValues(alpha: 0.14),
                       borderRadius: BorderRadius.circular(999),
                       border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.20)),
+                          color: Colors.white.withValues(alpha: 0.22)),
                     ),
                     child: Row(
                       children: [
@@ -627,9 +639,9 @@ class _HeroHeaderState extends State<_HeroHeader> {
                                           _user?.sellerType?.name,
                                       style: const TextStyle(
                                           color: Colors.white,
-                                          fontSize: 12.5,
+                                          fontSize: 13,
                                           fontWeight: FontWeight.w800),
-                                      iconSize: 12,
+                                      iconSize: 13,
                                     ),
                                   ),
                                 ],
@@ -649,32 +661,32 @@ class _HeroHeaderState extends State<_HeroHeader> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 18),
-                  // ── منطقة الترحيب: الشعار + التحية + اسم المستخدم ──
+                  const SizedBox(height: 10),
+                  // ── منطقة البطل: الشعار + اسم القرية + التحية ──
                   Row(
                     children: [
                       Container(
-                        width: 58,
-                        height: 58,
+                        width: 44,
+                        height: 44,
                         decoration: BoxDecoration(
                             color: Colors.white,
                             shape: BoxShape.circle,
                             border: Border.all(
                                 color: const Color(0xFFF1C40F)
                                     .withValues(alpha: 0.85),
-                                width: 2.5),
+                                width: 2),
                             boxShadow: const [
                               BoxShadow(
                                   color: Color(0x40000000),
-                                  blurRadius: 10,
-                                  offset: Offset(0, 3))
+                                  blurRadius: 8,
+                                  offset: Offset(0, 2))
                             ]),
                         child: ClipOval(
                           child: Image.asset('assets/images/Qurity.png',
                               fit: BoxFit.cover),
                         ),
                       ).animate().fadeIn(duration: 500.ms).scale(begin: const Offset(0.7, 0.7)),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -684,10 +696,10 @@ class _HeroHeaderState extends State<_HeroHeader> {
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                     color: Color(0xFFFFE082),
-                                    fontSize: 11,
+                                    fontSize: 15.5,
                                     fontWeight: FontWeight.w900,
                                     letterSpacing: 0.4)),
-                            const SizedBox(height: 3),
+                            const SizedBox(height: 1),
                             Row(
                               children: [
                                 Flexible(
@@ -696,29 +708,9 @@ class _HeroHeaderState extends State<_HeroHeader> {
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
                                           color: Colors.white
-                                              .withValues(alpha: 0.85),
-                                          fontSize: 12.5,
+                                              .withValues(alpha: 0.9),
+                                          fontSize: 12,
                                           fontWeight: FontWeight.w600)),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 2),
-                            Row(
-                              children: [
-                                Flexible(
-                                  child: RoleNameText(
-                                    name:
-                                        name.isEmpty ? 'ضيفنا الكريم' : name,
-                                    role: _user?.role,
-                                    sellerType:
-                                        _user?.sellerType?.name,
-                                    style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w900,
-                                        height: 1.2),
-                                    iconSize: 16,
-                                  ),
                                 ),
                               ],
                             ),
@@ -727,23 +719,23 @@ class _HeroHeaderState extends State<_HeroHeader> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   // ── التاريخ والساعة كحبّتين زجاجيتين ──
                   Wrap(
                     spacing: 8,
-                    runSpacing: 6,
+                    runSpacing: 4,
                     children: [
                       glassPill(
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             const Icon(Icons.event_rounded,
-                                size: 12, color: Color(0xFFFFE082)),
+                                size: 11, color: Color(0xFFFFE082)),
                             const SizedBox(width: 5),
                             Text(widget.dateLabel,
                                 style: const TextStyle(
                                     color: Colors.white,
-                                    fontSize: 10.5,
+                                    fontSize: 10,
                                     fontWeight: FontWeight.w700)),
                           ],
                         ),
@@ -1069,12 +1061,12 @@ class _VillageClockState extends State<_VillageClock> {
       mainAxisSize: MainAxisSize.min,
       children: [
         const Icon(Icons.schedule_rounded,
-            size: 12, color: Color(0xFFFFE082)),
+            size: 11, color: Color(0xFFFFE082)),
         const SizedBox(width: 5),
         Text(text,
             style: const TextStyle(
                 color: Colors.white,
-                fontSize: 11,
+                fontSize: 10.5,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 0.5,
                 fontFeatures: [FontFeature.tabularFigures()])),
