@@ -12,6 +12,12 @@ class _MarketTabState extends State<_MarketTab> {
   final MarketService _service = MarketService();
   final TextEditingController _search = TextEditingController();
   String _cat = 'الكل';
+  // تدفّق واحد ثابت طوال عمر الشاشة: إعادة إنشائه مع كل ضغطة كتابة
+  // كانت تعيد الاشتراك وتُعيد تركيب شجرة النتائج فيفقد مربع البحث تركيزه.
+  late final Stream<List<MarketProduct>> _stream =
+      _service.getProductsStream();
+  late final Future<List<Map<String, dynamic>>?> _cacheFuture =
+      CacheService.getProducts();
 
   static const _cats = ['الكل', ...kProductCategories];
 
@@ -25,7 +31,7 @@ class _MarketTabState extends State<_MarketTab> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return OfflineStreamBuilder<List<MarketProduct>>(
-      stream: _service.getProductsStream(),
+      stream: _stream,
       onlineBuilder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -45,7 +51,7 @@ class _MarketTabState extends State<_MarketTab> {
         return _buildMarketContent(theme, products);
       },
       cacheBuilder: (context) => FutureBuilder(
-        future: CacheService.getProducts(),
+        future: _cacheFuture,
         builder: (context, snapshot) {
           if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
           var products = (snapshot.data ?? []).map((j) => MarketProduct.fromJson(j, 'cache')).where((p) => p.isInStock).toList();
@@ -71,17 +77,45 @@ class _MarketTabState extends State<_MarketTab> {
             child: TextField(
               controller: _search,
               onChanged: (_) => setState(() {}),
+              textInputAction: TextInputAction.search,
               decoration: InputDecoration(
                 hintText: 'ابحث في السوق...',
+                hintStyle: TextStyle(
+                    color:
+                        theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
                 prefixIcon: Icon(Icons.search_rounded,
                     color: theme.colorScheme.primary),
+                suffixIcon: _search.text.isNotEmpty
+                    ? IconButton(
+                        tooltip: 'مسح البحث',
+                        icon: const Icon(Icons.clear_rounded, size: 18),
+                        onPressed: () {
+                          _search.clear();
+                          setState(() {});
+                        },
+                      )
+                    : null,
                 filled: true,
-                fillColor: theme.colorScheme.surfaceContainerHighest
-                    .withValues(alpha: 0.5),
+                fillColor: theme.colorScheme.surface,
+                isDense: true,
                 border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide.none),
-                contentPadding: EdgeInsets.zero,
+                    borderSide: BorderSide(
+                        color:
+                            theme.colorScheme.primary.withValues(alpha: 0.55),
+                        width: 1.3)),
+                enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(
+                        color:
+                            theme.colorScheme.primary.withValues(alpha: 0.55),
+                        width: 1.3)),
+                focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide:
+                        BorderSide(color: theme.colorScheme.primary, width: 1.8)),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
               ),
             ),
           ),
