@@ -59,7 +59,6 @@ class _SellerReviewsScreenState extends State<SellerReviewsScreen> {
       body: RefreshIndicator(
         onRefresh: _refresh,
         color: theme.colorScheme.primary,
-        backgroundColor: theme.colorScheme.surface,
         child: _isLoading
             ? ListView(children: const [SizedBox(height: 120), Center(child: CircularProgressIndicator(strokeWidth: 2))])
             : _reviews.isEmpty

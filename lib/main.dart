@@ -94,24 +94,16 @@ class QarityApp extends StatelessWidget {
           ],
           supportedLocales: const [Locale('ar', 'EG')],
           locale: const Locale('ar', 'EG'),
-          // خلفية التطبيق كلها: صورة bg خلف كل الشاشات (السكافولدز شفافة).
-          // الأساس الموحَّد لكل نصوص التطبيق: خط Tajawal.
-          builder: (context, child) => Stack(
-            children: [
-              Positioned.fill(
-                child: Image.asset(
-                  'assets/images/bg.jpg',
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const ColoredBox(
-                      color: Colors.white),
-                ),
-              ),
-              DefaultTextStyle(
-                style: GoogleFonts.tajawal(),
-                child: ConnectivityOverlay(
-                    child: child ?? const SizedBox.shrink()),
-              ),
-            ],
+          // الخلفية الموحّدة للتطبيق + الأساس الموحد للنصوص (Tajawal).
+          builder: (context, child) => ColoredBox(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF0A0A0A)
+                : const Color(0xFFD0F6EE),
+            child: DefaultTextStyle(
+              style: GoogleFonts.tajawal(),
+              child:
+                  ConnectivityOverlay(child: child ?? const SizedBox.shrink()),
+            ),
           ),
           initialRoute: AppRoutes.splash,
           onGenerateRoute: AppRoutes.onGenerateRoute,

@@ -122,7 +122,6 @@ class _MarketTabsScreenState extends State<MarketTabsScreen>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
         automaticallyImplyLeading: false,
         elevation: 0,

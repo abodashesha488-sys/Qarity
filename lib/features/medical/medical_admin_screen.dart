@@ -91,7 +91,6 @@ class _MedicalCenterAdminScreenState extends State<MedicalCenterAdminScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
         elevation: 0,
         backgroundColor: const Color(0xFF00897B),

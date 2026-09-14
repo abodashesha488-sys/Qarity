@@ -81,7 +81,6 @@ class _SellerDetailScreenState extends State<SellerDetailScreen> {
       body: RefreshIndicator(
         onRefresh: _refresh,
         color: theme.colorScheme.primary,
-        backgroundColor: theme.colorScheme.surface,
         child: ListView(
           physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.all(16),

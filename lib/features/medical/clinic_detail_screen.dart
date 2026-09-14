@@ -172,7 +172,6 @@ class VillageClinicDetailScreen extends StatelessWidget {
         const VillageClinic(id: '', name: '');
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
       body: CustomScrollView(
         slivers: [
           MedDetailHeader(
@@ -330,7 +329,6 @@ class PharmacyDetailScreen extends StatelessWidget {
         const Pharmacy(id: '', name: '');
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
       body: CustomScrollView(
         slivers: [
           MedDetailHeader(
@@ -494,7 +492,6 @@ class MedicalLabDetailScreen extends StatelessWidget {
         const MedicalLab(id: '', name: '');
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
       body: CustomScrollView(
         slivers: [
           MedDetailHeader(

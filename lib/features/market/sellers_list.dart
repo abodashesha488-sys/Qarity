@@ -236,7 +236,6 @@ class _MarketSellersScreenState extends State<MarketSellersScreen>
       body: RefreshIndicator(
         onRefresh: _refreshSellers,
         color: theme.colorScheme.primary,
-        backgroundColor: theme.colorScheme.surface,
         child: _buildBody(theme),
       ),
     );

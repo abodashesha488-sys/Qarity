@@ -83,53 +83,60 @@ class _HomeScreenState extends State<HomeScreen> {
           child: _pages[_selectedIndex],
         ),
       ),
-      bottomNavigationBar: DecoratedBox(
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('assets/images/toolbar.jpg'),
-            fit: BoxFit.cover,
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.fromLTRB(10, 2, 10, 10),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(26),
+            image: const DecorationImage(
+              image: AssetImage('assets/images/toolbar.jpg'),
+              fit: BoxFit.cover,
+            ),
+            border: Border.all(
+                color: Colors.white.withValues(alpha: 0.55)),
+            boxShadow: const [
+              BoxShadow(
+                  color: Color(0x33000000),
+                  blurRadius: 14,
+                  offset: Offset(0, 4)),
+            ],
           ),
-          boxShadow: [
-            BoxShadow(
-                color: Color(0x40000000),
-                blurRadius: 16,
-                offset: Offset(0, -4)),
-          ],
-        ),
-        child: ColoredBox(
-          color: Colors.black.withValues(alpha: 0.28),
-          child: NavigationBarTheme(
-          data: NavigationBarThemeData(
-            iconTheme: WidgetStateProperty.resolveWith((states) =>
-                IconThemeData(
-                    color: states.contains(WidgetState.selected)
-                        ? Colors.white
-                        : Colors.white70)),
+          clipBehavior: Clip.antiAlias,
+          child: ColoredBox(
+            color: Colors.black.withValues(alpha: 0.28),
+            child: NavigationBarTheme(
+              data: NavigationBarThemeData(
+                iconTheme: WidgetStateProperty.resolveWith((states) =>
+                    IconThemeData(
+                        color: states.contains(WidgetState.selected)
+                            ? Colors.white
+                            : Colors.white70)),
+              ),
+              child: NavigationBar(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                shadowColor: Colors.transparent,
+                surfaceTintColor: Colors.transparent,
+                indicatorColor: Colors.white.withValues(alpha: 0.22),
+                labelTextStyle: WidgetStateProperty.resolveWith((states) =>
+                    states.contains(WidgetState.selected)
+                        ? const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700)
+                        : const TextStyle(color: Colors.white70)),
+                selectedIndex: _selectedIndex,
+                onDestinationSelected: _onItemTapped,
+                animationDuration: const Duration(milliseconds: 400),
+                destinations: const [
+                  NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'الرئيسية'),
+                  NavigationDestination(icon: QurityLogo(size: 24, withBorder: false, withShadow: false), selectedIcon: QurityLogo(size: 24, withBorder: false, withShadow: false), label: 'عن القرية'),
+                  NavigationDestination(icon: Icon(Icons.store_outlined), selectedIcon: Icon(Icons.store_rounded), label: 'السوق'),
+                  NavigationDestination(icon: Icon(Icons.forum_outlined), selectedIcon: Icon(Icons.forum_rounded), label: 'المنتدى'),
+                  NavigationDestination(icon: Icon(Icons.person_outlined), selectedIcon: Icon(Icons.person_rounded), label: 'الملف'),
+                ],
+              ),
+            ),
           ),
-          child: NavigationBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          shadowColor: Colors.transparent,
-          surfaceTintColor: Colors.transparent,
-          indicatorColor: Colors.white.withValues(alpha: 0.22),
-          labelTextStyle: WidgetStateProperty.resolveWith((states) =>
-              states.contains(WidgetState.selected)
-                  ? const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700)
-                  : const TextStyle(color: Colors.white70)),
-          selectedIndex: _selectedIndex,
-          onDestinationSelected: _onItemTapped,
-          animationDuration: const Duration(milliseconds: 400),
-          destinations: const [
-            NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'الرئيسية'),
-            NavigationDestination(icon: QurityLogo(size: 24, withBorder: false, withShadow: false), selectedIcon: QurityLogo(size: 24, withBorder: false, withShadow: false), label: 'عن القرية'),
-            NavigationDestination(icon: Icon(Icons.store_outlined), selectedIcon: Icon(Icons.store_rounded), label: 'السوق'),
-            NavigationDestination(icon: Icon(Icons.forum_outlined), selectedIcon: Icon(Icons.forum_rounded), label: 'المنتدى'),
-            NavigationDestination(icon: Icon(Icons.person_outlined), selectedIcon: Icon(Icons.person_rounded), label: 'الملف'),
-          ],
-        ),
-        ),
         ),
       ),
     );
@@ -516,49 +523,45 @@ class _HeroHeaderState extends State<_HeroHeader> {
             BorderRadius.only(bottomLeft: Radius.circular(30), bottomRight: Radius.circular(30)),
         boxShadow: [
           BoxShadow(
-              color: Color(0x331565C0),
-              blurRadius: 18,
-              offset: Offset(0, 6)),
+              color: Color(0x14000000),
+              blurRadius: 14,
+              offset: Offset(0, 5)),
         ],
       ),
       clipBehavior: Clip.antiAlias,
       child: Stack(
         children: [
-          const Positioned.fill(
-            child: DecoratedBox(
-                decoration:
-                    BoxDecoration(gradient: AppColors.primaryGradient)),
-          ),
           Positioned.fill(
             child: Image.asset(
               'assets/images/heder.jpg',
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+              errorBuilder: (_, __, ___) =>
+                  const ColoredBox(color: Color(0xFFD0F6EE)),
             ),
           ),
-          // فينييت: الصورة مشرقة وواضحة في الوسط، وتعتّم تدريجياً عند الحواف
-          // حتى تذوب في أخضر الهيدر.
+          // تدرّج حواف: الصورة واضحة تمامًا في الوسط وتذوب في خلفية
+          // الشاشة (D0F6EE) كلما اقتربت من الأطراف.
           const Positioned.fill(
             child: DecoratedBox(
               decoration: BoxDecoration(
                 gradient: RadialGradient(
-                  center: Alignment(0.0, -0.12),
-                  radius: 1.08,
+                  center: Alignment(0.0, -0.10),
+                  radius: 1.18,
                   colors: [
-                    Color(0x001B5E20),
-                    Color(0x2E1B5E20),
-                    Color(0xA61B5E20),
-                    Color(0xE01B5E20),
+                    Color(0x00D0F6EE),
+                    Color(0x1AD0F6EE),
+                    Color(0x99D0F6EE),
+                    Color(0xF2D0F6EE),
                   ],
-                  stops: [0.0, 0.55, 0.82, 1.0],
+                  stops: [0.0, 0.55, 0.84, 1.0],
                 ),
               ),
             ),
           ),
           SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 20),
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -574,13 +577,12 @@ class _HeroHeaderState extends State<_HeroHeader> {
                       children: [
                         const Text('قرية أبوديشيشة',
                             style: TextStyle(
-                                color: Colors.white,
+                                color: Color(0xFF1B5E20),
                                 fontWeight: FontWeight.w900,
                                 fontSize: 15)),
                         Text(widget.dateLabel,
-                            style: TextStyle(
-                                color:
-                                    Colors.white.withValues(alpha: 0.75),
+                            style: const TextStyle(
+                                color: Color(0xFF455A64),
                                 fontSize: 10,
                                 fontWeight: FontWeight.w600)),
                         const _VillageClock(),
@@ -615,11 +617,10 @@ class _HeroHeaderState extends State<_HeroHeader> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(widget.greeting,
-                            style: TextStyle(
-                                color: Colors.white
-                                    .withValues(alpha: 0.8),
+                            style: const TextStyle(
+                                color: Color(0xFF2E7D32),
                                 fontSize: 11.5,
-                                fontWeight: FontWeight.w600)),
+                                fontWeight: FontWeight.w700)),
                         const SizedBox(height: 2),
                         Row(
                           children: [
@@ -631,7 +632,7 @@ class _HeroHeaderState extends State<_HeroHeader> {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
-                                      color: Colors.white70,
+                                      color: Color(0xFF37474F),
                                       fontSize: 12.5,
                                       fontWeight: FontWeight.w700)),
                             ),
@@ -643,7 +644,7 @@ class _HeroHeaderState extends State<_HeroHeader> {
                                   role: _user?.role,
                                   sellerType: _user?.sellerType?.name,
                                   style: const TextStyle(
-                                      color: Colors.white,
+                                      color: Color(0xFF1B5E20),
                                       fontSize: 16.5,
                                       fontWeight: FontWeight.w900),
                                   iconSize: 14,
@@ -694,14 +695,14 @@ class _GlassIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white.withValues(alpha: 0.14),
+      color: Colors.white.withValues(alpha: 0.75),
       shape: const CircleBorder(),
       child: InkWell(
         customBorder: const CircleBorder(),
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.all(8.5),
-          child: Icon(icon, color: Colors.white, size: 19),
+          child: Icon(icon, color: const Color(0xFF1B5E20), size: 19),
         ),
       ),
     );
@@ -959,16 +960,16 @@ class _VillageClockState extends State<_VillageClock> {
       padding: const EdgeInsets.only(top: 2),
       child: Row(
         children: [
-          Icon(Icons.schedule_rounded,
-              size: 11, color: Colors.white.withValues(alpha: 0.75)),
+          const Icon(Icons.schedule_rounded,
+              size: 11, color: Color(0xFF455A64)),
           const SizedBox(width: 4),
           Text(text,
-              style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.9),
+              style: const TextStyle(
+                  color: Color(0xFF37474F),
                   fontSize: 12,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 0.5,
-                  fontFeatures: const [FontFeature.tabularFigures()])),
+                  fontFeatures: [FontFeature.tabularFigures()])),
         ],
       ),
     );

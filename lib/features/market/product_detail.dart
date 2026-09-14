@@ -180,7 +180,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       body: RefreshIndicator(
         onRefresh: _refreshProduct,
         color: theme.colorScheme.primary,
-        backgroundColor: theme.colorScheme.surface,
         child: ListView(
           physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.symmetric(vertical: 12),

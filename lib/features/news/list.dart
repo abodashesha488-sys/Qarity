@@ -99,7 +99,6 @@ class _NewsScreenState extends State<NewsScreen>
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'news-add',
         onPressed: () => Navigator.pushNamed(context, AppRoutes.newsAdd),

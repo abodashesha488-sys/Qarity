@@ -124,7 +124,6 @@ class _ServiceProviderDetailScreenState
         final imageUrl = provider.photoUrl ?? '';
 
         return Scaffold(
-          backgroundColor: theme.colorScheme.surface,
           body: CustomScrollView(
             slivers: [
               MedDetailHeader(

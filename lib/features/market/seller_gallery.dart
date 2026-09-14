@@ -66,7 +66,6 @@ class _SellerGalleryScreenState extends State<SellerGalleryScreen> {
       body: RefreshIndicator(
         onRefresh: _refresh,
         color: theme.colorScheme.primary,
-        backgroundColor: theme.colorScheme.surface,
         child: _isLoading
             ? ListView(children: const [SizedBox(height: 120), Center(child: CircularProgressIndicator(strokeWidth: 2))])
             : _images.isEmpty
