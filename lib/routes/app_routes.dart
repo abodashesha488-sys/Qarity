@@ -27,6 +27,7 @@ import '../features/medical/medical_home_screen.dart';
 import '../features/news/add.dart';
 import '../features/news/list.dart';
 import '../features/news/view.dart';
+import '../features/notifications/notification_open_screen.dart';
 import '../features/notifications/notifications_inbox_screen.dart';
 import '../features/obituaries/add.dart';
 import '../features/obituaries/detail.dart';
@@ -96,6 +97,7 @@ static const String marketProducts = '/market';
   static const String medical = '/medical';
   static const String medicalSection = '/medical/section';
   static const String notificationsInbox = '/notifications';
+  static const String notificationOpen = '/open';
   static const String weather = '/weather';
 
   static final routes = <String, Widget Function(BuildContext)>{
@@ -138,6 +140,7 @@ static const String marketProducts = '/market';
     medicalLabDetail: (_) => const MedicalLabDetailScreen(),
     medical: (_) => const MedicalHomeScreen(),
     notificationsInbox: (_) => const NotificationsInboxScreen(),
+    notificationOpen: (_) => const NotificationOpenScreen(),
     weather: (_) => const WeatherDetailScreen(),
   };
 

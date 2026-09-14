@@ -1,6 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/utils/notification_deeplink.dart';
+import '../../routes/app_routes.dart';
 import '../../services/notification_inbox_service.dart';
 import '../../widgets/common_appbar_actions.dart';
 
@@ -81,8 +83,16 @@ class _NotificationsInboxScreenState extends State<NotificationsInboxScreen> {
                         onTap: () async {
                           await _service.markRead(n.id);
                           if (!context.mounted) return;
-                          if (n.route != null && n.route!.isNotEmpty) {
-                            Navigator.pushNamed(context, n.route!);
+                          final target = n.route;
+                          if (target == null || target.isEmpty) return;
+                          // صيغة التوجيه العميق: route|collection|itemId
+                          final deep = NotificationDeepLink.decode(target);
+                          if (deep != null) {
+                            Navigator.pushNamed(
+                                context, AppRoutes.notificationOpen,
+                                arguments: deep.toArgs());
+                          } else {
+                            Navigator.pushNamed(context, target);
                           }
                         },
                         leading: Container(

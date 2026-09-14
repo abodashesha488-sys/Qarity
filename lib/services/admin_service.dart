@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter/foundation.dart';
 
+import '../core/utils/notification_deeplink.dart';
 import 'cache_service.dart';
 import 'notification_inbox_service.dart';
 import 'notification_service.dart';
@@ -206,7 +207,7 @@ class AdminService {
       targetDocId: ref.id,
       targetTitle: title,
     );
-    _announceApproval(collection, title);
+    _announceApproval(collection, title, itemId: ref.id);
     return ref.id;
   }
 
@@ -393,9 +394,10 @@ class AdminService {
         targetTitle: title,
       );
     } catch (_) {}
-    _announceApproval(collection, title.toString());
+    _announceApproval(collection, title.toString(), itemId: docId);
     // إشعار شخصي لمقدم المحتوى: تمت الموافقة على منشورك.
-    _notifySubmitter(collection, doc.data(), approved: true);
+    _notifySubmitter(collection, doc.data(),
+        approved: true, itemId: docId);
   }
 
   /// حقل المالك/المقدم لكل مجموعة (لإشعاره شخصياً ولcascade الاسم).
@@ -419,7 +421,7 @@ class AdminService {
 
   Future<void> _notifySubmitter(
       String collection, Map<String, dynamic>? data,
-      {required bool approved}) async {
+      {required bool approved, String? itemId}) async {
     try {
       final field = _submitterFieldByCollection[collection];
       if (field == null || data == null) return;
@@ -431,12 +433,16 @@ class AdminService {
           ? 'تمت الموافقة على $label الخاص بك وهو منشور الآن'
           : 'لم يُقبل $label الخاص بك بعد المراجعة — يمكنك التعديل وإعادة الإرسال';
       final route = _routeForCollection(collection);
+      // مسارك الخاص بالعنصر: صندوق الإشعارات يحوّله لتفاصيل البيان نفسه.
+      final inboxRoute = (itemId != null && itemId.isNotEmpty)
+          ? NotificationDeepLink.encode(route, collection, itemId)
+          : route;
       // 1) صندوق الإشعارات داخل التطبيق (يعمل على كل المنصات)
       await NotificationInboxService.instance.push(
         userId: uid,
         title: title,
         body: body,
-        route: route,
+        route: inboxRoute,
         kind: approved ? 'approve' : 'reject',
       );
       // 2) FCM مباشر لجهاز المستخدم إن وُجد توكن (أندرويد غالباً)
@@ -448,6 +454,8 @@ class AdminService {
           title: title,
           body: body,
           route: route,
+          collection: collection,
+          itemId: itemId,
         );
       }
     } catch (e) {
@@ -522,16 +530,28 @@ class AdminService {
   }
 
   /// إشعار عام بعد الموافقة/النشر — Push للمواضيع + محلي على جهاز الأدمن.
-  void _announceApproval(String collection, String itemTitle) {
+  /// عند تمرير itemId يصبح النقر موجهاً لتفاصيل العنصر نفسه لا قائمته.
+  void _announceApproval(String collection, String itemTitle,
+      {String? itemId}) {
     final topic = kPushTopicForCollection[collection];
     final (title, body, route) = _pushMessageFor(collection, itemTitle);
     if (topic != null) {
-      RemotePushService.send(topic: topic, title: title, body: body, route: route);
+      RemotePushService.send(
+        topic: topic,
+        title: title,
+        body: body,
+        route: route,
+        collection: collection,
+        itemId: itemId,
+      );
     }
+    final payload = (itemId != null && itemId.isNotEmpty)
+        ? NotificationDeepLink.encode(route, collection, itemId)
+        : route;
     NotificationService.showLocalNotification(
       title: title,
       body: body,
-      payload: route,
+      payload: payload,
     );
   }
 
@@ -578,7 +598,8 @@ class AdminService {
         targetDocId: docId,
       );
     } catch (_) {}
-    _notifySubmitter(collection, snapshot.data(), approved: false);
+    _notifySubmitter(collection, snapshot.data(),
+        approved: false, itemId: docId);
   }
 
   Future<void> deleteItem(String collection, String docId) async {

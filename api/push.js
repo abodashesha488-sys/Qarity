@@ -169,6 +169,8 @@ export default async function handler(req, res) {
 
   // 3) التحقق من الحمولة ثم الإرسال: إلى topic (جماعي) أو token (شخصي)
   const { topic, token, title, route, data } = body;
+  const itemId = body.itemId ? String(body.itemId).slice(0, 40) : '';
+  const itemCollection = body.collection ? String(body.collection).slice(0, 40) : '';
   const text = (body.body || '').toString();
   if ((!topic && !token) || !title) {
     return res.status(400).json({ error: 'topic_or_token_and_title_required' });
@@ -182,6 +184,8 @@ export default async function handler(req, res) {
     data: {
       ...(data || {}),
       route: route ? String(route) : '',
+      ...(itemId ? { itemId } : {}),
+      ...(itemId && itemCollection ? { collection: itemCollection } : {}),
     },
     android: {
       priority: 'high',

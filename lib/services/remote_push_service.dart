@@ -21,13 +21,17 @@ class RemotePushService {
 
   /// أرسل إشعار FCM إلى topic — best-effort (أخطاء الشبكة تُبتلع بصمت).
   /// يُتخطى بهدوء إذا لم يكن هناك مستخدم مسجّل دخوله (المتلقي لا يرسل أصلاً).
+  /// عند تمرير collection+itemId يصبح النقر على الإشعار موجهاً للعنصر نفسه.
   static Future<void> send({
     required String topic,
     required String title,
     required String body,
     String? route,
+    String? collection,
+    String? itemId,
   }) =>
-      _post({'topic': topic}, title, body, route);
+      _post({'topic': topic}, title, body, route,
+          collection: collection, itemId: itemId);
 
   /// إشعار شخصي لجهاز محدد عبر FCM registration token
   /// (مثلاً: إخطار صاحب المحتوى عند الموافقة على منشوره أو رفضه).
@@ -36,13 +40,17 @@ class RemotePushService {
     required String title,
     required String body,
     String? route,
+    String? collection,
+    String? itemId,
   }) {
     if (fcmToken.isEmpty) return Future.value();
-    return _post({'token': fcmToken}, title, body, route);
+    return _post({'token': fcmToken}, title, body, route,
+        collection: collection, itemId: itemId);
   }
 
   static Future<void> _post(
-      Map<String, dynamic> target, String title, String body, String? route) async {
+      Map<String, dynamic> target, String title, String body, String? route,
+      {String? collection, String? itemId}) async {
     if (endpoint.isEmpty) return;
     try {
       final user = FirebaseAuth.instance.currentUser;
@@ -61,6 +69,9 @@ class RemotePushService {
               'title': title,
               'body': body,
               if (route != null) 'route': route,
+              if (collection != null && collection.isNotEmpty)
+                'collection': collection,
+              if (itemId != null && itemId.isNotEmpty) 'itemId': itemId,
             }),
           )
           .timeout(const Duration(seconds: 8));

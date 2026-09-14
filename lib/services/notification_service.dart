@@ -8,7 +8,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 
+import '../../../core/utils/notification_deeplink.dart';
 import '../../core/utils/navigator_key.dart';
+import '../../routes/app_routes.dart';
 
 class NotificationService {
   NotificationService._();
@@ -57,7 +59,7 @@ class NotificationService {
       final initialMessage =
           await FirebaseMessaging.instance.getInitialMessage();
       if (initialMessage != null) {
-        _openRoute(initialMessage.data['route'] as String?);
+        _handleData(initialMessage.data);
       }
     } catch (_) {}
 
@@ -73,11 +75,13 @@ class NotificationService {
   // قد يصل الطلب قبل أن يصبح الـ Navigator جاهزاً (أثناء الإقلاع)، لذا
   // نخزّن المسار المبدئي ونحاول الانتقال بإعادة محاولات قصيرة.
   static String? _pendingRoute;
+  static Object? _pendingArgs;
   static bool _navigating = false;
 
-  static void _openRoute(String? route) {
+  static void _openRoute(String? route, {Object? arguments}) {
     if (route == null || route.isEmpty || route == '/') return;
     _pendingRoute = route;
+    _pendingArgs = arguments;
     _drainPendingRoute();
   }
 
@@ -94,6 +98,7 @@ class NotificationService {
     if (context == null) {
       if (attempt >= 20) {
         _pendingRoute = null;
+        _pendingArgs = null;
         _navigating = false;
         return;
       }
@@ -104,8 +109,14 @@ class NotificationService {
     // إن كان المسار ما زال معلّقاً (لم يُلغَ أو يُستبدل) انتقل إليه مرة واحدة.
     if (_pendingRoute == route) {
       _pendingRoute = null;
+      final args = _pendingArgs;
+      _pendingArgs = null;
       try {
-        Navigator.pushNamed(context, route);
+        if (args != null) {
+          Navigator.pushNamed(context, route, arguments: args);
+        } else {
+          Navigator.pushNamed(context, route);
+        }
       } catch (_) {
         // مسار غير معروف — تجاهل بأمان.
       }
@@ -150,15 +161,49 @@ class NotificationService {
         ),
         iOS: DarwinNotificationDetails(presentAlert: true, presentBadge: true, presentSound: true),
       ),
-      payload: message.data['route'],
+      payload: _payloadFor(message.data),
     );
   }
 
-  static Future<void> _handleNotificationOpen(RemoteMessage message) async {
-    _openRoute(message.data['route'] as String?);
+  /// يبني حِمل الإشعار المحلي بنفس صيغة الموجّه: `route|collection|itemId`.
+  static String? _payloadFor(Map<String, dynamic> data) {
+    final route = (data['route'] ?? '').toString();
+    final collection = (data['collection'] ?? '').toString();
+    final itemId = (data['itemId'] ?? '').toString();
+    if (route.isEmpty) return null;
+    if (collection.isNotEmpty && itemId.isNotEmpty) {
+      return NotificationDeepLink.encode(route, collection, itemId);
+    }
+    return route;
   }
 
+  static Future<void> _handleNotificationOpen(RemoteMessage message) async {
+    _handleData(message.data);
+  }
+
+  /// موجّه الإشعار: إذا حمل معرّف عنصر → شاشة `/open` تعرض تفاصيله نفسها؛
+  /// وإلا يفتح المسار الاعتيادي.
+  static void _handleData(Map<String, dynamic> data) {
+    final itemId = (data['itemId'] ?? '').toString();
+    final collection = (data['collection'] ?? '').toString();
+    final route = (data['route'] ?? '').toString();
+    if (itemId.isNotEmpty && collection.isNotEmpty) {
+      _openRoute(
+        AppRoutes.notificationOpen,
+        arguments: {'route': route, 'collection': collection, 'id': itemId},
+      );
+      return;
+    }
+    _openRoute(route);
+  }
+
+  /// صيغة حِمل الإشعار المحلي: `route` بسيط أو `route|collection|itemId`.
   static void _onNotificationTapped(NotificationResponse response) {
+    final deep = NotificationDeepLink.decode(response.payload);
+    if (deep != null) {
+      _openRoute(AppRoutes.notificationOpen, arguments: deep.toArgs());
+      return;
+    }
     _openRoute(response.payload);
   }
 
