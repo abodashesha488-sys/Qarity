@@ -85,7 +85,7 @@ class _VillageWeatherBarState extends State<VillageWeatherBar> {
         final breaking = breakingSnap.data;
         if (breaking != null) {
           return Padding(
-            padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
+            padding: const EdgeInsets.fromLTRB(14, 2, 14, 6),
             child: Material(
               color: Colors.transparent,
               child: InkWell(
@@ -181,7 +181,7 @@ class _VillageWeatherBarState extends State<VillageWeatherBar> {
     final iconId = weather?['icon'] as String?;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
+      padding: const EdgeInsets.fromLTRB(14, 2, 14, 6),
       child: Material(
         color: Colors.transparent,
         child: InkWell(

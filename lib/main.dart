@@ -96,9 +96,7 @@ class QarityApp extends StatelessWidget {
           locale: const Locale('ar', 'EG'),
           // الخلفية الموحّدة للتطبيق + الأساس الموحد للنصوص (Tajawal).
           builder: (context, child) => ColoredBox(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? const Color(0xFF0A0A0A)
-                : const Color(0xFFD0F6EE),
+            color: const Color(0xFFF5F5DC),
             child: DefaultTextStyle(
               style: GoogleFonts.tajawal(),
               child:

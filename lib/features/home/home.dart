@@ -235,11 +235,9 @@ class HomeContent extends StatelessWidget {
                   parent: BouncingScrollPhysics()),
               slivers: [
                 const SliverToBoxAdapter(
-                    child: _SectionHead(
-                        title: 'خدمات القرية',
-                        subtitle: 'كل ما تحتاجه أبوديشيشة في مكان واحد',
-                        icon: Icons.apps_rounded)),
-                const SliverToBoxAdapter(child: ModernServiceGrid()),
+                    child: Padding(
+                        padding: EdgeInsets.only(top: 10),
+                        child: ModernServiceGrid())),
                 const SliverToBoxAdapter(
                     child: _SectionHead(
                         title: 'آخر المنتجات',
@@ -547,49 +545,24 @@ class _HeroHeaderState extends State<_HeroHeader> {
       clipBehavior: Clip.antiAlias,
       child: Stack(
         children: [
-          // 1) قاعدة خضراء عميقة متدرجة — هوية القرية
+          // 1) أرضية بديلة بلون الخلفية (تظهر فقط إن تعذّر تحميل الصورة)
           const Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                    begin: Alignment.topRight,
-                    end: Alignment.bottomLeft,
-                    colors: [
-                      Color(0xFF2E7D32),
-                      Color(0xFF1B5E20),
-                      Color(0xFF123D14)
-                    ]),
-              ),
-            ),
+            child: ColoredBox(color: Color(0xFFF5F5DC)),
           ),
-          // 2) توهج ذهبي ناعم من زاوية واحدة للعمق
-          const Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: RadialGradient(
-                    center: Alignment(0.9, -1.1),
-                    radius: 1.15,
-                    colors: [Color(0x33F1C40F), Color(0x00F1C40F)]),
-              ),
-            ),
-          ),
-          // 3) صورة القرية واضحة 90% فوق القاعدة الذهبية
+          // 2) صورة الهيدر بلا أي قاعدة خضراء — واضحة بالكامل
           Positioned.fill(
-            child: Opacity(
-              opacity: 0.9,
-              child: Image.asset('assets/images/heder.jpg',
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const SizedBox.shrink()),
-            ),
+            child: Image.asset('assets/images/heder.jpg',
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const SizedBox.shrink()),
           ),
-          // 3b) حجاب تدرجي سفلي خفيف يضمن بقاء النصوص البيضاء مقروءة فوق الصورة
+          // 2b) حجاب تدرجي شفاف-داكن خفيف يضمن بقاء النصوص البيضاء مقروءة
           const Positioned.fill(
             child: DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [Color(0x2E0B2A10), Color(0x730B2A10)],
+                    colors: [Color(0x26000000), Color(0x59000000)],
                     stops: [0.0, 1.0]),
               ),
             ),
