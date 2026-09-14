@@ -20,16 +20,6 @@ class AlertWisdomBar extends StatefulWidget {
 class _AlertWisdomBarState extends State<AlertWisdomBar> {
   late final Stream<VillageAlert?> _stream = AlertService().watchLiveAlert();
 
-  static const _weekdayNames = [
-    'الأحد',
-    'الاثنين',
-    'الثلاثاء',
-    'الأربعاء',
-    'الخميس',
-    'الجمعة',
-    'السبت'
-  ];
-
   void _showAlertDialog(VillageAlert alert) {
     showDialog<void>(
       context: context,
@@ -68,7 +58,6 @@ class _AlertWisdomBarState extends State<AlertWisdomBar> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return StreamBuilder<VillageAlert?>(
       stream: _stream,
       builder: (context, snapshot) {
@@ -163,10 +152,7 @@ class _AlertWisdomBarState extends State<AlertWisdomBar> {
             ),
           ).animate().fadeIn(duration: 350.ms);
         }
-        final now = DateTime.now();
-        final wisdom = WisdomCalendar.of(now);
-        final dateLabel =
-            '${_weekdayNames[now.weekday % 7]} ${now.day} ${WisdomCalendar.monthNames[now.month - 1]}';
+        final wisdom = WisdomCalendar.of(DateTime.now());
         return Padding(
           padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
           child: Material(
@@ -176,93 +162,52 @@ class _AlertWisdomBarState extends State<AlertWisdomBar> {
               onTap: _openWisdomDialog,
               child: Container(
                 constraints: const BoxConstraints(minHeight: 58),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  gradient: LinearGradient(
-                      begin: Alignment.centerRight,
-                      end: Alignment.centerLeft,
-                      colors: [
-                        theme.colorScheme.primaryContainer
-                            .withValues(alpha: 0.55),
-                        theme.colorScheme.surfaceContainerHighest
-                            .withValues(alpha: 0.45),
-                      ]),
-                  border: Border.all(
-                      color:
-                          theme.colorScheme.primary.withValues(alpha: 0.25)),
+                clipBehavior: Clip.antiAlias,
+                decoration: const BoxDecoration(
+                  borderRadius: BorderRadius.all(Radius.circular(16)),
+                  image: DecorationImage(
+                    image: AssetImage('assets/images/hekma.jpg'),
+                    fit: BoxFit.cover,
+                  ),
                 ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color:
-                            theme.colorScheme.primary.withValues(alpha: 0.12),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(Icons.format_quote_rounded,
-                          size: 18, color: theme.colorScheme.primary),
+                child: ColoredBox(
+                  color: Colors.black.withValues(alpha: 0.35),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 9),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.format_quote_rounded,
+                                size: 13,
+                                color:
+                                    Colors.white.withValues(alpha: 0.75)),
+                            Text('حكمة اليوم',
+                                style: TextStyle(
+                                    color:
+                                        Colors.white
+                                            .withValues(alpha: 0.85),
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700)),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(wisdom.text,
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                                height: 1.45)),
+                      ],
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Row(
-                            children: [
-                              Flexible(
-                                child: Text(
-                                    'حكمة اليوم • $dateLabel',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: theme.textTheme.labelSmall
-                                        ?.copyWith(
-                                            color: theme.colorScheme.primary,
-                                            fontWeight: FontWeight.w800)),
-                              ),
-                              if (wisdom.isSpecial) ...[
-                                const SizedBox(width: 6),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 6, vertical: 1),
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(colors: [
-                                      Color(0xFFF1C40F),
-                                      Color(0xFFB8860B)
-                                    ]),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Text(wisdom.occasion,
-                                      style: const TextStyle(
-                                          fontSize: 8.5,
-                                          fontWeight: FontWeight.w900,
-                                          color: Colors.white)),
-                                ),
-                              ],
-                            ],
-                          ),
-                          const SizedBox(height: 2),
-                          Text(wisdom.text,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w700,
-                                  fontStyle: FontStyle.italic,
-                                  height: 1.4,
-                                  color: theme.colorScheme.onSurface
-                                      .withValues(alpha: 0.85))),
-                        ],
-                      ),
-                    ),
-                    Icon(Icons.auto_awesome_rounded,
-                        size: 16,
-                        color:
-                            theme.colorScheme.primary.withValues(alpha: 0.6)),
-                  ],
+                  ),
                 ),
               ),
             ),

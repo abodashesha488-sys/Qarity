@@ -14,7 +14,7 @@ class AppTheme {
       onSurface: Color(0xFF1A1A1A),
       outline: Color(0xFFE0E0E0),
     ),
-    scaffoldBackgroundColor: const Color(0xFFFFFFFF),
+    scaffoldBackgroundColor: Colors.transparent,
     cardTheme: CardThemeData(
       color: const Color(0xFFFFFFFF),
       elevation: 4,
@@ -85,7 +85,7 @@ class AppTheme {
       onSurface: Color(0xFFE0E0E0),
       outline: Color(0xFF3D3D3D),
     ),
-    scaffoldBackgroundColor: const Color(0xFF0A0A0A),
+    scaffoldBackgroundColor: Colors.transparent,
     cardTheme: CardThemeData(
       color: const Color(0xFF121212),
       elevation: 4,

@@ -84,19 +84,21 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
       bottomNavigationBar: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-              begin: Alignment.topRight,
-              end: Alignment.bottomLeft,
-              colors: [AppColors.primary, AppColors.primaryDark]),
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/images/toolbar.jpg'),
+            fit: BoxFit.cover,
+          ),
           boxShadow: [
             BoxShadow(
-                color: AppColors.primaryDark.withValues(alpha: 0.35),
+                color: Color(0x40000000),
                 blurRadius: 16,
-                offset: const Offset(0, -4))
+                offset: Offset(0, -4)),
           ],
         ),
-        child: NavigationBarTheme(
+        child: ColoredBox(
+          color: Colors.black.withValues(alpha: 0.28),
+          child: NavigationBarTheme(
           data: NavigationBarThemeData(
             iconTheme: WidgetStateProperty.resolveWith((states) =>
                 IconThemeData(
@@ -126,6 +128,7 @@ class _HomeScreenState extends State<HomeScreen> {
             NavigationDestination(icon: Icon(Icons.forum_outlined), selectedIcon: Icon(Icons.forum_rounded), label: 'المنتدى'),
             NavigationDestination(icon: Icon(Icons.person_outlined), selectedIcon: Icon(Icons.person_rounded), label: 'الملف'),
           ],
+        ),
         ),
         ),
       ),
