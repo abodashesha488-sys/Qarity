@@ -5,8 +5,10 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_config.dart';
 import '../../core/utils/helpers.dart';
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
@@ -22,6 +24,15 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
 
+  // أخطاء تعني أن النافذة المنبثقة غير متاحة: المتصفح حجبها، أو التطبيق
+  // مثبّت كـPWA على الشاشة الرئيسية (iOS) حيث تُرفض popups تلقائياً ويرمي
+  // Firebase نفسه `popup-blocked` — كلها تُحوَّل لمسار إعادة التوجيه الرسمي.
+  static const Set<String> _popupUnavailableCodes = {
+    'popup-blocked',
+    'cancelled-popup-request',
+    'operation-not-allowed',
+  };
+
   Future<UserCredential?> _googleCredentialFlow() async {
     if (kIsWeb) {
       // على الويب: signInWithPopup هو المسار الرسمي لـ Firebase Auth
@@ -29,7 +40,12 @@ class _LoginScreenState extends State<LoginScreen> {
       final provider = GoogleAuthProvider()
         ..addScope('email')
         ..addScope('profile');
-      return FirebaseAuth.instance.signInWithPopup(provider);
+      try {
+        return await FirebaseAuth.instance.signInWithPopup(provider);
+      } on FirebaseAuthException catch (e) {
+        if (!_popupUnavailableCodes.contains(e.code)) rethrow;
+        return _startRedirectSignIn(provider);
+      }
     }
     final GoogleSignInAccount? googleUser = await GoogleSignIn(
       scopes: const <String>['openid', 'email', 'profile'],
@@ -42,6 +58,28 @@ class _LoginScreenState extends State<LoginScreen> {
       idToken: googleAuth.idToken,
     );
     return FirebaseAuth.instance.signInWithCredential(credential);
+  }
+
+  /// إعادة توجيه لمرة واحدة مع علم يمنع أي حلقة: إذا رجع المستخدم من
+  /// Google بدون إتمام تسجيل دخول، لا نُعيد التوجيه تلقائياً في نفس الجلسة.
+  Future<UserCredential?> _startRedirectSignIn(GoogleAuthProvider provider) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(AppConfig.googleRedirectFlagKey) ?? false) {
+      throw FirebaseAuthException(
+        code: 'redirect-incomplete',
+        message: 'تعذّر إتمام تسجيل الدخول عبر إعادة التوجيه — '
+            'أغلق اللسان وأعد المحاولة من متصفح Safari العادي',
+      );
+    }
+    await prefs.setBool(AppConfig.googleRedirectFlagKey, true);
+    try {
+      await FirebaseAuth.instance.signInWithRedirect(provider);
+    } catch (_) {
+      await prefs.setBool(AppConfig.googleRedirectFlagKey, false);
+      rethrow;
+    }
+    // الصفحة ستغادر إلى Google وتعود بإقلاع جديد يستهلك النتيجة في main.dart.
+    return null;
   }
 
   Future<void> _signInWithGoogle() async {

@@ -1,11 +1,15 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import './firebase_options.dart';
+import 'core/constants/app_config.dart';
 import 'core/network/connectivity_manager.dart';
 import 'core/theme/app_theme.dart';
 import 'core/utils/navigator_key.dart';
@@ -26,6 +30,23 @@ void main() async {
     );
   } catch (e) {
     debugPrint('Firebase initialization failed: $e');
+  }
+
+  // استهلاك نتيجة OAuth القادمة عبر إعادة التوجيه (وضع PWA المثبت على iOS)
+  // مرة واحدة عند الإقلاع — المدخل الوحيد لـ getRedirectResult في التطبيق.
+  // لا يعطّل الإقلاع: مهلة قصيرة ثم تجاهل، وصليان العلم يمنع أي حلقة توجيه.
+  if (kIsWeb) {
+    try {
+      await firebase_auth.FirebaseAuth.instance
+          .getRedirectResult()
+          .timeout(const Duration(seconds: 5));
+    } catch (e) {
+      debugPrint('getRedirectResult skipped: $e');
+    }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(AppConfig.googleRedirectFlagKey);
+    } catch (_) {}
   }
 
   // تحميل السمة فقط ضروري قبل runApp (سريع ومحلي).

@@ -4,13 +4,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 
-import '../../../core/utils/notification_deeplink.dart';
 import '../../core/utils/navigator_key.dart';
 import '../../routes/app_routes.dart';
+import '../core/constants/app_config.dart';
+import '../core/utils/notification_deeplink.dart';
 
 class NotificationService {
   NotificationService._();
@@ -48,11 +50,45 @@ class NotificationService {
           ?.createNotificationChannel(channel);
     }
 
-    await FirebaseMessaging.instance.requestPermission();
+    if (kIsWeb) {
+      // ويب: تجهيز الـPush اختياري تماماً ولا يجوز أن يجهض أي شيء آخر.
+      // (subscribeToTopic/onBackgroundMessage غير مدعومة على الويب — لا تُستدعى هنا.)
+      try {
+        if (AppConfig.fcmVapidPublicKey.isEmpty) {
+          debugPrint(
+              'Web push معطّل: لم يُمرر FCM_VAPID_PUBLIC_KEY وقت البناء');
+        } else {
+          await FirebaseMessaging.instance.requestPermission();
+          // تسجيل firebase-messaging-sw.js يحدث داخلياً هنا (يجب أن يُخدم من جذر الموقع).
+          final token = await FirebaseMessaging.instance
+              .getToken(vapidKey: AppConfig.fcmVapidPublicKey);
+          if (token != null && token.isNotEmpty) {
+            await _saveTokenToFirestore(token);
+          }
+          // إشعارات الصفحة في المقدمة (إن أُرسلت عبر الـService Worker).
+          try {
+            FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
+          } catch (_) {}
+        }
+      } catch (e) {
+        debugPrint('Web push init skipped (best-effort): $e');
+      }
+      return;
+    }
 
-    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-    FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
-    FirebaseMessaging.onMessageOpenedApp.listen(_handleNotificationOpen);
+    try {
+      await FirebaseMessaging.instance.requestPermission();
+    } catch (e) {
+      debugPrint('requestPermission failed: $e');
+    }
+
+    try {
+      FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+      FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
+      FirebaseMessaging.onMessageOpenedApp.listen(_handleNotificationOpen);
+    } catch (e) {
+      debugPrint('messaging streams failed: $e');
+    }
 
     // التشغيل البارد: التطبيق كان مغلقاً تماماً وفُتح بالضغط على إشعار.
     try {
@@ -63,12 +99,15 @@ class NotificationService {
       }
     } catch (_) {}
 
-    final token = await FirebaseMessaging.instance.getToken();
-    if (token != null) {
-      await _saveTokenToFirestore(token);
+    try {
+      final token = await FirebaseMessaging.instance.getToken();
+      if (token != null) {
+        await _saveTokenToFirestore(token);
+      }
+      FirebaseMessaging.instance.onTokenRefresh.listen(_saveTokenToFirestore);
+    } catch (e) {
+      debugPrint('FCM token init failed: $e');
     }
-
-    FirebaseMessaging.instance.onTokenRefresh.listen(_saveTokenToFirestore);
   }
 
   // ───────────────── فتح المسار القادم من إشعار ─────────────────

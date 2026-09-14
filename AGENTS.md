@@ -65,6 +65,30 @@ then verifies `users/{uid}.role in ['admin','medical_admin']` in Firestore.
 Only a signed-in admin can trigger a village push. There is no secret to
 embed, rotate, or leak.
 
+### iOS PWA auth & web push (blocker fixes)
+- **Google Sign-In**: browser/Safari uses `signInWithPopup` as before; when the popup
+  is unavailable (`popup-blocked` / `cancelled-popup-request` / `operation-not-allowed`,
+  e.g. the installed Home-screen PWA on iOS) `login.dart` falls back to
+  `signInWithRedirect(provider)`. The result is consumed EXACTLY ONCE at startup in
+  `main.dart` (`getRedirectResult()` with a 5s timeout + full error swallow, web-only).
+  A `SharedPreferences` flag `google_redirect_attempted` (set before redirect, cleared
+  on every startup) prevents redirect loops; a second blocked attempt surfaces a clear
+  error instead of re-redirecting.
+- **Web Push**: `web/firebase-messaging-sw.js` (served at site root, same public web
+  config + compat SDK 10.12.0 as index.html) handles background pushes + clicks.
+  `NotificationService.initialize()` splits by branch: web = permission +
+  `getToken(vapidKey: AppConfig.fcmVapidPublicKey)` in guarded try/catch (unsupported
+  web APIs like `onBackgroundMessage`/`subscribeToTopic` are never called there), then
+  early return; native path unchanged. Without a VAPID key at build time web push is
+  cleanly skipped (no prompt, no startup abort — in-app bell/inbox remains the
+  fallback; `forum_service` like-notifications now gate on auth, not FCM token, so the
+  inbox works on web).
+- **Required manual config**: Firebase Console → Project Settings → Cloud Messaging →
+  *Web Push certificates* → generate key pair, then
+  `flutter build web --dart-define=FCM_VAPID_PUBLIC_KEY=<public key>`. iOS needs
+  16.4+ AND Home-Screen installation for any web push; plain Safari tabs never
+  receive push (platform rule).
+
 ### Build the Flutter app
 Plain commands — push works out of the box:
 ```

@@ -20,6 +20,18 @@ class AppConfig {
     defaultValue: '79ddbbe54f06e4aba33efa74466d8bde',
   );
 
+  // مفتاح VAPID العام للـWeb Push (Firebase Console → Project Settings →
+  // Cloud Messaging → Web configuration → Web Push certificates).
+  // عام بطبيعته ويُمرر وقت البناء:
+  //   flutter build web --dart-define=FCM_VAPID_PUBLIC_KEY=<public key>
+  // إن لم يُضبط، يُلغى تجهيز الـPush على الويب بأمان (بدون أي كسر).
+  static const String fcmVapidPublicKey = String.fromEnvironment(
+    'FCM_VAPID_PUBLIC_KEY',
+  );
+
+  // علم لمرة واحدة يمنع حلقة إعادة التوجيه في OAuth على الـPWA المثبت (iOS).
+  static const String googleRedirectFlagKey = 'google_redirect_attempted';
+
   // موقع القرية (خط الطول/العرض) لعرض طقسها — قابل للتحديث من dart-define.
   static final double weatherLat = double.tryParse(
           const String.fromEnvironment('WEATHER_LAT', defaultValue: '31.299677')) ??

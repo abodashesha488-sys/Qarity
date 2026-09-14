@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 
 import '../models/data_models.dart';
 import 'cache_service.dart';
@@ -10,7 +9,6 @@ import 'remote_push_service.dart';
 
 class ForumService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseMessaging _messaging = FirebaseMessaging.instance;
 
   Stream<List<ForumPost>> getPostsStream() {
     return _firestore.collection('forum_posts').where('isApproved', isEqualTo: true).snapshots().map((snapshot) => snapshot.docs.map((doc) => ForumPost.fromJson(doc.data(), doc.id)).toList());
@@ -60,8 +58,9 @@ class ForumService {
 
   Future<void> _sendLikeNotification(String postId, String postTitle) async {
     try {
-      final token = await _messaging.getToken();
-      if (token != null) {
+      // بوابة الإخطار هي تسجيل الدخول (وليس توكن FCM): هكذا يبقى صندوق
+      // الوارد داخل التطبيق يعمل على الويب/القناة التي لا توكن فيها.
+      if (FirebaseAuth.instance.currentUser != null) {
         await _firestore.collection('notifications').add({
           'type': 'like',
           'targetId': postId,
