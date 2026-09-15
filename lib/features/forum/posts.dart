@@ -1,4 +1,4 @@
-﻿import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -13,8 +13,8 @@ import '../../services/cache_service.dart';
 import '../../services/forum_service.dart';
 import '../../services/share_service.dart';
 import '../../services/user_service.dart';
-import '../../widgets/common_appbar_actions.dart';
 import '../../widgets/offline_stream_builder.dart';
+import '../../widgets/qurity_app_bar.dart';
 
 class ForumPostsScreen extends StatefulWidget {
   const ForumPostsScreen({super.key});
@@ -131,14 +131,7 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('المنتدى المجتمعي'),
-        centerTitle: true,
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        surfaceTintColor: theme.colorScheme.surface,
-        actions: CommonAppBarActions.actions(context),
-      ),
+      appBar: const QurityAppBar(title: 'المنتدى المجتمعي'),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Navigator.pushNamed(context, AppRoutes.forumCreatePost),
         icon: const Icon(Icons.add_rounded),

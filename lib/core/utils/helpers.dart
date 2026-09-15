@@ -27,7 +27,7 @@ class AppHelpers {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message, style: const TextStyle(fontWeight: FontWeight.w600)),
-        backgroundColor: isError ? const Color(0xFFE53935) : isSuccess ? const Color(0xFF43A047) : const Color(0xFF43A047),
+        backgroundColor: isError ? const Color(0xFFE53935) : isSuccess ? const Color(0xFF6F4E37) : const Color(0xFF6F4E37),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         margin: const EdgeInsets.all(16),

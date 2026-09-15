@@ -9,7 +9,7 @@ import '../../core/widgets/shared_cards.dart';
 import '../../models/data_models.dart';
 import '../../services/news_service.dart';
 import '../../services/share_service.dart';
-import '../../widgets/common_appbar_actions.dart';
+import '../../widgets/qurity_app_bar.dart';
 
 /// Full article reader. Opened with a [NewsItem] as route argument
 /// (see `AppRoutes.newsView`).
@@ -98,12 +98,8 @@ class _NewsViewScreenState extends State<NewsViewScreen> {
     final passedItem = _news;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('تفاصيل الخبر'),
-        centerTitle: true,
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        surfaceTintColor: theme.colorScheme.surface,
+      appBar: QurityAppBar(
+        title: 'تفاصيل الخبر',
         actions: [
           if (passedItem != null)
             IconButton(
@@ -111,7 +107,6 @@ class _NewsViewScreenState extends State<NewsViewScreen> {
               icon: const Icon(Icons.share_rounded),
               onPressed: () => _shareNews(passedItem),
             ),
-          ...CommonAppBarActions.actions(context),
         ],
       ),
       body: passedItem == null

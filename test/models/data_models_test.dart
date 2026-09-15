@@ -205,7 +205,7 @@ void main() {
         createdAt: DateTime(2020),
       );
       expect(o.statusLabel, 'تم التسليم');
-      expect(o.statusColor, const Color(0xFF43A047));
+      expect(o.statusColor, const Color(0xFF6F4E37));
     });
 
     test('VillageInfo defaults are non-empty', () {

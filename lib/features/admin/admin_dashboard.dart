@@ -10,11 +10,12 @@ import '../../models/village_alert.dart';
 import '../../routes/app_routes.dart';
 import '../../services/admin_service.dart';
 import '../../services/alert_service.dart';
+import '../../widgets/qurity_app_bar.dart';
 
 part 'admin_dashboard_models.dart';
 part 'admin_dashboard_overview.dart';
-part 'admin_dashboard_review.dart';
 part 'admin_dashboard_reports.dart';
+part 'admin_dashboard_review.dart';
 part 'admin_dashboard_users.dart';
 
 /// لوحة تحكم عصرية — أربع وجهات: نظرة عامة، المراجعة، المستخدمون، التقارير.
@@ -55,7 +56,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         Icons.local_hospital_rounded, Color(0xFF00695C)),
     _Cat('village_clinics', 'عيادات القرية', Icons.add_business_rounded,
         Color(0xFF00897B)),
-    _Cat('pharmacies', 'الصيدليات', Icons.local_pharmacy_rounded, Colors.green),
+    _Cat('pharmacies', 'الصيدليات', Icons.local_pharmacy_rounded, Color(0xFF6F4E37)),
     _Cat('medical_labs', 'معامل التحاليل', Icons.science_rounded,
         Color(0xFF6A1B9A)),
     _Cat('blood_requests', 'طلبات التبرع بالدم', Icons.bloodtype_rounded,
@@ -104,21 +105,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        elevation: 0,
-        centerTitle: false,
-        title: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('لوحة التحكم',
-                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20)),
-            Text(_navTitles[_navIndex],
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.primary,
-                    fontWeight: FontWeight.w700)),
-          ],
-        ),
+      appBar: QurityAppBar(
+        title: 'لوحة التحكم • ${_navTitles[_navIndex]}',
         actions: [
           if (_totalPending > 0)
             Padding(
@@ -252,7 +240,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         SnackBar(
           content: Text(
               'تم ${action == 'approve' ? 'الموافقة' : action == 'reject' ? 'الرفض' : 'الحذف'} بنجاح'),
-          backgroundColor: Colors.green,
+          backgroundColor: const Color(0xFF6F4E37),
         ),
       );
       _refreshAll();

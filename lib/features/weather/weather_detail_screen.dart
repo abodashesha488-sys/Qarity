@@ -6,6 +6,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../core/constants/app_config.dart';
 import '../../services/weather_service.dart';
+import '../../widgets/qurity_app_bar.dart';
 
 /// شاشة الطقس الكاملة — تعرض كل بيانات openweathermap (الآن + توقع 5 أيام).
 class WeatherDetailScreen extends StatefulWidget {
@@ -56,21 +57,18 @@ class _WeatherDetailScreenState extends State<WeatherDetailScreen> {
     final theme = Theme.of(context);
     return Scaffold(
       backgroundColor: const Color(0xFF0D47A1),
-      appBar: AppBar(
-        title: const Text('طقس القرية',
-            style: TextStyle(fontWeight: FontWeight.w900)),
-        backgroundColor: const Color(0xFF1976D2),
-        foregroundColor: Colors.white,
-        elevation: 0,
+      appBar: QurityAppBar(
+        title: 'طقس القرية',
         actions: [
           IconButton(
+              tooltip: 'تحديث',
               onPressed: () => _load(force: true),
               icon: const Icon(Icons.refresh_rounded)),
         ],
       ),
       body: _loading
           ? const Center(
-              child: CircularProgressIndicator(color: Colors.white))
+              child: CircularProgressIndicator(color: Color(0xFF6F4E37)))
           : _offline
               ? Center(
                   child: Column(

@@ -14,7 +14,7 @@ class _ReportsPage extends StatelessWidget {
         FutureBuilder<int>(
           future: service.getActiveUsersCount(),
           builder: (context, s) => _reportRow(theme, 'المستخدمون',
-              '${s.data ?? 0}', Icons.people_rounded, Colors.green),
+              '${s.data ?? 0}', Icons.people_rounded, const Color(0xFF6F4E37)),
         ),
         const SizedBox(height: 12),
         const _SectionTitle(

@@ -1,4 +1,4 @@
-﻿import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -7,7 +7,7 @@ import '../../models/data_models.dart';
 import '../../services/forum_service.dart';
 import '../../services/image_upload_service.dart';
 import '../../services/user_service.dart';
-import '../../widgets/common_appbar_actions.dart';
+import '../../widgets/qurity_app_bar.dart';
 
 /// Creates a forum post. The post is stored unapproved (`isApproved: false`)
 /// so it goes through the admin review flow before appearing in the feed.
@@ -140,14 +140,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('إنشاء منشور'),
-        centerTitle: true,
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        surfaceTintColor: theme.colorScheme.surface,
-        actions: CommonAppBarActions.actions(context),
-      ),
+      appBar: const QurityAppBar(title: 'إنشاء منشور'),
       body: _isLoadingUser
           ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
           : AbsorbPointer(

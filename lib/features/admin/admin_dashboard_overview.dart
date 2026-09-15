@@ -200,7 +200,7 @@ class _AlertControlCardState extends State<_AlertControlCard> {
       if (!mounted) return;
       ScaffoldMessenger.maybeOf(context)?.showSnackBar(const SnackBar(
           content: Text('✅ مُفعَّل وأُرسل إشعاراً لجميع المستخدمين'),
-          backgroundColor: Colors.green));
+          backgroundColor: Color(0xFF6F4E37)));
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
@@ -633,7 +633,7 @@ class _ActivityPreview extends StatelessWidget {
     switch (action) {
       case 'approve':
       case 'publish':
-        return Colors.green;
+        return const Color(0xFF6F4E37);
       case 'reject':
         return Colors.orange;
       case 'delete':

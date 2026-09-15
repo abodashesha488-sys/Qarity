@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
@@ -7,9 +7,9 @@ class AppTheme {
   static final lightTheme = ThemeData(
     useMaterial3: true,
     colorScheme: const ColorScheme.light(
-      primary: Color(0xFF2E7D32),
+      primary: Color(0xFF6F4E37),
       secondary: Color(0xFFEF6C00),
-      tertiary: Color(0xFF4CAF50),
+      tertiary: Color(0xFF6F4E37),
       onSecondary: Colors.white,
       onSurface: Color(0xFF6F4E37),
       outline: Color(0xFFE0E0E0),
@@ -18,7 +18,7 @@ class AppTheme {
     cardTheme: CardThemeData(
       color: const Color(0xFFFFFFFF),
       elevation: 4,
-      shadowColor: const Color(0xFF2E7D32).withValues(alpha: 0.15),
+      shadowColor: const Color(0xFF6F4E37).withValues(alpha: 0.15),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     ),
     appBarTheme: const AppBarTheme(
@@ -30,21 +30,21 @@ class AppTheme {
     ),
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(
       backgroundColor: Color(0xFFFFFFFF),
-      selectedItemColor: Color(0xFF2E7D32),
+      selectedItemColor: Color(0xFF6F4E37),
       unselectedItemColor: Color(0xFF8B7355),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF2E7D32),
+        backgroundColor: const Color(0xFF6F4E37),
         foregroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         padding: const EdgeInsets.symmetric(vertical: 14),
-      ).copyWith(overlayColor: WidgetStateProperty.resolveWith((states) => states.contains(WidgetState.pressed) ? const Color(0xFF1B5E20) : null)),
+      ).copyWith(overlayColor: WidgetStateProperty.resolveWith((states) => states.contains(WidgetState.pressed) ? const Color(0xFF6F4E37) : null)),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        foregroundColor: const Color(0xFF2E7D32),
-        side: const BorderSide(color: Color(0xFF2E7D32), width: 1.5),
+        foregroundColor: const Color(0xFF6F4E37),
+        side: const BorderSide(color: Color(0xFF6F4E37), width: 1.5),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         padding: const EdgeInsets.symmetric(vertical: 14),
       ),
@@ -68,7 +68,7 @@ class AppTheme {
     ),
     inputDecorationTheme: InputDecorationTheme(
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFE0E0E0))),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF2E7D32))),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF6F4E37))),
       filled: true,
       fillColor: const Color(0xFFF5F5F5),
     ),
@@ -77,9 +77,9 @@ class AppTheme {
   static final darkTheme = ThemeData(
     useMaterial3: true,
     colorScheme: const ColorScheme.dark(
-      primary: Color(0xFF2E7D32),
+      primary: Color(0xFF6F4E37),
       secondary: Color(0xFFFF9800),
-      tertiary: Color(0xFF4CAF50),
+      tertiary: Color(0xFF6F4E37),
       onPrimary: Colors.white,
       onSecondary: Colors.white,
       onSurface: Color(0xFF6F4E37),
@@ -89,7 +89,7 @@ class AppTheme {
     cardTheme: CardThemeData(
       color: const Color(0xFFFFFFFF),
       elevation: 4,
-      shadowColor: const Color(0xFF2E7D32).withValues(alpha: 0.25),
+      shadowColor: const Color(0xFF6F4E37).withValues(alpha: 0.25),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     ),
     appBarTheme: const AppBarTheme(
@@ -101,21 +101,21 @@ class AppTheme {
     ),
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(
       backgroundColor: Color(0xFFFFFFFF),
-      selectedItemColor: Color(0xFF2E7D32),
+      selectedItemColor: Color(0xFF6F4E37),
       unselectedItemColor: Color(0xFF8B7355),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF2E7D32),
+        backgroundColor: const Color(0xFF6F4E37),
         foregroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         padding: const EdgeInsets.symmetric(vertical: 14),
-      ).copyWith(overlayColor: WidgetStateProperty.resolveWith((states) => states.contains(WidgetState.pressed) ? const Color(0xFF4CAF50) : null)),
+      ).copyWith(overlayColor: WidgetStateProperty.resolveWith((states) => states.contains(WidgetState.pressed) ? const Color(0xFF6F4E37) : null)),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        foregroundColor: const Color(0xFF2E7D32),
-        side: const BorderSide(color: Color(0xFF2E7D32), width: 1.5),
+        foregroundColor: const Color(0xFF6F4E37),
+        side: const BorderSide(color: Color(0xFF6F4E37), width: 1.5),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         padding: const EdgeInsets.symmetric(vertical: 14),
       ),
@@ -139,7 +139,7 @@ class AppTheme {
     ),
     inputDecorationTheme: InputDecorationTheme(
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFE0E0E0))),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF2E7D32))),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF6F4E37))),
       filled: true,
       fillColor: const Color(0xFFF5F5DC),
     ),

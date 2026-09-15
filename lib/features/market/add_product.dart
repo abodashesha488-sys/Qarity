@@ -8,7 +8,7 @@ import '../../services/cache_service.dart';
 import '../../services/image_upload_service.dart';
 import '../../services/market_service.dart';
 import '../../services/user_service.dart';
-import '../../widgets/common_appbar_actions.dart';
+import '../../widgets/qurity_app_bar.dart';
 
 class AddMarketProductScreen extends StatefulWidget {
   const AddMarketProductScreen({super.key});
@@ -139,14 +139,7 @@ class _AddMarketProductScreenState extends State<AddMarketProductScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('إضافة منتج'),
-        centerTitle: true,
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        surfaceTintColor: theme.colorScheme.surface,
-        actions: CommonAppBarActions.actions(context),
-      ),
+      appBar: const QurityAppBar(title: 'إضافة منتج'),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Form(

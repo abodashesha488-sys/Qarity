@@ -9,7 +9,7 @@ import '../../models/data_models.dart';
 import '../../services/image_upload_service.dart';
 import '../../services/occasion_service.dart';
 import '../../widgets/app_card.dart';
-import '../../widgets/common_appbar_actions.dart';
+import '../../widgets/qurity_app_bar.dart';
 
 class AddOccasionScreen extends StatefulWidget {
   const AddOccasionScreen({super.key});
@@ -116,14 +116,7 @@ class _AddOccasionScreenState extends State<AddOccasionScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('إضافة مناسبة'),
-        centerTitle: true,
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        surfaceTintColor: theme.colorScheme.surface,
-        actions: CommonAppBarActions.actions(context),
-      ),
+      appBar: const QurityAppBar(title: 'إضافة مناسبة'),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),

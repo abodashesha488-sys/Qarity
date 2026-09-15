@@ -76,11 +76,11 @@ class ShareService {
 
   static void _drawHeader(Canvas canvas, Size size) {
     _drawText(canvas, 'قرية أبوديشيشة', Offset(size.width / 2, 55),
-        fontSize: 30, fontWeight: FontWeight.w900, color: const Color(0xFF1B5E20));
+        fontSize: 30, fontWeight: FontWeight.w900, color: const Color(0xFF6F4E37));
     _drawText(canvas, 'سجل العزاء', Offset(size.width / 2, 95),
-        fontSize: 16, fontWeight: FontWeight.w500, color: const Color(0xFF388E3C));
+        fontSize: 16, fontWeight: FontWeight.w500, color: const Color(0xFF6F4E37));
     final line = Paint()
-      ..color = const Color(0xFF1B5E20).withValues(alpha: 0.3)
+      ..color = const Color(0xFF6F4E37).withValues(alpha: 0.3)
       ..strokeWidth = 2;
     canvas.drawLine(Offset(size.width * 0.2, 120), Offset(size.width * 0.8, 120), line);
   }
@@ -99,7 +99,7 @@ class ShareService {
         fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black87);
     y += 40;
     final line = Paint()
-      ..color = const Color(0xFF1B5E20).withValues(alpha: 0.4)
+      ..color = const Color(0xFF6F4E37).withValues(alpha: 0.4)
       ..strokeWidth = 2;
     canvas.drawLine(Offset(size.width * 0.3, y), Offset(size.width * 0.7, y), line);
     y += 35;
@@ -116,7 +116,7 @@ class ShareService {
   static void _drawLocations(Canvas canvas, Size size, Obituary obituary) {
     double y = 150 + size.width * 0.4 + 40 + 40 + 35 + 55 + 35 + 35;
     final line = Paint()
-      ..color = const Color(0xFF1B5E20).withValues(alpha: 0.3)
+      ..color = const Color(0xFF6F4E37).withValues(alpha: 0.3)
       ..strokeWidth = 2;
     canvas.drawLine(Offset(size.width * 0.2, y), Offset(size.width * 0.8, y), line);
     y += 35;
@@ -141,7 +141,7 @@ class ShareService {
     if (relatives.isEmpty) return;
     double y = 150 + size.width * 0.4 + 40 + 40 + 35 + 55 + 35 + 35 + 35 + 32 + 32 + 32;
     final line = Paint()
-      ..color = const Color(0xFF1B5E20).withValues(alpha: 0.3)
+      ..color = const Color(0xFF6F4E37).withValues(alpha: 0.3)
       ..strokeWidth = 2;
     canvas.drawLine(Offset(size.width * 0.2, y), Offset(size.width * 0.8, y), line);
     y += 35;
@@ -232,7 +232,7 @@ class ShareService {
       ..shader = const LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [Color(0xFF00695C), Color(0xFF004D40)],
+        colors: [Color(0xFF00695C), Color(0xFF6F4E37)],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
     canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), bg);
 

@@ -11,7 +11,7 @@ import '../../models/data_models.dart';
 import '../../services/image_upload_service.dart';
 import '../../services/obituary_service.dart';
 import '../../services/share_service.dart';
-import '../../widgets/common_appbar_actions.dart';
+import '../../widgets/qurity_app_bar.dart';
 
 class AddObituaryScreen extends StatefulWidget {
   const AddObituaryScreen({super.key});
@@ -284,14 +284,7 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('إضافة تعزية'),
-        centerTitle: true,
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        surfaceTintColor: theme.colorScheme.surface,
-        actions: CommonAppBarActions.actions(context),
-      ),
+      appBar: const QurityAppBar(title: 'إضافة تعزية'),
       body: Form(
         key: _formKey,
         child: ListView(

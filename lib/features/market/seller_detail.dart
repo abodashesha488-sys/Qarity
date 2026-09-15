@@ -2,11 +2,12 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
+
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
 import '../../services/market_service.dart';
 import '../../services/review_service.dart';
-import '../../widgets/common_appbar_actions.dart';
+import '../../widgets/qurity_app_bar.dart';
 
 class SellerDetailScreen extends StatefulWidget {
   const SellerDetailScreen({super.key});
@@ -70,14 +71,7 @@ class _SellerDetailScreenState extends State<SellerDetailScreen> {
     final sellerId = seller['sellerId'] ?? '';
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(name, style: const TextStyle(fontWeight: FontWeight.w800)),
-        centerTitle: true,
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        surfaceTintColor: theme.colorScheme.surface,
-        actions: CommonAppBarActions.actions(context),
-      ),
+      appBar: QurityAppBar(title: name),
       body: RefreshIndicator(
         onRefresh: _refresh,
         color: theme.colorScheme.primary,
@@ -190,7 +184,7 @@ class _SellerDetailScreenState extends State<SellerDetailScreen> {
                       context,
                       icon: Icons.call_rounded,
                       label: 'اتصال',
-                      color: Colors.green,
+                      color: const Color(0xFF6F4E37),
                       onTap: () async {
                         final uri = Uri(scheme: 'tel', path: phone);
                         try {

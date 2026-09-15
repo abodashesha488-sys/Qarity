@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../services/admin_service.dart';
+import '../../widgets/qurity_app_bar.dart';
 
 /// شاشة تعديل الأدمن لأي عنصر — تغطي كل المجموعات بحقولها الحقيقية،
 /// مع أنواع صحيحة (نص/رقم/منطقي) ووسوم عربية.
@@ -319,7 +320,7 @@ class _AdminEditScreenState extends State<AdminEditScreen> {
       await AdminService().updateItem(widget.collection, widget.docId, data);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('تم الحفظ بنجاح'), backgroundColor: Colors.green));
+            content: Text('تم الحفظ بنجاح'), backgroundColor: Color(0xFF6F4E37)));
         Navigator.pop(context, true);
       }
     } catch (e) {
@@ -336,12 +337,8 @@ class _AdminEditScreenState extends State<AdminEditScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('تعديل'),
-        centerTitle: true,
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        surfaceTintColor: theme.colorScheme.surface,
+      appBar: QurityAppBar(
+        title: 'تعديل',
         actions: [
           TextButton.icon(
             onPressed: _isSaving ? null : _save,

@@ -1,4 +1,4 @@
-﻿import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
@@ -6,8 +6,8 @@ import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
 import '../../services/cache_service.dart';
 import '../../services/obituary_service.dart';
-import '../../widgets/common_appbar_actions.dart';
 import '../../widgets/offline_stream_builder.dart';
+import '../../widgets/qurity_app_bar.dart';
 
 class ObituariesListScreen extends StatefulWidget {
   const ObituariesListScreen({super.key});
@@ -117,14 +117,7 @@ class _ObituariesListScreenState extends State<ObituariesListScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('سجل العزاء'),
-        centerTitle: true,
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        surfaceTintColor: theme.colorScheme.surface,
-        actions: CommonAppBarActions.actions(context),
-      ),
+      appBar: const QurityAppBar(title: 'سجل العزاء'),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Navigator.pushNamed(context, AppRoutes.obituariesAdd),
         icon: const Icon(Icons.add_rounded),

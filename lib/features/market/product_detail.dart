@@ -10,7 +10,7 @@ import '../../routes/app_routes.dart';
 import '../../services/market_service.dart';
 import '../../services/product_interaction_service.dart';
 import '../../services/share_service.dart';
-import '../../widgets/common_appbar_actions.dart';
+import '../../widgets/qurity_app_bar.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   const ProductDetailScreen({super.key});
@@ -152,7 +152,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     }
     if (_product == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('المنتج')),
+        appBar: const QurityAppBar(title: 'المنتج'),
         body: Center(
             child:
                 Column(mainAxisAlignment: MainAxisAlignment.center, children: [
@@ -168,15 +168,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final product = _product!;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(product.name,
-            style: const TextStyle(fontWeight: FontWeight.w800)),
-        centerTitle: true,
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        surfaceTintColor: theme.colorScheme.surface,
-        actions: CommonAppBarActions.actions(context),
-      ),
+      appBar: QurityAppBar(title: product.name),
       body: RefreshIndicator(
         onRefresh: _refreshProduct,
         color: theme.colorScheme.primary,
@@ -509,7 +501,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               value: 'whatsapp',
               child: ListTile(
                   leading: Icon(Icons.chat_bubble_outline_rounded,
-                      color: Colors.green),
+                      color: Color(0xFF6F4E37)),
                   title: Text('واتساب'),
                   dense: true)),
           const PopupMenuItem(
@@ -893,11 +885,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                  color: Colors.green.withValues(alpha: 0.1),
+                                  color: const Color(0xFF6F4E37).withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(6)),
                               child: Text('توفير ${savings.toStringAsFixed(0)}',
                                   style: theme.textTheme.labelSmall?.copyWith(
-                                      color: Colors.green,
+                                      color: const Color(0xFF6F4E37),
                                       fontWeight: FontWeight.w700)),
                             ),
                         ],
@@ -998,7 +990,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       setState(() => _isSubscribedToStockAlert = true);
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('تم الاشتراك في التنبيهات'),
-          backgroundColor: Colors.green));
+          backgroundColor: Color(0xFF6F4E37)));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

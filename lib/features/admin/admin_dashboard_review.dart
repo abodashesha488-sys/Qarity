@@ -268,7 +268,7 @@ class _ReviewCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final id = item['id'] as String;
-    final statusColor = _isApproved ? Colors.green : Colors.orange;
+    final statusColor = _isApproved ? const Color(0xFF6F4E37) : Colors.orange;
     return Card(
       elevation: 0,
       clipBehavior: Clip.antiAlias,
@@ -386,7 +386,7 @@ class _ReviewCard extends StatelessWidget {
                         context,
                         'موافقة',
                         Icons.check_rounded,
-                        Colors.green,
+                        const Color(0xFF6F4E37),
                         () => onAction(cat.collection, id, 'approve'),
                         _busy('approve', id)),
                   ),

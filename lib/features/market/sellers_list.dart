@@ -6,6 +6,7 @@ import '../../core/utils/role_style.dart';
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
 import '../../services/market_service.dart';
+import '../../widgets/qurity_app_bar.dart';
 
 class MarketSellersScreen extends StatefulWidget {
   const MarketSellersScreen({super.key});
@@ -193,12 +194,8 @@ class _MarketSellersScreenState extends State<MarketSellersScreen>
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('محلات القرية'),
-        centerTitle: true,
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        surfaceTintColor: theme.colorScheme.surface,
+      appBar: QurityAppBar(
+        title: 'محلات القرية',
         actions: [
           PopupMenuButton<String>(
             onSelected: _selectSort,

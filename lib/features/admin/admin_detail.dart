@@ -5,6 +5,7 @@ import '../../core/constants/app_colors.dart';
 import '../../routes/app_routes.dart';
 import '../../services/admin_service.dart';
 import '../../widgets/common_appbar_actions.dart';
+import '../../widgets/qurity_app_bar.dart';
 
 class AdminDetailScreen extends StatefulWidget {
   final String collection;
@@ -60,12 +61,8 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
     }).toList();
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(title.length > 24 ? '${title.substring(0, 24)}...' : title),
-        centerTitle: true,
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        surfaceTintColor: theme.colorScheme.surface,
+      appBar: QurityAppBar(
+        title: title.length > 24 ? '${title.substring(0, 24)}...' : title,
         actions: [
           _busy.isEmpty
               ? TextButton.icon(
@@ -125,15 +122,15 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: isApproved ? Colors.green.withValues(alpha: 0.2) : Colors.orange.withValues(alpha: 0.2),
+                    color: isApproved ? const Color(0xFF6F4E37).withValues(alpha: 0.2) : Colors.orange.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(isApproved ? Icons.check_circle_rounded : Icons.pending_rounded, color: isApproved ? Colors.green.shade100 : Colors.orange.shade100, size: 14),
+                      Icon(isApproved ? Icons.check_circle_rounded : Icons.pending_rounded, color: isApproved ? const Color(0xFFF0E3D5) : Colors.orange.shade100, size: 14),
                       const SizedBox(width: 4),
-                      Text(isApproved ? 'معتمد' : 'قيد المراجعة', style: TextStyle(color: isApproved ? Colors.green.shade100 : Colors.orange.shade100, fontSize: 12, fontWeight: FontWeight.w700)),
+                      Text(isApproved ? 'معتمد' : 'قيد المراجعة', style: TextStyle(color: isApproved ? const Color(0xFFF0E3D5) : Colors.orange.shade100, fontSize: 12, fontWeight: FontWeight.w700)),
                     ],
                   ),
                 ),
@@ -186,7 +183,7 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
             spacing: 8,
             runSpacing: 8,
             children: [
-              _buildActionFilled(theme, 'موافقة', Icons.check_rounded, Colors.green,
+              _buildActionFilled(theme, 'موافقة', Icons.check_rounded, const Color(0xFF6F4E37),
                   _isBusy('approve')
                       ? null
                       : () => _run('approve', () => _adminService.approveItem(widget.collection, widget.docId))),

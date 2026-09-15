@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../models/medical_models.dart';
 import '../../services/medical_service.dart';
+import '../../widgets/qurity_app_bar.dart';
 
 /// شاشة إدارة المركز الطبي الخيري — لمدير المركز الطبي.
 /// إضافة/تعديل/حذف عيادات المركز مع الأيام والساعات والأجور.
@@ -91,13 +92,7 @@ class _MedicalCenterAdminScreenState extends State<MedicalCenterAdminScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: const Color(0xFF00897B),
-        foregroundColor: Colors.white,
-        centerTitle: true,
-        title: const Text('إدارة المركز الطبي الخيري'),
-      ),
+      appBar: const QurityAppBar(title: 'إدارة المركز الطبي الخيري'),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _addOrEdit(),
         icon: const Icon(Icons.add_rounded),

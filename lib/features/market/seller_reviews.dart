@@ -1,7 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+
 import '../../services/review_service.dart';
-import '../../widgets/common_appbar_actions.dart';
+import '../../widgets/qurity_app_bar.dart';
 
 class SellerReviewsScreen extends StatefulWidget {
   const SellerReviewsScreen({super.key});
@@ -48,14 +49,7 @@ class _SellerReviewsScreenState extends State<SellerReviewsScreen> {
     final name = args is Map<String, String> ? (args['name'] ?? 'البائع') : 'البائع';
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('$name - المراجعات'),
-        centerTitle: true,
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        surfaceTintColor: theme.colorScheme.surface,
-        actions: CommonAppBarActions.actions(context),
-      ),
+      appBar: QurityAppBar(title: '$name — المراجعات'),
       body: RefreshIndicator(
         onRefresh: _refresh,
         color: theme.colorScheme.primary,

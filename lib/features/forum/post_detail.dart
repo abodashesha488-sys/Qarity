@@ -11,6 +11,7 @@ import '../../services/forum_service.dart';
 import '../../services/share_service.dart';
 import '../../services/user_service.dart';
 import '../../widgets/common_appbar_actions.dart';
+import '../../widgets/qurity_app_bar.dart';
 
 /// Forum post reader. Opened with a [ForumPost] as route argument
 /// (see `AppRoutes.forumPostDetail`).
@@ -116,18 +117,10 @@ class _ForumPostDetailScreenState extends State<ForumPostDetailScreen> {
     final passedPost = _post;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          (passedPost != null && passedPost.title.isNotEmpty)
-              ? passedPost.title
-              : (passedPost?.userName.isNotEmpty == true ? passedPost!.userName : 'الموضوع'),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        centerTitle: true,
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        surfaceTintColor: theme.colorScheme.surface,
+      appBar: QurityAppBar(
+        title: (passedPost != null && passedPost.title.isNotEmpty)
+            ? passedPost.title
+            : (passedPost?.userName.isNotEmpty == true ? passedPost!.userName : 'الموضوع'),
         actions: [
           if (passedPost != null)
             IconButton(

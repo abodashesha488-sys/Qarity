@@ -410,7 +410,7 @@ class _UsersPageState extends State<_UsersPage> {
               SwitchListTile(
                 secondary: Icon(
                     active ? Icons.toggle_on_rounded : Icons.toggle_off_rounded,
-                    color: active ? Colors.green : Colors.grey),
+                    color: active ? const Color(0xFF6F4E37) : Colors.grey),
                 title: const Text('الحساب مفعّل',
                     style: TextStyle(fontWeight: FontWeight.w700)),
                 subtitle: Text(

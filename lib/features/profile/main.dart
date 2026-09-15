@@ -1,4 +1,4 @@
-﻿import 'dart:typed_data';
+import 'dart:typed_data';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -11,7 +11,7 @@ import '../../services/image_upload_service.dart';
 import '../../services/market_service.dart';
 import '../../services/theme_service.dart';
 import '../../services/user_service.dart';
-import '../../widgets/common_appbar_actions.dart';
+import '../../widgets/qurity_app_bar.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -260,7 +260,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       await _marketService.submitSellerRequest(request);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم إرسال طلبك بنجاح! سنراجعه قريباً'), backgroundColor: Colors.green),
+        const SnackBar(content: Text('تم إرسال طلبك بنجاح! سنراجعه قريباً'), backgroundColor: Color(0xFF6F4E37)),
       );
       await _fetchData();
     } catch (e) {
@@ -292,29 +292,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final theme = Theme.of(context);
 
     if (_isLoading) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('الملف الشخصي'),
-          centerTitle: true,
-          elevation: 0,
-          shadowColor: Colors.transparent,
-          surfaceTintColor: theme.colorScheme.surface,
-          actions: CommonAppBarActions.actions(context),
-        ),
-        body: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      return const Scaffold(
+        appBar: QurityAppBar(title: 'الملف الشخصي'),
+        body: Center(child: CircularProgressIndicator(strokeWidth: 2)),
       );
     }
 
     if (_loadError != null && _user == null) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text('الملف الشخصي'),
-          centerTitle: true,
-          elevation: 0,
-          shadowColor: Colors.transparent,
-          surfaceTintColor: theme.colorScheme.surface,
-          actions: CommonAppBarActions.actions(context),
-        ),
+        appBar: const QurityAppBar(title: 'الملف الشخصي'),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -346,14 +332,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('الملف الشخصي'),
-        centerTitle: true,
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        surfaceTintColor: theme.colorScheme.surface,
-        actions: CommonAppBarActions.actions(context),
-      ),
+      appBar: const QurityAppBar(title: 'الملف الشخصي'),
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: ListView(

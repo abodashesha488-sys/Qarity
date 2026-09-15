@@ -517,7 +517,7 @@ class BloodRequest {
   Color get urgencyColor => switch (urgency) {
         'طارئ' => Colors.red,
         'مستعجل' => Colors.orange,
-        _ => Colors.green,
+        _ => const Color(0xFF6F4E37),
       };
   String get statusLabel => isOpen ? 'مفتوح' : 'مغلق';
 }

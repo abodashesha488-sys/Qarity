@@ -1,7 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+
 import '../../services/market_service.dart';
-import '../../widgets/common_appbar_actions.dart';
+import '../../widgets/qurity_app_bar.dart';
 
 class SellerGalleryScreen extends StatefulWidget {
   const SellerGalleryScreen({super.key});
@@ -55,14 +56,7 @@ class _SellerGalleryScreenState extends State<SellerGalleryScreen> {
     final name = seller['name'] ?? 'بائع محلي';
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('$name - معرض'),
-        centerTitle: true,
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        surfaceTintColor: theme.colorScheme.surface,
-        actions: CommonAppBarActions.actions(context),
-      ),
+      appBar: QurityAppBar(title: '$name — معرض الصور'),
       body: RefreshIndicator(
         onRefresh: _refresh,
         color: theme.colorScheme.primary,

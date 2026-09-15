@@ -6,7 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../models/data_models.dart';
 import '../../services/image_upload_service.dart';
 import '../../services/phone_directory_service.dart';
-import '../../widgets/common_appbar_actions.dart';
+import '../../widgets/qurity_app_bar.dart';
 
 /// إضافة جهة اتصال — الاسم + رقم الهاتف + الوظيفة (اختياري) + صورة اختيارية.
 class AddPhoneDirectoryScreen extends StatefulWidget {
@@ -78,7 +78,7 @@ class _AddPhoneDirectoryScreenState extends State<AddPhoneDirectoryScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
             content: Text('تم إرسال الطلب للمراجعة'),
-            backgroundColor: Colors.green),
+            backgroundColor: Color(0xFF6F4E37)),
       );
       Navigator.pop(context);
     } catch (e) {
@@ -94,14 +94,7 @@ class _AddPhoneDirectoryScreenState extends State<AddPhoneDirectoryScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('إضافة جهة اتصال'),
-        centerTitle: true,
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        surfaceTintColor: theme.colorScheme.surface,
-        actions: CommonAppBarActions.actions(context),
-      ),
+      appBar: const QurityAppBar(title: 'إضافة جهة اتصال'),
       body: AbsorbPointer(
         absorbing: _isSaving,
         child: SingleChildScrollView(

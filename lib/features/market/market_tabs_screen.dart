@@ -1,4 +1,4 @@
-﻿import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -18,12 +18,12 @@ import '../../services/market_service.dart';
 import '../../services/share_service.dart';
 import '../../services/shop_service.dart';
 import '../../services/user_service.dart';
-import '../../widgets/common_appbar_actions.dart';
 import '../../widgets/offline_stream_builder.dart';
+import '../../widgets/qurity_app_bar.dart';
 
+part 'market_tab_buy_donate.dart';
 part 'market_tab_market.dart';
 part 'market_tab_shops.dart';
-part 'market_tab_buy_donate.dart';
 
 /// سوق القرية — أربع تبويبات مترابطة: السوق، المحلات، سلع مطلوبة، تبرعات.
 class MarketTabsScreen extends StatefulWidget {
@@ -120,18 +120,9 @@ class _MarketTabsScreenState extends State<MarketTabsScreen>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        backgroundColor: theme.colorScheme.primary,
-        foregroundColor: Colors.white,
-        centerTitle: false,
-        title: const Text('سوق القرية',
-            style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20)),
-        actions: CommonAppBarActions.actions(context),
+      appBar: QurityAppBar(
+        title: 'سوق القرية',
         bottom: TabBar(
           controller: _tabController,
           onTap: (_) => setState(() {}),

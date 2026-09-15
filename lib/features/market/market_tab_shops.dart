@@ -152,9 +152,8 @@ class _ShopDetailScreen extends StatelessWidget {
     final currentUid = FirebaseAuth.instance.currentUser?.uid;
     final isOwner = currentUid == shop.ownerUid;
     return Scaffold(
-      appBar: AppBar(
-        title: Text(shop.name),
-        centerTitle: true,
+      appBar: QurityAppBar(
+        title: shop.name,
         actions: [
           IconButton(
             tooltip: 'مشاركة المحل',

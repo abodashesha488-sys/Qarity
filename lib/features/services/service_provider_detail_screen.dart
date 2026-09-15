@@ -1,4 +1,4 @@
-﻿import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
@@ -99,7 +99,7 @@ class _ServiceProviderDetailScreenState
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: error ? Colors.red : Colors.green,
+      backgroundColor: error ? Colors.red : const Color(0xFF6F4E37),
       behavior: SnackBarBehavior.floating,
     ));
   }

@@ -9,6 +9,8 @@ import '../../services/cache_service.dart';
 import '../../services/news_service.dart';
 import '../../widgets/common_appbar_actions.dart';
 import '../../widgets/offline_stream_builder.dart';
+import '../../widgets/qurity_app_bar.dart';
+import '../../widgets/qurity_logo.dart';
 
 class NewsScreen extends StatefulWidget {
   const NewsScreen({super.key});
@@ -215,52 +217,55 @@ class _NewsScreenState extends State<NewsScreen>
   }
 
   Widget _buildAppBar(ThemeData theme) {
-    const gradient = LinearGradient(
-      begin: Alignment.topRight,
-      end: Alignment.bottomLeft,
-      colors: [Color(0xFF1565C0), Color(0xFF0D47A1)],
-    );
     return SliverAppBar(
       pinned: true,
-      expandedHeight: 132,
+      backgroundColor: QurityAppBar.headerColor,
+      foregroundColor: Colors.white,
       elevation: 0,
       scrolledUnderElevation: 0,
-      backgroundColor: theme.colorScheme.primary,
-      foregroundColor: Colors.white,
       centerTitle: false,
-      title: const Text('أخبار القرية',
-          style: TextStyle(
-              fontWeight: FontWeight.w900, color: Colors.white, fontSize: 18)),
+      titleSpacing: 10,
+      title: const Row(
+        children: [
+          QurityLogo(size: 32),
+          SizedBox(width: 10),
+          Expanded(
+            child: Text('أخبار القرية',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16.5,
+                    fontWeight: FontWeight.w800)),
+          ),
+        ],
+      ),
       actions: CommonAppBarActions.actions(context),
-      flexibleSpace: const DecoratedBox(decoration: BoxDecoration(gradient: gradient)),
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(74),
-        child: DecoratedBox(
-          decoration: const BoxDecoration(gradient: gradient),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-            child: TextField(
-              controller: _searchController,
-              style: const TextStyle(color: Colors.black87),
-              decoration: InputDecoration(
-                hintText: 'ابحث في الأخبار...',
-                hintStyle: TextStyle(color: Colors.grey.shade600, fontSize: 14),
-                prefixIcon: const Icon(Icons.search_rounded, color: Colors.grey),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear_rounded),
-                        onPressed: _clearSearch,
-                      )
-                    : null,
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+          child: TextField(
+            controller: _searchController,
+            style: const TextStyle(color: Colors.black87),
+            decoration: InputDecoration(
+              hintText: 'ابحث في الأخبار...',
+              hintStyle: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+              prefixIcon: const Icon(Icons.search_rounded, color: Colors.grey),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear_rounded),
+                      onPressed: _clearSearch,
+                    )
+                  : null,
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
               ),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             ),
           ),
         ),

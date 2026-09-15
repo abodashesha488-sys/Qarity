@@ -10,6 +10,7 @@ import '../../routes/app_routes.dart';
 import '../../services/image_upload_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/user_service.dart';
+import '../../widgets/qurity_app_bar.dart';
 
 class CompleteProfileScreen extends StatefulWidget {
   final String userId;
@@ -142,7 +143,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم حفظ الملف الشخصي بنجاح'), backgroundColor: Colors.green),
+        const SnackBar(content: Text('تم حفظ الملف الشخصي بنجاح'), backgroundColor: Color(0xFF6F4E37)),
       );
 
       await NotificationService.subscribeToTopic('village_news');
@@ -186,27 +187,15 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
     final theme = Theme.of(context);
 
     if (_isLoading) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('إكمال الملف الشخصي'),
-          centerTitle: true,
-          elevation: 0,
-          shadowColor: Colors.transparent,
-          surfaceTintColor: theme.colorScheme.surface,
-        ),
-        body: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      return const Scaffold(
+        appBar: QurityAppBar(title: 'إكمال الملف الشخصي'),
+        body: Center(child: CircularProgressIndicator(strokeWidth: 2)),
       );
     }
 
     if (_errorMessage != null || _user == null) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text('إكمال الملف الشخصي'),
-          centerTitle: true,
-          elevation: 0,
-          shadowColor: Colors.transparent,
-          surfaceTintColor: theme.colorScheme.surface,
-        ),
+        appBar: const QurityAppBar(title: 'إكمال الملف الشخصي'),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -228,13 +217,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
     final imageProvider = _getImageProvider();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('إكمال الملف الشخصي'),
-        centerTitle: true,
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        surfaceTintColor: theme.colorScheme.surface,
-      ),
+      appBar: const QurityAppBar(title: 'إكمال الملف الشخصي'),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(

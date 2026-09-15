@@ -1,11 +1,11 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/data_models.dart';
 import '../../services/cache_service.dart';
 import '../../services/emergency_contacts_service.dart';
-import '../../widgets/common_appbar_actions.dart';
 import '../../widgets/offline_stream_builder.dart';
+import '../../widgets/qurity_app_bar.dart';
 
 class EmergencyContactsScreen extends StatefulWidget {
   const EmergencyContactsScreen({super.key});
@@ -37,14 +37,7 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('الطوارئ'),
-        centerTitle: true,
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        surfaceTintColor: theme.colorScheme.surface,
-        actions: CommonAppBarActions.actions(context),
-      ),
+      appBar: const QurityAppBar(title: 'الطوارئ'),
       body: OfflineStreamBuilder<List<EmergencyContact>>(
         stream: _service.getContactsStream(),
         onlineBuilder: (context, snapshot) {
@@ -244,7 +237,7 @@ class _ContactCard extends StatelessWidget {
             IconButton.filled(
               onPressed: onCall,
               icon: const Icon(Icons.call_rounded, size: 18),
-              style: IconButton.styleFrom(backgroundColor: Colors.green.withValues(alpha: 0.15)),
+              style: IconButton.styleFrom(backgroundColor: const Color(0xFF6F4E37).withValues(alpha: 0.15)),
             ),
           ],
         ),

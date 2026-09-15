@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import '../../models/data_models.dart';
 import '../../services/cache_service.dart';
 import '../../services/village_info_service.dart';
-import '../../widgets/common_appbar_actions.dart';
 import '../../widgets/offline_stream_builder.dart';
+import '../../widgets/qurity_app_bar.dart';
 
 class VillageScreen extends StatefulWidget {
   const VillageScreen({super.key});
@@ -32,19 +32,14 @@ class _VillageScreenState extends State<VillageScreen> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('عن القرية'),
-        centerTitle: true,
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        surfaceTintColor: theme.colorScheme.surface,
+      appBar: QurityAppBar(
+        title: 'عن القرية',
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: theme.colorScheme.primary,
-          labelColor: theme.colorScheme.primary,
-          unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
+          indicatorColor: Colors.white,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white.withValues(alpha: 0.7),
           tabs: const [
             Tab(text: 'عن القرية'),
             Tab(text: 'تاريخ'),
@@ -52,7 +47,6 @@ class _VillageScreenState extends State<VillageScreen> with SingleTickerProvider
             Tab(text: 'منشآت'),
           ],
         ),
-        actions: CommonAppBarActions.actions(context),
       ),
       body: OfflineStreamBuilder<VillageInfo?>(
         stream: _service.getInfoStream(),

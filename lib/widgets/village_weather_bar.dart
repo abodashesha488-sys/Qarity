@@ -9,9 +9,10 @@ import '../routes/app_routes.dart';
 import '../services/alert_service.dart';
 import '../services/weather_service.dart';
 
-/// الشريط الثاني أسفل الهيدر — بنفس مقاس كارت «حكمة اليوم» تماماً:
+/// الشريط الثاني أسفل الهيدر:
 /// — خبر عاجل مفعّل؟ شريط أصفر بكتابة زرقاء (الضغط = نص الخبر كاملاً).
-/// — غير ذلك؟ «طقس القرية» (الضغط = شاشة الطقس الكاملة).
+/// — غير ذلك؟ كارت «طقس القرية» بخلفية wither.jpg وعمودين (أيقونة+حالة+درجة
+///   الحرارة | العظمى/الصغرى فوق الرطوبة/الرياح) — الضغط = شاشة الطقس الكاملة.
 /// التنبيه الأحمر لا يحجبه — يظهران معاً كلٌّ في شريطه.
 class VillageWeatherBar extends StatefulWidget {
   const VillageWeatherBar({super.key});
@@ -172,13 +173,44 @@ class _VillageWeatherBarState extends State<VillageWeatherBar> {
     );
   }
 
+  static String _conditionAr(String? iconId, String apiDesc) {
+    if (iconId != null && iconId.length >= 2) {
+      switch (iconId.substring(0, 2)) {
+        case '01':
+          return 'مشمس';
+        case '02':
+          return 'غائم جزئيًا';
+        case '03':
+          return 'غائم';
+        case '04':
+          return 'غائم كليًا';
+        case '09':
+        case '10':
+          return 'ممطر';
+        case '11':
+          return 'عاصفة رعدية';
+        case '13':
+          return 'ثلوج';
+        case '50':
+          return 'ضباب';
+      }
+    }
+    return apiDesc.isNotEmpty ? apiDesc : '—';
+  }
+
   Widget _weatherStrip(ThemeData theme) {
     final w = _weather;
     final weather = (w?['weather'] as List?)?.first as Map?;
     final main = w?['main'] as Map?;
+    final wind = w?['wind'] as Map?;
     final temp = (main?['temp'] as num?)?.round();
     final desc = (weather?['description'] as String? ?? '').trim();
     final iconId = weather?['icon'] as String?;
+
+    final lineStyle = TextStyle(
+        color: Colors.white.withValues(alpha: 0.92),
+        fontWeight: FontWeight.w700,
+        fontSize: 10.5);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 2, 14, 6),
@@ -189,61 +221,119 @@ class _VillageWeatherBarState extends State<VillageWeatherBar> {
           onTap: () => Navigator.pushNamed(context, AppRoutes.weather),
           child: Container(
             constraints: const BoxConstraints(minHeight: 58),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              gradient: const LinearGradient(
-                  begin: Alignment.centerRight,
-                  end: Alignment.centerLeft,
-                  colors: [Color(0xFF1976D2), Color(0xFF42A5F5)]),
+            clipBehavior: Clip.antiAlias,
+            decoration: const BoxDecoration(
+              borderRadius: BorderRadius.all(Radius.circular(16)),
+              image: DecorationImage(
+                image: AssetImage('assets/images/wither.jpg'),
+                fit: BoxFit.cover,
+              ),
             ),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 34,
-                  height: 34,
-                  child: w == null
-                      ? const Icon(Icons.cloud_rounded,
-                          color: Colors.white, size: 24)
-                      : CachedNetworkImage(
-                          imageUrl: WeatherFormat.iconUrl(iconId ?? '01d'),
-                          fit: BoxFit.contain,
-                          errorWidget: (_, __, ___) => const Icon(
-                              Icons.cloud_rounded,
-                              color: Colors.white,
-                              size: 24)),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('طقس القرية • اضغط للتفاصيل والتوقعات',
-                          style: TextStyle(
-                              fontSize: 9.5,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white
-                                  .withValues(alpha: 0.85))),
-                      const SizedBox(height: 2),
-                      Text(
-                        w == null
-                            ? 'جارٍ جلب حالة الطقس…'
-                            : '$temp°م  •  $desc  •  العظمى ${(main?['temp_max'] as num?)?.round()}° / الصغرى ${(main?['temp_min'] as num?)?.round()}°',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 12.5),
+            child: ColoredBox(
+              color: Colors.black.withValues(alpha: 0.38),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 6),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 56,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: w == null
+                                ? const Icon(Icons.cloud_rounded,
+                                    color: Colors.white, size: 16)
+                                : CachedNetworkImage(
+                                    imageUrl: WeatherFormat.iconUrl(
+                                        iconId ?? '01d'),
+                                    fit: BoxFit.contain,
+                                    errorWidget: (_, __, ___) => const Icon(
+                                        Icons.cloud_rounded,
+                                        color: Colors.white,
+                                        size: 16)),
+                          ),
+                          Text(
+                              w == null
+                                  ? 'جارٍ الجلب…'
+                                  : _conditionAr(iconId, desc),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 8.5,
+                                  height: 1.3)),
+                          Text(w == null ? '—' : '$temp°م',
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 14.5,
+                                  height: 1.2)),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                    Container(
+                      width: 1,
+                      height: 34,
+                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                      color: Colors.white.withValues(alpha: 0.35),
+                    ),
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.call_merge_rounded,
+                                  size: 12,
+                                  color: Colors.white
+                                      .withValues(alpha: 0.85)),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                    w == null
+                                        ? 'جارٍ جلب حالة الطقس…'
+                                        : 'العظمى ${(main?['temp_max'] as num?)?.round()}°  •  الصغرى ${(main?['temp_min'] as num?)?.round()}°',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: lineStyle),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(Icons.water_drop_rounded,
+                                  size: 12,
+                                  color: Colors.white
+                                      .withValues(alpha: 0.85)),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                    w == null
+                                        ? ' '
+                                        : 'رطوبة ${(main?['humidity'] as num?)?.round()}%  •  رياح ${(wind?['speed'] as num?)?.toStringAsFixed(1) ?? '—'} م/ث',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: lineStyle),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.chevron_left_rounded,
+                        size: 16,
+                        color: Colors.white.withValues(alpha: 0.8)),
+                  ],
                 ),
-                Icon(Icons.chevron_left_rounded,
-                    size: 18, color: Colors.white.withValues(alpha: 0.8)),
-              ],
+              ),
             ),
           ),
         ),

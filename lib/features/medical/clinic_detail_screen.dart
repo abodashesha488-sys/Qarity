@@ -4,6 +4,9 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/medical_models.dart';
 import '../../services/share_service.dart';
+import '../../widgets/common_appbar_actions.dart';
+import '../../widgets/qurity_app_bar.dart';
+import '../../widgets/qurity_logo.dart';
 
 /// صف معلومة (أيقونة + عنوان + قيمة) — مشترك بين شاشات التفاصيل الطبية.
 class MedInfoRow extends StatelessWidget {
@@ -113,33 +116,53 @@ class MedDetailHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SliverAppBar(
-      pinned: true,
-      expandedHeight: imageUrl.isNotEmpty ? 230 : 150,
-      backgroundColor: accent,
-      foregroundColor: Colors.white,
-      title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
-      actions: [
-        if (onShare != null)
-          IconButton(
-              tooltip: 'مشاركة',
-              icon: const Icon(Icons.share_rounded),
-              onPressed: onShare),
-      ],
-      flexibleSpace: imageUrl.isNotEmpty
-          ? FlexibleSpaceBar(
-              background: Stack(
-                fit: StackFit.expand,
-                children: [
-                  CachedNetworkImage(
-                      imageUrl: imageUrl,
-                      fit: BoxFit.cover,
-                      errorWidget: (_, __, ___) =>
-                          _gradientFallback(context)),
-                ],
+    return SliverMainAxisGroup(
+      slivers: [
+        SliverAppBar(
+          pinned: true,
+          backgroundColor: QurityAppBar.headerColor,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          centerTitle: false,
+          titleSpacing: 10,
+          title: Row(
+            children: [
+              const QurityLogo(size: 32),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16.5,
+                        fontWeight: FontWeight.w800)),
               ),
-            )
-          : FlexibleSpaceBar(background: _gradientFallback(context)),
+            ],
+          ),
+          actions: [
+            if (onShare != null)
+              IconButton(
+                  tooltip: 'مشاركة',
+                  icon: const Icon(Icons.share_rounded),
+                  onPressed: onShare),
+            const NotificationBellButton(),
+          ],
+        ),
+        if (imageUrl.isNotEmpty)
+          SliverToBoxAdapter(
+            child: SizedBox(
+              height: 210,
+              width: double.infinity,
+              child: CachedNetworkImage(
+                  imageUrl: imageUrl,
+                  fit: BoxFit.cover,
+                  errorWidget: (_, __, ___) =>
+                      _gradientFallback(context)),
+            ),
+          ),
+      ],
     );
   }
 
@@ -319,8 +342,8 @@ class VillageClinicDetailScreen extends StatelessWidget {
 class PharmacyDetailScreen extends StatelessWidget {
   const PharmacyDetailScreen({super.key});
 
-  static const _green = Color(0xFF2E7D32);
-  static const _greenDark = Color(0xFF1B5E20);
+  static const _green = Color(0xFF6F4E37);
+  static const _greenDark = Color(0xFF6F4E37);
 
   @override
   Widget build(BuildContext context) {

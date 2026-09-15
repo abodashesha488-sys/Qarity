@@ -1,4 +1,4 @@
-﻿import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:shimmer/shimmer.dart';
@@ -7,8 +7,8 @@ import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
 import '../../services/cache_service.dart';
 import '../../services/occasion_service.dart';
-import '../../widgets/common_appbar_actions.dart';
 import '../../widgets/offline_stream_builder.dart';
+import '../../widgets/qurity_app_bar.dart';
 
 class OccasionsListScreen extends StatefulWidget {
   const OccasionsListScreen({super.key});
@@ -120,15 +120,7 @@ class _OccasionsListScreenState extends State<OccasionsListScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('مناسبات القرية',
-            style: TextStyle(fontWeight: FontWeight.w900)),
-        centerTitle: false,
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        surfaceTintColor: theme.colorScheme.surface,
-        actions: CommonAppBarActions.actions(context),
-      ),
+      appBar: const QurityAppBar(title: 'مناسبات القرية'),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Navigator.pushNamed(context, AppRoutes.occasionsAdd),
         icon: const Icon(Icons.add_rounded),

@@ -1,8 +1,8 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../services/notification_service.dart';
-import '../../widgets/common_appbar_actions.dart';
+import '../../widgets/qurity_app_bar.dart';
 
 /// إعدادات الإشعارات — كل الخدمات مفعّلة افتراضياً، والتبديل محفوظ محلياً
 /// ويرتبط فعلياً بالاشتراك/الإلغاء في موضوع FCM الخاص بالخدمة.
@@ -98,14 +98,7 @@ class _NotificationsSettingsScreenState
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('إعدادات الإشعارات'),
-        centerTitle: true,
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        surfaceTintColor: theme.colorScheme.surface,
-        actions: CommonAppBarActions.actions(context),
-      ),
+      appBar: const QurityAppBar(title: 'إعدادات الإشعارات'),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : ListView(

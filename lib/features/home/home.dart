@@ -87,13 +87,10 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: const EdgeInsets.fromLTRB(10, 2, 10, 10),
         child: Container(
           decoration: BoxDecoration(
+            color: const Color(0xFF6F4E37),
             borderRadius: BorderRadius.circular(26),
-            image: const DecorationImage(
-              image: AssetImage('assets/images/toolbar.jpg'),
-              fit: BoxFit.cover,
-            ),
             border: Border.all(
-                color: Colors.white.withValues(alpha: 0.55)),
+                color: Colors.white.withValues(alpha: 0.35)),
             boxShadow: const [
               BoxShadow(
                   color: Color(0x33000000),
@@ -102,39 +99,36 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           clipBehavior: Clip.antiAlias,
-          child: ColoredBox(
-            color: Colors.black.withValues(alpha: 0.28),
-            child: NavigationBarTheme(
-              data: NavigationBarThemeData(
-                iconTheme: WidgetStateProperty.resolveWith((states) =>
-                    IconThemeData(
-                        color: states.contains(WidgetState.selected)
-                            ? Colors.white
-                            : Colors.white70)),
-              ),
-              child: NavigationBar(
-                backgroundColor: Colors.transparent,
-                elevation: 0,
-                shadowColor: Colors.transparent,
-                surfaceTintColor: Colors.transparent,
-                indicatorColor: Colors.white.withValues(alpha: 0.22),
-                labelTextStyle: WidgetStateProperty.resolveWith((states) =>
-                    states.contains(WidgetState.selected)
-                        ? const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700)
-                        : const TextStyle(color: Colors.white70)),
-                selectedIndex: _selectedIndex,
-                onDestinationSelected: _onItemTapped,
-                animationDuration: const Duration(milliseconds: 400),
-                destinations: const [
-                  NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'الرئيسية'),
-                  NavigationDestination(icon: QurityLogo(size: 24, withBorder: false, withShadow: false), selectedIcon: QurityLogo(size: 24, withBorder: false, withShadow: false), label: 'عن القرية'),
-                  NavigationDestination(icon: Icon(Icons.store_outlined), selectedIcon: Icon(Icons.store_rounded), label: 'السوق'),
-                  NavigationDestination(icon: Icon(Icons.forum_outlined), selectedIcon: Icon(Icons.forum_rounded), label: 'المنتدى'),
-                  NavigationDestination(icon: Icon(Icons.person_outlined), selectedIcon: Icon(Icons.person_rounded), label: 'الملف'),
-                ],
-              ),
+          child: NavigationBarTheme(
+            data: NavigationBarThemeData(
+              iconTheme: WidgetStateProperty.resolveWith((states) =>
+                  IconThemeData(
+                      color: states.contains(WidgetState.selected)
+                          ? Colors.white
+                          : Colors.white70)),
+            ),
+            child: NavigationBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              shadowColor: Colors.transparent,
+              surfaceTintColor: Colors.transparent,
+              indicatorColor: Colors.white.withValues(alpha: 0.22),
+              labelTextStyle: WidgetStateProperty.resolveWith((states) =>
+                  states.contains(WidgetState.selected)
+                      ? const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700)
+                      : const TextStyle(color: Colors.white70)),
+              selectedIndex: _selectedIndex,
+              onDestinationSelected: _onItemTapped,
+              animationDuration: const Duration(milliseconds: 400),
+              destinations: const [
+                NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'الرئيسية'),
+                NavigationDestination(icon: QurityLogo(size: 24, withBorder: false, withShadow: false), selectedIcon: QurityLogo(size: 24, withBorder: false, withShadow: false), label: 'عن القرية'),
+                NavigationDestination(icon: Icon(Icons.store_outlined), selectedIcon: Icon(Icons.store_rounded), label: 'السوق'),
+                NavigationDestination(icon: Icon(Icons.forum_outlined), selectedIcon: Icon(Icons.forum_rounded), label: 'مندرة القرية'),
+                NavigationDestination(icon: Icon(Icons.person_outlined), selectedIcon: Icon(Icons.person_rounded), label: 'الملف'),
+              ],
             ),
           ),
         ),
@@ -173,7 +167,7 @@ class HomeDrawer extends StatelessWidget {
             _buildDrawerItem(context, 'سوق القرية', Icons.store_rounded, AppRoutes.marketProducts),
             _buildDrawerItem(context, 'دليل البائعين', Icons.business_center_rounded, AppRoutes.marketSellers),
             _buildDrawerItem(context, 'دليل الخدمات', Icons.category_rounded, AppRoutes.serviceRequest),
-            _buildDrawerItem(context, 'المنتدى', Icons.forum_rounded, AppRoutes.forumPosts),
+            _buildDrawerItem(context, 'مندرة القرية', Icons.forum_rounded, AppRoutes.forumPosts),
             _buildDrawerItem(context, 'الطوارئ', Icons.contact_phone_rounded, AppRoutes.emergencyContacts),
             _buildDrawerItem(context, 'دليل الهاتف', Icons.phone_rounded, AppRoutes.phoneDirectory),
             _buildDrawerItem(context, 'الملف الشخصي', Icons.person_rounded, AppRoutes.profileMain),
@@ -510,6 +504,42 @@ class _HeroHeaderState extends State<_HeroHeader> {
     }
   }
 
+  void _showLogoFull(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.82),
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(28),
+        child: Column(
+          children: [
+            Expanded(
+              child: InteractiveViewer(
+                maxScale: 4,
+                child: Center(
+                  child: AspectRatio(
+                    aspectRatio: 1,
+                    child: Image.asset('assets/images/Qurity.png',
+                        fit: BoxFit.contain),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextButton.icon(
+              style: TextButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  backgroundColor: Colors.white24),
+              onPressed: () => Navigator.pop(ctx),
+              icon: const Icon(Icons.close_rounded, size: 18),
+              label: const Text('إغلاق'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final photo = _user?.photoUrl ?? '';
@@ -549,23 +579,11 @@ class _HeroHeaderState extends State<_HeroHeader> {
           const Positioned.fill(
             child: ColoredBox(color: Color(0xFFF5F5DC)),
           ),
-          // 2) صورة الهيدر بلا أي قاعدة خضراء — واضحة بالكامل
+          // 2) صورة الهيدر كما هي — بلا أي حجابات أو تأثيرات
           Positioned.fill(
             child: Image.asset('assets/images/heder.jpg',
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => const SizedBox.shrink()),
-          ),
-          // 2b) حجاب تدرجي شفاف-داكن خفيف يضمن بقاء النصوص البيضاء مقروءة
-          const Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Color(0x26000000), Color(0x59000000)],
-                    stops: [0.0, 1.0]),
-              ),
-            ),
           ),
           SafeArea(
             bottom: false,
@@ -574,92 +592,40 @@ class _HeroHeaderState extends State<_HeroHeader> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ── الصف العلوي: الهوية + الإجراءات (شريط زجاجي واحد) ──
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 6, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.14),
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.22)),
-                    ),
-                    child: Row(
-                      children: [
-                        Builder(builder: (context) => _GlassIconButton(
-                            icon: Icons.menu_rounded,
-                            onTap: () =>
-                                Scaffold.of(context).openEndDrawer())),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(999),
-                            onTap: openProfile,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  vertical: 2),
-                              child: Row(
-                                children: [
-                                  _ProfileAvatarButton(
-                                      photoUrl: photo, onTap: openProfile),
-                                  const SizedBox(width: 8),
-                                  Flexible(
-                                    child: RoleNameText(
-                                      name:
-                                          name.isEmpty ? 'أهلاً بك' : name,
-                                      role: _user?.role,
-                                      sellerType:
-                                          _user?.sellerType?.name,
-                                      style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w800),
-                                      iconSize: 13,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                        ...CommonAppBarActions.actions(context)
-                            .map((w) => IconTheme(
-                                data: const IconThemeData(color: Colors.white),
-                                child: w)),
-                        const SizedBox(width: 2),
-                        _GlassIconButton(
-                            icon: Icons.settings_outlined,
-                            onTap: () => Navigator.pushNamed(
-                                context, AppRoutes.settingsIndex)),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  // ── منطقة البطل: الشعار + اسم القرية + التحية ──
+                  // ── الصف العلوي: شبكة أزرار 2×2 مرتبة + اسم القرية + الشعار ──
                   Row(
                     children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                                color: const Color(0xFFF1C40F)
-                                    .withValues(alpha: 0.85),
-                                width: 2),
-                            boxShadow: const [
-                              BoxShadow(
-                                  color: Color(0x40000000),
-                                  blurRadius: 8,
-                                  offset: Offset(0, 2))
-                            ]),
-                        child: ClipOval(
-                          child: Image.asset('assets/images/Qurity.png',
-                              fit: BoxFit.cover),
-                        ),
-                      ).animate().fadeIn(duration: 500.ms).scale(begin: const Offset(0.7, 0.7)),
-                      const SizedBox(width: 10),
+                      // الأزرار: إعدادات + تنبيهات، وتحتهما صورة المستخدم + القائمة
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _GlassIconButton(
+                                  icon: Icons.settings_outlined,
+                                  onTap: () => Navigator.pushNamed(context,
+                                      AppRoutes.settingsIndex)),
+                              const SizedBox(width: 7),
+                              const NotificationBellButton(compact: true),
+                            ],
+                          ),
+                          const SizedBox(height: 7),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _ProfileAvatarButton(
+                                  photoUrl: photo, onTap: openProfile),
+                              const SizedBox(width: 7),
+                              Builder(builder: (context) => _GlassIconButton(
+                                  icon: Icons.menu_rounded,
+                                  onTap: () => Scaffold.of(context)
+                                      .openEndDrawer())),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -669,10 +635,16 @@ class _HeroHeaderState extends State<_HeroHeader> {
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                     color: Color(0xFFFFE082),
-                                    fontSize: 15.5,
+                                    fontSize: 16.5,
                                     fontWeight: FontWeight.w900,
-                                    letterSpacing: 0.4)),
-                            const SizedBox(height: 1),
+                                    letterSpacing: 0.4,
+                                    shadows: [
+                                      Shadow(
+                                          color: Color(0x8A000000),
+                                          blurRadius: 8,
+                                          offset: Offset(0, 1))
+                                    ])),
+                            const SizedBox(height: 4),
                             Row(
                               children: [
                                 Flexible(
@@ -681,22 +653,75 @@ class _HeroHeaderState extends State<_HeroHeader> {
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
                                           color: Colors.white
-                                              .withValues(alpha: 0.9),
+                                              .withValues(alpha: 0.95),
                                           fontSize: 12,
-                                          fontWeight: FontWeight.w600)),
+                                          fontWeight: FontWeight.w700,
+                                          shadows: const [
+                                            Shadow(
+                                                color: Color(0x8A000000),
+                                                blurRadius: 6,
+                                                offset: Offset(0, 1))
+                                          ])),
                                 ),
+                                if (name.isNotEmpty) ...[
+                                  const SizedBox(width: 5),
+                                  Flexible(
+                                    child: RoleNameText(
+                                      name: name,
+                                      role: _user?.role,
+                                      sellerType:
+                                          _user?.sellerType?.name,
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w800,
+                                          shadows: [
+                                            Shadow(
+                                                color: Color(0x8A000000),
+                                                blurRadius: 6,
+                                                offset: Offset(0, 1))
+                                          ]),
+                                      iconSize: 13,
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                           ],
                         ),
                       ),
+                      const SizedBox(width: 8),
+                      // الشعار — بالضغط يُعرض بالحجم الكامل
+                      InkWell(
+                        borderRadius: BorderRadius.circular(999),
+                        onTap: () => _showLogoFull(context),
+                        child: Container(
+                          width: 52,
+                          height: 52,
+                          decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                  color: const Color(0xFFF1C40F)
+                                      .withValues(alpha: 0.85),
+                                  width: 2),
+                              boxShadow: const [
+                                BoxShadow(
+                                    color: Color(0x40000000),
+                                    blurRadius: 10,
+                                    offset: Offset(0, 3))
+                              ]),
+                          child: ClipOval(
+                            child: Image.asset('assets/images/Qurity.png',
+                                fit: BoxFit.cover),
+                          ),
+                        ),
+                      ).animate().fadeIn(duration: 500.ms).scale(begin: const Offset(0.7, 0.7)),
                     ],
                   ),
                   const SizedBox(height: 8),
-                  // ── التاريخ والساعة كحبّتين زجاجيتين ──
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
+                  // ── التاريخ يمينًا والساعة يسارًا (حبّتان زجاجيتان) ──
+                  Row(
                     children: [
                       glassPill(
                         child: Row(
@@ -713,6 +738,7 @@ class _HeroHeaderState extends State<_HeroHeader> {
                           ],
                         ),
                       ),
+                      const Spacer(),
                       glassPill(child: const _VillageClock()),
                     ],
                   ),
@@ -775,47 +801,44 @@ class _ProfileAvatarButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsetsDirectional.only(start: 2, end: 2),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: Colors.white.withValues(alpha: 0.18),
-          border: Border.all(
-              color:
-                  const Color(0xFFF1C40F).withValues(alpha: 0.85),
-              width: 2),
-          boxShadow: const [
-            BoxShadow(
-                color: Color(0x33000000),
-                blurRadius: 6,
-                offset: Offset(0, 2)),
-          ],
-        ),
-        child: Material(
-          color: Colors.transparent,
-          shape: const CircleBorder(),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            customBorder: const CircleBorder(),
-            onTap: onTap,
-            child: SizedBox(
-              width: 38,
-              height: 38,
-              child: photoUrl.isEmpty
-                  ? const Icon(Icons.person_outline_rounded,
-                      color: Colors.white, size: 20)
-                  : CachedNetworkImage(
-                      imageUrl: photoUrl,
-                      fit: BoxFit.cover,
-                      placeholder: (_, __) => const Icon(
-                          Icons.person_outline_rounded,
-                          color: Colors.white, size: 20),
-                      errorWidget: (_, __, ___) => const Icon(
-                          Icons.person_outline_rounded,
-                          color: Colors.white, size: 20),
-                    ),
-            ),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white.withValues(alpha: 0.18),
+        border: Border.all(
+            color:
+                const Color(0xFFF1C40F).withValues(alpha: 0.85),
+            width: 2),
+        boxShadow: const [
+          BoxShadow(
+              color: Color(0x33000000),
+              blurRadius: 6,
+              offset: Offset(0, 2)),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        shape: const CircleBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: SizedBox(
+            width: 36,
+            height: 36,
+            child: photoUrl.isEmpty
+                ? const Icon(Icons.person_outline_rounded,
+                    color: Colors.white, size: 19)
+                : CachedNetworkImage(
+                    imageUrl: photoUrl,
+                    fit: BoxFit.cover,
+                    placeholder: (_, __) => const Icon(
+                        Icons.person_outline_rounded,
+                        color: Colors.white, size: 19),
+                    errorWidget: (_, __, ___) => const Icon(
+                        Icons.person_outline_rounded,
+                        color: Colors.white, size: 19),
+                  ),
           ),
         ),
       ),
@@ -904,15 +927,14 @@ class ModernServiceGrid extends StatelessWidget {
   const ModernServiceGrid({super.key});
 
   static const _services = [
-    _ServiceItem('عن القرية', Icons.villa_rounded, AppRoutes.about, logo: true),
-    _ServiceItem('أخبار القرية', Icons.newspaper_rounded, AppRoutes.newsList),
-    _ServiceItem('سوق القرية', Icons.store_rounded, AppRoutes.marketProducts),
-    _ServiceItem('سجل العزاء', Icons.grade_rounded, AppRoutes.obituariesList),
-    _ServiceItem('المناسبات', Icons.card_giftcard_rounded, AppRoutes.occasionsList),
-    _ServiceItem('المنتدى', Icons.forum_rounded, AppRoutes.forumPosts),
-    _ServiceItem('دليل الخدمات', Icons.category_rounded, AppRoutes.serviceRequest),
-    _ServiceItem('الطوارئ', Icons.contact_phone_rounded, AppRoutes.emergencyContacts, color: Color(0xFFD32F2F)),
-    _ServiceItem('حول التطبيق', Icons.info_rounded, AppRoutes.aboutApp),
+    _ServiceItem('عن القرية', AppRoutes.about, 'assets/images/About.jpg'),
+    _ServiceItem('أخبار القرية', AppRoutes.newsList, 'assets/images/News.jpg'),
+    _ServiceItem('سوق القرية', AppRoutes.marketProducts, 'assets/images/Souq.jpg'),
+    _ServiceItem('سجل العزاء', AppRoutes.obituariesList, 'assets/images/des.jpg'),
+    _ServiceItem('المناسبات', AppRoutes.occasionsList, 'assets/images/festefal.jpg'),
+    _ServiceItem('مندرة القرية', AppRoutes.forumPosts, 'assets/images/mandra.jpg'),
+    _ServiceItem('دليل الخدمات', AppRoutes.serviceRequest, 'assets/images/Services.jpg'),
+    _ServiceItem('حول التطبيق', AppRoutes.aboutApp, 'assets/images/aboutapp.jpg'),
   ];
 
   @override
@@ -924,78 +946,50 @@ class ModernServiceGrid extends StatelessWidget {
       itemCount: _services.length,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 3,
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: 0.98),
+          mainAxisSpacing: 14,
+          crossAxisSpacing: 14,
+          childAspectRatio: 0.95),
       itemBuilder: (context, index) => _buildServiceCard(context, _services[index], index),
     );
   }
 
   Widget _buildServiceCard(BuildContext context, _ServiceItem service, int index) {
     final theme = Theme.of(context);
-    return Card(
-      elevation: 0,
-      color: theme.colorScheme.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-        side: BorderSide(color: service.color.withValues(alpha: 0.22)),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: () => Navigator.pushNamed(context, service.route),
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              service.logo
-                  ? const QurityLogo(size: 46, withShadow: false)
-                  : Container(
-                      width: 46,
-                      height: 46,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                            begin: Alignment.topRight,
-                            end: Alignment.bottomLeft,
-                            colors: [
-                              service.color,
-                              service.color.withValues(alpha: 0.72)
-                            ]),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                              color: service.color.withValues(alpha: 0.35),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4)),
-                        ],
-                      ),
-                      child: Center(
-                          child: Icon(service.icon,
-                              color: Colors.white, size: 21)),
-                    ),
-              const SizedBox(height: 9),
-              Text(service.title,
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.tajawal(
-                      fontWeight: FontWeight.w800, fontSize: 10.5),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis),
-            ],
+    final radius = BorderRadius.circular(18);
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.26),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Material(
+        color: theme.colorScheme.surface,
+        child: InkWell(
+          borderRadius: radius,
+          onTap: () => Navigator.pushNamed(context, service.route),
+          child: Image.asset(service.image,
+              width: double.infinity,
+              height: double.infinity,
+              fit: BoxFit.cover,
+              cacheWidth: 280,
+              semanticLabel: service.title),
         ),
-      ).animate(delay: (index * 40).ms).fadeIn(duration: 400.ms).scale(begin: const Offset(0.92, 0.92)),
-    );
+      ),
+    ).animate(delay: (index * 40).ms).fadeIn(duration: 400.ms).scale(begin: const Offset(0.92, 0.92));
   }
 }
 
 class _ServiceItem {
   final String title;
-  final IconData icon;
   final String route;
-  final Color color;
-  final bool logo;
-  const _ServiceItem(this.title, this.icon, this.route,
-      {this.color = AppColors.primary, this.logo = false});
+  final String image;
+  const _ServiceItem(this.title, this.route, this.image);
 }
 
 // ═══════════════ ساعة التوقيت المحلي للقرية (تحت التاريخ) ═══════════════

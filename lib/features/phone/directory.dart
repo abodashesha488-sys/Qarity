@@ -7,7 +7,7 @@ import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
 import '../../services/admin_service.dart';
 import '../../services/phone_directory_service.dart';
-import '../../widgets/common_appbar_actions.dart';
+import '../../widgets/qurity_app_bar.dart';
 
 class PhoneDirectoryScreen extends StatefulWidget {
   const PhoneDirectoryScreen({super.key, this.embedded = false});
@@ -109,24 +109,20 @@ class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
       backgroundColor: widget.embedded ? Colors.transparent : null,
       appBar: widget.embedded
           ? null
-          : AppBar(
-              title: const Text('دليل الهاتف'),
-              centerTitle: true,
-              elevation: 0,
-              shadowColor: Colors.transparent,
-              surfaceTintColor: theme.colorScheme.surface,
+          : QurityAppBar(
+              title: 'دليل الهاتف',
               actions: _isAdmin
                   ? [
                       IconButton(
                         icon: Icon(_pendingCount > 0 ? Icons.pending_rounded : Icons.check_rounded,
-                            color: _pendingCount > 0 ? Colors.orange : Colors.green),
-                        tooltip: 'طلباتpending',
+                            color: _pendingCount > 0 ? Colors.orange : Colors.white),
+                        tooltip: 'طلبات قيد المراجعة',
                         onPressed: _pendingCount > 0
                             ? () => _showPendingBottomSheet()
                             : null,
                       ),
                     ]
-                  : CommonAppBarActions.actions(context),
+                  : const [],
             ),
       body: RefreshIndicator(
         onRefresh: _refresh,
@@ -261,7 +257,7 @@ floatingActionButton: FloatingActionButton.extended(
               IconButton.filled(
                 onPressed: () => _makeCall(entry.phone),
                 icon: const Icon(Icons.call_rounded, size: 18),
-                style: IconButton.styleFrom(backgroundColor: Colors.green.withValues(alpha: 0.15)),
+                style: IconButton.styleFrom(backgroundColor: const Color(0xFF6F4E37).withValues(alpha: 0.15)),
               ),
               if (_isAdmin && !isApproved)
                 PopupMenuButton<String>(
@@ -278,7 +274,7 @@ floatingActionButton: FloatingActionButton.extended(
                       value: 'approve',
                       child: Row(
                         children: [
-                          Icon(Icons.check_circle_rounded, color: Colors.green),
+                          Icon(Icons.check_circle_rounded, color: Color(0xFF6F4E37)),
                           SizedBox(width: 8),
                           Text('موافقة'),
                         ],
@@ -347,7 +343,7 @@ floatingActionButton: FloatingActionButton.extended(
       await _adminService.approveItem('phone_directory', entry.id);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم قبول الدخول في الدليل'), backgroundColor: Colors.green),
+        const SnackBar(content: Text('تم قبول الدخول في الدليل'), backgroundColor: Color(0xFF6F4E37)),
       );
       _loadEntries();
       _loadPendingCount();
@@ -563,7 +559,7 @@ class _PendingEntryCardState extends State<_PendingEntryCard> {
                       value: 'approve',
                       child: Row(
                         children: [
-                          Icon(Icons.check_circle_rounded, color: Colors.green),
+                          Icon(Icons.check_circle_rounded, color: Color(0xFF6F4E37)),
                           SizedBox(width: 8),
                           Text('موافقة'),
                         ],

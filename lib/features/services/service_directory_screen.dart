@@ -11,7 +11,7 @@ import '../../services/image_upload_service.dart';
 import '../../services/service_provider_service.dart';
 import '../../services/share_service.dart';
 import '../../services/user_service.dart';
-import '../../widgets/common_appbar_actions.dart';
+import '../../widgets/qurity_app_bar.dart';
 
 /// دليل الخدمات — شبكة أزرار لفئات قابلة للتوسّع مستقبلاً.
 /// كل زر يفتح شاشة الفئة الخاصة بها (بحث منسدل + مربّع بحث + مميز/الأكثر تقييماً).
@@ -26,17 +26,8 @@ class ServiceDirectoryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('دليل الخدمات',
-            style: TextStyle(fontWeight: FontWeight.w900)),
-        centerTitle: true,
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        surfaceTintColor: theme.colorScheme.surface,
-        actions: CommonAppBarActions.actions(context),
-      ),
+      appBar: const QurityAppBar(title: 'دليل الخدمات'),
       body: GridView.count(
         padding: const EdgeInsets.all(16),
         crossAxisCount: 2,
@@ -337,7 +328,7 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: error ? Colors.red : Colors.green,
+      backgroundColor: error ? Colors.red : const Color(0xFF6F4E37),
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ));
@@ -347,15 +338,7 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(
-        title: Text(ServiceCategory.label(widget.category),
-            style: const TextStyle(fontWeight: FontWeight.w900)),
-        centerTitle: true,
-        elevation: 0,
-        backgroundColor: _color,
-        foregroundColor: Colors.white,
-        actions: CommonAppBarActions.actions(context),
-      ),
+      appBar: QurityAppBar(title: ServiceCategory.label(widget.category)),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'svc_cat_fab',
         onPressed: _openForm,

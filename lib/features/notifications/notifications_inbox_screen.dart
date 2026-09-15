@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import '../../core/utils/notification_deeplink.dart';
 import '../../routes/app_routes.dart';
 import '../../services/notification_inbox_service.dart';
-import '../../widgets/common_appbar_actions.dart';
+import '../../widgets/qurity_app_bar.dart';
 
 /// صندوق الإشعارات الشخصي للمستخدم.
 class NotificationsInboxScreen extends StatefulWidget {
@@ -32,14 +32,7 @@ class _NotificationsInboxScreenState extends State<NotificationsInboxScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('إشعاراتي'),
-        centerTitle: true,
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        surfaceTintColor: theme.colorScheme.surface,
-        actions: CommonAppBarActions.actions(context),
-      ),
+      appBar: const QurityAppBar(title: 'إشعاراتي'),
       body: _uid.isEmpty
           ? const Center(
               child: Text('سجّل الدخول لعرض إشعاراتك',
@@ -61,7 +54,7 @@ class _NotificationsInboxScreenState extends State<NotificationsInboxScreen> {
                   itemBuilder: (context, i) {
                     final n = items[i];
                     final color = switch (n.kind) {
-                      'approve' => Colors.green,
+                      'approve' => const Color(0xFF6F4E37),
                       'reject' => Colors.orange,
                       _ => theme.colorScheme.primary,
                     };

@@ -11,7 +11,7 @@ import '../../services/image_upload_service.dart';
 import '../../services/medical_service.dart';
 import '../../services/share_service.dart';
 import '../../services/user_service.dart';
-import '../../widgets/common_appbar_actions.dart';
+import '../../widgets/qurity_app_bar.dart';
 import 'medical_admin_screen.dart';
 
 /// بوابة الخدمات الطبية — شبكة أيقونات، كل أيقونة تفتح شاشة قسمها.
@@ -25,7 +25,7 @@ class MedicalHomeScreen extends StatelessWidget {
         'متبرعون وطلبات تبرع بالدم'),
     ('عيادات القرية', Icons.add_business_rounded, Color(0xFF00897B),
         'عيادات الأهالي المعتمدة وتخصصاتها'),
-    ('صيدليات القرية', Icons.local_pharmacy_rounded, Color(0xFF2E7D32),
+    ('صيدليات القرية', Icons.local_pharmacy_rounded, Color(0xFF6F4E37),
         'صيدليات القرية ومواعيدها'),
     ('معامل التحاليل', Icons.science_rounded, Color(0xFF6A1B9A),
         'تحاليل معتمدة وسحب عينة بالمنزل'),
@@ -35,22 +35,14 @@ class MedicalHomeScreen extends StatelessWidget {
     Color(0xFF00695C),
     Color(0xFFC62828),
     Color(0xFF00897B),
-    Color(0xFF2E7D32),
+    Color(0xFF6F4E37),
     Color(0xFF6A1B9A),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: const Color(0xFF00897B),
-        foregroundColor: Colors.white,
-        centerTitle: true,
-        title: const Text('الخدمات الطبية',
-            style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20)),
-        actions: CommonAppBarActions.actions(context),
-      ),
+      appBar: const QurityAppBar(title: 'الخدمات الطبية'),
       body: GridView.count(
         padding: const EdgeInsets.all(16),
         crossAxisCount: 2,
@@ -338,15 +330,7 @@ class _MedicalSectionScreenState extends State<MedicalSectionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: _color,
-        foregroundColor: Colors.white,
-        centerTitle: true,
-        title: Text(_title,
-            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
-        actions: CommonAppBarActions.actions(context),
-      ),
+      appBar: QurityAppBar(title: _title),
       floatingActionButton: _fab(),
       body: _body(),
     );
@@ -1159,7 +1143,7 @@ class _PharmacyCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    const accent = Color(0xFF2E7D32);
+    const accent = Color(0xFF6F4E37);
     return Card(
       elevation: 0,
       clipBehavior: Clip.antiAlias,

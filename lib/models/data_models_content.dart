@@ -1,4 +1,4 @@
-﻿part of 'data_models.dart';
+part of 'data_models.dart';
 
 
 // ═══════════════════════════════════════════════════════════════
@@ -750,8 +750,8 @@ class ItemRequest implements BaseModel {
 
   static const Map<String, Color> _statusColors = {
     'pending': Color(0xFFFF9800),
-    'approved': Color(0xFF4CAF50),
-    'completed': Color(0xFF43A047),
+    'approved': Color(0xFF6F4E37),
+    'completed': Color(0xFF6F4E37),
     'cancelled': Color(0xFFE53935),
   };
 }
@@ -832,9 +832,9 @@ class DonationItem implements BaseModel {
   };
 
   static const Map<String, Color> _statusColors = {
-    'available': Color(0xFF4CAF50),
-    'claimed': Color(0xFF66BB6A),
-    'completed': Color(0xFF43A047),
+    'available': Color(0xFF6F4E37),
+    'claimed': Color(0xFF6F4E37),
+    'completed': Color(0xFF6F4E37),
   };
 }
 

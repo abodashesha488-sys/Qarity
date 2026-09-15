@@ -1,4 +1,4 @@
-﻿import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -10,7 +10,7 @@ import '../../services/obituary_service.dart';
 import '../../services/share_service.dart';
 import '../../services/user_service.dart';
 import '../../widgets/app_card.dart';
-import '../../widgets/common_appbar_actions.dart';
+import '../../widgets/qurity_app_bar.dart';
 
 class ObituaryDetailScreen extends StatefulWidget {
   const ObituaryDetailScreen({super.key});
@@ -64,12 +64,8 @@ class _ObituaryDetailScreenState extends State<ObituaryDetailScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('تفاصيل الوفاة'),
-        centerTitle: true,
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        surfaceTintColor: theme.colorScheme.surface,
+      appBar: QurityAppBar(
+        title: 'تفاصيل الوفاة',
         actions: [
           if (_obituary != null)
             IconButton(
@@ -77,7 +73,6 @@ class _ObituaryDetailScreenState extends State<ObituaryDetailScreen> {
               tooltip: 'مشاركة',
               onPressed: () => _shareObituary(_obituary!),
             ),
-          ...CommonAppBarActions.actions(context),
         ],
       ),
       body: _buildBody(theme),
@@ -515,7 +510,7 @@ class _CondolenceSectionState extends State<_CondolenceSection> {
       _messageController.clear();
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('تم تقديم التعزية'), backgroundColor: Colors.green));
+          content: Text('تم تقديم التعزية'), backgroundColor: Color(0xFF6F4E37)));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(

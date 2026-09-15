@@ -10,7 +10,7 @@ import '../../models/data_models.dart';
 import '../../services/image_upload_service.dart';
 import '../../services/news_service.dart';
 import '../../services/user_service.dart';
-import '../../widgets/common_appbar_actions.dart';
+import '../../widgets/qurity_app_bar.dart';
 
 class AddNewsScreen extends StatefulWidget {
   const AddNewsScreen({super.key});
@@ -127,14 +127,7 @@ class _AddNewsScreenState extends State<AddNewsScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('إضافة خبر'),
-        centerTitle: true,
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        surfaceTintColor: theme.colorScheme.surface,
-        actions: CommonAppBarActions.actions(context),
-      ),
+      appBar: const QurityAppBar(title: 'إضافة خبر'),
       body: AbsorbPointer(
         absorbing: _isSaving,
         child: SingleChildScrollView(

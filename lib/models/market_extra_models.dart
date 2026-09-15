@@ -177,7 +177,7 @@ class BuyRequest {
 
   bool get isOpen => status == 'open';
   String get statusLabel => isOpen ? 'مفتوح' : 'مغلق';
-  Color get statusColor => isOpen ? const Color(0xFF43A047) : Colors.grey;
+  Color get statusColor => isOpen ? const Color(0xFF6F4E37) : Colors.grey;
   String get imageUrl => imageUrls.isNotEmpty ? imageUrls.first : '';
 }
 
@@ -247,6 +247,6 @@ class Donation {
 
   bool get isAvailable => status == 'available';
   String get statusLabel => isAvailable ? 'متبرَّع به' : 'تم التبريع';
-  Color get statusColor => isAvailable ? const Color(0xFF2E7D32) : Colors.grey;
+  Color get statusColor => isAvailable ? const Color(0xFF6F4E37) : Colors.grey;
   String get imageUrl => imageUrls.isNotEmpty ? imageUrls.first : '';
 }

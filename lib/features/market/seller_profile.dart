@@ -7,7 +7,7 @@ import '../../core/utils/role_style.dart';
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
 import '../../services/market_service.dart';
-import '../../widgets/common_appbar_actions.dart';
+import '../../widgets/qurity_app_bar.dart';
 
 class SellerProfileScreen extends StatefulWidget {
   final String sellerId;
@@ -80,15 +80,15 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
     final theme = Theme.of(context);
 
     if (_isLoading) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('ملف البائع')),
-        body: const Center(child: CircularProgressIndicator()),
+      return const Scaffold(
+        appBar: QurityAppBar(title: 'ملف البائع'),
+        body: Center(child: CircularProgressIndicator()),
       );
     }
 
     if (_hasError || _sellerProfile == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('ملف البائع')),
+        appBar: const QurityAppBar(title: 'ملف البائع'),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -120,12 +120,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
         _sellerProducts.where((p) => p.isApproved).toList();
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(profile.name),
-        centerTitle: true,
-        elevation: 0,
-        actions: CommonAppBarActions.actions(context),
-      ),
+      appBar: QurityAppBar(title: profile.name),
       body: RefreshIndicator(
         onRefresh: _loadSellerData,
         child: CustomScrollView(
@@ -293,7 +288,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                 theme,
                 icon: Icons.chat_bubble_outline_rounded,
                 label: 'واتساب',
-                color: Colors.green,
+                color: const Color(0xFF6F4E37),
                 onTap: () => _openWhatsApp(profile.phone),
               ),
             ],

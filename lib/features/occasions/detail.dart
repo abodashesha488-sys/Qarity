@@ -1,4 +1,4 @@
-﻿import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -9,7 +9,7 @@ import '../../services/occasion_service.dart';
 import '../../services/share_service.dart';
 import '../../services/user_service.dart';
 import '../../widgets/app_card.dart';
-import '../../widgets/common_appbar_actions.dart';
+import '../../widgets/qurity_app_bar.dart';
 
 class OccasionDetailScreen extends StatefulWidget {
   const OccasionDetailScreen({super.key});
@@ -59,14 +59,9 @@ class _OccasionDetailScreenState extends State<OccasionDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('تفاصيل المناسبة'),
-        centerTitle: true,
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        surfaceTintColor: theme.colorScheme.surface,
+      appBar: QurityAppBar(
+        title: 'تفاصيل المناسبة',
         actions: [
           if (_occasion != null && !_isPastOccasion(_occasion!))
             IconButton(
@@ -74,7 +69,6 @@ class _OccasionDetailScreenState extends State<OccasionDetailScreen> {
               icon: const Icon(Icons.share_rounded),
               onPressed: () => ShareService.shareOccasionAsImage(context, _occasion!),
             ),
-          ...CommonAppBarActions.actions(context),
         ],
       ),
       body: _buildBody(),
@@ -248,7 +242,7 @@ class _AttendanceSectionState extends State<_AttendanceSection> {
         );
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تم تسجيل حضورك 🎉'), backgroundColor: Colors.green),
+          const SnackBar(content: Text('تم تسجيل حضورك 🎉'), backgroundColor: Color(0xFF6F4E37)),
         );
       }
     } catch (e) {
