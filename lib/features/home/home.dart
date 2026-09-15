@@ -272,12 +272,11 @@ class HomeContent extends StatelessWidget {
 
   static String _dateLabel() {
     const days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
-    const months = [
-      'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
-      'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر',
-    ];
-    final n = DateTime.now();
-    return '${days[n.weekday % 7]} • ${n.day} ${months[n.month - 1]} ${n.year}';
+    // تاريخ القرية نفسه — مشتق من توقيت إحداثيات الطقس وليس من جهاز المستخدم.
+    final n = WeatherService.villageNow();
+    final d = n.day.toString().padLeft(2, '0');
+    final m = n.month.toString().padLeft(2, '0');
+    return '${days[n.weekday % 7]} : $d-$m-${n.year}';
   }
 
   @override
@@ -537,10 +536,10 @@ class _HeroHeader extends StatelessWidget {
   const _HeroHeader({required this.dateLabel});
   final String dateLabel;
 
-  Widget _bluePill({required Widget child}) => Container(
+  Widget _pill({required Widget child}) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
         decoration: BoxDecoration(
-          color: const Color(0xE61565C0),
+          color: const Color(0xE66F4E37),
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
               color: Colors.white.withValues(alpha: 0.4)),
@@ -589,34 +588,35 @@ class _HeroHeader extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ── الجرس بخلفية زرقاء واضحة أعلى اليسار ──
-                  const Row(
-                    children: [
-                      Spacer(),
-                      NotificationBellButton(compact: true),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  // ── التاريخ يمينًا والساعة يسارًا (حبّتان زرقاوان) ──
+                  // ── الوقت فوق التاريخ يمينًا، والجرس أعلى اليسار ──
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _bluePill(
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.event_rounded,
-                                size: 11, color: Color(0xFFFFE082)),
-                            const SizedBox(width: 5),
-                            Text(dateLabel,
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700)),
-                          ],
-                        ),
+                      // توقيت القرية ثم تاريخها (حسب إحداثيات الطقس، لا جهاز المستخدم)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _pill(child: const _VillageClock()),
+                          const SizedBox(height: 6),
+                          _pill(
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.event_rounded,
+                                    size: 11, color: Color(0xFFFFE082)),
+                                const SizedBox(width: 5),
+                                Text(dateLabel,
+                                    style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700)),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                       const Spacer(),
-                      _bluePill(child: const _VillageClock()),
+                      const NotificationBellButton(compact: true),
                     ],
                   ),
                 ],
