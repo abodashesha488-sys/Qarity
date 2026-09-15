@@ -15,8 +15,10 @@ import 'core/theme/app_theme.dart';
 import 'core/utils/navigator_key.dart';
 import 'routes/app_routes.dart';
 import 'services/notification_service.dart';
+import 'services/promo_service.dart';
 import 'services/theme_service.dart';
 import 'widgets/connectivity_overlay.dart';
+import 'widgets/promo_host.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -99,10 +101,13 @@ class QarityApp extends StatelessWidget {
             color: const Color(0xFFF5F5DC),
             child: DefaultTextStyle(
               style: GoogleFonts.tajawal(),
-              child:
-                  ConnectivityOverlay(child: child ?? const SizedBox.shrink()),
+              child: PromoHost(
+                child: ConnectivityOverlay(
+                    child: child ?? const SizedBox.shrink()),
+              ),
             ),
           ),
+          navigatorObservers: [promoRouteObserver],
           initialRoute: AppRoutes.splash,
           onGenerateRoute: AppRoutes.onGenerateRoute,
         );

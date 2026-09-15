@@ -347,6 +347,8 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
         return Icons.forum_rounded;
       case 'service_providers':
         return Icons.category_rounded;
+      case 'lost_items':
+        return Icons.search_rounded;
       case 'medical_labs':
         return Icons.science_rounded;
       case 'village_clinics':
@@ -374,6 +376,8 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
         return 'منشور';
       case 'service_providers':
         return 'بيان في دليل الخدمات';
+      case 'lost_items':
+        return 'إعلان مفقودات';
       case 'medical_labs':
         return 'معمل تحاليل';
       case 'village_clinics':

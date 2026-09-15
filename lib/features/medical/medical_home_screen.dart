@@ -42,7 +42,8 @@ class MedicalHomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const QurityAppBar(title: 'الخدمات الطبية'),
+      appBar: const QurityAppBar(
+          title: 'الخدمات الطبية', color: Color(0xFF00897B)),
       body: GridView.count(
         padding: const EdgeInsets.all(16),
         crossAxisCount: 2,
@@ -330,7 +331,7 @@ class _MedicalSectionScreenState extends State<MedicalSectionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: QurityAppBar(title: _title),
+      appBar: QurityAppBar(title: _title, color: _color),
       floatingActionButton: _fab(),
       body: _body(),
     );

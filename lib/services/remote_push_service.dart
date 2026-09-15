@@ -22,6 +22,7 @@ class RemotePushService {
   /// أرسل إشعار FCM إلى topic — best-effort (أخطاء الشبكة تُبتلع بصمت).
   /// يُتخطى بهدوء إذا لم يكن هناك مستخدم مسجّل دخوله (المتلقي لا يرسل أصلاً).
   /// عند تمرير collection+itemId يصبح النقر على الإشعار موجهاً للعنصر نفسه.
+  /// `alert: true` يطلب من الخادم أولوية قصوى + صوت + اهتزاز (تنبيه عاجل).
   static Future<void> send({
     required String topic,
     required String title,
@@ -29,9 +30,10 @@ class RemotePushService {
     String? route,
     String? collection,
     String? itemId,
+    bool alert = false,
   }) =>
       _post({'topic': topic}, title, body, route,
-          collection: collection, itemId: itemId);
+          collection: collection, itemId: itemId, alert: alert);
 
   /// إشعار شخصي لجهاز محدد عبر FCM registration token
   /// (مثلاً: إخطار صاحب المحتوى عند الموافقة على منشوره أو رفضه).
@@ -50,7 +52,7 @@ class RemotePushService {
 
   static Future<void> _post(
       Map<String, dynamic> target, String title, String body, String? route,
-      {String? collection, String? itemId}) async {
+      {String? collection, String? itemId, bool alert = false}) async {
     if (endpoint.isEmpty) return;
     try {
       final user = FirebaseAuth.instance.currentUser;
@@ -72,6 +74,7 @@ class RemotePushService {
               if (collection != null && collection.isNotEmpty)
                 'collection': collection,
               if (itemId != null && itemId.isNotEmpty) 'itemId': itemId,
+              if (alert) 'alert': true,
             }),
           )
           .timeout(const Duration(seconds: 8));
@@ -121,6 +124,7 @@ const Set<String> kAdminNotifyCollections = {
   'donations',
   'phone_directory',
   'service_providers',
+  'lost_items',
   'seller_requests',
   'village_clinics',
   'pharmacies',
@@ -140,6 +144,7 @@ const Map<String, String> kPushTopicForCollection = {
   'forum_posts': 'village_forum',
   'service_requests': 'village_services',
   'service_providers': 'village_services',
+  'lost_items': 'village_services',
   'shops': 'village_market',
   'village_clinics': 'village_medical',
   'pharmacies': 'village_medical',

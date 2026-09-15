@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../core/constants/wisdom_calendar.dart';
 import '../../models/village_alert.dart';
 import '../../services/alert_service.dart';
+import '../../services/alert_sound_service.dart';
 import '../../services/share_service.dart';
 
 /// الشريط الثابت أسفل هيدر الرئيسية:
@@ -19,6 +22,32 @@ class AlertWisdomBar extends StatefulWidget {
 
 class _AlertWisdomBarState extends State<AlertWisdomBar> {
   late final Stream<VillageAlert?> _stream = AlertService().watchLiveAlert();
+  Timer? _expiryTimer;
+
+  void _onAlertShown(VillageAlert alert) {
+    if (alert.mode == VillageAlertMode.sound) {
+      final stamp = alert.updatedAt?.millisecondsSinceEpoch ?? 0;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        unawaited(AlertSound.ringOnce('alert_ring_current_$stamp'));
+      });
+    }
+    _expiryTimer?.cancel();
+    final expires = alert.expiresAt;
+    if (expires != null) {
+      final delay = expires.difference(DateTime.now());
+      if (delay > Duration.zero) {
+        _expiryTimer = Timer(delay, () {
+          if (mounted) setState(() {});
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _expiryTimer?.cancel();
+    super.dispose();
+  }
 
   void _showAlertDialog(VillageAlert alert) {
     showDialog<void>(
@@ -61,8 +90,11 @@ class _AlertWisdomBarState extends State<AlertWisdomBar> {
     return StreamBuilder<VillageAlert?>(
       stream: _stream,
       builder: (context, snapshot) {
-        final alert = snapshot.data;
+        final data = snapshot.data;
+        final alert =
+            (data != null && data.liveAt(DateTime.now())) ? data : null;
         if (alert != null) {
+          _onAlertShown(alert);
           return Padding(
             padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
             child: Material(

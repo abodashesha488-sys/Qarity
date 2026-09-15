@@ -290,6 +290,26 @@ service cloud.firestore {
       }
     }
 
+    // ───────────────────────── المفقودات (أشياء مفقودة/موجودة) ─────────────────────────
+    match /lost_items/{docId} {
+      allow list, get: if true;
+      // كل إعلان يبدأ غير معتمد، ومن صاحبه نفسه
+      allow create: if isSignedIn()
+                    && request.auth.uid == request.resource.data.userId
+                    && request.resource.data.isApproved == false;
+      // الأدمن: مراجعة كاملة. المالك: يبدّل حالة «تم التسليم» فقط بعد الاعتماد،
+      // أو يعدّل إعلانَه غير المعتمد دون المساس بالموافقة.
+      allow update: if isAdmin()
+                    || (isSignedIn() && resource.data.userId == request.auth.uid
+                        && request.resource.data.diff(resource.data)
+                             .affectedKeys().hasOnly(['isResolved']))
+                    || (isSignedIn() && resource.data.userId == request.auth.uid
+                        && resource.data.isApproved == false
+                        && !request.resource.data.diff(resource.data)
+                             .affectedKeys().hasAny(['isApproved']));
+      allow delete: if isAdmin();
+    }
+
     // محلات القرية — الإنشاء لصاحب المحل (يبدأ غير معتمد)، والتعديل لصاحبه أو الأدمن
     match /shops/{docId} {
       allow list, get: if true;
@@ -393,6 +413,13 @@ service cloud.firestore {
                         && request.resource.data.diff(resource.data).affectedKeys()
                              .hasOnly(['status','requesterName','phone']));
       allow delete: if isMedicalAdmin();
+    }
+
+    // ───────────────────────── الإعلانات الدعائية المنبثقة ─────────────────────────
+    // قراءة عامة (تظهر لكل المستخدمين) — الإنشاء/التعديل/الحذف للأدمن فقط.
+    match /promos/{docId} {
+      allow list, get: if true;
+      allow write: if isAdmin();
     }
   }
 }

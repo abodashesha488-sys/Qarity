@@ -111,6 +111,7 @@ class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
           ? null
           : QurityAppBar(
               title: 'دليل الهاتف',
+              color: const Color(0xFF37474F),
               actions: _isAdmin
                   ? [
                       IconButton(

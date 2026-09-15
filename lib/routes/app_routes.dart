@@ -38,6 +38,7 @@ import '../features/occasions/list.dart';
 import '../features/phone/add_directory.dart';
 import '../features/phone/directory.dart';
 import '../features/profile/main.dart';
+import '../features/services/lost_items_screen.dart';
 import '../features/services/service_directory_screen.dart';
 import '../features/services/service_provider_detail_screen.dart';
 import '../features/settings/index.dart';
@@ -91,6 +92,8 @@ static const String marketProducts = '/market';
   static const String serviceRequest = '/services';
   static const String serviceCategory = '/services/category';
   static const String serviceProviderDetail = '/services/detail';
+  static const String lostItems = '/services/lost-items';
+  static const String lostItemDetail = '/services/lost-item-detail';
   static const String medicalClinicDetail = '/medical/clinic-detail';
   static const String medicalPharmacyDetail = '/medical/pharmacy-detail';
   static const String medicalLabDetail = '/medical/lab-detail';
@@ -135,6 +138,8 @@ static const String marketProducts = '/market';
     notificationsSettings: (_) => const NotificationsSettingsScreen(),
     serviceRequest: (_) => const ServiceDirectoryScreen(),
     serviceProviderDetail: (_) => const ServiceProviderDetailScreen(),
+    lostItems: (_) => const LostItemsScreen(),
+    lostItemDetail: (_) => const LostItemDetailScreen(),
     medicalClinicDetail: (_) => const VillageClinicDetailScreen(),
     medicalPharmacyDetail: (_) => const PharmacyDetailScreen(),
     medicalLabDetail: (_) => const MedicalLabDetailScreen(),

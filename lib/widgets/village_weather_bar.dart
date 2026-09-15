@@ -7,6 +7,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../models/village_alert.dart';
 import '../routes/app_routes.dart';
 import '../services/alert_service.dart';
+import '../services/alert_sound_service.dart';
 import '../services/weather_service.dart';
 
 /// الشريط الثاني أسفل الهيدر:
@@ -25,6 +26,7 @@ class _VillageWeatherBarState extends State<VillageWeatherBar> {
   final AlertService _alerts = AlertService();
   Map<String, dynamic>? _weather;
   Timer? _refreshTimer;
+  Timer? _expiryTimer;
 
   @override
   void initState() {
@@ -37,7 +39,27 @@ class _VillageWeatherBarState extends State<VillageWeatherBar> {
   @override
   void dispose() {
     _refreshTimer?.cancel();
+    _expiryTimer?.cancel();
     super.dispose();
+  }
+
+  void _onBreakingShown(VillageAlert breaking) {
+    if (breaking.mode == VillageAlertMode.sound) {
+      final stamp = breaking.updatedAt?.millisecondsSinceEpoch ?? 0;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        unawaited(AlertSound.ringOnce('alert_ring_breaking_$stamp'));
+      });
+    }
+    _expiryTimer?.cancel();
+    final expires = breaking.expiresAt;
+    if (expires != null) {
+      final delay = expires.difference(DateTime.now());
+      if (delay > Duration.zero) {
+        _expiryTimer = Timer(delay, () {
+          if (mounted) setState(() {});
+        });
+      }
+    }
   }
 
   Future<void> _loadWeather() async {
@@ -83,8 +105,11 @@ class _VillageWeatherBarState extends State<VillageWeatherBar> {
     return StreamBuilder<VillageAlert?>(
       stream: _alerts.watchLiveBreaking(),
       builder: (context, breakingSnap) {
-        final breaking = breakingSnap.data;
+        final data = breakingSnap.data;
+        final breaking =
+            (data != null && data.liveAt(DateTime.now())) ? data : null;
         if (breaking != null) {
+          _onBreakingShown(breaking);
           return Padding(
             padding: const EdgeInsets.fromLTRB(14, 2, 14, 6),
             child: Material(

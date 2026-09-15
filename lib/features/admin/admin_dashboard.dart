@@ -1,19 +1,28 @@
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:image_picker/image_picker.dart';
 
+import '../../core/constants/promo_placements.dart';
 import '../../models/data_models.dart';
+import '../../models/promo_model.dart';
 import '../../models/service_provider_model.dart';
 import '../../models/village_alert.dart';
 import '../../routes/app_routes.dart';
 import '../../services/admin_service.dart';
 import '../../services/alert_service.dart';
+import '../../services/image_upload_service.dart';
+import '../../services/promo_service.dart';
+import '../../widgets/promo_host.dart';
 import '../../widgets/qurity_app_bar.dart';
 
+part 'admin_dashboard_alerts.dart';
 part 'admin_dashboard_models.dart';
 part 'admin_dashboard_overview.dart';
+part 'admin_dashboard_promos.dart';
 part 'admin_dashboard_reports.dart';
 part 'admin_dashboard_review.dart';
 part 'admin_dashboard_users.dart';
@@ -52,6 +61,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     _Cat('phone_directory', 'دليل الهاتف', Icons.phone_rounded, Colors.cyan),
     _Cat('service_providers', 'دليل الخدمات', Icons.category_rounded,
         Color(0xFF6D4C41)),
+    _Cat('lost_items', 'المفقودات', Icons.search_rounded,
+        Color(0xFF5E35B1)),
     _Cat('medical_center_clinics', 'عيادات المركز الخيري',
         Icons.local_hospital_rounded, Color(0xFF00695C)),
     _Cat('village_clinics', 'عيادات القرية', Icons.add_business_rounded,
@@ -149,6 +160,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             }),
             onOpenUsers: () => setState(() => _navIndex = 2),
             onOpenReports: () => setState(() => _navIndex = 3),
+            onOpenAlerts: () => setState(() => _navIndex = 5),
           ),
           _ReviewPage(
             key: ValueKey('review_$_reviewNav'),
@@ -167,6 +179,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             onUpdated: _refreshAll,
           ),
           const _ReportsPage(),
+          _PromosPage(currentUid: _auth.currentUser?.uid),
+          const _AlertsControlPage(),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -189,6 +203,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               icon: Icon(Icons.insights_outlined),
               selectedIcon: Icon(Icons.insights_rounded),
               label: 'التقارير'),
+          NavigationDestination(
+              icon: Icon(Icons.campaign_outlined),
+              selectedIcon: Icon(Icons.campaign_rounded),
+              label: 'الإعلانات'),
+          NavigationDestination(
+              icon: Icon(Icons.warning_amber_outlined),
+              selectedIcon: Icon(Icons.warning_amber_rounded),
+              label: 'التنبيهات'),
         ],
       ),
     );
@@ -199,6 +221,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     'مراجعة المحتوى والطلبات',
     'إدارة المستخدمين والأدوار',
     'تقارير وإحصائيات',
+    'الإعلانات الدعائية المنبثقة',
+    'التنبيهات العاجلة',
   ];
 
   String? _selectedCat;

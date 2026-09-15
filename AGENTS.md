@@ -1,4 +1,4 @@
-﻿# Qarity Project - Agent Documentation
+# Qarity Project - Agent Documentation
 
 ## Project Overview
 Qarity is a comprehensive digital platform for village community services (قرية أبوديشيشة).
@@ -7,7 +7,7 @@ Qarity is a comprehensive digital platform for village community services (قر�
 - **Errors:** 0
 - **Warnings:** 0
 - **Info:** 0
-- **Status:** Compiles successfully · `flutter test`: 90/90 passing
+- **Status:** Compiles successfully · `flutter test`: 115/115 passing
 
 ## Firebase Configuration
 
@@ -124,6 +124,8 @@ to Blaze and run `firebase deploy --only functions`.
   `occasions`, `forum_posts`, `village_clinics`, `pharmacies`, `blood_requests`,
   `blood_donors`, `medical_center_clinics`, `shops`, `buy_requests`, `donations`,
   `price_history`, `phone_directory`, `emergency_contacts`, `village_info`,
+  `lost_items` (public read; owner create `isApproved:false`; owner may toggle
+  only `isResolved` post-approval; admin full)
   `village_alerts/current` (urgent home alert; admin-only write)
 - Authenticated create access for content collections (starts `isApproved: false`)
 - **Service Directory (`service_providers`)**: public read; owner create only with `isApproved: false`; owner may update their own *unapproved* entry without touching `isApproved`; admin full access.
@@ -183,6 +185,8 @@ lib/
 - `ForumService` - Forum posts and comments
 - `OrderService` - Order management
 - `ServiceRequestService` - Service request creation and tracking
+- `LostItemService` - المفقودات: approved feed, own items, resolved toggling (`lost_items` collection)
+- `PromoService` + `PromoRouteObserver` + `PromoLocation` (`lib/services/promo_service.dart`) — الإعلانات الدعائية: watchAll stream, admin CRUD (update bumps `version`), navigator observer tracking the current placement key
 - `ProductInteractionService` - Likes and comments
 - `ThemeService` - Theme management
 
@@ -190,6 +194,8 @@ lib/
 - `UserModel` - User profile with role
 - `NewsItem`, `MarketProduct`, `ForumPost`, `Obituary`, `Occasion`
 - `AppOrder`, `EmergencyContact`, `ServiceRequest`, `Review`
+- `LostItem` (`lib/models/lost_item_model.dart`) — lost/found announcement with isResolved/isApproved; `kLostItemsColor` (deep purple `#5E35B1`) is its single source of truth
+- `Promo` (`lib/models/promo_model.dart`) — pop-up ad: placement key, link (none/app/external kind), window, showOnce, sound/vibrate, version
 
 ## Admin Access
 - **Role-based only** (no hardcoded email in Firestore rules).
@@ -214,7 +220,7 @@ lib/
 - Use `RoleNameText(name, role, sellerType)` for any user-facing author/seller name.
 
 ## Admin Dashboard
-- Review chips (14): News, Products, Shops, Obituaries, Occasions, Forum Posts, Seller Requests, Phone Directory, Service Directory (`service_providers`), Charity Medical Center Clinics (`medical_center_clinics`), Village Clinics, Pharmacies, Blood Requests, Blood Donors.
+- Review chips (15): News, Products, Shops, Obituaries, Occasions, Forum Posts, Seller Requests, Phone Directory, Service Directory (`service_providers`), **Lost Items (`lost_items` — 🔎 fan-out to `village_services`, submitter field `userId`, route `/services/lost-items`)**, Charity Medical Center Clinics (`medical_center_clinics`), Village Clinics, Pharmacies, Blood Requests, Blood Donors.
 - Stats grid with counts
 - Search bar and filter chips (all / pending)
 - Pending count badges on tabs and AppBar
@@ -226,6 +232,9 @@ lib/
 - Service Directory (`/services`, route `serviceRequest` → `ServiceDirectoryScreen`): tabs الفنيون/خدمات زراعية/خدمات تعليمية (user-submitted `service_providers`, admin-approved, dropdown-grouped lists) + دليل الهاتف (`PhoneDirectoryScreen(embedded: true)` keeps its own design/logic). Replaced the old "طلب الخدمة" request screens (`request.dart`/`detail.dart` deleted; `service_requests` collection kept for legacy stats).
 
 ## Recent Updates
+- Urgent-alerts admin tab (التنبيهات العاجلة): the two overview `_AlertControlCard`s moved to a dedicated 6th dashboard tab (`admin_dashboard_alerts.dart` part — `_AlertsControlPage` + `_ManagedAlertCard` for red `village_alerts/current` and yellow `village_alerts/breaking`), overview keeps a compact `_LiveAlertSummary` status strip with «إدارة» shortcut. Three explicit levels chosen per activation (`VillageAlertMode`: display = banner only / push = + FCM fan-out / sound = + high-priority push with default sound & in-app `AlertSound.ringOnce` — ding.wav + HapticFeedback, rung ONCE per alert version keyed `alert_ring_<doc>_<updatedAtMillis>` in SharedPreferences). Optional auto-expiry (chips: none/1/3/6/12/24h/3d → `expiresAt` Timestamp; `VillageAlert.liveAt(now)` gates every consumer — `_map`, AlertWisdomBar, VillageWeatherBar — and a client Timer re-hides the banner exactly at expiry). Silent «حفظ» vs explicit «إعادة إرسال الإشعار» (renotify reads stored mode; refuses when mode=display). `RemotePushService.send(alert: true)` → worker `api/push.js` adds android defaultSound+vibrate [400,200,400] red color, apns sound:default + priority 10, webpush Urgency:high (needs Vercel redeploy on push). Rules unchanged (village_alerts admin-write covers new fields). Tests: +5 expiry/mode cases (suite 115/115).
+- Promotional pop-up ads (الإعلانات الدعائية): admin-only `promos` collection (public read, `isAdmin()` write in rules) + `Promo` model (`lib/models/promo_model.dart`: title/imageUrl/placement/linkType/linkValue/showOnce/startsAt/endsAt/isActive/playSound/vibrate/version) + `PromoService`. Placement registry `lib/core/constants/promo_placements.dart` — `kPromoPlacements` (19 spots incl. every service-directory sub-screen & medical section via `promoKeyForRoute(name, args)`), `kPromoInternalLinks` (route|arg encoded), `kPromoExternalKinds` + `buildExternalUrl` (wa.me country-code normalization, handle→platform-url builders, full https passthrough). `PromoHost` (`lib/widgets/promo_host.dart`) wraps the whole app in `main.dart`'s builder + `navigatorObservers:[promoRouteObserver]`: when the top route matches an active promo's placement, a full-screen dimmed overlay shows the image after 700ms — round **× button OUTSIDE the image**, 15s auto-dismiss countdown ring, tap image = open link then dismiss, tap outside = dismiss; multiple promos per screen queue one-by-one; per-user once/always via `showOnce` + SharedPreferences `promo_seen_<id>_v<version>` (editing bumps version → re-shows); optional `ding.wav` sound (generated asset + `audioplayers`) and `HapticFeedback` vibration. Admin UI: 5th dashboard tab «الإعلانات» (`admin_dashboard_promos.dart` part) — cards with status chips (مباشر/مجدول/متوقف/منتهي), active switch, edit/delete, and a full form sheet (ImgBB image upload + preview, grouped placement dropdown, link type none/app/external with per-kind validation, mandatory start/end dates, once-vs-every-visit segmented button, sound/vibration switches, and a **معاينة حية** live-preview button rendering the real overlay). Tests: `test/services/promo_test.dart` (+16; suite 110/110).
+- Lost Items service (المفقودات): new `lost_items` collection + `LostItem` model + `LostItemService`; `LostItemsScreen` (`/services/lost-items`) reachable as the 6th tile of `/services` — purple `#5E35B1`, search + filter chips (الكل/مفقود/تم العثور عليه/تم التسليم), FAB form sheet (type toggle, title, description, location, date picker, optional ImgBB image, phone) → `isApproved:false` + `notifyAdmins`. `LostItemDetailScreen` (`/services/lost-item-detail`, also deep-linked from notifications) with call/WhatsApp/share and owner-only «تم التسليم» toggle. Admin: review chip + pending count + edit fields + approve/reject/delete via the generic AdminService maps; `firestore.rules` lost_items block (public read, owner create unapproved, owner resolved-flag-only update post-approval, admin full); api/push.js `PENDING_KINDS.lost_items`. **Per-service theming**: `QurityAppBar` gained a `color:` param and each directory service now has a unique non-repeating brand color applied to its tile, header and FAB — الفنيون `#EF6C00`, زراعية `#AD1457`, تعليمية `#1565C0`, دليل الهاتف `#37474F`, طبية `#00897B`, مفقودات `#5E35B1`; badge/pair colors (مفقود `#C62828` / موجود `#00897B`) keep white-text contrast against the beige page. Tests: `test/services/lost_items_test.dart` (+4; suite 94/94).
 - Unified fixed header (`lib/widgets/qurity_app_bar.dart` → `QurityAppBar`, implements `PreferredSizeWidget`) on every screen EXCEPT Home: app logo (`QurityLogo` 32) + page name (Tajawal white 16.5/w800, ellipsis) + notification bell (auto-appended to screen `actions`), solid `#6F4E37` (also `AppColors.primary` — the whole green palette + `Colors.green*` usages across the app were replaced with coffee #6F4E37; light-green shade → cream #F0E3D5), constant `kToolbarHeight`, white icons, `scrolledUnderElevation: 0`. `NotificationBellButton` (public in `common_appbar_actions.dart`, `compact:` glass variant for the Home hero; auth/Firestore reads try/catch-guarded so widget tests without Firebase mocks render). Tab-bar screens (market tabs, about-village) and news list (brown pinned SliverAppBar keeping the search box) and `MedDetailHeader` (pinned brown bar + hero image moved into a body sliver; used by clinic/pharmacy/lab/provider details) all follow the same colors/height. Home hero: glass action strip removed — 2×2 button grid (settings|bell over avatar|menu) beside the logo (tap = full-screen zoomable logo dialog), village name + greeting-with-name, date pill right / clock pill left. Service grid tiles are now pure label-less images (About/News/Souq/des/festefal/mandra→«مندرة القرية»/Services/aboutapp, no borders, soft drop shadow, الطوارئ removed; About.jpg recompressed 253KB→72KB). Weather strip card = wither.jpg background + black scrim, same footprint as the wisdom bar (minHeight 58), two columns: icon+condition+temp | max/min over humidity+wind.
 - Orphan cleanup on deletion: `ContentCleanupService.cleanupForDeleted(fs, collection, docId)` (lib/services/content_cleanup_service.dart) runs BEFORE the document delete in both `AdminService.deleteItem` and `MarketService.deleteProduct` — wipes `market_products/{id}/likes` + `/comments`, `product_reviews`/`stock_alerts` by productId, `news|forum_posts|service_providers/{id}/comments`, obituary `condolences`, occasion `occasion_attendees`; `orders`, `activity_log` and inbox notifications are deliberately preserved as history. Admin product deletion also deletes the ImgBB images (previously only the seller path did). Rules updated: admin may delete any product `likes` doc and any `stock_alerts` doc (cleanup rights); deployed with hosting.
 - Notification deep-links: tapping any notification now opens the exact item, not just its section. `RemotePushService.send/sendToDevice` accept `collection`+`itemId` (forwarded by the worker into FCM `data`); `NotificationService` (cold-start `getInitialMessage`, `onMessageOpenedApp`, local-notification taps via `route|collection|itemId` payloads encoded/decoded by `core/utils/notification_deeplink.dart`) routes to `/open` (`NotificationOpenScreen`) which fetches `collection/id`, builds the model (news, products, obituaries, occasions, forum posts, service providers, clinics, pharmacies, labs) and `pushReplacementNamed` to its detail screen — falling back to the section route on any failure/unknown collection (old pushes never break). `AdminService.approveItem/rejectItem/publishContent` pass `docId`, so both the public topic push and the submitter's personal FCM + in-app inbox entry (`NotificationInboxService` route now stores the pipe format; the inbox screen decodes it) deep-link to the item.

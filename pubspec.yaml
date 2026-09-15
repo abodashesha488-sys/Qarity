@@ -47,6 +47,7 @@ dependencies:
   connectivity_plus: ^6.0.0
   flutter_local_notifications: ^19.0.0
   timezone: ^0.10.0
+  audioplayers: ^6.8.1
 
 dev_dependencies:
   flutter_test:
@@ -69,3 +70,4 @@ flutter:
     - assets/animations/
     - assets/images/
     - assets/images/Qurity.png
+    - assets/sounds/

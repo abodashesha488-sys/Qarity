@@ -14,6 +14,7 @@ class QurityAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.actions = const [],
     this.bottom,
     this.leading,
+    this.color,
   });
 
   final String title;
@@ -22,6 +23,9 @@ class QurityAppBar extends StatelessWidget implements PreferredSizeWidget {
   final List<Widget> actions;
   final PreferredSizeWidget? bottom;
   final Widget? leading;
+
+  /// لون خلفية مخصص (لشاشات الخدمات الملونة) — الافتراضي بني التطبيق.
+  final Color? color;
 
   static const Color headerColor = Color(0xFF6F4E37);
 
@@ -32,7 +36,7 @@ class QurityAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      backgroundColor: headerColor,
+      backgroundColor: color ?? headerColor,
       foregroundColor: Colors.white,
       iconTheme: const IconThemeData(color: Colors.white),
       actionsIconTheme: const IconThemeData(color: Colors.white),

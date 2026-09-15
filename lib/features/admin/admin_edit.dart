@@ -221,6 +221,16 @@ class _AdminEditScreenState extends State<AdminEditScreen> {
           _FieldSpec('description', 'نبذة', multiline: true),
           _FieldSpec('isFeatured', 'بيان مميز (يظهر ذهبيًا وفي المقدمة)', boolean: true),
         ];
+      case 'lost_items':
+        return const [
+          _FieldSpec('title', 'اسم الغرض', required: true),
+          _FieldSpec('type', 'النوع (lost/found)'),
+          _FieldSpec('description', 'الوصف', multiline: true),
+          _FieldSpec('location', 'المكان'),
+          _FieldSpec('phone', 'هاتف التواصل'),
+          _FieldSpec('userName', 'اسم صاحب الإعلان'),
+          _FieldSpec('isResolved', 'تم التسليم (مغلق)', boolean: true),
+        ];
       case 'medical_center_clinics':
         return const [
           _FieldSpec('name', 'اسم العيادة', required: true),

@@ -416,6 +416,7 @@ class AdminService {
     'pharmacies': 'submittedBy',
     'medical_labs': 'submittedBy',
     'service_providers': 'submittedBy',
+    'lost_items': 'userId',
     'blood_requests': 'userId',
     'blood_donors': 'userId',
     'service_requests': 'userId',
@@ -482,6 +483,8 @@ class AdminService {
         return '/forum';
       case 'service_providers':
         return '/services';
+      case 'lost_items':
+        return '/services/lost-items';
       case 'village_clinics':
       case 'pharmacies':
       case 'medical_labs':
@@ -516,6 +519,8 @@ class AdminService {
         return 'عيادة المركز الخيري';
       case 'service_providers':
         return 'الإضافة في دليل الخدمات';
+      case 'lost_items':
+        return 'إعلان المفقودات';
       case 'pharmacies':
         return 'الصيدلية';
       case 'blood_requests':
@@ -568,6 +573,11 @@ class AdminService {
       'forum_posts' => ('💬 منشور جديد', preview, '/forum'),
       'service_requests' => ('🔔 طلب خدمة', preview, '/services'),
       'service_providers' => ('🧰 خدمة جديدة في الدليل', preview, '/services'),
+      'lost_items' => (
+            '🔎 إعلان مفقودات جديد',
+            preview,
+            '/services/lost-items'
+          ),
       'shops' => ('🏬 محل جديد في السوق', preview, '/market'),
       'medical_center_clinics' => (
             '🏥 عيادة جديدة بالمركز الطبي الخيري',
@@ -707,6 +717,7 @@ class AdminService {
       _pendingCount('service_providers').first,
       _pendingCount('medical_center_clinics').first,
       _pendingCount('medical_labs').first,
+      _pendingCount('lost_items').first,
     ]);
     return {
       'news': results[0],
@@ -724,6 +735,7 @@ class AdminService {
       'service_providers': results[12],
       'medical_center_clinics': results[13],
       'medical_labs': results[14],
+      'lost_items': results[15],
     };
   }
 

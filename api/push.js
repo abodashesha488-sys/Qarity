@@ -33,6 +33,7 @@ const PENDING_KINDS = {
   donations: { t: '🎁 عرض تبرع جديد بانتظار المراجعة', b: 'أضاف أحد الأهالي عرض تبرع.' },
   phone_directory: { t: '📞 جهة اتصال جديدة بانتظار المراجعة', b: 'طلب إضافة جديد لدليل الهاتف.' },
   service_providers: { t: '🧰 إضافة جديدة بدليل الخدمات', b: 'إضافة جديدة في دليل الخدمات بانتظار المراجعة.' },
+  lost_items: { t: '🔎 إعلان مفقودات جديد', b: 'أضاف أحد الأهالي إعلاناً في المفقودات بانتظار المراجعة.' },
   seller_requests: { t: '🏪 طلب بائعية جديد', b: 'قدّم أحد الأهالي طلباً لفتح متجر.' },
   village_clinics: { t: '🏥 عيادة جديدة بانتظار المراجعة', b: 'إضافة جديدة لعيادات القرية.', medical: true },
   pharmacies: { t: '💊 صيدلية جديدة بانتظار المراجعة', b: 'إضافة جديدة لصيدليات القرية.', medical: true },
@@ -192,6 +193,25 @@ export default async function handler(req, res) {
       notification: { channelId: 'qarity_channel', color: '#1B5E20' },
     },
   };
+
+  // وضع التنبيه العاجل: أولوية قصوى + صوت + اهتزاز على كل المنصات.
+  if (body.alert) {
+    base.android = {
+      priority: 'high',
+      notification: {
+        channelId: 'qarity_channel',
+        color: '#C62828',
+        defaultSound: true,
+        defaultVibrate: true,
+        vibrate: [400, 200, 400],
+      },
+    };
+    base.apns = {
+      payload: { aps: { sound: 'default', badge: 1 } },
+      headers: { 'apns-priority': '10' },
+    };
+    base.webpush = { headers: { Urgency: 'high' } };
+  }
 
   try {
     const target = token ? { token: String(token) } : { topic };

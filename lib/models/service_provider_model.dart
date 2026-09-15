@@ -33,7 +33,7 @@ class ServiceCategory {
 
   static Color color(String c) => switch (c) {
         technicians => const Color(0xFFEF6C00),
-        agricultural => const Color(0xFF6F4E37),
+        agricultural => const Color(0xFFAD1457),
         educational => const Color(0xFF1565C0),
         _ => Colors.teal,
       };

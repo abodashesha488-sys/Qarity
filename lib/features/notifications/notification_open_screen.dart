@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/data_models.dart';
+import '../../models/lost_item_model.dart';
 import '../../models/medical_models.dart';
 import '../../models/service_provider_model.dart';
 import '../../routes/app_routes.dart';
@@ -82,6 +83,10 @@ class _NotificationOpenScreenState extends State<NotificationOpenScreen> {
             case 'medical_labs':
               model = MedicalLab.fromJson(data, id);
               route = AppRoutes.medicalLabDetail;
+              break;
+            case 'lost_items':
+              model = LostItem.fromJson(data, id);
+              route = AppRoutes.lostItemDetail;
               break;
           }
           if (route != null && mounted) {
