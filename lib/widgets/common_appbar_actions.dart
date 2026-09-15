@@ -48,19 +48,24 @@ class NotificationBellButton extends StatelessWidget {
             onPressed: open,
           );
         }
-        return Material(
-          color: Colors.white.withValues(alpha: 0.16),
-          shape: CircleBorder(
-              side: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.28))),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            customBorder: const CircleBorder(),
-            onTap: open,
-            child: SizedBox(
-              width: 36,
-              height: 36,
-              child: Center(child: badge),
+        // النسخة المضغوطة (هيدر الرئيسية) — دائرة زرقاء صريحة عالية الوضوح
+        return Padding(
+          padding: const EdgeInsetsDirectional.only(end: 4),
+          child: Material(
+            color: const Color(0xFF1565C0),
+            shape: CircleBorder(
+                side: BorderSide(
+                    color: Colors.white.withValues(alpha: 0.55),
+                    width: 1.6)),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: open,
+              child: SizedBox(
+                width: 40,
+                height: 40,
+                child: Center(child: badge),
+              ),
             ),
           ),
         );

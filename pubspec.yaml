@@ -2,7 +2,7 @@ name: qurity
 description: "تطبيق قرية أبوديشيشة - التطبيق المجتمعي لخدمة قرى المنطقة"
 publish_to: 'none'
 
-version: 3.2.1+0
+version: 1.0.1+1
 
 environment:
   sdk: '>=3.2.0 <4.0.0'
@@ -48,6 +48,7 @@ dependencies:
   flutter_local_notifications: ^19.0.0
   timezone: ^0.10.0
   audioplayers: ^6.8.1
+  package_info_plus: ^10.2.1
 
 dev_dependencies:
   flutter_test:

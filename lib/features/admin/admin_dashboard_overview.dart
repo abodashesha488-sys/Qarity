@@ -33,6 +33,8 @@ class _OverviewPage extends StatelessWidget {
           _WelcomeHeader(isLoading: isLoading, users: stats['users'] ?? 0),
           const SizedBox(height: 16),
           _LiveAlertSummary(onOpenAlerts: onOpenAlerts),
+          const SizedBox(height: 12),
+          const _AppVersionAdminCard(),
           const SizedBox(height: 16),
           if (totalPending > 0)
             _PendingAlert(

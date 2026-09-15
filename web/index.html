@@ -30,6 +30,59 @@
     };
     firebase.initializeApp(firebaseConfig);
   </script>
-  <script src="flutter_bootstrap.js" async></script>
+  <!-- شريط «تحديث جديد متاح» لتطبيقات الويب/PWA -->
+  <div id="pw-update" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:9999;
+       justify-content:center;align-items:center;gap:12px;padding:10px 14px;
+       background:#6F4E37;color:#fff;font-family:'Tajawal',sans-serif;font-size:13px;
+       box-shadow:0 -4px 14px rgba(0,0,0,.25);direction:rtl;">
+    <span>✨ يوجد إصدار جديد من التطبيق</span>
+    <button id="pw-update-btn" style="background:#F1C40F;color:#3E2B1F;border:none;border-radius:10px;
+       padding:6px 14px;font-weight:800;font-size:12.5px;cursor:pointer;">تحديث الآن</button>
+    <button id="pw-update-later" style="background:transparent;color:#ffffffcc;border:1px solid #ffffff55;
+       border-radius:10px;padding:6px 10px;font-size:12px;cursor:pointer;">لاحقًا</button>
+  </div>
+  <script>
+    {{flutter_bootstrap.js}}({
+      serviceWorkerConfiguration: {
+        // لا تُفعَّل النسخة الجديدة تلقائيًا أثناء الجلسة — نُسأل المستخدم أولًا.
+        skipWaiting: false,
+      },
+    });
+  </script>
+  <script>
+    (function () {
+      if (!('serviceWorker' in navigator)) return;
+      var banner = document.getElementById('pw-update');
+      var pending = null;
+      function show(reg) {
+        if (!reg || !reg.waiting || banner.style.display === 'flex') return;
+        pending = reg;
+        banner.style.display = 'flex';
+      }
+      navigator.serviceWorker.ready.then(function (reg) {
+        show(reg);
+        reg.addEventListener('updatefound', function () {
+          var w = reg.installing || reg.waiting;
+          if (!w) return;
+          w.addEventListener('statechange', function () {
+            if (w.state === 'installed' && navigator.serviceWorker.controller) show(reg);
+          });
+        });
+      }).catch(function () {});
+      document.getElementById('pw-update-btn').addEventListener('click', function () {
+        if (pending && pending.waiting) pending.waiting.postMessage({ action: 'skipWaiting' });
+        window.location.reload();
+      });
+      document.getElementById('pw-update-later').addEventListener('click', function () {
+        banner.style.display = 'none';
+      });
+      var reloaded = false;
+      navigator.serviceWorker.addEventListener('controllerchange', function () {
+        if (reloaded) return;
+        reloaded = true;
+        window.location.reload();
+      });
+    })();
+  </script>
 </body>
 </html>

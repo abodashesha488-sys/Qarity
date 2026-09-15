@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../routes/app_routes.dart';
 import '../../services/theme_service.dart';
 import '../../widgets/qurity_app_bar.dart';
+import '../../widgets/update_dialogs.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -72,6 +74,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   subtitle: 'الملف الشخصي وتسجيلات الدخول',
                   onTap: () {},
                 ),
+              ]),
+              const SizedBox(height: 16),
+              _buildSectionCard(theme, 'التحديثات', Icons.system_update_rounded, [
+                const _UpdateTile(),
               ]),
               const SizedBox(height: 16),
               _buildSectionCard(theme, 'عن التطبيق', Icons.info_rounded, [
@@ -175,6 +181,38 @@ class _SettingsTile extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// صف التحديثات — يعرض الإصدار الحالي ويفحص يدويًا عند الضغط.
+class _UpdateTile extends StatefulWidget {
+  const _UpdateTile();
+
+  @override
+  State<_UpdateTile> createState() => _UpdateTileState();
+}
+
+class _UpdateTileState extends State<_UpdateTile> {
+  String _version = '…';
+
+  @override
+  void initState() {
+    super.initState();
+    PackageInfo.fromPlatform().then((p) {
+      if (mounted) {
+        setState(() => _version = 'الإصدار ${p.version} (${p.buildNumber})');
+      }
+    }).catchError((_) {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _SettingsTile(
+      icon: Icons.system_update_alt_rounded,
+      title: 'التحقق من التحديثات',
+      subtitle: '$_version • اضغط للفحص الآن',
+      onTap: () => UpdateDialogs.runManualCheck(context),
     );
   }
 }
