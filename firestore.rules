@@ -240,11 +240,16 @@ service cloud.firestore {
 
     // ───────────────────────── الإشعارات ─────────────────────────
     match /notifications/{docId} {
+      // خاص بالكامل: لا يقرأ أو يعدّل أحد إشعاراتِ غيره.
       allow get: if isSignedIn() && request.auth.uid == resource.data.userId;
-      allow list: if isSignedIn();
-      allow create: if isSignedIn();
+      allow list: if isSignedIn() && request.auth.uid == resource.data.userId;
+      // الأدمن يوصّل إشعارات للآخرين؛ المستخدم يسجّل إشعارات نفسه فقط.
+      allow create: if isAdmin()
+                    || (isSignedIn()
+                        && request.auth.uid == request.resource.data.userId);
       allow update: if isSignedIn() && request.auth.uid == resource.data.userId;
-      allow delete: if isAdmin();
+      allow delete: if isAdmin()
+                    || (isSignedIn() && request.auth.uid == resource.data.userId);
     }
 
     // ───────────────────────── دليل الهاتف ─────────────────────────

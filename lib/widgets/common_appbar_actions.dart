@@ -48,23 +48,59 @@ class NotificationBellButton extends StatelessWidget {
             onPressed: open,
           );
         }
-        // النسخة المضغوطة (هيدر الرئيسية) — دائرة زرقاء صريحة عالية الوضوح
+        // النسخة المضغوطة (هيدر الرئيسية) — دائرة زرقاء صريحة + شارة غير مقطوعة
         return Padding(
-          padding: const EdgeInsetsDirectional.only(end: 4),
-          child: Material(
-            color: const Color(0xFF1565C0),
-            shape: CircleBorder(
-                side: BorderSide(
+          padding: const EdgeInsetsDirectional.only(end: 4, top: 1, bottom: 1),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: open,
+            child: Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF1565C0),
+                border: Border.all(
                     color: Colors.white.withValues(alpha: 0.55),
-                    width: 1.6)),
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              customBorder: const CircleBorder(),
-              onTap: open,
-              child: SizedBox(
-                width: 40,
-                height: 40,
-                child: Center(child: badge),
+                    width: 1.6),
+                boxShadow: const [
+                  BoxShadow(
+                      color: Color(0x40000000),
+                      blurRadius: 8,
+                      offset: Offset(0, 2))
+                ],
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  const Icon(Icons.notifications_none_rounded,
+                      color: Colors.white, size: 21),
+                  if (unread > 0)
+                    PositionedDirectional(
+                      top: 4,
+                      end: 3,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 4.5, vertical: 1),
+                        constraints: const BoxConstraints(minWidth: 15),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.error,
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.9),
+                              width: 1.2),
+                        ),
+                        child: Text(
+                            unread > 99 ? '99+' : '$unread',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 8.5,
+                                height: 1.25,
+                                fontWeight: FontWeight.w900)),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),

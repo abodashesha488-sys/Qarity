@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -7,12 +8,14 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 
 import '../../core/utils/navigator_key.dart';
 import '../../routes/app_routes.dart';
 import '../core/constants/app_config.dart';
 import '../core/utils/notification_deeplink.dart';
+import 'notification_inbox_service.dart';
 
 class NotificationService {
   NotificationService._();
@@ -95,6 +98,7 @@ class NotificationService {
       final initialMessage =
           await FirebaseMessaging.instance.getInitialMessage();
       if (initialMessage != null) {
+        _logToInbox(initialMessage);
         _handleData(initialMessage.data);
       }
     } catch (_) {}
@@ -184,6 +188,7 @@ class NotificationService {
   static void _handleForegroundMessage(RemoteMessage message) {
     final notification = message.notification;
     if (notification == null) return;
+    _logToInbox(message);
 
     _localNotifications.show(
       notification.hashCode,
@@ -217,7 +222,41 @@ class NotificationService {
   }
 
   static Future<void> _handleNotificationOpen(RemoteMessage message) async {
+    _logToInbox(message);
     _handleData(message.data);
+  }
+
+  /// تسجيل نسخة من أي Push وصل (بثٍّ كان أو شخصيًا) في صندوق إشعارات
+  /// المستخدم الحالي حتى تتحرك شارة الجرس فعليًا مع ما يراه.
+  /// إزالة التكرار تتم محليًا بواسطة messageId (بصمة في SharedPreferences).
+  static void _logToInbox(RemoteMessage message) {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      final n = message.notification;
+      if (user == null || n == null) return;
+      final uid = user.uid;
+      final title = (n.title ?? '').trim();
+      final body = (n.body ?? '').trim();
+      if (title.isEmpty && body.isEmpty) return;
+      // البصمة بمحتوى الإشعار نفسه — تلتقط التكرار حتى لو وصلت نفس
+      // الرسالة برقمَي معرف مختلفين (كتابة الأدمن ثم onMessage عند المستلم).
+      final fingerprint =
+          'inbox_logged_${'$uid|$title|$body'.hashCode}';
+      unawaited(() async {
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          if (prefs.getBool(fingerprint) ?? false) return;
+          await prefs.setBool(fingerprint, true);
+          await NotificationInboxService.instance.push(
+            userId: uid,
+            title: title.isEmpty ? 'إشعار من القرية' : title,
+            body: body,
+            route: _payloadFor(message.data),
+            kind: (message.data['kind'] as String?) ?? 'info',
+          );
+        } catch (_) {}
+      }());
+    } catch (_) {}
   }
 
   /// موجّه الإشعار: إذا حمل معرّف عنصر → شاشة `/open` تعرض تفاصيله نفسها؛
