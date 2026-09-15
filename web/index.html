@@ -42,14 +42,6 @@
        border-radius:10px;padding:6px 10px;font-size:12px;cursor:pointer;">لاحقًا</button>
   </div>
   <script>
-    {{flutter_bootstrap.js}}({
-      serviceWorkerConfiguration: {
-        // لا تُفعَّل النسخة الجديدة تلقائيًا أثناء الجلسة — نُسأل المستخدم أولًا.
-        skipWaiting: false,
-      },
-    });
-  </script>
-  <script>
     (function () {
       if (!('serviceWorker' in navigator)) return;
       var banner = document.getElementById('pw-update');
@@ -70,7 +62,8 @@
         });
       }).catch(function () {});
       document.getElementById('pw-update-btn').addEventListener('click', function () {
-        if (pending && pending.waiting) pending.waiting.postMessage({ action: 'skipWaiting' });
+        // Flutter's generated service worker listens for the plain 'skipWaiting' string.
+        if (pending && pending.waiting) pending.waiting.postMessage('skipWaiting');
         window.location.reload();
       });
       document.getElementById('pw-update-later').addEventListener('click', function () {
@@ -84,5 +77,6 @@
       });
     })();
   </script>
+  <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
