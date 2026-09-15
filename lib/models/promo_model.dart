@@ -1,13 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-
-DateTime? _parseTs(dynamic value) {
-  if (value == null) return null;
-  if (value is Timestamp) return value.toDate();
-  if (value is DateTime) return value;
-  if (value is int) return DateTime.fromMillisecondsSinceEpoch(value);
-  if (value is String) return DateTime.tryParse(value);
-  return null;
-}
+import '../core/utils/firebase_ts.dart';
 
 /// إعلان دعائي منبثق يظهر فوق الشاشات (مجموعة promos).
 /// linkType: none | app | url | whatsapp | facebook | instagram | youtube | telegram | tiktok
@@ -67,14 +59,14 @@ class Promo {
       linkType: json['linkType'] as String? ?? 'none',
       linkValue: json['linkValue'] as String? ?? '',
       showOnce: json['showOnce'] as bool? ?? true,
-      startsAt: _parseTs(json['startsAt']) ?? DateTime.now(),
-      endsAt: _parseTs(json['endsAt']) ?? DateTime.now(),
+      startsAt: tsToDateTime(json['startsAt']) ?? DateTime.now(),
+      endsAt: tsToDateTime(json['endsAt']) ?? DateTime.now(),
       isActive: json['isActive'] as bool? ?? true,
       playSound: json['playSound'] as bool? ?? false,
       vibrate: json['vibrate'] as bool? ?? false,
       version: (json['version'] as num?)?.toInt() ?? 1,
       createdBy: json['createdBy'] as String? ?? '',
-      createdAt: _parseTs(json['createdAt']),
+      createdAt: tsToDateTime(json['createdAt']),
     );
   }
 

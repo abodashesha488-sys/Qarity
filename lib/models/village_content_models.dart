@@ -1,14 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
-DateTime? _parseTs(dynamic value) {
-  if (value == null) return null;
-  if (value is Timestamp) return value.toDate();
-  if (value is DateTime) return value;
-  if (value is int) return DateTime.fromMillisecondsSinceEpoch(value);
-  if (value is String) return DateTime.tryParse(value);
-  return null;
-}
+import '../core/utils/firebase_ts.dart';
 
 // ═══════════════ حقبة تاريخية (village_history) ═══════════════
 class HistoryEra {
@@ -38,7 +31,7 @@ class HistoryEra {
         narrative: j['narrative'] as String? ?? '',
         imageUrl: j['imageUrl'] as String? ?? '',
         sortOrder: (j['sortOrder'] as num?)?.toInt() ?? 0,
-        createdAt: _parseTs(j['createdAt']),
+        createdAt: tsToDateTime(j['createdAt']),
       );
 
   Map<String, dynamic> toJson() => {
@@ -139,7 +132,7 @@ class VillageFigure {
         bio: j['bio'] as String? ?? '',
         photoUrl: j['photoUrl'] as String? ?? '',
         sortOrder: (j['sortOrder'] as num?)?.toInt() ?? 0,
-        createdAt: _parseTs(j['createdAt']),
+        createdAt: tsToDateTime(j['createdAt']),
       );
 
   Map<String, dynamic> toJson() => {
@@ -197,7 +190,7 @@ class VillageArchivePhoto {
         description: j['description'] as String? ?? '',
         source: j['source'] as String? ?? '',
         imageUrl: j['imageUrl'] as String? ?? '',
-        createdAt: _parseTs(j['createdAt']),
+        createdAt: tsToDateTime(j['createdAt']),
       );
 
   Map<String, dynamic> toJson() => {
@@ -316,7 +309,7 @@ class VillageInstitution {
         imageUrls:
             (j['imageUrls'] as List<dynamic>?)?.cast<String>() ?? const [],
         sortOrder: (j['sortOrder'] as num?)?.toInt() ?? 0,
-        createdAt: _parseTs(j['createdAt']),
+        createdAt: tsToDateTime(j['createdAt']),
       );
 
   Map<String, dynamic> toJson() => {

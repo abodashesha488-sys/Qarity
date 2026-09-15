@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:qurity/core/constants/wisdoms.dart';
+import 'package:qurity/core/constants/wisdom_calendar.dart';
 import 'package:qurity/models/village_alert.dart';
 import 'package:qurity/services/alert_service.dart';
 
@@ -107,22 +107,24 @@ void main() {
     });
   });
 
-  group('TodayWisdom', () {
-    test('pick is stable within the same day', () {
-      expect(TodayWisdom.pick(), TodayWisdom.pick());
+  group('WisdomCalendar', () {
+    test('same date returns the same wisdom', () {
+      final d = DateTime(2026, 9, 15);
+      expect(WisdomCalendar.of(d).text, WisdomCalendar.of(d).text);
+      expect(WisdomCalendar.of(d).text, isNotEmpty);
     });
 
-    test('pick offsets cycle inside list bounds', () {
-      for (var i = 0; i < TodayWisdom.items.length + 3; i++) {
-        final w = TodayWisdom.pick(offset: i);
-        expect(TodayWisdom.items, contains(w));
-        expect(w, isNotEmpty);
+    test('every day of 2026 yields a non-empty wisdom', () {
+      for (var day = 0; day < 365; day++) {
+        final w = WisdomCalendar.of(DateTime(2026).add(Duration(days: day)));
+        expect(w.text.trim(), isNotEmpty);
       }
     });
 
-    test('inventory is broad and non-duplicated', () {
-      expect(TodayWisdom.items.length, greaterThanOrEqualTo(140));
-      expect(TodayWisdom.items.toSet().length, TodayWisdom.items.length);
+    test('Feb 29 falls back to Feb 28', () {
+      final leap = WisdomCalendar.of(DateTime(2028, 2, 29));
+      final feb28 = WisdomCalendar.of(DateTime(2028, 2, 28));
+      expect(leap.text, feb28.text);
     });
   });
 }

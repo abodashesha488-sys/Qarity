@@ -1,14 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
-DateTime? _parseTs(dynamic value) {
-  if (value == null) return null;
-  if (value is Timestamp) return value.toDate();
-  if (value is DateTime) return value;
-  if (value is int) return DateTime.fromMillisecondsSinceEpoch(value);
-  if (value is String) return DateTime.tryParse(value);
-  return null;
-}
+import '../core/utils/firebase_ts.dart';
 
 /// لون خدمة «المفقودات» المميز — لا يتكرر مع أي خدمة أخرى في الدليل.
 const Color kLostItemsColor = Color(0xFF5E35B1);
@@ -55,14 +48,14 @@ class LostItem {
       type: json['type'] as String? ?? 'lost',
       description: json['description'] as String? ?? '',
       location: json['location'] as String? ?? '',
-      date: _parseTs(json['date']),
+      date: tsToDateTime(json['date']),
       phone: json['phone'] as String? ?? '',
       imageUrl: json['imageUrl'] as String? ?? '',
       userId: json['userId'] as String? ?? '',
       userName: json['userName'] as String? ?? '',
       isResolved: json['isResolved'] as bool? ?? false,
       isApproved: json['isApproved'] as bool? ?? false,
-      createdAt: _parseTs(json['createdAt']),
+      createdAt: tsToDateTime(json['createdAt']),
     );
   }
 

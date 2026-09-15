@@ -1,14 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
-DateTime? _parseTsOrNull(dynamic value) {
-  if (value == null) return null;
-  if (value is Timestamp) return value.toDate();
-  if (value is DateTime) return value;
-  if (value is int) return DateTime.fromMillisecondsSinceEpoch(value);
-  if (value is String) return DateTime.tryParse(value);
-  return null;
-}
+import '../core/utils/firebase_ts.dart';
 
 // ═══════════════════════ فصائل الدم ═══════════════════════
 enum BloodType {
@@ -99,7 +92,7 @@ class MedicalCenterClinic {
       fees: (json['fees'] as num?)?.toDouble() ?? 0,
       isActive: json['isActive'] as bool? ?? true,
       isApproved: json['isApproved'] as bool? ?? true,
-      updatedAt: _parseTsOrNull(json['updatedAt']),
+      updatedAt: tsToDateTime(json['updatedAt']),
     );
   }
 
@@ -193,7 +186,7 @@ class VillageClinic {
       isApproved: json['isApproved'] as bool? ?? false,
       submittedBy: json['submittedBy'] as String?,
       submittedByName: json['submittedByName'] as String?,
-      createdAt: _parseTsOrNull(json['createdAt']),
+      createdAt: tsToDateTime(json['createdAt']),
     );
   }
 
@@ -264,7 +257,7 @@ class Pharmacy {
       isApproved: json['isApproved'] as bool? ?? false,
       submittedBy: json['submittedBy'] as String?,
       submittedByName: json['submittedByName'] as String?,
-      createdAt: _parseTsOrNull(json['createdAt']),
+      createdAt: tsToDateTime(json['createdAt']),
     );
   }
 
@@ -356,7 +349,7 @@ class MedicalLab {
       isApproved: json['isApproved'] as bool? ?? false,
       submittedBy: json['submittedBy'] as String?,
       submittedByName: json['submittedByName'] as String?,
-      createdAt: _parseTsOrNull(json['createdAt']),
+      createdAt: tsToDateTime(json['createdAt']),
     );
   }
 
@@ -421,10 +414,10 @@ class BloodDonor {
       age: (json['age'] as num?)?.toInt() ?? 0,
       gender: json['gender'] as String? ?? '',
       address: json['address'] as String? ?? '',
-      lastDonation: _parseTsOrNull(json['lastDonation']),
+      lastDonation: tsToDateTime(json['lastDonation']),
       isAvailable: json['isAvailable'] as bool? ?? true,
       isApproved: json['isApproved'] as bool? ?? false,
-      createdAt: _parseTsOrNull(json['createdAt']),
+      createdAt: tsToDateTime(json['createdAt']),
     );
   }
 
@@ -492,7 +485,7 @@ class BloodRequest {
       notes: json['notes'] as String? ?? '',
       status: json['status'] as String? ?? 'open',
       isApproved: json['isApproved'] as bool? ?? false,
-      createdAt: _parseTsOrNull(json['createdAt']),
+      createdAt: tsToDateTime(json['createdAt']),
     );
   }
 

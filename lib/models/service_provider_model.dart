@@ -1,14 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
-DateTime? _parseTsOrNull(dynamic value) {
-  if (value == null) return null;
-  if (value is Timestamp) return value.toDate();
-  if (value is DateTime) return value;
-  if (value is int) return DateTime.fromMillisecondsSinceEpoch(value);
-  if (value is String) return DateTime.tryParse(value);
-  return null;
-}
+import '../core/utils/firebase_ts.dart';
 
 /// فئات دليل الخدمات العامة.
 class ServiceCategory {
@@ -181,7 +174,7 @@ class ServiceProvider {
       ratingCount: (json['ratingCount'] as num?)?.toInt() ?? 0,
       submittedBy: json['submittedBy'] as String?,
       submittedByName: json['submittedByName'] as String?,
-      createdAt: _parseTsOrNull(json['createdAt']),
+      createdAt: tsToDateTime(json['createdAt']),
     );
   }
 
@@ -269,7 +262,7 @@ class ServiceProviderComment {
       photoUrl: json['userPhotoUrl'] as String?,
       rating: (json['rating'] as num?)?.toInt() ?? 0,
       text: json['text'] as String? ?? '',
-      createdAt: _parseTsOrNull(json['createdAt']),
+      createdAt: tsToDateTime(json['createdAt']),
     );
   }
 

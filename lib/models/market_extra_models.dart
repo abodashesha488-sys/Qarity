@@ -1,13 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
-DateTime _parseTs(dynamic value) {
-  if (value is Timestamp) return value.toDate();
-  if (value is DateTime) return value;
-  if (value is int) return DateTime.fromMillisecondsSinceEpoch(value);
-  if (value is String) return DateTime.tryParse(value) ?? DateTime.now();
-  return DateTime.now();
-}
+import '../core/utils/firebase_ts.dart';
 
 // ═══════════════════════ SHOP (محلات القرية) ═══════════════════════
 /// المتجر هو منصة تسويقية لصاحبها؛ منتجاته تُربط عبر ownerUid (نفس sellerId).
@@ -63,7 +57,7 @@ class Shop {
       ownerSellerType: json['ownerSellerType'] as String?,
       isActive: json['isActive'] as bool? ?? true,
       isApproved: json['isApproved'] as bool? ?? false,
-      createdAt: json['createdAt'] != null ? _parseTs(json['createdAt']) : null,
+      createdAt: json['createdAt'] != null ? tsOrNow(json['createdAt']) : null,
     );
   }
 
@@ -156,7 +150,7 @@ class BuyRequest {
       status: json['status'] as String? ?? 'open',
       userRole: json['userRole'] as String?,
       userSellerType: json['userSellerType'] as String?,
-      createdAt: json['createdAt'] != null ? _parseTs(json['createdAt']) : null,
+      createdAt: json['createdAt'] != null ? tsOrNow(json['createdAt']) : null,
     );
   }
 
@@ -225,7 +219,7 @@ class Donation {
       status: json['status'] as String? ?? 'available',
       userRole: json['userRole'] as String?,
       userSellerType: json['userSellerType'] as String?,
-      createdAt: json['createdAt'] != null ? _parseTs(json['createdAt']) : null,
+      createdAt: json['createdAt'] != null ? tsOrNow(json['createdAt']) : null,
     );
   }
 

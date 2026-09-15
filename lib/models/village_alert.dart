@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../core/utils/firebase_ts.dart';
+
 /// مستويات ظهور التنبيه/الخبر العاجل (تحددها لوحة الأدمن):
 /// display = عرض على الشاشة فقط — push = + إشعار لجميع المشتركين —
 /// sound = + صوت واهتزاز عند ظهور البانر داخل التطبيق.
@@ -31,15 +33,13 @@ class VillageAlert {
   });
 
   factory VillageAlert.fromJson(Map<String, dynamic> json) {
-    final raw = json['updatedAt'];
-    final expires = json['expiresAt'];
     return VillageAlert(
       message: (json['message'] as String? ?? '').trim(),
       isActive: json['isActive'] as bool? ?? false,
       mode: json['mode'] as String? ?? VillageAlertMode.push,
-      expiresAt: expires is Timestamp ? expires.toDate() : null,
+      expiresAt: tsToDateTime(json['expiresAt']),
       updatedBy: json['updatedBy'] as String?,
-      updatedAt: raw is Timestamp ? raw.toDate() : null,
+      updatedAt: tsToDateTime(json['updatedAt']),
     );
   }
 
