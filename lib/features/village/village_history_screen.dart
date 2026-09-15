@@ -224,13 +224,11 @@ class _EraNode extends StatelessWidget {
                         SizedBox(
                           height: 150,
                           width: double.infinity,
-                          child: ColorFiltered(
-                              colorFilter: VillageOrnament.sepia,
-                              child: CachedNetworkImage(
-                                  imageUrl: era.imageUrl,
-                                  fit: BoxFit.cover,
-                                  errorWidget: (_, __, ___) =>
-                                      const SizedBox.shrink())),
+                          child: CachedNetworkImage(
+                              imageUrl: era.imageUrl,
+                              fit: BoxFit.cover,
+                              errorWidget: (_, __, ___) =>
+                                  const SizedBox.shrink()),
                         ),
                       Padding(
                         padding: const EdgeInsets.all(14),

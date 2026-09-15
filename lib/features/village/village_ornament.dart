@@ -11,13 +11,6 @@ class VillageOrnament {
   static const Color goldDark = Color(0xFFB8860B);
 
   /// مرشح سيبيا دافئ للصور الأرشيفية.
-  static const ColorFilter sepia = ColorFilter.matrix(<double>[
-    0.393, 0.769, 0.189, 0, 0, //
-    0.349, 0.686, 0.168, 0, 0, //
-    0.272, 0.534, 0.131, 0, 0, //
-    0, 0, 0, 1, 0, //
-  ]);
-
   static TextStyle amiri(
           {double size = 20, FontWeight weight = FontWeight.w700, Color? color}) =>
       GoogleFonts.amiri(fontSize: size, fontWeight: weight, color: color);
@@ -167,26 +160,6 @@ class VillageSectionHeader extends StatelessWidget {
       ),
     );
   }
-}
-
-/// قصّدة على شكل طاق (محراب) — لإطارات صور الشخصيات.
-class ArchClipper extends CustomClipper<Path> {
-  @override
-  Path getClip(Size size) {
-    final w = size.width;
-    final h = size.height;
-    final archTop = w / 2;
-    return Path()
-      ..moveTo(0, h)
-      ..lineTo(0, archTop)
-      ..arcToPoint(Offset(w, archTop),
-          radius: Radius.circular(archTop), clockwise: false)
-      ..lineTo(w, h)
-      ..close();
-  }
-
-  @override
-  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }
 
 /// فاصل زخرفي: خطان ذهبيان مع نجمة ثمانية في المنتصف.

@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../core/constants/app_config.dart';
 import '../../models/village_content_models.dart';
 import '../../services/admin_service.dart';
 import '../../services/image_upload_service.dart';
@@ -12,11 +13,16 @@ import '../../services/village_content_service.dart';
 import '../../widgets/qurity_app_bar.dart';
 
 /// هل المستخدم الحالي يسمح له بإدارة محتوى «تعرف على القرية»؟
+/// يعترف بدور admin في Firestore أو ببريد bootstrap الإداري (نفس بوابة اللوحة).
 Future<bool> canManageVillageContent() async {
   try {
-    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
-    if (uid.isEmpty) return false;
-    final v = await AdminService().isAdminUser(uid);
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return false;
+    if (AppConfig.bootstrapAdminEmail.isNotEmpty &&
+        user.email == AppConfig.bootstrapAdminEmail) {
+      return true;
+    }
+    final v = await AdminService().isAdminUser(user.uid);
     return v;
   } catch (_) {
     return false;

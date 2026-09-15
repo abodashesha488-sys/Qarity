@@ -14,7 +14,11 @@ import 'village_history_screen.dart' show kVillageHistoryColor;
 import 'village_institutions_screen.dart' show kVillageInstitutionsColor;
 import 'village_ornament.dart';
 
-/// «تعرف على القرية» — بوابة التراث: بطاقة تعريف وأقسام التاريخ والأرشيف والمنشآت.
+/// ألوان أقسام «تعرف على القرية» — كل قسم بلون مميز لا يتكرر.
+const Color kVillageIntroColor = Color(0xFF6F4E37);
+
+/// «تعرف على القرية» — بوابة التراث: بطاقة تعريف وأقسام التاريخ والأرشيف
+/// والمنشآت كأيقونات ملونة منظمة.
 class VillageScreen extends StatefulWidget {
   const VillageScreen({super.key});
 
@@ -44,36 +48,38 @@ class _VillageScreenState extends State<VillageScreen> {
       body: OfflineStreamBuilder<VillageInfo?>(
         stream: _stream,
         onlineBuilder: (context, snapshot) {
-          return _buildBody(theme, snapshot.data, loading: !snapshot.hasData &&
-              snapshot.connectionState == ConnectionState.waiting);
+          if (snapshot.connectionState == ConnectionState.waiting &&
+              !snapshot.hasData) {
+            return const Center(
+                child: CircularProgressIndicator(strokeWidth: 2));
+          }
+          return _buildBody(theme, snapshot.data);
         },
         cacheBuilder: (context) => FutureBuilder(
           future: CacheService.getVillageInfo(),
           builder: (context, snapshot) {
             if (!snapshot.hasData) {
-              return const Center(child: CircularProgressIndicator());
+              return const Center(
+                  child: CircularProgressIndicator(strokeWidth: 2));
             }
             final info = snapshot.data != null
                 ? VillageInfo.fromJson(snapshot.data!, 'main')
                 : null;
-            return _buildBody(theme, info, loading: false);
+            return _buildBody(theme, info);
           },
         ),
       ),
     );
   }
 
-  Widget _buildBody(ThemeData theme, VillageInfo? info,
-      {required bool loading}) {
-    if (loading && info == null) {
-      return const Center(child: CircularProgressIndicator());
-    }
+  Widget _buildBody(ThemeData theme, VillageInfo? info) {
+    final desc = (info?.description ?? '').trim();
     return ListView(
-      padding: const EdgeInsets.only(bottom: 30),
+      padding: const EdgeInsets.only(bottom: 28),
       children: [
-        // ── هيرو القسم ──
+        // ── الهيرو الترحيبي ──
         Container(
-          height: 168,
+          height: 150,
           decoration: const BoxDecoration(
             borderRadius:
                 BorderRadius.vertical(bottom: Radius.circular(30)),
@@ -94,44 +100,38 @@ class _VillageScreenState extends State<VillageScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text('قرية أبوديشيشة',
+                      Text(info?.name.isNotEmpty == true
+                              ? info!.name
+                              : 'قرية أبوديشيشة',
                           style: VillageOrnament.amiri(
-                              size: 30,
+                              size: 28,
                               color: VillageOrnament.gold)),
-                      const SizedBox(height: 2),
-                      Text('روحُ التطبيق النابض… وذاكرةُ القرية الحية',
+                      const SizedBox(height: 4),                      Text('روحُ التطبيق النابض… وذاكرةُ القرية الحية',
                           style: TextStyle(
-                              fontSize: 12,
+                              fontSize: 11.5,
                               fontWeight: FontWeight.w600,
-                              color: Colors.white
-                                  .withValues(alpha: 0.85))),
+                              color:
+                                  Colors.white.withValues(alpha: 0.85))),
                       const SizedBox(height: 8),
                       const SizedBox(
-                        width: 120,
-                        child: OrnamentDivider(
-                            color: VillageOrnament.gold),
-                      ),
+                          width: 120,
+                          child: OrnamentDivider(
+                              color: VillageOrnament.gold)),
                     ],
                   ),
                 ),
                 if (_isAdmin)
                   Positioned(
-                    top: 8,
-                    left: 8,
-                    child: Tooltip(
-                      message: 'تعديل بطاقة التعريف',
-                      child: Material(
-                        color: Colors.white24,
-                        shape: const CircleBorder(),
-                        child: InkWell(
-                          customBorder: const CircleBorder(),
-                          onTap: () => editVillageIntro(context, info),
-                          child: const Padding(
-                            padding: EdgeInsets.all(8),
-                            child: Icon(Icons.edit_rounded,
-                                size: 16, color: Colors.white),
-                          ),
-                        ),
+                    top: 6,
+                    left: 6,
+                    child: Material(
+                      color: Colors.white24,
+                      shape: const CircleBorder(),
+                      child: IconButton(
+                        tooltip: 'تعديل بطاقة التعريف',
+                        icon: const Icon(Icons.edit_rounded,
+                            size: 16, color: Colors.white),
+                        onPressed: () => editVillageIntro(context, info),
                       ),
                     ),
                   ),
@@ -139,122 +139,101 @@ class _VillageScreenState extends State<VillageScreen> {
             ),
           ),
         ).animate().fadeIn(duration: 400.ms),
-        // ── بطاقة التعريف ──
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                  color:
-                      const Color(0xFF6F4E37).withValues(alpha: 0.25),
-                  width: 1.2),
-              boxShadow: const [
-                BoxShadow(
-                    color: Color(0x12000000),
-                    blurRadius: 12,
-                    offset: Offset(0, 5))
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.info_rounded,
-                          size: 18, color: Color(0xFF6F4E37)),
-                      const SizedBox(width: 7),
-                      Text('بطاقة تعريف القرية',
-                          style: VillageOrnament.amiri(
-                              size: 17,
-                              color: const Color(0xFF6F4E37))),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if ((info?.description ?? '').isNotEmpty) ...[
-                        Text(info!.description,
-                            style: const TextStyle(
-                                fontSize: 13, height: 1.9)),
-                        const SizedBox(height: 12),
-                      ],
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          _statChip(Icons.groups_rounded, 'السكان',
-                              (info?.population ?? '').isNotEmpty
-                                  ? info!.population
-                                  : '—'),
-                          _statChip(Icons.map_rounded, 'المساحة',
-                              (info?.area ?? '').isNotEmpty
-                                  ? info!.area
-                                  : '—'),
-                          _statChip(Icons.celebration_rounded, 'التأسيس',
-                              (info?.founded ?? '').isNotEmpty
-                                  ? info!.founded
-                                  : '—'),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+        const SizedBox(height: 14),
+        if (desc.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 22),
+            child: Text(desc,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    fontSize: 12,
+                    height: 1.7,
+                    color: theme.colorScheme.onSurfaceVariant)),
           ),
-        ).animate(delay: 80.ms).fadeIn().slideY(begin: 0.08),
-        const SizedBox(height: 18),
+        const SizedBox(height: 16),
+        // ── ترويسة الشبكة ──
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Row(
             children: [
               const Expanded(child: OrnamentDivider()),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Text('كنوز القسم',
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Text('استكشف تراث القرية',
                     style: VillageOrnament.amiri(
-                        size: 15,
-                        color: const Color(0xFF6F4E37))),
+                        size: 16,
+                        color: kVillageIntroColor)),
               ),
               const Expanded(child: OrnamentDivider()),
             ],
           ),
         ),
         const SizedBox(height: 12),
-        // ── بلاطات الأقسام الثلاثة ──
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16),
-          child: Column(
+        // ── أيقونات الأقسام ──
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: 14,
+            crossAxisSpacing: 14,
+            childAspectRatio: 0.92,
             children: [
-              _SectionTile(
+              _IconTile(
+                color: kVillageIntroColor,
+                icon: Icons.badge_rounded,
+                title: 'بطاقة القرية',
+                subtitle: 'الهوية والسكان والمساحة والتأسيس',
+                onTap: () => _openIntroSheet(info),
+              ),
+              _IconTile(
                 color: kVillageHistoryColor,
                 icon: Icons.history_edu_rounded,
                 title: 'تاريخ القرية',
-                subtitle: 'حقباتُ أبوديشيشة على خطٍّ زمني مزخرف',
-                route: AppRoutes.villageHistory,
+                subtitle: 'حقباتٌ على خطٍّ زمني مزخرف',
+                onTap: () =>
+                    Navigator.pushNamed(context, AppRoutes.villageHistory),
               ),
-              SizedBox(height: 12),
-              _SectionTile(
+              _IconTile(
                 color: kVillageArchiveColor,
                 icon: Icons.architecture_rounded,
                 title: 'أرشيف القرية',
-                subtitle: 'شخصياتٌ صنعت المجد، وصورٌ تحفظ الذاكرة',
-                route: AppRoutes.villageArchive,
+                subtitle: 'شخصياتٌ وصورٌ تحفظ الذاكرة',
+                onTap: () =>
+                    Navigator.pushNamed(context, AppRoutes.villageArchive),
               ),
-              SizedBox(height: 12),
-              _SectionTile(
+              _IconTile(
                 color: kVillageInstitutionsColor,
                 icon: Icons.account_balance_rounded,
                 title: 'منشآت القرية',
-                subtitle: 'مدارسٌ ومعاهد ومساجد ومرافق الخدمة',
-                route: AppRoutes.villageInstitutions,
+                subtitle: 'مدارسُ ومعاهدُ ومساجدُ ومرافق',
+                onTap: () => Navigator.pushNamed(
+                    context, AppRoutes.villageInstitutions),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 18),
+        // ── تلميح سفلي ──
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 28),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.auto_awesome_rounded,
+                  size: 14, color: kVillageIntroColor.withValues(alpha: 0.6)),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  'محتوى هذه الأقسام ينسّقه مسؤولو القرية — كل قسم يفتح عالمه الخاص',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      fontSize: 10.5,
+                      color: theme.colorScheme.onSurfaceVariant),
+                ),
               ),
             ],
           ),
@@ -263,15 +242,90 @@ class _VillageScreenState extends State<VillageScreen> {
     );
   }
 
-  Widget _statChip(IconData icon, String label, String value) {
+  void _openIntroSheet(VillageInfo? info) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.badge_rounded,
+                      color: kVillageIntroColor, size: 22),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text('بطاقة تعريف القرية',
+                        style: VillageOrnament.amiri(
+                            size: 18,
+                            color: kVillageIntroColor)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              const OrnamentDivider(),
+              const SizedBox(height: 12),
+              if ((info?.description ?? '').trim().isNotEmpty) ...[
+                Text(info!.description,
+                    style: const TextStyle(fontSize: 13, height: 1.9)),
+                const SizedBox(height: 14),
+              ],
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _chip(Icons.groups_rounded, 'السكان',
+                      (info?.population ?? '').isNotEmpty
+                          ? info!.population
+                          : '—'),
+                  _chip(Icons.map_rounded, 'المساحة',
+                      (info?.area ?? '').isNotEmpty ? info!.area : '—'),
+                  _chip(Icons.celebration_rounded, 'التأسيس',
+                      (info?.founded ?? '').isNotEmpty
+                          ? info!.founded
+                          : '—'),
+                ],
+              ),
+              if (_isAdmin) ...[
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                        backgroundColor: kVillageIntroColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 13)),
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      editVillageIntro(context, info);
+                    },
+                    icon: const Icon(Icons.edit_rounded, size: 17),
+                    label: const Text('تعديل البطاقة',
+                        style: TextStyle(fontWeight: FontWeight.w800)),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _chip(IconData icon, String label, String value) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: const Color(0xFFFFF8E1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-            color:
-                VillageOrnament.goldDark.withValues(alpha: 0.45)),
+            color: VillageOrnament.goldDark.withValues(alpha: 0.45)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -287,27 +341,27 @@ class _VillageScreenState extends State<VillageScreen> {
               style: const TextStyle(
                   fontSize: 11.5,
                   fontWeight: FontWeight.w900,
-                  color: Color(0xFF6F4E37))),
+                  color: kVillageIntroColor)),
         ],
       ),
     );
   }
 }
 
-/// بلاطة قسم بأسلوب دليل الخدمات — لون مميز لا يتكرر.
-class _SectionTile extends StatelessWidget {
-  const _SectionTile({
+/// بلاطة قسم مربعة — دائرة أيقونة متدرجة بلون القسم + عنوان Amiri.
+class _IconTile extends StatelessWidget {
+  const _IconTile({
     required this.color,
     required this.icon,
     required this.title,
     required this.subtitle,
-    required this.route,
+    required this.onTap,
   });
   final Color color;
   final IconData icon;
   final String title;
   final String subtitle;
-  final String route;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -323,13 +377,14 @@ class _SectionTile extends StatelessWidget {
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
-        onTap: () => Navigator.pushNamed(context, route),
+        onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          child: Row(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(13),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                       begin: Alignment.topRight,
@@ -343,30 +398,25 @@ class _SectionTile extends StatelessWidget {
                         offset: const Offset(0, 5)),
                   ],
                 ),
-                child: Icon(icon, color: Colors.white, size: 24),
+                child: Icon(icon, color: Colors.white, size: 27),
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title,
-                        style: GoogleFonts.amiri(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 17,
-                            color: color)),
-                    const SizedBox(height: 2),
-                    Text(subtitle,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.labelMedium?.copyWith(
-                            fontSize: 11,
-                            color: theme.colorScheme.onSurfaceVariant)),
-                  ],
-                ),
-              ),
-              Icon(Icons.arrow_back_ios_rounded,
-                  size: 15, color: color.withValues(alpha: 0.7)),
+              const SizedBox(height: 11),
+              Text(title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.amiri(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16.5,
+                      color: color)),
+              const SizedBox(height: 3),
+              Text(subtitle,
+                  maxLines: 2,
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                      fontSize: 10.5,
+                      height: 1.5,
+                      color: theme.colorScheme.onSurfaceVariant)),
             ],
           ),
         ),
@@ -452,7 +502,7 @@ class _IntroFormState extends State<_IntroForm> {
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('تم تحديث بطاقة التعريف'),
-          backgroundColor: Color(0xFF6F4E37)));
+          backgroundColor: kVillageIntroColor));
     }
   }
 
@@ -495,7 +545,7 @@ class _IntroFormState extends State<_IntroForm> {
               child: FilledButton.icon(
                   onPressed: _saving ? null : _save,
                   style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF6F4E37),
+                      backgroundColor: kVillageIntroColor,
                       padding: const EdgeInsets.symmetric(vertical: 13)),
                   icon: const Icon(Icons.save_rounded, size: 18),
                   label: const Text('حفظ البطاقة',

@@ -299,27 +299,24 @@ class _FigureCard extends StatelessWidget {
         child: Column(
           children: [
             const SizedBox(height: 8),
-            // القوس الأرشيفي
+            // الصورة كما رُفعت — بلا فلاتر أو قص
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: ClipPath(
-                clipper: ArchClipper(),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
                 child: Container(
                   height: 104,
                   color: color.withValues(alpha: 0.08),
                   child: figure.photoUrl.isEmpty
                       ? Icon(FigureCategory.icon(figure.category),
                           size: 42, color: color.withValues(alpha: 0.5))
-                      : ColorFiltered(
-                          colorFilter: VillageOrnament.sepia,
-                          child: CachedNetworkImage(
-                            imageUrl: figure.photoUrl,
-                            fit: BoxFit.cover,
-                            errorWidget: (_, __, ___) => Icon(
-                                FigureCategory.icon(figure.category),
-                                size: 42,
-                                color: color.withValues(alpha: 0.5)),
-                          ),
+                      : CachedNetworkImage(
+                          imageUrl: figure.photoUrl,
+                          fit: BoxFit.cover,
+                          errorWidget: (_, __, ___) => Icon(
+                              FigureCategory.icon(figure.category),
+                              size: 42,
+                              color: color.withValues(alpha: 0.5)),
                         ),
                 ),
               ),
@@ -379,8 +376,8 @@ class _FigureCard extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                ClipPath(
-                  clipper: ArchClipper(),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
                   child: Container(
                     width: 130,
                     height: 150,
@@ -389,16 +386,13 @@ class _FigureCard extends StatelessWidget {
                         ? Icon(FigureCategory.icon(figure.category),
                             size: 56,
                             color: color.withValues(alpha: 0.5))
-                        : ColorFiltered(
-                            colorFilter: VillageOrnament.sepia,
-                            child: CachedNetworkImage(
-                              imageUrl: figure.photoUrl,
-                              fit: BoxFit.cover,
-                              errorWidget: (_, __, ___) => Icon(
-                                  FigureCategory.icon(figure.category),
-                                  size: 56,
-                                  color: color.withValues(alpha: 0.5)),
-                            ),
+                        : CachedNetworkImage(
+                            imageUrl: figure.photoUrl,
+                            fit: BoxFit.cover,
+                            errorWidget: (_, __, ___) => Icon(
+                                FigureCategory.icon(figure.category),
+                                size: 56,
+                                color: color.withValues(alpha: 0.5)),
                           ),
                   ),
                 ),
@@ -489,15 +483,12 @@ class _ArchivePhotoCard extends StatelessWidget {
                         child: Icon(Icons.photo_album_rounded,
                             size: 36,
                             color: Color(0x55000000)))
-                    : ColorFiltered(
-                        colorFilter: VillageOrnament.sepia,
-                        child: CachedNetworkImage(
-                            imageUrl: photo.imageUrl,
-                            fit: BoxFit.cover,
-                            errorWidget: (_, __, ___) => const Center(
-                                child: Icon(Icons.broken_image_rounded,
-                                    color: Colors.black26))),
-                      ),
+                    : CachedNetworkImage(
+                        imageUrl: photo.imageUrl,
+                        fit: BoxFit.cover,
+                        errorWidget: (_, __, ___) => const Center(
+                            child: Icon(Icons.broken_image_rounded,
+                                color: Colors.black26))),
               ),
             ),
             Padding(
@@ -550,15 +541,12 @@ class _ArchivePhotoCard extends StatelessWidget {
                 ClipRRect(
                   borderRadius: const BorderRadius.vertical(
                       top: Radius.circular(22)),
-                  child: ColorFiltered(
-                    colorFilter: VillageOrnament.sepia,
-                    child: CachedNetworkImage(
-                        imageUrl: photo.imageUrl,
-                        width: double.infinity,
-                        fit: BoxFit.contain,
-                        errorWidget: (_, __, ___) =>
-                            const SizedBox.shrink()),
-                  ),
+                  child: CachedNetworkImage(
+                      imageUrl: photo.imageUrl,
+                      width: double.infinity,
+                      fit: BoxFit.contain,
+                      errorWidget: (_, __, ___) =>
+                          const SizedBox.shrink()),
                 ),
               Padding(
                 padding: const EdgeInsets.all(16),
