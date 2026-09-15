@@ -31,4 +31,10 @@ class VillageInfoService {
     await _ref.doc('main').set(VillageInfo.defaults().toJson());
     await CacheService.invalidateVillageInfo();
   }
+
+  /// حفظ بطاقة التعريف (للقواعد: الأدمن فقط).
+  Future<void> saveInfo(VillageInfo info) async {
+    await _ref.doc('main').set(info.toJson());
+    await CacheService.invalidateVillageInfo();
+  }
 }

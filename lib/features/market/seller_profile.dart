@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/utils/contact_links.dart';
+
 import '../../core/utils/role_style.dart';
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
@@ -67,8 +69,8 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
   }
 
   Future<void> _openWhatsApp(String phone) async {
-    final cleanedPhone = phone.replaceAll(RegExp(r'[^\d]'), '');
-    final url = 'https://wa.me/2$cleanedPhone'; // Egypt country code
+    final url = egyptianWhatsAppUrl(phone);
+    if (url == null) return;
     final Uri launchUri = Uri.parse(url);
     if (await canLaunchUrl(launchUri)) {
       await launchUrl(launchUri, mode: LaunchMode.externalApplication);

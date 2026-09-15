@@ -173,8 +173,9 @@ class _ShopDetailScreen extends StatelessWidget {
               tooltip: 'تواصل واتساب',
               icon: const Icon(Icons.chat_rounded),
               onPressed: () async {
-                final uri = Uri.parse(
-                    'https://wa.me/2${shop.whatsapp.replaceAll(RegExp(r'[^0-9]'), '')}');
+                final wa = egyptianWhatsAppUrl(shop.whatsapp);
+                if (wa == null) return;
+                final uri = Uri.parse(wa);
                 if (await canLaunchUrl(uri)) {
                   await launchUrl(uri, mode: LaunchMode.externalApplication);
                 }

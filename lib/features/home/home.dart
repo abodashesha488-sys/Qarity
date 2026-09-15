@@ -124,7 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {
               animationDuration: const Duration(milliseconds: 400),
               destinations: const [
                 NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'الرئيسية'),
-                NavigationDestination(icon: QurityLogo(size: 24, withBorder: false, withShadow: false), selectedIcon: QurityLogo(size: 24, withBorder: false, withShadow: false), label: 'عن القرية'),
+                NavigationDestination(icon: QurityLogo(size: 24, withBorder: false, withShadow: false), selectedIcon: QurityLogo(size: 24, withBorder: false, withShadow: false), label: 'تعرف على القرية'),
                 NavigationDestination(icon: Icon(Icons.store_outlined), selectedIcon: Icon(Icons.store_rounded), label: 'السوق'),
                 NavigationDestination(icon: Icon(Icons.forum_outlined), selectedIcon: Icon(Icons.forum_rounded), label: 'مندرة القرية'),
                 NavigationDestination(icon: Icon(Icons.person_outlined), selectedIcon: Icon(Icons.person_rounded), label: 'الملف'),
@@ -159,7 +159,7 @@ class HomeDrawer extends StatelessWidget {
             ),
             _buildDrawerItem(context, 'الرئيسية', Icons.home_rounded, AppRoutes.home),
             _buildDrawerItem(context, 'عن التطبيق', Icons.info_rounded, AppRoutes.aboutApp),
-            _buildDrawerItem(context, 'عن القرية', Icons.villa_rounded, AppRoutes.about,
+            _buildDrawerItem(context, 'تعرف على القرية', Icons.villa_rounded, AppRoutes.about,
                 leading: const QurityLogo(size: 28, withBorder: false, withShadow: false)),
             _buildDrawerItem(context, 'أخبار القرية', Icons.newspaper_rounded, AppRoutes.newsList),
             _buildDrawerItem(context, 'سجل العزاء', Icons.grade_rounded, AppRoutes.obituariesList),
@@ -927,7 +927,7 @@ class ModernServiceGrid extends StatelessWidget {
   const ModernServiceGrid({super.key});
 
   static const _services = [
-    _ServiceItem('عن القرية', AppRoutes.about, 'assets/images/About.jpg'),
+    _ServiceItem('تعرف على القرية', AppRoutes.about, 'assets/images/About.jpg'),
     _ServiceItem('أخبار القرية', AppRoutes.newsList, 'assets/images/News.jpg'),
     _ServiceItem('سوق القرية', AppRoutes.marketProducts, 'assets/images/Souq.jpg'),
     _ServiceItem('سجل العزاء', AppRoutes.obituariesList, 'assets/images/des.jpg'),

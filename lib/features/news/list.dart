@@ -764,6 +764,7 @@ class _EmptyNews extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               filtered ? 'جرّب تغيير الفئة أو كلمة البحث' : 'كن أول من ينشر خبراً عن القرية',
+
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium
                   ?.copyWith(color: theme.colorScheme.onSurfaceVariant),

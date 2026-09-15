@@ -176,8 +176,8 @@ class BuyRequest {
       };
 
   bool get isOpen => status == 'open';
-  String get statusLabel => isOpen ? 'مفتوح' : 'مغلق';
-  Color get statusColor => isOpen ? const Color(0xFF6F4E37) : Colors.grey;
+  String get statusLabel => isOpen ? 'مطلوب الآن' : 'تمت التلبية';
+  Color get statusColor => isOpen ? const Color(0xFF1565C0) : Colors.blueGrey;
   String get imageUrl => imageUrls.isNotEmpty ? imageUrls.first : '';
 }
 
@@ -246,7 +246,7 @@ class Donation {
       };
 
   bool get isAvailable => status == 'available';
-  String get statusLabel => isAvailable ? 'متبرَّع به' : 'تم التبريع';
-  Color get statusColor => isAvailable ? const Color(0xFF6F4E37) : Colors.grey;
+  String get statusLabel => isAvailable ? 'متاح للتبرّع' : 'تم تسليمها';
+  Color get statusColor => isAvailable ? const Color(0xFFEF6C00) : Colors.blueGrey;
   String get imageUrl => imageUrls.isNotEmpty ? imageUrls.first : '';
 }

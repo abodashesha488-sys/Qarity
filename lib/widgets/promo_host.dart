@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../core/constants/promo_placements.dart';
 import '../core/utils/navigator_key.dart';
 import '../models/promo_model.dart';
+import '../routes/app_routes.dart';
 import '../services/promo_service.dart';
 
 const int kPromoAutoDismissSeconds = 15;
@@ -152,9 +153,14 @@ class _PromoHostState extends State<PromoHost> {
       final (route, args) = PromoInternalLink.decode(value);
       _dismiss();
       try {
-        navigatorKey.currentState
-            ?.pushNamed(route, arguments: args)
-            .ignore();
+        final nav = navigatorKey.currentState;
+        if (nav == null) return;
+        if (route == AppRoutes.home) {
+          // لا نكدّس الرئيسية فوق نفسها — نعود لجذرها.
+          nav.popUntil((r) => r.isFirst);
+        } else {
+          nav.pushNamed(route, arguments: args).ignore();
+        }
       } catch (_) {}
       return;
     }

@@ -5,6 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/utils/contact_links.dart';
 import '../../models/lost_item_model.dart';
 import '../../routes/app_routes.dart';
 import '../../services/image_upload_service.dart';
@@ -380,8 +381,6 @@ class _LostItemDetailScreenState extends State<LostItemDetailScreen> {
     _item ??= ModalRoute.of(context)!.settings.arguments as LostItem?;
   }
 
-  String _digits(String p) => p.replaceAll(RegExp(r'[^0-9]'), '');
-
   Future<void> _launch(String url) async {
     final uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) {
@@ -565,8 +564,12 @@ class _LostItemDetailScreenState extends State<LostItemDetailScreen> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: FilledButton.icon(
-                    onPressed: () =>
-                        _launch('https://wa.me/${_digits(item.phone)}'),
+                    onPressed: item.phone.isEmpty
+                    ? null
+                    : () {
+                        final u = egyptianWhatsAppUrl(item.phone);
+                        if (u != null) _launch(u);
+                      },
                     style: FilledButton.styleFrom(
                         backgroundColor: const Color(0xFF128C7E),
                         foregroundColor: Colors.white,

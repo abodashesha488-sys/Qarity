@@ -190,7 +190,7 @@ export default async function handler(req, res) {
     },
     android: {
       priority: 'high',
-      notification: { channelId: 'qarity_channel', color: '#1B5E20' },
+      notification: { channelId: 'qarity_channel', color: '#6F4E37' },
     },
   };
 

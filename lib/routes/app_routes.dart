@@ -44,6 +44,9 @@ import '../features/services/service_provider_detail_screen.dart';
 import '../features/settings/index.dart';
 import '../features/settings/notifications.dart';
 import '../features/village/about.dart';
+import '../features/village/village_archive_screen.dart';
+import '../features/village/village_history_screen.dart';
+import '../features/village/village_institutions_screen.dart';
 import '../features/weather/weather_detail_screen.dart';
 import '../services/admin_service.dart';
 
@@ -58,6 +61,9 @@ class AppRoutes {
   static const String login = '/login';
   static const String aboutApp = '/about-app';
   static const String about = '/about';
+  static const String villageHistory = '/village/history';
+  static const String villageArchive = '/village/archive';
+  static const String villageInstitutions = '/village/institutions';
   static const String obituariesList = '/obituaries';
   static const String obituariesDetail = '/obituaries/detail';
   static const String obituariesAdd = '/obituaries/add';
@@ -109,6 +115,9 @@ static const String marketProducts = '/market';
     login: (_) => const LoginScreen(),
     aboutApp: (_) => const AboutScreen(),
     about: (_) => const VillageScreen(),
+    villageHistory: (_) => const VillageHistoryScreen(),
+    villageArchive: (_) => const VillageArchiveScreen(),
+    villageInstitutions: (_) => const VillageInstitutionsScreen(),
     obituariesList: (_) => const ObituariesListScreen(),
     obituariesDetail: (_) => const ObituaryDetailScreen(),
     obituariesAdd: (_) => const AddObituaryScreen(),

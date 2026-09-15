@@ -415,6 +415,28 @@ service cloud.firestore {
       allow delete: if isMedicalAdmin();
     }
 
+    // ───────────────────────── محتوى «تعرف على القرية» ─────────────────────────
+    // قراءة عامة للجميع؛ الإنشاء/التعديل/الحذف للأدمن فقط (لا مراجعة — الأدمن هو المؤلف).
+    match /village_history/{docId} {
+      allow list, get: if true;
+      allow write: if isAdmin();
+    }
+
+    match /village_figures/{docId} {
+      allow list, get: if true;
+      allow write: if isAdmin();
+    }
+
+    match /village_archive_photos/{docId} {
+      allow list, get: if true;
+      allow write: if isAdmin();
+    }
+
+    match /village_institutions/{docId} {
+      allow list, get: if true;
+      allow write: if isAdmin();
+    }
+
     // ───────────────────────── الإعلانات الدعائية المنبثقة ─────────────────────────
     // قراءة عامة (تظهر لكل المستخدمين) — الإنشاء/التعديل/الحذف للأدمن فقط.
     match /promos/{docId} {

@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/product_categories.dart';
+import '../../core/utils/contact_links.dart';
 import '../../core/utils/role_style.dart';
 import '../../models/data_models.dart';
 import '../../models/market_extra_models.dart';

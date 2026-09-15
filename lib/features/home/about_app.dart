@@ -124,7 +124,7 @@ class AboutScreen extends StatelessWidget {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4))),
             child: ListTile(
               leading: Icon(Icons.villa_rounded, color: theme.colorScheme.primary),
-              title: Text('عن القرية', style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+              title: Text('تعرف على القرية', style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
               trailing: const Icon(Icons.chevron_left_rounded, size: 18),
               onTap: () => Navigator.pushNamed(context, AppRoutes.about),
             ),

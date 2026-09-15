@@ -1,4 +1,5 @@
 import '../../routes/app_routes.dart';
+import '../utils/contact_links.dart';
 
 /// ─── الإعلانات الدعائية المنبثقة ───
 /// سجل أماكن العرض المعتمدة: إضافة شاشة جديدة مستقبلًا = سطر واحد هنا،
@@ -17,7 +18,10 @@ const List<PromoPlacement> kPromoPlacements = [
   PromoPlacement('forum', 'مندرة القرية', 'عام'),
   PromoPlacement('obituaries', 'سجل العزاء', 'عام'),
   PromoPlacement('occasions', 'المناسبات', 'عام'),
-  PromoPlacement('about', 'عن القرية', 'عام'),
+  PromoPlacement('about', 'تعرف على القرية', 'عام'),
+  PromoPlacement('village_history', 'تعرف على القرية — التاريخ', 'التراث'),
+  PromoPlacement('village_archive', 'تعرف على القرية — الأرشيف', 'التراث'),
+  PromoPlacement('village_institutions', 'تعرف على القرية — المنشآت', 'التراث'),
   PromoPlacement('services', 'دليل الخدمات — الصفحة الرئيسية', 'دليل الخدمات'),
   PromoPlacement('svc_technicians', 'دليل الخدمات — الفنيون', 'دليل الخدمات'),
   PromoPlacement('svc_agricultural', 'دليل الخدمات — خدمات زراعية', 'دليل الخدمات'),
@@ -55,6 +59,12 @@ String promoKeyForRoute(String name, Object? args) {
       return 'occasions';
     case AppRoutes.about:
       return 'about';
+    case AppRoutes.villageHistory:
+      return 'village_history';
+    case AppRoutes.villageArchive:
+      return 'village_archive';
+    case AppRoutes.villageInstitutions:
+      return 'village_institutions';
     case AppRoutes.serviceRequest:
       return 'services';
     case AppRoutes.serviceCategory:
@@ -113,7 +123,10 @@ const List<PromoInternalLink> kPromoInternalLinks = [
   PromoInternalLink('مندرة القرية', AppRoutes.forumPosts),
   PromoInternalLink('سجل العزاء', AppRoutes.obituariesList),
   PromoInternalLink('المناسبات', AppRoutes.occasionsList),
-  PromoInternalLink('عن القرية', AppRoutes.about),
+  PromoInternalLink('تعرف على القرية', AppRoutes.about),
+  PromoInternalLink('تاريخ القرية', AppRoutes.villageHistory),
+  PromoInternalLink('أرشيف القرية', AppRoutes.villageArchive),
+  PromoInternalLink('منشآت القرية', AppRoutes.villageInstitutions),
   PromoInternalLink('دليل الخدمات', AppRoutes.serviceRequest),
   PromoInternalLink('دليل الخدمات — الفنيون', AppRoutes.serviceCategory, 'technicians'),
   PromoInternalLink('دليل الخدمات — خدمات زراعية', AppRoutes.serviceCategory, 'agricultural'),
@@ -164,13 +177,7 @@ String? buildExternalUrl(String? kindKey, String rawValue) {
     orElse: () => const PromoLinkKind('url', '', '', ''),
   );
   if (kind.key == 'whatsapp') {
-    final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
-    if (digits.isEmpty) return null;
-    final local = digits.replaceAll(RegExp(r'^0+'), '');
-    final full = digits.startsWith('00')
-        ? digits.substring(2)
-        : (digits.startsWith('20') ? digits : '20$local');
-    return 'https://wa.me/$full';
+    return egyptianWhatsAppUrl(value);
   }
   if (kind.prefix.isEmpty) return 'https://$value';
   final handle = value.replaceFirst('@', '').replaceAll('/', '');
