@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -7,6 +9,8 @@ import '../../core/utils/navigator_key.dart';
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
 import '../../services/user_service.dart';
+// ignore: directives_ordering
+import '../../services/update_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -95,6 +99,31 @@ class _SplashScreenState extends State<SplashScreen>
       return;
     }
 
+    // فحص التحديث قبل الانتقال إلى الصفحة الرئيسية.
+    await _checkUpdateAndNavigate(currentUser);
+  }
+
+  // ignore: use_build_context_synchronously
+  Future<void> _checkUpdateAndNavigate(
+    firebase_auth.User? currentUser,
+  ) async {
+    UpdateInfo? updateInfo;
+    try {
+      updateInfo = await UpdateService().getUpdateInfo();
+    } catch (_) {}
+    if (!mounted) return;
+    final ctx = navigatorKey.currentContext;
+    if (ctx == null) return;
+    if (updateInfo != null && currentUser != null) {
+      // ignore: use_build_context_synchronously
+      final result = await UpdateService.showUpdateDialog(ctx, updateInfo);
+      if (result == DialogResult.updateNow) {
+        if (!mounted) return;
+        await UpdateService().openUpdate(updateInfo.apkUrl);
+        return;
+      }
+      if (!mounted) return;
+    }
     _safeNavigate(AppRoutes.home);
   }
 

@@ -72,3 +72,4 @@ android/.kotlin/
 
 # APK binaries served via hosting (kept local, never committed)
 web/download/*.apk
+download/*.apk
