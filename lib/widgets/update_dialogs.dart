@@ -1,20 +1,44 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../services/app_update_service.dart';
+
+/// مدة تجاهل التحديث الاختياري بعد الضغط على «لاحقًا».
+const Duration kUpdateSnooze = Duration(hours: 24);
 
 /// حوارات التحديث الموحّدة — تُستدعى من الإقلاع، الإعدادات، والقائمة الجانبية.
 class UpdateDialogs {
   UpdateDialogs._();
 
-  /// فحص صامت عند الإقلاع — لا يزعج المستخدم إلا عند وجود شيء حقيقي.
+  /// فحص صامت عند الإقلاع — لا يزعج المستخدم إلا عند وجود شيء حقيقي،
+  /// ويحترم «لاحقًا» بتجاهل التحديث الاختياري لمدة 24 ساعة لكل إصدار.
   static Future<void> runStartupCheck(BuildContext context) async {
     try {
       final res = await AppUpdateService().check();
       if (res == null || !context.mounted) return;
       final (info, status) = res;
       if (status == UpdateStatus.upToDate) return;
+      if (status == UpdateStatus.available) {
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          final last =
+              prefs.getInt('update_snooze_${info.androidBuild}') ?? 0;
+          final elapsed =
+              DateTime.now().millisecondsSinceEpoch - last;
+          if (elapsed < kUpdateSnooze.inMilliseconds) return;
+        } catch (_) {}
+        if (!context.mounted) return;
+      }
       await _show(context, info, status);
+    } catch (_) {}
+  }
+
+  static Future<void> _snooze(int build) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(
+          'update_snooze_$build', DateTime.now().millisecondsSinceEpoch);
     } catch (_) {}
   }
 
@@ -98,7 +122,10 @@ class UpdateDialogs {
         actions: [
           if (!mandatory)
             TextButton(
-              onPressed: () => Navigator.pop(ctx),
+              onPressed: () {
+                Navigator.pop(ctx);
+                _snooze(info.androidBuild);
+              },
               child: const Text('لاحقًا'),
             ),
           FilledButton.icon(

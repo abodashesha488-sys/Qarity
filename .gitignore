@@ -1,4 +1,4 @@
-﻿# Miscellaneous
+# Miscellaneous
 *.class
 *.log
 *.pyc
@@ -69,3 +69,6 @@ android/.kotlin/
 
 # Firebase local cache
 .firebase/*.cache
+
+# APK binaries served via hosting (kept local, never committed)
+web/download/*.apk
