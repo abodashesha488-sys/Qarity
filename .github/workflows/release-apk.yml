@@ -205,7 +205,7 @@ jobs:
               androidUrl: 'https://github.com/${{ github.repository }}/releases/latest/download/Qarity.apk',
               message: `${{ github.event.inputs.message }}`,
               maintenance: ${{ github.event.inputs.maintenance }},
-              maintenanceMessage: '${{ github.event.inputs.maintenance_message || "التطبيق تحت الصيانة، يرجى المحاولة لاحقاً." }}',
+              maintenanceMessage: '${{ github.event.inputs.maintenance_message }}' || 'التطبيق تحت الصيانة، يرجى المحاولة لاحقاً.',
               updatedAt: new Date().toISOString(),
               updatedBy: 'github-actions'
             };
