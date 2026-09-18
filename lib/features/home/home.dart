@@ -843,16 +843,16 @@ class _SectionHead extends StatelessWidget {
 class ModernServiceGrid extends StatelessWidget {
   const ModernServiceGrid({super.key});
 
-  static const _services = [
-    _ServiceItem('تعرف على القرية', AppRoutes.about, 'assets/images/About.jpg'),
-    _ServiceItem('أخبار القرية', AppRoutes.newsList, 'assets/images/News.jpg'),
-    _ServiceItem('سوق القرية', AppRoutes.marketProducts, 'assets/images/Souq.jpg'),
-    _ServiceItem('سجل العزاء', AppRoutes.obituariesList, 'assets/images/des.jpg'),
-    _ServiceItem('المناسبات', AppRoutes.occasionsList, 'assets/images/festefal.jpg'),
-    _ServiceItem('مندرة القرية', AppRoutes.forumPosts, 'assets/images/mandra.jpg'),
-    _ServiceItem('دليل الخدمات', AppRoutes.serviceRequest, 'assets/images/Services.jpg'),
-    _ServiceItem('حول التطبيق', AppRoutes.aboutApp, 'assets/images/aboutapp.jpg'),
-  ];
+static const _services = [
+     _ServiceItem('تعرف على القرية', AppRoutes.about, 'assets/images/About.jpg'),
+     _ServiceItem('أخبار القرية', AppRoutes.newsList, 'assets/images/News.jpg'),
+     _ServiceItem('سوق القرية', AppRoutes.marketProducts, 'assets/images/Souq.jpg'),
+     _ServiceItem('دليل الخدمات', AppRoutes.serviceRequest, 'assets/images/Services.jpg'),
+     _ServiceItem('مندرة القرية', AppRoutes.forumPosts, 'assets/images/mandra.jpg'),
+     _ServiceItem('المناسبات', AppRoutes.occasionsList, 'assets/images/festefal.jpg'),
+     _ServiceItem('سجل العزاء', AppRoutes.obituariesList, 'assets/images/des.jpg'),
+     _ServiceItem('حول التطبيق', AppRoutes.aboutApp, 'assets/images/aboutapp.jpg'),
+   ];
 
   @override
   Widget build(BuildContext context) {
