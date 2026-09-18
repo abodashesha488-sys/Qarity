@@ -68,8 +68,29 @@ jobs:
       # ─── Install Android build-tools (for apksigner) ───
       - name: Install Android build-tools
         run: |
-          echo "y" | sdkmanager "build-tools;34.0.0" >/dev/null
-          echo "Android build-tools installed"
+          # sdkmanager is in Android SDK cmdline-tools
+          SDKMANAGER="/usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -f "$SDKMANAGER" ]; then
+            # Try alternative location
+            SDKMANAGER=$(find /usr/local/lib/android/sdk -name "sdkmanager" -type f 2>/dev/null | head -1)
+          fi
+          if [ -f "$SDKMANAGER" ]; then
+            echo "y" | "$SDKMANAGER" "build-tools;34.0.0" >/dev/null
+            echo "Android build-tools installed via $SDKMANAGER"
+          else
+            echo "⚠️ sdkmanager not found, trying Flutter's Android SDK..."
+            # Try Flutter's Android SDK
+            FLUTTER_SDK="$HOME/.flutter"
+            if [ -d "$FLUTTER_SDK" ]; then
+              SDKMANAGER=$(find "$FLUTTER_SDK" -name "sdkmanager" -type f 2>/dev/null | head -1)
+              if [ -f "$SDKMANAGER" ]; then
+                echo "y" | "$SDKMANAGER" "build-tools;34.0.0" >/dev/null
+                echo "Android build-tools installed via Flutter SDK"
+              else
+                echo "⚠️ No sdkmanager found, apksigner may not work"
+              fi
+            fi
+          fi
 
       # ─── Install dependencies ───
       - name: Get Flutter dependencies
