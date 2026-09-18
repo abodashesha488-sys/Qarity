@@ -240,6 +240,14 @@ jobs:
           echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
           ls -lh "$APK_PATH"
 
+      # ─── Generate Release Date ───
+      - name: Generate Release Date
+        id: release_date
+        run: |
+          RELEASE_DATE=$(date -u +"%Y-%m-%d %H:%M UTC")
+          echo "date=$RELEASE_DATE" >> $GITHUB_OUTPUT
+          echo "Release date: $RELEASE_DATE"
+
       # ─── Create GitHub Release ───
       - name: Create GitHub Release
         id: release
@@ -252,7 +260,7 @@ jobs:
 
             **Build:** ${{ steps.version.outputs.new_build }}
             **Version:** ${{ steps.version.outputs.new_name }}
-            **Date:** $(date -u +"%Y-%m-%d %H:%M UTC")
+            **Date:** ${{ steps.release_date.outputs.date }}
           files: ${{ steps.apk.outputs.apk_path }}
           draft: false
           prerelease: false
