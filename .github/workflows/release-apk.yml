@@ -67,28 +67,61 @@ jobs:
       # ─── Install Android build-tools (for apksigner) ───
       - name: Install Android build-tools
         run: |
-          # sdkmanager is in Android SDK cmdline-tools
-          SDKMANAGER="/usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager"
-          if [ ! -f "$SDKMANAGER" ]; then
-            # Try alternative location
-            SDKMANAGER=$(find /usr/local/lib/android/sdk -name "sdkmanager" -type f 2>/dev/null | head -1)
-          fi
-          if [ -f "$SDKMANAGER" ]; then
-            echo "y" | "$SDKMANAGER" "build-tools;34.0.0" >/dev/null
-            echo "Android build-tools installed via $SDKMANAGER"
-          else
-            echo "⚠️ sdkmanager not found, trying Flutter's Android SDK..."
-            # Try Flutter's Android SDK
-            FLUTTER_SDK="$HOME/.flutter"
-            if [ -d "$FLUTTER_SDK" ]; then
-              SDKMANAGER=$(find "$FLUTTER_SDK" -name "sdkmanager" -type f 2>/dev/null | head -1)
-              if [ -f "$SDKMANAGER" ]; then
-                echo "y" | "$SDKMANAGER" "build-tools;34.0.0" >/dev/null
-                echo "Android build-tools installed via Flutter SDK"
-              else
-                echo "⚠️ No sdkmanager found, apksigner may not work"
-              fi
+          set -e
+          echo "🔍 Looking for sdkmanager..."
+          
+          # Common locations for sdkmanager on GitHub runners
+          SDKMANAGER_PATHS=(
+            "/usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager"
+            "/opt/android/sdk/cmdline-tools/latest/bin/sdkmanager"
+            "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+            "$HOME/.android/sdk/cmdline-tools/latest/bin/sdkmanager"
+          )
+          
+          SDKMANAGER=""
+          for path in "${SDKMANAGER_PATHS[@]}"; do
+            if [ -f "$path" ]; then
+              SDKMANAGER="$path"
+              echo "✅ Found sdkmanager at: $SDKMANAGER"
+              break
             fi
+          done
+          
+          # If not found, search
+          if [ -z "$SDKMANAGER" ]; then
+            echo "🔎 Searching for sdkmanager..."
+            SDKMANAGER=$(find /usr/local/lib/android /opt/android $ANDROID_HOME $HOME -name "sdkmanager" -type f 2>/dev/null | head -1)
+            if [ -f "$SDKMANAGER" ]; then
+              echo "✅ Found sdkmanager at: $SDKMANAGER"
+            fi
+          fi
+          
+          if [ -z "$SDKMANAGER" ] || [ ! -f "$SDKMANAGER" ]; then
+            echo "❌ sdkmanager not found! Installing cmdline-tools..."
+            # Install cmdline-tools using the setup-java action's Android SDK
+            if [ -d "$ANDROID_HOME/cmdline-tools" ]; then
+              echo "y" | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "cmdline-tools;latest" 2>/dev/null || true
+            fi
+            SDKMANAGER=$(find /usr/local/lib/android /opt/android $ANDROID_HOME $HOME -name "sdkmanager" -type f 2>/dev/null | head -1)
+          fi
+          
+          if [ -f "$SDKMANAGER" ]; then
+            echo "📦 Installing build-tools;34.0.0..."
+            echo "y" | "$SDKMANAGER" "build-tools;34.0.0"
+            
+            # Find apksigner and add to PATH
+            APKSIGNER=$(find $(dirname "$SDKMANAGER")/../build-tools -name "apksigner" -type f 2>/dev/null | head -1)
+            if [ -f "$APKSIGNER" ]; then
+              APKSIGNER_DIR=$(dirname "$APKSIGNER")
+              echo "✅ apksigner found at: $APKSIGNER"
+              echo "$APKSIGNER_DIR" >> $GITHUB_PATH
+              echo "✅ Added $APKSIGNER_DIR to PATH"
+            else
+              echo "⚠️ apksigner not found in build-tools directory"
+            fi
+          else
+            echo "❌ Could not find or install sdkmanager"
+            exit 1
           fi
 
       # ─── Install dependencies ───
