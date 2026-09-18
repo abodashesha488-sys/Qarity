@@ -347,7 +347,7 @@ class _NewsScreenState extends State<NewsScreen>
               style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
         ),
         SizedBox(
-          height: 190,
+          height: 210,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -362,6 +362,25 @@ class _NewsScreenState extends State<NewsScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Category badge at top
+                      if (n.category.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primary
+                                  .withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(n.category,
+                                style: TextStyle(
+                                    color: theme.colorScheme.primary,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800)),
+                          ),
+                        ),
                       Expanded(
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(14),
@@ -433,33 +452,58 @@ class _BreakingBar extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: const Color(0xFFC62828).withValues(alpha: 0.3)),
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: const Color(0xFFC62828),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: const Text('عاجل',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900)),
+            Row(
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFC62828),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Text('عاجل',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w900)),
+                ),
+                if (item.category.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(item.category,
+                        style: TextStyle(
+                            color: theme.colorScheme.primary,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800)),
+                  ),
+                ],
+              ],
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(item.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: theme.colorScheme.onSurface,
-                      fontSize: 13)),
+            const SizedBox(height: 8),
+            Text(item.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: theme.colorScheme.onSurface,
+                    fontSize: 13)),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                const Spacer(),
+                Icon(Icons.chevron_left_rounded,
+                    size: 20, color: theme.colorScheme.onSurfaceVariant),
+              ],
             ),
-            Icon(Icons.chevron_left_rounded,
-                size: 20, color: theme.colorScheme.onSurfaceVariant),
           ],
         ),
       ),
@@ -502,8 +546,8 @@ class _FeaturedHero extends StatelessWidget {
                   padding: const EdgeInsets.all(18),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.end,
                     children: [
+                      // Category badge at top
                       Row(
                         children: [
                           Container(
@@ -527,7 +571,7 @@ class _FeaturedHero extends StatelessWidget {
                                   fontWeight: FontWeight.w700)),
                         ],
                       ),
-                      const SizedBox(height: 10),
+                      const Spacer(),
                       Text(item.title,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -613,6 +657,28 @@ class _NewsCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Category badge at the top (above image)
+            if (item.category.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
+                child: Align(
+                  alignment: AlignmentDirectional.topStart,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary
+                          .withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(item.category,
+                        style: TextStyle(
+                            color: theme.colorScheme.primary,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800)),
+                  ),
+                ),
+              ),
             SizedBox(height: 160, child: _CardThumb(item: item)),
             Padding(
               padding: const EdgeInsets.all(14),
@@ -621,20 +687,6 @@ class _NewsCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.primary
-                              .withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(item.category,
-                            style: TextStyle(
-                                color: theme.colorScheme.primary,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800)),
-                      ),
                       const Spacer(),
                       if (item.date.isNotEmpty)
                         Text(item.date,

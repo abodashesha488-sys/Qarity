@@ -34,7 +34,6 @@ class _OverviewPage extends StatelessWidget {
           const SizedBox(height: 16),
           _LiveAlertSummary(onOpenAlerts: onOpenAlerts),
           const SizedBox(height: 12),
-          const _AppVersionAdminCard(),
           const SizedBox(height: 16),
           if (totalPending > 0)
             _PendingAlert(

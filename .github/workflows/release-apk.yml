@@ -1,0 +1,247 @@
+name: Build & Release APK + Update Firestore Version
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version name (e.g., 1.0.5) — leave empty for auto patch bump'
+        required: false
+        type: string
+      message:
+        description: 'Release notes / update message for users'
+        required: true
+        type: string
+      min_build:
+        description: 'Minimum build number to force update (optional, defaults to current build)'
+        required: false
+        type: string
+      maintenance:
+        description: 'Enable maintenance mode (locks app completely)'
+        required: false
+        default: 'false'
+        type: boolean
+      maintenance_message:
+        description: 'Maintenance message (shown when maintenance=true)'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  id-token: write
+
+env:
+  # Keystore secrets (configured in GitHub Secrets)
+  KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+  KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+  KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+  KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+
+jobs:
+  build-and-release:
+    name: Build APK & Publish Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      # ─── Checkout ───
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ─── Setup Flutter ───
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0'
+          channel: 'stable'
+          cache: true
+
+      # ─── Setup Java (for Android build) ───
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      # ─── Install dependencies ───
+      - name: Get Flutter dependencies
+        run: flutter pub get
+
+      # ─── Determine version ───
+      - name: Determine version & build number
+        id: version
+        run: |
+          CURRENT_VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d ' ')
+          CURRENT_NAME=${CURRENT_VERSION%+*}
+          CURRENT_BUILD=${CURRENT_VERSION#*+}
+
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            NEW_NAME="${{ github.event.inputs.version }}"
+          else
+            # Auto patch bump: 1.0.4 -> 1.0.5
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_NAME"
+            NEW_PATCH=$((PATCH + 1))
+            NEW_NAME="$MAJOR.$MINOR.$NEW_PATCH"
+          fi
+
+          NEW_BUILD=$((CURRENT_BUILD + 1))
+          NEW_VERSION="$NEW_NAME+$NEW_BUILD"
+
+          echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "current_name=$CURRENT_NAME" >> $GITHUB_OUTPUT
+          echo "current_build=$CURRENT_BUILD" >> $GITHUB_OUTPUT
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "new_name=$NEW_NAME" >> $GITHUB_OUTPUT
+          echo "new_build=$NEW_BUILD" >> $GITHUB_OUTPUT
+
+      # ─── Update pubspec.yaml with new version ───
+      - name: Update pubspec.yaml version
+        run: |
+          sed -i "s/^version: .*/version: ${{ steps.version.outputs.new_version }}/" pubspec.yaml
+          echo "Updated pubspec.yaml to ${{ steps.version.outputs.new_version }}"
+
+      # ─── Build APK (unsigned) ───
+      - name: Build Release APK (unsigned)
+        run: flutter build apk --release --split-per-abi
+
+      # ─── Decode Keystore ───
+      - name: Decode Keystore
+        if: env.KEYSTORE_BASE64 != ''
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > keystore.jks
+          echo "Keystore decoded to keystore.jks"
+
+      # ─── Sign APK ───
+      - name: Sign APK
+        if: env.KEYSTORE_BASE64 != ''
+        id: sign
+        run: |
+          # Find the unsigned APK (arm64-v8a preferred)
+          UNSIGNED_APK=$(find build/app/outputs/flutter-apk -name '*arm64-v8a*release*.apk' | head -1)
+          if [ -z "$UNSIGNED_APK" ]; then
+            UNSIGNED_APK=$(find build/app/outputs/flutter-apk -name '*release*.apk' | head -1)
+          fi
+          
+          SIGNED_APK="${UNSIGNED_APK%.apk}-signed.apk"
+          
+          # Sign with apksigner (part of Android SDK build-tools)
+          apksigner sign \
+            --ks keystore.jks \
+            --ks-pass pass:${{ secrets.KEYSTORE_PASSWORD }} \
+            --key-pass pass:${{ secrets.KEY_PASSWORD }} \
+            --ks-key-alias ${{ secrets.KEY_ALIAS }} \
+            --out "$SIGNED_APK" \
+            "$UNSIGNED_APK"
+          
+          # Verify signature
+          apksigner verify --print-certs "$SIGNED_APK"
+          
+          echo "signed_apk_path=$SIGNED_APK" >> $GITHUB_OUTPUT
+          ls -lh "$SIGNED_APK"
+
+      # ─── Locate APK (signed if keystore provided, otherwise unsigned) ───
+      - name: Locate APK
+        id: apk
+        run: |
+          if [ -n "${{ steps.sign.outputs.signed_apk_path }}" ]; then
+            APK_PATH="${{ steps.sign.outputs.signed_apk_path }}"
+            echo "Using SIGNED APK: $APK_PATH"
+          else
+            APK_PATH=$(find build/app/outputs/flutter-apk -name '*arm64-v8a*release*.apk' | head -1)
+            if [ -z "$APK_PATH" ]; then
+              APK_PATH=$(find build/app/outputs/flutter-apk -name '*release*.apk' | head -1)
+            fi
+            echo "Using UNSIGNED APK (no keystore): $APK_PATH"
+          fi
+          echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
+          ls -lh "$APK_PATH"
+
+      # ─── Create GitHub Release ───
+      - name: Create GitHub Release
+        id: release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.new_name }}
+          name: Qarity v${{ steps.version.outputs.new_name }}
+          body: |
+            ${{ github.event.inputs.message }}
+
+            **Build:** ${{ steps.version.outputs.new_build }}
+            **Version:** ${{ steps.version.outputs.new_name }}
+            **Date:** $(date -u +"%Y-%m-%d %H:%M UTC")
+          files: ${{ steps.apk.outputs.apk_path }}
+          draft: false
+          prerelease: false
+          generate_release_notes: false
+
+      # ─── Update Firestore app_version/current ───
+      - name: Update Firestore app_version
+        id: firestore
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          project_id: abudshisha
+
+      - name: Write version to Firestore
+        run: |
+          cat > /tmp/update_version.js << 'EOF'
+          const { initializeApp, cert } = require('firebase-admin/app');
+          const { getFirestore } = require('firebase-admin/firestore');
+
+          initializeApp({
+            credential: cert(require('/tmp/service-account.json'))
+          });
+
+          const db = getFirestore();
+
+          async function updateVersion() {
+            const versionDoc = db.collection('app_version').doc('current');
+
+            const data = {
+              androidVersion: '${{ steps.version.outputs.new_name }}',
+              androidBuild: ${{ steps.version.outputs.new_build }},
+              minBuild: ${{ github.event.inputs.min_build || steps.version.outputs.new_build }},
+              androidUrl: 'https://github.com/${{ github.repository }}/releases/latest/download/Qarity.apk',
+              message: `${{ github.event.inputs.message }}`,
+              maintenance: ${{ github.event.inputs.maintenance }},
+              maintenanceMessage: '${{ github.event.inputs.maintenance_message || "التطبيق تحت الصيانة، يرجى المحاولة لاحقاً." }}',
+              updatedAt: new Date().toISOString(),
+              updatedBy: 'github-actions'
+            };
+
+            await versionDoc.set(data);
+            console.log('✅ Firestore app_version/current updated:', data);
+          }
+
+          updateVersion().catch(err => {
+            console.error('❌ Failed to update Firestore:', err);
+            process.exit(1);
+          });
+          EOF
+
+          # Write service account to temp file
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > /tmp/service-account.json
+
+          # Install firebase-admin if needed
+          npm init -y >/dev/null 2>&1
+          npm install firebase-admin >/dev/null 2>&1
+
+          node /tmp/update_version.js
+
+      # ─── Summary ───
+      - name: Release Summary
+        run: |
+          echo "## 🚀 Release Published" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Version** | ${{ steps.version.outputs.new_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Build** | ${{ steps.version.outputs.new_build }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Min Build** | ${{ github.event.inputs.min_build || steps.version.outputs.new_build }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **APK URL** | https://github.com/${{ github.repository }}/releases/latest/download/Qarity.apk |" >> $GITHUB_STEP_SUMMARY
+          echo "| **APK Signed** | ${{ steps.sign.outputs.signed_apk_path != '' && '✅ Yes' || '❌ No (unsigned)' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Maintenance** | ${{ github.event.inputs.maintenance }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Release URL:** ${{ steps.release.outputs.html_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Firestore:** app_version/current updated ✅" >> $GITHUB_STEP_SUMMARY

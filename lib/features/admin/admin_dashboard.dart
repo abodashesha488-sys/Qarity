@@ -14,7 +14,6 @@ import '../../models/village_alert.dart';
 import '../../routes/app_routes.dart';
 import '../../services/admin_service.dart';
 import '../../services/alert_service.dart';
-import '../../services/app_update_service.dart';
 import '../../services/image_upload_service.dart';
 import '../../services/promo_service.dart';
 import '../../widgets/promo_host.dart';
@@ -27,7 +26,6 @@ part 'admin_dashboard_promos.dart';
 part 'admin_dashboard_reports.dart';
 part 'admin_dashboard_review.dart';
 part 'admin_dashboard_users.dart';
-part 'admin_dashboard_version.dart';
 
 /// لوحة تحكم عصرية — أربع وجهات: نظرة عامة، المراجعة، المستخدمون، التقارير.
 /// الملف مقسّم إلى `part` files حسب الصفحة لتسهيل الصيانة.

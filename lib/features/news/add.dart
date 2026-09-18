@@ -88,6 +88,57 @@ class _AddNewsScreenState extends State<AddNewsScreen> {
 
   void _removeImage() => setState(() => _imageUrl = null);
 
+  void _showFullScreenImage(BuildContext context, String imageUrl) {
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.9),
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: EdgeInsets.zero,
+        child: Stack(
+          children: [
+            InteractiveViewer(
+              maxScale: 4,
+              minScale: 1,
+              child: Center(
+                child: CachedNetworkImage(
+                  imageUrl: imageUrl,
+                  fit: BoxFit.contain,
+                  placeholder: (context, url) => const Center(
+                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                  ),
+                  errorWidget: (context, url, error) => const Center(
+                    child: Icon(Icons.broken_image_rounded, color: Colors.white, size: 40),
+                  ),
+                ),
+              ),
+            ),
+            SafeArea(
+              child: Align(
+                alignment: Alignment.topRight,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Material(
+                    color: Colors.black.withValues(alpha: 0.5),
+                    shape: const CircleBorder(),
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: () => Navigator.pop(ctx),
+                      child: const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: Icon(Icons.close_rounded, color: Colors.white, size: 24),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     if (!await NetworkInfo().isConnected) {
@@ -181,46 +232,65 @@ class _AddNewsScreenState extends State<AddNewsScreen> {
                   title: 'صورة الخبر (اختياري)',
                   icon: Icons.image_rounded,
                   children: [
-                    if (_imageUrl != null)
-                      Stack(
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(14),
-                            child: CachedNetworkImage(
-                              imageUrl: _imageUrl!,
-                              height: 180,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                              placeholder: (context, url) => Container(
-                                height: 180,
-                                color: theme.colorScheme.surfaceContainerHighest,
-                                child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                              ),
-                              errorWidget: (context, url, error) => Container(
-                                height: 180,
-                                color: theme.colorScheme.surfaceContainerHighest,
-                                child: Icon(Icons.broken_image_rounded, color: theme.colorScheme.onSurfaceVariant),
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            top: 8,
-                            right: 8,
-                            child: Material(
-                              color: theme.colorScheme.surface.withValues(alpha: 0.9),
-                              shape: const CircleBorder(),
-                              child: InkWell(
-                                customBorder: const CircleBorder(),
-                                onTap: _isSaving ? null : _removeImage,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(6),
-                                  child: Icon(Icons.close_rounded, size: 18, color: theme.colorScheme.error),
+if (_imageUrl != null)
+                        Stack(
+                          children: [
+                            GestureDetector(
+                              onTap: () => _showFullScreenImage(context, _imageUrl!),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(14),
+                                child: CachedNetworkImage(
+                                  imageUrl: _imageUrl!,
+                                  height: 180,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                  placeholder: (context, url) => Container(
+                                    height: 180,
+                                    color: theme.colorScheme.surfaceContainerHighest,
+                                    child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                                  ),
+                                  errorWidget: (context, url, error) => Container(
+                                    height: 180,
+                                    color: theme.colorScheme.surfaceContainerHighest,
+                                    child: Icon(Icons.broken_image_rounded, color: theme.colorScheme.onSurfaceVariant),
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
-                      )
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: Material(
+                                color: theme.colorScheme.surface.withValues(alpha: 0.9),
+                                shape: const CircleBorder(),
+                                child: InkWell(
+                                  customBorder: const CircleBorder(),
+                                  onTap: _isSaving ? null : _removeImage,
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(6),
+                                    child: Icon(Icons.close_rounded, size: 18, color: theme.colorScheme.error),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              bottom: 8,
+                              right: 8,
+                              child: Material(
+                                color: Colors.black.withValues(alpha: 0.6),
+                                shape: const CircleBorder(),
+                                child: InkWell(
+                                  customBorder: const CircleBorder(),
+                                  onTap: () => _showFullScreenImage(context, _imageUrl!),
+                                  child: const Padding(
+                                    padding: EdgeInsets.all(6),
+                                    child: Icon(Icons.zoom_in_rounded, size: 18, color: Colors.white),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
                     else
                       SizedBox(
                         width: double.infinity,

@@ -9,7 +9,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/constants/app_colors.dart';
-import '../../core/utils/navigator_key.dart';
 import '../../core/utils/role_style.dart';
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
@@ -24,7 +23,6 @@ import '../../widgets/alert_wisdom_bar.dart';
 import '../../widgets/common_appbar_actions.dart';
 import '../../widgets/offline_stream_builder.dart';
 import '../../widgets/qurity_logo.dart';
-import '../../widgets/update_dialogs.dart';
 import '../../widgets/village_weather_bar.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -42,7 +40,6 @@ class _HomeScreenState extends State<HomeScreen> {
     // لها من «إعدادات الإشعارات» (يُعاد الاشتراك فقط إن كانت مفعّلة).
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       // فحص إصدار التطبيق (أندرويد فقط) — صامت ما لم يوجد جديد فعلًا.
-      unawaited(UpdateDialogs.runStartupCheck(context));
       if (FirebaseAuth.instance.currentUser == null) return;
       final prefs = await SharedPreferences.getInstance();
       if (prefs.getBool('notif_pref_village_alerts') ?? true) {
@@ -234,8 +231,7 @@ class HomeDrawer extends StatelessWidget {
                   RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               onTap: () {
                 Navigator.pop(context);
-                final root = navigatorKey.currentContext;
-                if (root != null) UpdateDialogs.runManualCheck(root);
+                Navigator.pushNamed(context, AppRoutes.home);
               },
             ),
             _buildDrawerItem(context, 'لوحة التحكم', Icons.admin_panel_settings_rounded, AppRoutes.admin),

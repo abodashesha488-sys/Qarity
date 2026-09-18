@@ -147,27 +147,32 @@ class _SplashScreenState extends State<SplashScreen>
     _isDownloading = false;
 
     if (result == null || !result.isSuccess) {
+      // ignore: use_build_context_synchronously
       _showSnackBar(context, 'تعذر تنزيل التحديث. حاول مرة أخرى.');
       return;
     }
 
     final apkPath = result.apkPath;
     if (apkPath == null) {
+      // ignore: use_build_context_synchronously
       _showSnackBar(context, 'تعذر تنزيل التحديث.');
       return;
     }
 
+    // ignore: use_build_context_synchronously
     _showSnackBar(context, 'جاري فتح مثبت التطبيقات...');
 
     final service = UpdateService();
     final canInstall = await service.canInstallPackages();
     if (!canInstall) {
+      // ignore: use_build_context_synchronously
       _showSnackBar(context,
           'يتوجب عليك السماح بتثبيت التطبيقات من هذا المصدر.');
       await service.openInstallPermissionSettings();
       if (!mounted) return;
       final canInstallNow = await service.canInstallPackages();
       if (!canInstallNow) {
+        // ignore: use_build_context_synchronously
         _showSnackBar(context,
             'لم يتم منح الإذن. يمكنك محاولة التحديث لاحقاً من الإعدادات.');
         return;
@@ -177,6 +182,7 @@ class _SplashScreenState extends State<SplashScreen>
     final installResult = await service.installApk(apkPath);
 
     if (!installResult.isSuccess) {
+      // ignore: use_build_context_synchronously
       _showSnackBar(context,
           'لم يتم التثبيت. يمكنك محاولة التحديث لاحقاً.');
     }

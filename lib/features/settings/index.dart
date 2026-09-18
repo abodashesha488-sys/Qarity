@@ -6,7 +6,6 @@ import '../../core/constants/app_colors.dart';
 import '../../routes/app_routes.dart';
 import '../../services/theme_service.dart';
 import '../../widgets/qurity_app_bar.dart';
-import '../../widgets/update_dialogs.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -212,7 +211,7 @@ class _UpdateTileState extends State<_UpdateTile> {
       icon: Icons.system_update_alt_rounded,
       title: 'التحقق من التحديثات',
       subtitle: '$_version • اضغط للفحص الآن',
-      onTap: () => UpdateDialogs.runManualCheck(context),
+      onTap: () {},
     );
   }
 }
