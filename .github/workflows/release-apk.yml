@@ -212,6 +212,25 @@ jobs:
 
       - name: Write version to Firestore
         run: |
+          # Create package.json and install firebase-admin properly
+          cd /tmp
+          cat > package.json << 'PKGEOF'
+          {
+            "name": "firestore-updater",
+            "private": true,
+            "dependencies": {
+              "firebase-admin": "^13.0.0"
+            }
+          }
+          PKGEOF
+          
+          echo "Installing firebase-admin..."
+          npm install --omit=dev 2>&1 | tail -20
+          
+          # Write service account
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > /tmp/service-account.json
+          
+          # Write update script
           cat > /tmp/update_version.js << 'EOF'
           const { initializeApp, cert } = require('firebase-admin/app');
           const { getFirestore } = require('firebase-admin/firestore');
@@ -247,13 +266,7 @@ jobs:
           });
           EOF
 
-          # Write service account to temp file
-          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > /tmp/service-account.json
-
-          # Install firebase-admin if needed
-          npm init -y >/dev/null 2>&1
-          npm install firebase-admin >/dev/null 2>&1
-
+          echo "Running Firestore update..."
           node /tmp/update_version.js
 
       # ─── Summary ───
