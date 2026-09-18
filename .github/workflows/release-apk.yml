@@ -115,9 +115,21 @@ jobs:
               APKSIGNER_DIR=$(dirname "$APKSIGNER")
               echo "✅ apksigner found at: $APKSIGNER"
               echo "$APKSIGNER_DIR" >> $GITHUB_PATH
-              echo "✅ Added $APKSIGNER_DIR to PATH"
+              echo "APKSIGNER_PATH=$APKSIGNER" >> $GITHUB_ENV
+              echo "✅ Added $APKSIGNER_DIR to PATH and APKSIGNER_PATH to ENV"
             else
               echo "⚠️ apksigner not found in build-tools directory"
+              # Search more broadly
+              APKSIGNER=$(find /usr/local/lib/android /opt/android $ANDROID_HOME $HOME -name "apksigner" -type f 2>/dev/null | head -1)
+              if [ -f "$APKSIGNER" ]; then
+                APKSIGNER_DIR=$(dirname "$APKSIGNER")
+                echo "✅ apksigner found (broad search) at: $APKSIGNER"
+                echo "$APKSIGNER_DIR" >> $GITHUB_PATH
+                echo "APKSIGNER_PATH=$APKSIGNER" >> $GITHUB_ENV
+              else
+                echo "❌ apksigner NOT FOUND anywhere!"
+                exit 1
+              fi
             fi
           else
             echo "❌ Could not find or install sdkmanager"
@@ -176,7 +188,18 @@ jobs:
       - name: Sign APK
         if: env.KEYSTORE_BASE64 != ''
         id: sign
+        env:
+          APKSIGNER_PATH: ${{ env.APKSIGNER_PATH }}
         run: |
+          # Determine apksigner command
+          if [ -n "$APKSIGNER_PATH" ] && [ -f "$APKSIGNER_PATH" ]; then
+            APKSIGNER_CMD="$APKSIGNER_PATH"
+            echo "Using APKSIGNER_PATH: $APKSIGNER_CMD"
+          else
+            APKSIGNER_CMD="apksigner"
+            echo "Using apksigner from PATH"
+          fi
+          
           # Find the unsigned APK (arm64-v8a preferred)
           UNSIGNED_APK=$(find build/app/outputs/flutter-apk -name '*arm64-v8a*release*.apk' | head -1)
           if [ -z "$UNSIGNED_APK" ]; then
@@ -186,7 +209,7 @@ jobs:
           SIGNED_APK="${UNSIGNED_APK%.apk}-signed.apk"
           
           # Sign with apksigner (part of Android SDK build-tools)
-          apksigner sign \
+          "$APKSIGNER_CMD" sign \
             --ks keystore.jks \
             --ks-pass pass:${{ secrets.KEYSTORE_PASSWORD }} \
             --key-pass pass:${{ secrets.KEY_PASSWORD }} \
@@ -195,7 +218,7 @@ jobs:
             "$UNSIGNED_APK"
           
           # Verify signature
-          apksigner verify --print-certs "$SIGNED_APK"
+          "$APKSIGNER_CMD" verify --print-certs "$SIGNED_APK"
           
           echo "signed_apk_path=$SIGNED_APK" >> $GITHUB_OUTPUT
           ls -lh "$SIGNED_APK"
