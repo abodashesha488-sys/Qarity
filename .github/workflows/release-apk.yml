@@ -220,14 +220,23 @@ jobs:
           # Verify signature
           "$APKSIGNER_CMD" verify --print-certs "$SIGNED_APK"
           
+          # Copy to standard name for Release URL
+          cp "$SIGNED_APK" Qarity.apk
+          echo "Copied to Qarity.apk"
+          
           echo "signed_apk_path=$SIGNED_APK" >> $GITHUB_OUTPUT
+          echo "release_apk_path=Qarity.apk" >> $GITHUB_OUTPUT
           ls -lh "$SIGNED_APK"
+          ls -lh Qarity.apk
 
       # ─── Locate APK (signed if keystore provided, otherwise unsigned) ───
       - name: Locate APK
         id: apk
         run: |
-          if [ -n "${{ steps.sign.outputs.signed_apk_path }}" ]; then
+          if [ -n "${{ steps.sign.outputs.release_apk_path }}" ]; then
+            APK_PATH="${{ steps.sign.outputs.release_apk_path }}"
+            echo "Using RELEASE APK (Qarity.apk): $APK_PATH"
+          elif [ -n "${{ steps.sign.outputs.signed_apk_path }}" ]; then
             APK_PATH="${{ steps.sign.outputs.signed_apk_path }}"
             echo "Using SIGNED APK: $APK_PATH"
           else
