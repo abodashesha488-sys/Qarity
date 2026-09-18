@@ -275,6 +275,25 @@ jobs:
           prerelease: false
           generate_release_notes: false
 
+      # ─── Update update.json in repo (for app's UpdateService) ───
+      - name: Update update.json
+        run: |
+          cat > update.json << EOF
+          {
+            "versionCode": ${{ steps.version.outputs.new_build }},
+            "versionName": "${{ steps.version.outputs.new_name }}",
+            "apkUrl": "https://github.com/${{ github.repository }}/releases/latest/download/Qarity.apk",
+            "forceUpdate": false,
+            "releaseNotes": "${{ github.event.inputs.message }}"
+          }
+          EOF
+          
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add update.json
+          git commit -m "chore: update version to ${{ steps.version.outputs.new_name }}+${{ steps.version.outputs.new_build }}"
+          git push
+
       # ─── Update Firestore app_version/current ───
       - name: Update Firestore app_version
         id: firestore
