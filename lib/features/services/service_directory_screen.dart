@@ -36,75 +36,9 @@ class ServiceDirectoryScreen extends StatelessWidget {
         childAspectRatio: 0.98,
         children: [
           for (final c in _categories) _CategoryTile(category: c),
-          const _PhoneBookTile(),
-          const _LostItemsTile(),
         ],
       ),
     );
-  }
-}
-
-/// بطاقة المفقودات — إعلانات الأشياء المفقودة/الموجودة في القرية.
-class _LostItemsTile extends StatelessWidget {
-  const _LostItemsTile();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    const color = kLostItemsColor;
-    return Card(
-      elevation: 0,
-      color: color.withValues(alpha: 0.07),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: color.withValues(alpha: 0.35)),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: () => Navigator.pushNamed(context, AppRoutes.lostItems),
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: const BoxDecoration(
-                  gradient:
-                      LinearGradient(colors: [color, Color(0xFF9575CD)]),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                        color: Color(0x595E35B1),
-                        blurRadius: 12,
-                        offset: Offset(0, 5)),
-                  ],
-                ),
-                child: const Icon(Icons.search_rounded,
-                    color: Colors.white, size: 26),
-              ),
-              const SizedBox(height: 10),
-              const Text('المفقودات',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 14,
-                      color: color)),
-              const SizedBox(height: 3),
-              Text('أُشياء فُقدت أو وُجدت في القرية',
-                  maxLines: 2,
-                  textAlign: TextAlign.center,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                      fontSize: 10,
-                      color: theme.colorScheme.onSurfaceVariant)),
-            ],
-          ),
-        ),
-      ),
-    ).animate().fadeIn(duration: 250.ms).scale(begin: const Offset(0.94, 0.94));
   }
 }
 
@@ -173,69 +107,6 @@ class _CategoryTile extends StatelessWidget {
                     fontSize: 10,
                     color: theme.colorScheme.onSurfaceVariant),
               ),
-            ],
-          ),
-        ),
-      ),
-    ).animate().fadeIn(duration: 250.ms).scale(begin: const Offset(0.94, 0.94));
-  }
-}
-
-class _PhoneBookTile extends StatelessWidget {
-  const _PhoneBookTile();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    const color = Color(0xFF37474F);
-    return Card(
-      elevation: 0,
-      color: color.withValues(alpha: 0.07),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: color.withValues(alpha: 0.35)),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: () => Navigator.pushNamed(context, AppRoutes.phoneDirectory),
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: const BoxDecoration(
-                  gradient:
-                      LinearGradient(colors: [color, Color(0xFF78909C)]),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                        color: Color(0x5937474F),
-                        blurRadius: 12,
-                        offset: Offset(0, 5)),
-                  ],
-                ),
-                child: const Icon(Icons.phone_rounded,
-                    color: Colors.white, size: 26),
-              ),
-              const SizedBox(height: 10),
-              const Text('دليل الهاتف',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 14,
-                      color: color)),
-              const SizedBox(height: 3),
-              Text('أرقام أهالي القرية وجهاتها',
-                  maxLines: 2,
-                  textAlign: TextAlign.center,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                      fontSize: 10,
-                      color: theme.colorScheme.onSurfaceVariant)),
             ],
           ),
         ),
