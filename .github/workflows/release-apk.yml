@@ -278,6 +278,9 @@ jobs:
       # ─── Update update.json in repo (for app's UpdateService) ───
       - name: Update update.json
         run: |
+          # Stash any local changes (pubspec.yaml, build artifacts)
+          git stash --include-untracked || true
+          
           cat > update.json << EOF
           {
             "versionCode": ${{ steps.version.outputs.new_build }},
