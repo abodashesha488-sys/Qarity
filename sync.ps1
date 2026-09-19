@@ -7,7 +7,8 @@
     1. يخزن التغييرات المؤقتة (stash) بما فيها ملفات Actions
     2. يسحب أحدث التغييرات من GitHub مع rebase
     3. يعيد التغييرات من stash
-    4. يحمي ملفات Actions (pubspec.yaml, update.json) لتظل بنسخة GitHub
+    4. يحمي ملف update.json فقط (لأنه يُدار من GitHub Actions)
+    4. pubspec.yaml يُعدل محلياً ويُحدث رقمه تلقائياً عبر الـ Workflow
     5. يضيف تغييراتك، يعمل commit، ويدفع لـ GitHub
 
 .PARAMETER Message
@@ -54,8 +55,10 @@ if (-not $status) {
 Write-Host "📝 التغييرات المحلية:" -ForegroundColor Yellow
 git status --short
 
-# الملفات التي يديرها GitHub Actions - لا تلمسها يدوياً
-$actionFiles = @("pubspec.yaml", "update.json")
+# الملفات التي يديرها GitHub Actions فقط - لا تلمسها يدوياً
+# pubspec.yaml يُعدل محلياً (تبعيات، أصول) ويُحدث رقمه تلقائياً عبر الـ Workflow
+# update.json فقط هو الذي يُدار بالكامل من GitHub Actions
+$actionFiles = @("update.json")
 
 # 1. Stash جميع التغييرات (بما فيها ملفات Actions مؤقتاً)
 Write-Host "📦 تخزين التغييرات مؤقتاً (stash)..." -ForegroundColor Yellow
@@ -83,13 +86,13 @@ try {
     exit 1
 }
 
-# 3. حماية ملفات Actions - استعد نسخة GitHub
-Write-Host "🔒 حماية ملفات GitHub Actions..." -ForegroundColor Magenta
-foreach ($file in @("pubspec.yaml", "update.json")) {
-    if (Test-Path $file) {
-        git restore $file 2>$null
-    }
-}
+# 3. حماية ملفات Actions - استعد نسخة GitHub لـ update.json فقط
+      Write-Host "🔒 حماية ملفات GitHub Actions (update.json فقط)..." -ForegroundColor Magenta
+      foreach ($file in @("update.json")) {
+          if (Test-Path $file) {
+              git restore $file 2>$null
+          }
+      }
 
 # 4. إضافة جميع التغييرات (باستثناء ملفات Actions المستعادة)
 Write-Host "➕ إضافة التغييرات..." -ForegroundColor Yellow
