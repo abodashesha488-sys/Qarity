@@ -157,7 +157,11 @@ jobs:
             NEW_NAME="$MAJOR.$MINOR.$NEW_PATCH"
           fi
 
-          NEW_BUILD=$((CURRENT_BUILD + 1))
+          # Calculate build number from version name (major*10000 + minor*100 + patch)
+          # This ensures versionCode matches versionName semantically
+          IFS='.' read -r NEW_MAJOR NEW_MINOR NEW_PATCH <<< "$NEW_NAME"
+          NEW_BUILD=$((NEW_MAJOR * 10000 + NEW_MINOR * 100 + NEW_PATCH))
+          
           NEW_VERSION="$NEW_NAME+$NEW_BUILD"
 
           echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
