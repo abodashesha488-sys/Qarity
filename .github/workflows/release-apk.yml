@@ -315,8 +315,13 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add update.json
-          git commit -m "chore: update version to ${{ steps.version.outputs.new_name }}+${{ steps.version.outputs.new_build }}"
-          git push
+          # Only commit if there are changes
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: update version to ${{ steps.version.outputs.new_name }}+${{ steps.version.outputs.new_build }}"
+            git push origin main
+          else
+            echo "No changes to update.json, skipping commit"
+          fi
 
       # ─── Update Firestore app_version/current ───
       - name: Update Firestore app_version
