@@ -7,6 +7,7 @@ import '../features/admin/admin_detail.dart';
 import '../features/admin/admin_edit.dart';
 import '../features/auth/complete_profile.dart';
 import '../features/auth/login.dart';
+import '../features/children/children_screen.dart';
 import '../features/emergency/contacts.dart';
 import '../features/forum/create_post.dart';
 import '../features/forum/post_detail.dart';
@@ -108,6 +109,7 @@ static const String marketProducts = '/market';
   static const String notificationsInbox = '/notifications';
   static const String notificationOpen = '/open';
   static const String weather = '/weather';
+  static const String children = '/children';
 
   static final routes = <String, Widget Function(BuildContext)>{
     splash: (_) => const SplashScreen(),
@@ -156,6 +158,7 @@ static const String marketProducts = '/market';
     notificationsInbox: (_) => const NotificationsInboxScreen(),
     notificationOpen: (_) => const NotificationOpenScreen(),
     weather: (_) => const WeatherDetailScreen(),
+    children: (_) => const ChildrenScreen(),
   };
 
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {

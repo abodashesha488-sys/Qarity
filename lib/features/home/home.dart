@@ -846,8 +846,9 @@ static const _services = [
      _ServiceItem('دليل الخدمات', AppRoutes.serviceRequest, 'assets/images/Services.jpg'),
      _ServiceItem('مندرة القرية', AppRoutes.forumPosts, 'assets/images/mandra.jpg'),
      _ServiceItem('المناسبات', AppRoutes.occasionsList, 'assets/images/festefal.jpg'),
-     _ServiceItem('سجل العزاء', AppRoutes.obituariesList, 'assets/images/des.jpg'),
-     _ServiceItem('حول التطبيق', AppRoutes.aboutApp, 'assets/images/aboutapp.jpg'),
+      _ServiceItem('سجل العزاء', AppRoutes.obituariesList, 'assets/images/des.jpg'),
+      _ServiceItem('ركن الأطفال', AppRoutes.children, 'assets/images/childern.jpg'),
+      _ServiceItem('حول التطبيق', AppRoutes.aboutApp, 'assets/images/aboutapp.jpg'),
    ];
 
   @override
