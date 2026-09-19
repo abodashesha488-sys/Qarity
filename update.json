@@ -1,7 +1,7 @@
 {
-  "versionCode": 2,
-  "versionName": "1.0.2",
+  "versionCode": 3,
+  "versionName": "1.0.3",
   "apkUrl": "https://github.com/abodashesha488-sys/Qarity/releases/latest/download/Qarity.apk",
   "forceUpdate": false,
-  "releaseNotes": "أول إصدار بالعداد التسلسلي 1.0.1"
+  "releaseNotes": "إضافة ركن الأطفال"
 }
