@@ -5,6 +5,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import '../../core/constants/app_colors.dart';
 import '../../routes/app_routes.dart';
 import '../../services/theme_service.dart';
+import '../../services/update_service.dart';
 import '../../widgets/qurity_app_bar.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -194,15 +195,39 @@ class _UpdateTile extends StatefulWidget {
 
 class _UpdateTileState extends State<_UpdateTile> {
   String _version = '…';
+  bool _checking = false;
 
   @override
   void initState() {
     super.initState();
-    PackageInfo.fromPlatform().then((p) {
+    _loadVersion();
+  }
+
+  Future<void> _loadVersion() async {
+    try {
+      final p = await PackageInfo.fromPlatform();
       if (mounted) {
         setState(() => _version = 'الإصدار ${p.version} (${p.buildNumber})');
       }
-    }).catchError((_) {});
+    } catch (_) {}
+  }
+
+  Future<void> _checkForUpdate() async {
+    if (_checking) return;
+    setState(() => _checking = true);
+    try {
+      final info = await UpdateService().getUpdateInfo();
+      if (!mounted) return;
+      if (info != null) {
+        await UpdateService.showUpdateDialog(context, info);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('أنت على أحدث إصدار')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _checking = false);
+    }
   }
 
   @override
@@ -210,8 +235,8 @@ class _UpdateTileState extends State<_UpdateTile> {
     return _SettingsTile(
       icon: Icons.system_update_alt_rounded,
       title: 'التحقق من التحديثات',
-      subtitle: '$_version • اضغط للفحص الآن',
-      onTap: () {},
+      subtitle: '$_version ${_checking ? '• جاري الفحص…' : '• اضغط للفحص الآن'}',
+      onTap: _checkForUpdate,
     );
   }
 }

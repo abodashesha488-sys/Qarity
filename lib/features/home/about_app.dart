@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../routes/app_routes.dart';
 import '../../widgets/qurity_app_bar.dart';
 
-class AboutScreen extends StatelessWidget {
+class AboutScreen extends StatefulWidget {
   const AboutScreen({super.key});
 
   static const List<_Feature> _features = [
@@ -17,6 +18,28 @@ class AboutScreen extends StatelessWidget {
     _Feature(icon: Icons.person_rounded, text: 'الملف الشخصي والإعدادات'),
     _Feature(icon: Icons.admin_panel_settings_rounded, text: 'لوحة تحكم المسؤول'),
   ];
+
+  @override
+  State<AboutScreen> createState() => _AboutScreenState();
+}
+
+class _AboutScreenState extends State<AboutScreen> {
+  String _version = '…';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVersion();
+  }
+
+  Future<void> _loadVersion() async {
+    try {
+      final p = await PackageInfo.fromPlatform();
+      if (mounted) {
+        setState(() => _version = 'الإصدار ${p.version} (${p.buildNumber})');
+      }
+    } catch (_) {}
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +72,7 @@ class AboutScreen extends StatelessWidget {
                 const SizedBox(height: 16),
                 const Text('تطبيق قرية أبوديشيشة', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800, height: 1.2), textAlign: TextAlign.center),
                 const SizedBox(height: 6),
-                const Text('إصدار 1.0.0', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
+                Text(_version, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
               ],
             ),
           ),
@@ -81,7 +104,7 @@ class AboutScreen extends StatelessWidget {
           const SizedBox(height: 20),
           Text('الميزات', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
           const SizedBox(height: 12),
-          ..._features.map((f) => Padding(
+          ...AboutScreen._features.map((f) => Padding(
             padding: const EdgeInsets.only(bottom: 10),
             child: Card(
               elevation: 0,

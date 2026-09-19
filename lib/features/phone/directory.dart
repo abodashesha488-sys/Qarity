@@ -83,11 +83,17 @@ class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
       _filteredEntries = query.isEmpty
           ? _entries
           : _entries.where((e) {
-              return e.name.toLowerCase().contains(query) ||
-                  e.title.toLowerCase().contains(query) ||
-                  e.phone.contains(query);
+              return _normalizePhone(e.name).contains(query) ||
+                  _normalizePhone(e.title).contains(query) ||
+                  _normalizePhone(e.phone).contains(query) ||
+                  (e.secondaryPhone != null &&
+                      _normalizePhone(e.secondaryPhone!).contains(query));
             }).toList();
     });
+  }
+
+  String _normalizePhone(String phone) {
+    return phone.replaceAll(RegExp(r'[\s\-\+\(\)\.]+'), '');
   }
 
   Future<void> _refresh() async {
@@ -223,14 +229,17 @@ floatingActionButton: FloatingActionButton.extended(
       child: Theme(
         data: theme.copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
-          leading: CircleAvatar(
-            backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
-            foregroundImage: entry.photoUrl != null && entry.photoUrl!.isNotEmpty
-                ? CachedNetworkImageProvider(entry.photoUrl!)
-                : null,
-            child: Text(
-              (entry.photoUrl != null && entry.photoUrl!.isNotEmpty) ? '' : (entry.name.isNotEmpty ? entry.name[0] : ''),
-              style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.w800),
+          leading: GestureDetector(
+            onTap: () => _showContactDetailDialog(entry),
+            child: CircleAvatar(
+              backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
+              foregroundImage: entry.photoUrl != null && entry.photoUrl!.isNotEmpty
+                  ? CachedNetworkImageProvider(entry.photoUrl!)
+                  : null,
+              child: Text(
+                (entry.photoUrl != null && entry.photoUrl!.isNotEmpty) ? '' : (entry.name.isNotEmpty ? entry.name[0] : ''),
+                style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.w800),
+              ),
             ),
           ),
           title: Text(entry.name, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
@@ -373,6 +382,106 @@ floatingActionButton: FloatingActionButton.extended(
         SnackBar(content: Text('خطأ: $e'), backgroundColor: Colors.red),
       );
     }
+  }
+
+  Future<void> _showContactDetailDialog(PhoneDirectoryEntry entry) async {
+    if (!mounted) return;
+    await showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+              // صورة كبيرة
+              CircleAvatar(
+                radius: 64,
+                backgroundColor: const Color(0xFF6F4E37).withValues(alpha: 0.1),
+                foregroundImage: entry.photoUrl != null && entry.photoUrl!.isNotEmpty
+                    ? CachedNetworkImageProvider(entry.photoUrl!)
+                    : null,
+                child: entry.photoUrl != null && entry.photoUrl!.isNotEmpty
+                    ? null
+                    : Text(
+                        entry.name.isNotEmpty ? entry.name[0] : '',
+                        style: const TextStyle(fontSize: 48, fontWeight: FontWeight.w800, color: Color(0xFF6F4E37)),
+                      ),
+              ),
+              const SizedBox(height: 16),
+              // الاسم
+              Text(entry.name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+              if (entry.job != null && entry.job!.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(entry.job!, style: const TextStyle(fontSize: 14, color: Colors.grey)),
+              ],
+              const SizedBox(height: 16),
+              // أزرار الهاتف والواتساب
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  IconButton.filled(
+                    onPressed: () => _makeCall(entry.phone),
+                    icon: const Icon(Icons.call_rounded),
+                    style: IconButton.styleFrom(backgroundColor: const Color(0xFF6F4E37).withValues(alpha: 0.15)),
+                  ),
+                  const SizedBox(width: 12),
+                  FutureBuilder<String?>(
+                    future: _getWhatsAppUrl(entry.phone),
+                    builder: (ctx, snap) {
+                      final url = snap.data;
+                      return IconButton.filled(
+                        onPressed: url != null ? () => _launchUrl(url) : null,
+                        icon: const Icon(Icons.message_rounded),
+                        style: IconButton.styleFrom(backgroundColor: const Color(0xFF25D366).withValues(alpha: 0.15)),
+                      );
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              // رقم الهاتف
+              Text(entry.phone, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+              if (entry.secondaryPhone != null && entry.secondaryPhone!.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(entry.secondaryPhone!, style: const TextStyle(fontSize: 16, color: Colors.grey)),
+              ],
+              if (entry.address != null && entry.address!.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.location_on_rounded, size: 18, color: Colors.grey),
+                    const SizedBox(width: 6),
+                    Expanded(child: Text(entry.address!, textAlign: TextAlign.center, style: const TextStyle(fontSize: 14, color: Colors.grey))),
+                  ],
+                ),
+              ],
+              const SizedBox(height: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<String?> _getWhatsAppUrl(String phone) async {
+    final normalized = phone.replaceAll(RegExp(r'[\s\-\+\(\)\.]+'), '');
+    final waPhone = normalized.startsWith('0') ? '20${normalized.substring(1)}' : normalized;
+    final uri = Uri.parse('https://wa.me/$waPhone');
+    if (await canLaunchUrl(uri)) return uri.toString();
+    return null;
+  }
+
+  Future<void> _launchUrl(String url) async {
+    try {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    } catch (_) {}
   }
 
   void _navigateToAddScreen() {

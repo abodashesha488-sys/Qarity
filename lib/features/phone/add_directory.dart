@@ -61,14 +61,35 @@ class _AddPhoneDirectoryScreenState extends State<AddPhoneDirectoryScreen> {
 
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
+    final phone = _phoneController.text.trim();
     setState(() => _isSaving = true);
     try {
+      final entries = await _service.getApprovedEntriesList();
+      final duplicate = entries.firstWhere(
+        (e) => _normalizePhone(e.phone) == _normalizePhone(phone),
+        orElse: () => const PhoneDirectoryEntry(
+          id: '',
+          name: '',
+          title: '',
+          phone: '',
+        ),
+      );
+      if (duplicate.id.isNotEmpty && duplicate.phone.isNotEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('هذا الرقم مسجل في الدليل تحت اسم: ${duplicate.name}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
       final job = _jobController.text.trim();
       final entry = PhoneDirectoryEntry(
         id: '',
         name: _nameController.text.trim(),
         title: job,
-        phone: _phoneController.text.trim(),
+        phone: phone,
         job: job.isNotEmpty ? job : null,
         photoUrl: _photoUrl,
         submittedBy: FirebaseAuth.instance.currentUser?.uid,
@@ -88,6 +109,10 @@ class _AddPhoneDirectoryScreenState extends State<AddPhoneDirectoryScreen> {
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
+  }
+
+  String _normalizePhone(String phone) {
+    return phone.replaceAll(RegExp(r'[\s\-\+\(\)\.]+'), '');
   }
 
   @override
