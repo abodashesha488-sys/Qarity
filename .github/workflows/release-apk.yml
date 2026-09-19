@@ -136,10 +136,6 @@ jobs:
             exit 1
           fi
 
-      # ─── Install dependencies ───
-      - name: Get Flutter dependencies
-        run: flutter pub get
-
       # ─── Determine version (sequential build counter) ───
       - name: Determine version & build number
         id: version
@@ -193,6 +189,10 @@ jobs:
           git add pubspec.yaml build_number.txt
           git commit -m "chore: bump version to ${{ steps.version.outputs.new_version }}"
           git push origin main
+
+      # ─── Install dependencies ───
+      - name: Get Flutter dependencies
+        run: flutter pub get
 
       # ─── Build APK (unsigned) ───
       - name: Build Release APK (unsigned)
