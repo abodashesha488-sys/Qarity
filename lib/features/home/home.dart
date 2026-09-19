@@ -845,6 +845,7 @@ class ModernServiceGrid extends StatelessWidget {
     _ServiceItem('سوق القرية', AppRoutes.marketProducts, 'assets/images/Souq.jpg'),
     _ServiceItem('دليل الخدمات', AppRoutes.serviceRequest, 'assets/images/Services.jpg'),
     _ServiceItem('مندرة القرية', AppRoutes.forumPosts, 'assets/images/mandra.jpg'),
+    _ServiceItem('الخدمات الطبية', AppRoutes.medical, 'assets/images/doctor.jpg'),
     _ServiceItem('دليل الحرفيين', AppRoutes.serviceCategory, 'assets/images/herafeen.jpg', arguments: 'technicians'),
     _ServiceItem('خدمات المزارع', AppRoutes.farmerServices, 'assets/images/farmer.jpg'),
     _ServiceItem('المناسبات', AppRoutes.occasionsList, 'assets/images/festefal.jpg'),

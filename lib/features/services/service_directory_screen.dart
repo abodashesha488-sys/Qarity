@@ -38,7 +38,6 @@ class ServiceDirectoryScreen extends StatelessWidget {
         children: [
           for (final c in _categories) _CategoryTile(category: c),
           const _PhoneBookTile(),
-          const _MedicalTile(),
           const _LostItemsTile(),
         ],
       ),
@@ -96,70 +95,6 @@ class _LostItemsTile extends StatelessWidget {
                       color: color)),
               const SizedBox(height: 3),
               Text('أُشياء فُقدت أو وُجدت في القرية',
-                  maxLines: 2,
-                  textAlign: TextAlign.center,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                      fontSize: 10,
-                      color: theme.colorScheme.onSurfaceVariant)),
-            ],
-          ),
-        ),
-      ),
-    ).animate().fadeIn(duration: 250.ms).scale(begin: const Offset(0.94, 0.94));
-  }
-}
-
-/// بطاقة الخدمات الطبية — تفتح شاشة /medical بمحتواها الكامل كما هو.
-class _MedicalTile extends StatelessWidget {
-  const _MedicalTile();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    const color = Color(0xFF00897B);
-    return Card(
-      elevation: 0,
-      color: color.withValues(alpha: 0.07),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: color.withValues(alpha: 0.35)),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: () => Navigator.pushNamed(context, AppRoutes.medical),
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: const BoxDecoration(
-                  gradient:
-                      LinearGradient(colors: [color, Color(0xFF4DB6AC)]),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                        color: Color(0x5900897B),
-                        blurRadius: 12,
-                        offset: Offset(0, 5)),
-                  ],
-                ),
-                child: const Icon(Icons.medical_services_rounded,
-                    color: Colors.white, size: 26),
-              ),
-              const SizedBox(height: 10),
-              const Text('الخدمات الطبية',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 14,
-                      color: color)),
-              const SizedBox(height: 3),
-              Text('المركز الخيري وبنك الدم والعيادات والصيدليات والمعامل',
                   maxLines: 2,
                   textAlign: TextAlign.center,
                   overflow: TextOverflow.ellipsis,
