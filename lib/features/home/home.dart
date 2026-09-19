@@ -839,17 +839,19 @@ class _SectionHead extends StatelessWidget {
 class ModernServiceGrid extends StatelessWidget {
   const ModernServiceGrid({super.key});
 
-static const _services = [
-     _ServiceItem('تعرف على القرية', AppRoutes.about, 'assets/images/About.jpg'),
-     _ServiceItem('أخبار القرية', AppRoutes.newsList, 'assets/images/News.jpg'),
-     _ServiceItem('سوق القرية', AppRoutes.marketProducts, 'assets/images/Souq.jpg'),
-     _ServiceItem('دليل الخدمات', AppRoutes.serviceRequest, 'assets/images/Services.jpg'),
-     _ServiceItem('مندرة القرية', AppRoutes.forumPosts, 'assets/images/mandra.jpg'),
-     _ServiceItem('المناسبات', AppRoutes.occasionsList, 'assets/images/festefal.jpg'),
-      _ServiceItem('سجل العزاء', AppRoutes.obituariesList, 'assets/images/des.jpg'),
-      _ServiceItem('ركن الأطفال', AppRoutes.children, 'assets/images/childern.jpg'),
-      _ServiceItem('حول التطبيق', AppRoutes.aboutApp, 'assets/images/aboutapp.jpg'),
-   ];
+  static const _services = [
+    _ServiceItem('تعرف على القرية', AppRoutes.about, 'assets/images/About.jpg'),
+    _ServiceItem('أخبار القرية', AppRoutes.newsList, 'assets/images/News.jpg'),
+    _ServiceItem('سوق القرية', AppRoutes.marketProducts, 'assets/images/Souq.jpg'),
+    _ServiceItem('دليل الخدمات', AppRoutes.serviceRequest, 'assets/images/Services.jpg'),
+    _ServiceItem('مندرة القرية', AppRoutes.forumPosts, 'assets/images/mandra.jpg'),
+    _ServiceItem('دليل الحرفيين', AppRoutes.serviceCategory, 'assets/images/herafeen.jpg', arguments: ServiceCategory.technicians),
+    _ServiceItem('خدمات المزارع', AppRoutes.farmerServices, 'assets/images/farmer.jpg'),
+    _ServiceItem('المناسبات', AppRoutes.occasionsList, 'assets/images/festefal.jpg'),
+    _ServiceItem('سجل العزاء', AppRoutes.obituariesList, 'assets/images/des.jpg'),
+    _ServiceItem('ركن الأطفال', AppRoutes.children, 'assets/images/childern.jpg'),
+    _ServiceItem('حول التطبيق', AppRoutes.aboutApp, 'assets/images/aboutapp.jpg'),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -886,7 +888,7 @@ static const _services = [
         color: theme.colorScheme.surface,
         child: InkWell(
           borderRadius: radius,
-          onTap: () => Navigator.pushNamed(context, service.route),
+          onTap: () => Navigator.pushNamed(context, service.route, arguments: service.arguments),
           child: Image.asset(service.image,
               width: double.infinity,
               height: double.infinity,
@@ -903,7 +905,8 @@ class _ServiceItem {
   final String title;
   final String route;
   final String image;
-  const _ServiceItem(this.title, this.route, this.image);
+  final Object? arguments;
+  const _ServiceItem(this.title, this.route, this.image, {this.arguments});
 }
 
 // ═══════════════ ساعة التوقيت المحلي للقرية (تحت التاريخ) ═══════════════

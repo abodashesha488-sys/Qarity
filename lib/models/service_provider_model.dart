@@ -11,8 +11,8 @@ class ServiceCategory {
   static const educational = 'educational';
 
   static String label(String c) => switch (c) {
-        technicians => 'الفنيون',
-        agricultural => 'خدمات زراعية',
+        technicians => 'دليل الحرفيين',
+        agricultural => 'خدمات المزارع',
         educational => 'خدمات تعليمية',
         _ => c,
       };
