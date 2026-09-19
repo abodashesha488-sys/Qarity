@@ -4,11 +4,11 @@
 
 .DESCRIPTION
     يقوم بالآتي بالترتيب:
-    1. يتحقق من وجود تغييرات محلية
-    2. يخزن الملفات التي يديرها GitHub Actions (pubspec.yaml, update.json) مؤقتاً
-    3. يسحب أحدث التغييرات من GitHub مع rebase
-    4. يعيد الملفات المدارة من Actions
-    4. يضيف تغييراتك، يعمل commit، ويدفع لـ GitHub
+    1. يخزن التغييرات المؤقتة (stash) بما فيها ملفات Actions
+    2. يسحب أحدث التغييرات من GitHub مع rebase
+    3. يعيد التغييرات من stash
+    4. يحمي ملفات Actions (pubspec.yaml, update.json) لتظل بنسخة GitHub
+    5. يضيف تغييراتك، يعمل commit، ويدفع لـ GitHub
 
 .PARAMETER Message
     رسالة الـ commit (اختياري، الافتراضي: "sync: update")
@@ -56,62 +56,65 @@ git status --short
 
 # الملفات التي يديرها GitHub Actions - لا تلمسها يدوياً
 $actionFiles = @("pubspec.yaml", "update.json")
-$stashedActionFiles = @()
 
-foreach ($file in $actionFiles) {
-    if (Test-Path $file) {
-        $fileStatus = git status --porcelain $file
-        if ($fileStatus) {
-            Write-Host "🔒 حماية ملف Actions: $file" -ForegroundColor Magenta
-            # خزن النسخة الحالية
-            $content = Get-Content $file -Raw
-            $stashedActionFiles += @{ File = $file; Content = $content }
-            # استعد النسخة من HEAD (تجاهل التغييرات المحلية)
-            git restore $file
-        }
-    }
-}
+# 1. Stash جميع التغييرات (بما فيها ملفات Actions مؤقتاً)
+Write-Host "📦 تخزين التغييرات مؤقتاً (stash)..." -ForegroundColor Yellow
+git stash push --include-untracked -m "sync-script-stash-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
 
-# سحب أحدث التغييرات مع rebase
+# 2. سحب أحدث التغييرات مع rebase
 if (-not $SkipPull) {
     Write-Host "📥 سحب أحدث التغييرات من GitHub (rebase)..." -ForegroundColor Yellow
     try {
         git pull --rebase origin main
     } catch {
         Write-Host "❌ فشل في pull --rebase. قد يكون هناك تعارض." -ForegroundColor Red
-        Write-Host "💡 حل التعارض يدوياً ثم شغل: git rebase --continue" -ForegroundColor Yellow
-        # أعد الملفات المحمية
-        foreach ($item in $stashedActionFiles) {
-            Set-Content -Path $item.File -Value $item.Content -Encoding UTF8
-        }
+        Write-Host "💡 استعادة التغييرات: git stash pop" -ForegroundColor Yellow
+        git stash pop
         exit 1
     }
 }
 
-# أعد الملفات المدارة من Actions (النسخة الجديدة من GitHub ستبقى، هذا للتأكيد)
-foreach ($item in $stashedActionFiles) {
-    # لا نعيد الكتابة - نترك نسخة GitHub
-    Write-Host "✅ ملف Actions محفوظ بنسخة GitHub: $($item.File)" -ForegroundColor Green
+# 3. استعادة التغييرات من stash
+Write-Host "📤 استعادة تغييراتك المحلية..." -ForegroundColor Yellow
+try {
+    git stash pop
+} catch {
+    Write-Host "⚠️ تعارض عند استعادة التغييرات. حلّه يدوياً ثم: git add . && git commit" -ForegroundColor Red
+    exit 1
 }
 
-# إضافة جميع التغييرات (باستثناء ملفات Actions التي استُعيدت من GitHub)
+# 3. حماية ملفات Actions - استعد نسخة GitHub
+Write-Host "🔒 حماية ملفات GitHub Actions..." -ForegroundColor Magenta
+foreach ($file in @("pubspec.yaml", "update.json")) {
+    if (Test-Path $file) {
+        git restore $file 2>$null
+    }
+}
+
+# 4. إضافة جميع التغييرات (باستثناء ملفات Actions المستعادة)
 Write-Host "➕ إضافة التغييرات..." -ForegroundColor Yellow
 git add -A
 
-# التحقق مجدداً
+# التحقق من وجود تغييرات للـ commit
 $newStatus = git status --porcelain
 if (-not $newStatus) {
     Write-Host "ℹ️ لا توجد تغييرات جديدة للـ commit (بعد استبعاد ملفات Actions)." -ForegroundColor Yellow
     exit 0
 }
 
-# Commit
+# 5. Commit
 Write-Host "💾 إنشاء commit: $Message" -ForegroundColor Yellow
 git commit -m $Message
 
-# Push
+# 6. Push
 Write-Host "🚀 دفع التغييرات إلى GitHub..." -ForegroundColor Yellow
-git push origin main
+try {
+    git push origin main
+} catch {
+    Write-Host "❌ فشل في push. جاري محاولة pull ثم push..." -ForegroundColor Red
+    git pull --rebase origin main
+    git push origin main
+}
 
 Write-Host "`n✅ تمت المزامنة بنجاح!" -ForegroundColor Green
 Write-Host "📦 commit: $Message" -ForegroundColor Gray
