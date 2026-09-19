@@ -140,30 +140,38 @@ jobs:
       - name: Get Flutter dependencies
         run: flutter pub get
 
-      # ─── Determine version ───
+      # ─── Determine version (sequential build counter) ───
       - name: Determine version & build number
         id: version
         run: |
+          # Read or initialize sequential build counter
+          BUILD_FILE="build_number.txt"
+          if [ -f "$BUILD_FILE" ]; then
+            CURRENT_BUILD=$(cat "$BUILD_FILE")
+          else
+            CURRENT_BUILD=0
+          fi
+          
+          # Increment build number (sequential counter)
+          NEW_BUILD=$((CURRENT_BUILD + 1))
+          
+          # Calculate version name from build number (1.0.1, 1.0.2, 1.0.3...)
+          # 1=1.0.1, 2=1.0.2, ..., 9=1.0.9, 10=1.1.0, etc.
+          MAJOR=1
+          MINOR=$(( (NEW_BUILD - 1) / 10 ))
+          PATCH=$(( (NEW_BUILD - 1) % 10 + 1 ))
+          NEW_NAME="${MAJOR}.${MINOR}.${PATCH}"
+          
+          NEW_VERSION="${NEW_NAME}+${NEW_BUILD}"
+          
+          # Save new build number for next run
+          echo "$NEW_BUILD" > "$BUILD_FILE"
+          
+          # For backward compatibility, also read current pubspec
           CURRENT_VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d ' ')
           CURRENT_NAME=${CURRENT_VERSION%+*}
           CURRENT_BUILD=${CURRENT_VERSION#*+}
-
-          if [ -n "${{ github.event.inputs.version }}" ]; then
-            NEW_NAME="${{ github.event.inputs.version }}"
-          else
-            # Auto patch bump: 1.0.4 -> 1.0.5
-            IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_NAME"
-            NEW_PATCH=$((PATCH + 1))
-            NEW_NAME="$MAJOR.$MINOR.$NEW_PATCH"
-          fi
-
-          # Calculate build number from version name (major*10000 + minor*100 + patch)
-          # This ensures versionCode matches versionName semantically
-          IFS='.' read -r NEW_MAJOR NEW_MINOR NEW_PATCH <<< "$NEW_NAME"
-          NEW_BUILD=$((NEW_MAJOR * 10000 + NEW_MINOR * 100 + NEW_PATCH))
           
-          NEW_VERSION="$NEW_NAME+$NEW_BUILD"
-
           echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
           echo "current_name=$CURRENT_NAME" >> $GITHUB_OUTPUT
           echo "current_build=$CURRENT_BUILD" >> $GITHUB_OUTPUT
@@ -177,12 +185,12 @@ jobs:
           sed -i "s/^version: .*/version: ${{ steps.version.outputs.new_version }}/" pubspec.yaml
           echo "Updated pubspec.yaml to ${{ steps.version.outputs.new_version }}"
 
-      # ─── Commit & Push updated pubspec.yaml ───
-      - name: Commit & Push pubspec.yaml
+      # ─── Commit & Push pubspec.yaml & build_number.txt ───
+      - name: Commit & Push version files
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add pubspec.yaml
+          git add pubspec.yaml build_number.txt
           git commit -m "chore: bump version to ${{ steps.version.outputs.new_version }}"
           git push origin main
 
