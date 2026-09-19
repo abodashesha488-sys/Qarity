@@ -16,7 +16,7 @@ class HeritageScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      appBar: const QurityAppBar(title: 'حكاياة تراثية', color: AppColors.primary),
+      appBar: const QurityAppBar(title: 'حكاية مصورة', color: AppColors.primary),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: GridView.count(

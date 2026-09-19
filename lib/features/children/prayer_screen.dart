@@ -7,9 +7,11 @@ class PrayerScreen extends StatelessWidget {
 
   static const _items = [
     _SubItem('أوقات الصلاة', Icons.access_time_rounded, Color(0xFF6F4E37), 'مواقيت الصلاة الخمسة'),
+    _SubItem('تعليم الوضوء', Icons.water_rounded, Color(0xFF4CAF50), 'خطوات الوضوء'),
     _SubItem('كيف نؤدي الصلاة', Icons.self_improvement_rounded, Color(0xFF4CAF50), 'خطوات الأداء'),
     _SubItem('أدب الصلاة', Icons.check_circle_rounded, Color(0xFF2196F3), 'آداب وأحكام'),
     _SubItem('تلاوة القرآن', Icons.menu_book_rounded, Color(0xFF9C27B0), 'حفظ وتلاوة'),
+    _SubItem('حروف وأرقام', Icons.numbers_rounded, Color(0xFFFF9800), 'تعلم الحروف والأرقام'),
   ];
 
   @override

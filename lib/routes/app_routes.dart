@@ -49,6 +49,7 @@ import '../features/village/village_archive_screen.dart';
 import '../features/village/village_history_screen.dart';
 import '../features/village/village_institutions_screen.dart';
 import '../features/weather/weather_detail_screen.dart';
+import '../models/service_provider_model.dart';
 import '../services/admin_service.dart';
 
 /// 🛣️ Qarity App Routes
@@ -98,6 +99,7 @@ static const String marketProducts = '/market';
   static const String notificationsSettings = '/settings/notifications';
   static const String serviceRequest = '/services';
   static const String serviceCategory = '/services/category';
+  static const String farmerServices = '/services/farmer';
   static const String serviceProviderDetail = '/services/detail';
   static const String lostItems = '/services/lost-items';
   static const String lostItemDetail = '/services/lost-item-detail';
@@ -213,6 +215,12 @@ static const String marketProducts = '/market';
       final category = settings.arguments as String? ?? 'technicians';
       return _buildSlideRoute(
         (_) => ProviderCategoryScreen(category: category),
+        settings,
+      );
+    }
+    if (settings.name == farmerServices) {
+      return _buildSlideRoute(
+        (_) => const ProviderCategoryScreen(category: ServiceCategory.agricultural),
         settings,
       );
     }

@@ -17,7 +17,7 @@ class ChildrenScreen extends StatelessWidget {
     const _ChildItem('تعليم الصلاة', Icons.workspace_premium_rounded, kChildrenColor, PrayerScreen()),
     const _ChildItem('أحاديث نبوية', Icons.book_rounded, Color(0xFF42A5F5), HadithScreen()),
     const _ChildItem('قصص الأنبياء', Icons.sports_soccer_rounded, Color(0xFFFF9800), ProphetsScreen()),
-    const _ChildItem('حكاياة تراثية', Icons.museum_rounded, Color(0xFFAB47BC), HeritageScreen()),
+    const _ChildItem('حكاية مصورة', Icons.museum_rounded, Color(0xFFAB47BC), HeritageScreen()),
     const _ChildItem('ألبوم الأطفال', Icons.photo_album_rounded, Color(0xFFEC407A), AlbumScreen()),
   ];
 
