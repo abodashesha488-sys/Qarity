@@ -22,7 +22,6 @@ class ServiceDirectoryScreen extends StatelessWidget {
   static const _categories = [
     ServiceCategory.technicians,
     ServiceCategory.agricultural,
-    ServiceCategory.educational,
   ];
 
   @override
