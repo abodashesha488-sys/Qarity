@@ -1,9 +1,12 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/data_models.dart';
 import 'cache_service.dart';
+import 'notification_inbox_service.dart';
+import 'notification_service.dart';
 import 'remote_push_service.dart';
 
 class PhoneDirectoryService {
@@ -53,8 +56,28 @@ class PhoneDirectoryService {
   }
   
   Future<void> addPhoneDirectoryEntry(PhoneDirectoryEntry entry) async {
+    String? uid;
+    try {
+      uid = FirebaseAuth.instance.currentUser?.uid;
+    } catch (_) {
+      // FirebaseAuth not initialized (e.g., in tests)
+    }
     await _firestore.collection('phone_directory').add(entry.toJson());
     await CacheService.invalidatePhoneDirectory();
     unawaited(RemotePushService.notifyAdmins('phone_directory'));
+    await NotificationService.showLocalNotification(
+      title: '📞 دليل هاتف جديد',
+      body: 'تم إرسال "${entry.name}" للمراجعة',
+      payload: '/phone-directory',
+    );
+    if (uid != null) {
+      unawaited(NotificationInboxService.instance.push(
+        userId: uid,
+        title: '📞 تم إرسال طلبك',
+        body: 'تم إرسال "${entry.name}" للمراجعة وسيظهر بعد موافقة الإدارة',
+        route: '/phone-directory',
+        kind: 'info',
+      ));
+    }
   }
 }

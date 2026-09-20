@@ -9,7 +9,7 @@ class CommonAppBarActions {
   static List<Widget> actions(BuildContext context) => const [
         NotificationBellButton(),
       ];
-}
+  }
 
 /// جرس الإشعارات — عادي لـ AppBar، أو `compact` دائري زجاجي لهيدر الرئيسية.
 class NotificationBellButton extends StatelessWidget {
@@ -48,7 +48,7 @@ class NotificationBellButton extends StatelessWidget {
             onPressed: open,
           );
         }
-        // النسخة المضغوطة (هيدر الرئيسية) — دائرة زرقاء صريحة + شارة غير مقطوعة
+        // النسخة المضغوطة (هيدر الرئيسية) — دائرة بلون الثيم + شارة غير مقطوعة
         return Padding(
           padding: const EdgeInsetsDirectional.only(end: 4, top: 1, bottom: 1),
           child: InkWell(
@@ -59,7 +59,7 @@ class NotificationBellButton extends StatelessWidget {
               height: 42,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFF1565C0),
+                color: Theme.of(context).colorScheme.primaryContainer,
                 border: Border.all(
                     color: Colors.white.withValues(alpha: 0.55),
                     width: 1.6),
@@ -73,8 +73,10 @@ class NotificationBellButton extends StatelessWidget {
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  const Icon(Icons.notifications_none_rounded,
-                      color: Colors.white, size: 21),
+                  Icon(
+                    Icons.notifications_none_rounded,
+                    color: Theme.of(context).colorScheme.onPrimaryContainer,
+                    size: 21),
                   if (unread > 0)
                     PositionedDirectional(
                       top: 4,

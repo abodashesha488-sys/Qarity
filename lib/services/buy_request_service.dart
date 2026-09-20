@@ -1,9 +1,12 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/market_extra_models.dart';
 import 'cache_service.dart';
+import 'notification_inbox_service.dart';
+import 'notification_service.dart';
 import 'remote_push_service.dart';
 
 class BuyRequestService {
@@ -15,9 +18,29 @@ class BuyRequestService {
       _firestore.collection('buy_requests');
 
   Future<String> create(BuyRequest request) async {
+    String? uid;
+    try {
+      uid = FirebaseAuth.instance.currentUser?.uid;
+    } catch (_) {
+      // FirebaseAuth not initialized (e.g., in tests)
+    }
     final ref = await _col.add(request.toJson());
     await CacheService.invalidateBuyRequests();
     unawaited(RemotePushService.notifyAdmins('buy_requests'));
+    await NotificationService.showLocalNotification(
+      title: '📝 طلب شراء جديد',
+      body: 'تم إرسال "${request.title}" للمراجعة',
+      payload: '/market',
+    );
+    if (uid != null) {
+      unawaited(NotificationInboxService.instance.push(
+        userId: uid,
+        title: '📝 تم إرسال طلبك',
+        body: 'تم إرسال طلب الشراء "${request.title}" للمراجعة وسيظهر بعد موافقة الإدارة',
+        route: '/market',
+        kind: 'info',
+      ));
+    }
     return ref.id;
   }
 

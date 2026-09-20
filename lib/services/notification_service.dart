@@ -305,20 +305,24 @@ class NotificationService {
     required String body,
     String? payload,
   }) async {
-    await _localNotifications.show(
-      DateTime.now().millisecondsSinceEpoch % 100000,
-      title,
-      body,
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'qarity_channel',
-          'إشعارات قرية أبوديشيشة',
-          importance: Importance.high,
-          priority: Priority.high,
+    try {
+      await _localNotifications.show(
+        DateTime.now().millisecondsSinceEpoch % 100000,
+        title,
+        body,
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'qarity_channel',
+            'إشعارات قرية أبوديشيشة',
+            importance: Importance.high,
+            priority: Priority.high,
+          ),
+          iOS: DarwinNotificationDetails(),
         ),
-        iOS: DarwinNotificationDetails(),
-      ),
-      payload: payload,
-    );
+        payload: payload,
+      );
+    } catch (_) {
+      // Plugin not initialized (e.g., in tests) — silently ignore.
+    }
   }
 }

@@ -1,9 +1,12 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/market_extra_models.dart';
 import 'cache_service.dart';
+import 'notification_inbox_service.dart';
+import 'notification_service.dart';
 import 'remote_push_service.dart';
 
 class ShopService {
@@ -15,9 +18,29 @@ class ShopService {
       _firestore.collection('shops');
 
   Future<String> createShop(Shop shop) async {
+    String? uid;
+    try {
+      uid = FirebaseAuth.instance.currentUser?.uid;
+    } catch (_) {
+      // FirebaseAuth not initialized (e.g., in tests)
+    }
     final ref = await _col.add(shop.toJson());
     await CacheService.invalidateShops();
     unawaited(RemotePushService.notifyAdmins('shops'));
+    await NotificationService.showLocalNotification(
+      title: '🏬 محل جديد',
+      body: 'تم إرسال "${shop.name}" للمراجعة',
+      payload: '/market',
+    );
+    if (uid != null) {
+      unawaited(NotificationInboxService.instance.push(
+        userId: uid,
+        title: '🏬 تم إرسال طلبك',
+        body: 'تم إرسال "${shop.name}" للمراجعة وسيظهر بعد موافقة الإدارة',
+        route: '/market',
+        kind: 'info',
+      ));
+    }
     return ref.id;
   }
 

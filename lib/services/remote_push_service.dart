@@ -110,6 +110,58 @@ class RemotePushService {
           .timeout(const Duration(seconds: 8));
     } catch (_) {}
   }
+
+  /// إرسال إشعار إذاعي (Broadcast) لجميع المستخدمين — يرسل عبر Topic "all_users".
+  /// يمكن للأدمن استخدامه لإرسال إعلانات عاجلة لجميع المستخدمين حتى لو كان التطبيق مغلقاً.
+  static Future<void> broadcastToAllUsers({
+    required String title,
+    required String body,
+    String? route,
+    String? collection,
+    String? itemId,
+    bool alert = true,
+  }) async {
+    // يستخدم Topic "all_users" الذي يشترك فيه جميع المستخدمين عند تسجيل الدخول
+    await send(
+      topic: 'all_users',
+      title: title,
+      body: body,
+      route: route,
+      collection: collection,
+      itemId: itemId,
+      alert: true, // التنبيهات الإذاعية دائماً عاجلة
+    );
+  }
+
+  /// إرسال إشعار لمجموعة مستخدمين محددة عبر FCM tokens
+  static Future<void> sendToTokens({
+    required List<String> tokens,
+    required String title,
+    required String body,
+    String? route,
+    String? collection,
+    String? itemId,
+    bool alert = true,
+  }) async {
+    if (tokens.isEmpty || endpoint.isEmpty) return;
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+      final idToken = await user.getIdToken();
+      if (idToken == null || idToken.isEmpty) return;
+
+      // نرسل دفعات من 500 توكن كحد أقصى (حد FCM)
+      const batchSize = 500;
+      for (var i = 0; i < tokens.length; i += batchSize) {
+        final batch = tokens.skip(i).take(batchSize).toList();
+        final target = {'tokens': batch};
+        await _post(target, title, body, route,
+            collection: collection, itemId: itemId, alert: true);
+      }
+    } catch (_) {
+      // لا يُطاح الاستثناء — الإشعارات أفضل-جهد.
+    }
+  }
 }
 
 /// المجموعات التي تستدعي موافقة الأدمن — أي إرسال منها يفعّل إخطار اللوحة.

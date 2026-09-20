@@ -1,9 +1,11 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/data_models.dart';
 import 'cache_service.dart';
+import 'notification_inbox_service.dart';
 import 'notification_service.dart';
 import 'remote_push_service.dart';
 
@@ -39,9 +41,16 @@ class OccasionService {
   }
 
   Future<void> addOccasion(Occasion occasion) async {
+    String? uid;
+    try {
+      uid = FirebaseAuth.instance.currentUser?.uid;
+    } catch (_) {
+      // FirebaseAuth not initialized (e.g., in tests)
+    }
     await _firestore.collection('occasions').add({
       ...occasion.toJson(),
       'isApproved': false,
+      'submittedBy': uid ?? '',
     });
     await CacheService.invalidateOccasions();
     unawaited(RemotePushService.notifyAdmins('occasions'));
@@ -50,5 +59,14 @@ class OccasionService {
       body: 'تم إرسال المناسبة للمراجعة: ${occasion.title}',
       payload: '/occasions',
     );
+    if (uid != null) {
+      unawaited(NotificationInboxService.instance.push(
+        userId: uid,
+        title: '🎉 تم إرسال طلبك',
+        body: 'تم إرسال المناسبة "${occasion.title}" للمراجعة وستظهر بعد موافقة الإدارة',
+        route: '/occasions',
+        kind: 'info',
+      ));
+    }
   }
 }

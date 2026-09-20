@@ -1,9 +1,11 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/data_models.dart';
 import 'cache_service.dart';
+import 'notification_inbox_service.dart';
 import 'notification_service.dart';
 import 'remote_push_service.dart';
 
@@ -40,9 +42,16 @@ class ObituaryService {
   }
 
   Future<void> addObituary(Obituary obituary) async {
+    String? uid;
+    try {
+      uid = FirebaseAuth.instance.currentUser?.uid;
+    } catch (_) {
+      // FirebaseAuth not initialized (e.g., in tests)
+    }
     await _firestore.collection('obituaries').add({
       ...obituary.toJson(),
       'isApproved': false,
+      'submittedBy': uid ?? '',
     });
     await CacheService.invalidateObituaries();
     unawaited(RemotePushService.notifyAdmins('obituaries'));
@@ -51,5 +60,14 @@ class ObituaryService {
       body: 'تم إرسال التعزية للمراجعة: ${obituary.name}',
       payload: '/obituaries',
     );
+    if (uid != null) {
+      unawaited(NotificationInboxService.instance.push(
+        userId: uid,
+        title: '⚰️ تم إرسال طلبك',
+        body: 'تم إرسال التعزية "${obituary.name}" للمراجعة وستظهر بعد موافقة الإدارة',
+        route: '/obituaries',
+        kind: 'info',
+      ));
+    }
   }
 }

@@ -11,6 +11,7 @@ class _OverviewPage extends StatelessWidget {
     required this.onOpenUsers,
     required this.onOpenReports,
     required this.onOpenAlerts,
+    required this.onOpenBroadcast,
   });
 
   final Map<String, int> stats;
@@ -21,6 +22,7 @@ class _OverviewPage extends StatelessWidget {
   final VoidCallback onOpenUsers;
   final VoidCallback onOpenReports;
   final VoidCallback onOpenAlerts;
+  final VoidCallback onOpenBroadcast;
 
   @override
   Widget build(BuildContext context) {
@@ -126,6 +128,16 @@ class _OverviewPage extends StatelessWidget {
             onPressed: onOpenReports,
             icon: const Icon(Icons.insights_rounded),
             label: const Text('عرض التقارير والإحصائيات'),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: onOpenBroadcast,
+            icon: const Icon(Icons.campaign_rounded),
+            label: const Text('إرسال إشعار لجميع المستخدمين'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.red,
+              side: const BorderSide(color: Colors.red),
+            ),
           ),
           const SizedBox(height: 24),
           _ActivityPreview(),

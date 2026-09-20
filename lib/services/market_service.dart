@@ -1,11 +1,13 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/data_models.dart';
 import 'cache_service.dart';
 import 'content_cleanup_service.dart';
 import 'image_upload_service.dart';
+import 'notification_inbox_service.dart';
 import 'notification_service.dart';
 import 'remote_push_service.dart';
 
@@ -149,9 +151,16 @@ class MarketService {
   }
 
   Future<void> addProduct(MarketProduct product) async {
+    String? uid;
+    try {
+      uid = FirebaseAuth.instance.currentUser?.uid;
+    } catch (_) {
+      // FirebaseAuth not initialized (e.g., in tests)
+    }
     await _firestore.collection('market_products').add({
       ...product.toJson(),
       'isApproved': false,
+      'sellerId': uid ?? '',
     });
     await CacheService.invalidateProducts();
     unawaited(RemotePushService.notifyAdmins('market_products'));
@@ -160,6 +169,15 @@ class MarketService {
       body: 'تم إرسال المنتج للمراجعة: ${product.name}',
       payload: '/market',
     );
+    if (uid != null) {
+      unawaited(NotificationInboxService.instance.push(
+        userId: uid,
+        title: '🛒 تم إرسال طلبك',
+        body: 'تم إرسال المنتج "${product.name}" للمراجعة وسيظهر بعد موافقة الإدارة',
+        route: '/market',
+        kind: 'info',
+      ));
+    }
   }
 
   Future<void> deleteProduct(String productId, List<String> imageUrls) async {

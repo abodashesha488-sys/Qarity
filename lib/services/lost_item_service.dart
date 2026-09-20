@@ -1,8 +1,11 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/lost_item_model.dart';
+import 'notification_inbox_service.dart';
+import 'notification_service.dart';
 import 'remote_push_service.dart';
 
 /// خدمة المفقودات — نشر الأشياء المفقودة/الموجودة في القرية (موافقة مطلوبة).
@@ -15,8 +18,28 @@ class LostItemService {
       _firestore.collection('lost_items');
 
   Future<String> create(LostItem item) async {
+    String? uid;
+    try {
+      uid = FirebaseAuth.instance.currentUser?.uid;
+    } catch (_) {
+      // FirebaseAuth not initialized (e.g., in tests)
+    }
     final ref = await _col.add(item.toJson());
     unawaited(RemotePushService.notifyAdmins('lost_items'));
+    await NotificationService.showLocalNotification(
+      title: '🔎 إعلان مفقودات جديد',
+      body: 'تم إرسال "${item.title}" للمراجعة',
+      payload: '/services/lost-items',
+    );
+    if (uid != null) {
+      unawaited(NotificationInboxService.instance.push(
+        userId: uid,
+        title: '🔎 تم إرسال طلبك',
+        body: 'تم إرسال "${item.title}" للمراجعة وسيظهر بعد موافقة الإدارة',
+        route: '/services/lost-items',
+        kind: 'info',
+      ));
+    }
     return ref.id;
   }
 

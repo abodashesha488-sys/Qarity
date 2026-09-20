@@ -1,8 +1,11 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/service_provider_model.dart';
+import 'notification_inbox_service.dart';
+import 'notification_service.dart';
 import 'remote_push_service.dart';
 
 /// خدمة دليل الخدمات — فنيون/خدمات زراعية/خدمات تعليمية (مدخلات مستخدمين + موافقة).
@@ -18,8 +21,28 @@ class ServiceProviderService {
       _col.doc(providerId).collection('comments');
 
   Future<String> create(ServiceProvider provider) async {
+    String? uid;
+    try {
+      uid = FirebaseAuth.instance.currentUser?.uid;
+    } catch (_) {
+      // FirebaseAuth not initialized (e.g., in tests)
+    }
     final ref = await _col.add(provider.toJson());
     unawaited(RemotePushService.notifyAdmins('service_providers'));
+    await NotificationService.showLocalNotification(
+      title: '🧰 إضافة في دليل الخدمات',
+      body: 'تم إرسال "${provider.name}" للمراجعة',
+      payload: '/services',
+    );
+    if (uid != null) {
+      unawaited(NotificationInboxService.instance.push(
+        userId: uid,
+        title: '🧰 تم إرسال طلبك',
+        body: 'تم إرسال "${provider.name}" للمراجعة وسيظهر بعد موافقة الإدارة',
+        route: '/services',
+        kind: 'info',
+      ));
+    }
     return ref.id;
   }
 

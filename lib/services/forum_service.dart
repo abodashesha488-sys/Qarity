@@ -5,6 +5,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/data_models.dart';
 import 'cache_service.dart';
+import 'notification_inbox_service.dart';
+import 'notification_service.dart';
 import 'remote_push_service.dart';
 
 class ForumService {
@@ -34,12 +36,33 @@ class ForumService {
   }
 
   Future<void> addPost(ForumPost post) async {
+    String? uid;
+    try {
+      uid = FirebaseAuth.instance.currentUser?.uid;
+    } catch (_) {
+      // FirebaseAuth not initialized (e.g., in tests)
+    }
     await _firestore.collection('forum_posts').add({
       ...post.toJson(),
       'isApproved': false,
+      'userId': uid ?? '',
     });
     await CacheService.invalidateForumPosts();
     unawaited(RemotePushService.notifyAdmins('forum_posts'));
+    await NotificationService.showLocalNotification(
+      title: '💬 منشور جديد',
+      body: 'تم إرسال المنشور للمراجعة',
+      payload: '/forum',
+    );
+    if (uid != null) {
+      unawaited(NotificationInboxService.instance.push(
+        userId: uid,
+        title: '💬 تم إرسال طلبك',
+        body: 'تم إرسال منشورك للمراجعة وسيظهر بعد موافقة الإدارة',
+        route: '/forum',
+        kind: 'info',
+      ));
+    }
   }
 
   Future<void> toggleLike(String postId, String userId) async {

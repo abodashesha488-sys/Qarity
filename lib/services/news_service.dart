@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/data_models.dart';
 import 'cache_service.dart';
+import 'notification_inbox_service.dart';
 import 'notification_service.dart';
 import 'remote_push_service.dart';
 
@@ -122,9 +123,16 @@ class NewsService {
   }
 
   Future<void> addNews(NewsItem news) async {
+    String? uid;
+    try {
+      uid = _auth.currentUser?.uid;
+    } catch (_) {
+      // FirebaseAuth not initialized (e.g., in tests)
+    }
     await _firestore.collection('news').add({
       ...news.toJson(),
       'isApproved': false,
+      'authorId': uid ?? '',
     });
     await CacheService.invalidateNews();
     unawaited(RemotePushService.notifyAdmins('news'));
@@ -133,5 +141,14 @@ class NewsService {
       body: 'تم إرسال الخبر للمراجعة: ${news.title}',
       payload: '/news',
     );
+    if (uid != null) {
+      unawaited(NotificationInboxService.instance.push(
+        userId: uid,
+        title: '📰 تم إرسال طلبك',
+        body: 'تم إرسال الخبر "${news.title}" للمراجعة وسيظهر بعد موافقة الإدارة',
+        route: '/news',
+        kind: 'info',
+      ));
+    }
   }
 }

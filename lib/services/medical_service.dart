@@ -1,8 +1,11 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/medical_models.dart';
+import 'notification_inbox_service.dart';
+import 'notification_service.dart';
 import 'remote_push_service.dart';
 
 /// خدمة المركز الطبي الخيري — عيادات بأجور رمزية مع المواعيد.
@@ -15,8 +18,28 @@ class MedicalCenterService {
       _firestore.collection('medical_center_clinics');
 
   Future<String> addClinic(MedicalCenterClinic clinic) async {
+    String? uid;
+    try {
+      uid = FirebaseAuth.instance.currentUser?.uid;
+    } catch (_) {
+      // FirebaseAuth not initialized (e.g., in tests)
+    }
     final ref = await _col.add(clinic.toJson());
     unawaited(RemotePushService.notifyAdmins('medical_center_clinics'));
+    await NotificationService.showLocalNotification(
+      title: '🏥 عيادة جديدة بالمركز الطبي',
+      body: 'تم إرسال "${clinic.name}" للمراجعة',
+      payload: '/medical',
+    );
+    if (uid != null) {
+      unawaited(NotificationInboxService.instance.push(
+        userId: uid,
+        title: '🏥 تم إرسال طلبك',
+        body: 'تم إرسال "${clinic.name}" للمراجعة وسيظهر بعد موافقة الإدارة',
+        route: '/medical',
+        kind: 'info',
+      ));
+    }
     return ref.id;
   }
 
@@ -162,8 +185,28 @@ class VillageClinicService {
       _firestore.collection('village_clinics');
 
   Future<String> create(VillageClinic clinic) async {
+    String? uid;
+    try {
+      uid = FirebaseAuth.instance.currentUser?.uid;
+    } catch (_) {
+      // FirebaseAuth not initialized (e.g., in tests)
+    }
     final ref = await _col.add(clinic.toJson());
     unawaited(RemotePushService.notifyAdmins('village_clinics'));
+    await NotificationService.showLocalNotification(
+      title: '🩺 عيادة قرية جديدة',
+      body: 'تم إرسال "${clinic.name}" للمراجعة',
+      payload: '/medical',
+    );
+    if (uid != null) {
+      unawaited(NotificationInboxService.instance.push(
+        userId: uid,
+        title: '🩺 تم إرسال طلبك',
+        body: 'تم إرسال "${clinic.name}" للمراجعة وستظهر بعد موافقة الإدارة',
+        route: '/medical',
+        kind: 'info',
+      ));
+    }
     return ref.id;
   }
 
@@ -194,8 +237,28 @@ class PharmacyService {
       _firestore.collection('pharmacies');
 
   Future<String> create(Pharmacy pharmacy) async {
+    String? uid;
+    try {
+      uid = FirebaseAuth.instance.currentUser?.uid;
+    } catch (_) {
+      // FirebaseAuth not initialized (e.g., in tests)
+    }
     final ref = await _col.add(pharmacy.toJson());
     unawaited(RemotePushService.notifyAdmins('pharmacies'));
+    await NotificationService.showLocalNotification(
+      title: '💊 صيدلية جديدة',
+      body: 'تم إرسال "${pharmacy.name}" للمراجعة',
+      payload: '/medical',
+    );
+    if (uid != null) {
+      unawaited(NotificationInboxService.instance.push(
+        userId: uid,
+        title: '💊 تم إرسال طلبك',
+        body: 'تم إرسال "${pharmacy.name}" للمراجعة وستظهر بعد موافقة الإدارة',
+        route: '/medical',
+        kind: 'info',
+      ));
+    }
     return ref.id;
   }
 
@@ -227,8 +290,28 @@ class MedicalLabService {
       _firestore.collection('medical_labs');
 
   Future<String> create(MedicalLab lab) async {
+    String? uid;
+    try {
+      uid = FirebaseAuth.instance.currentUser?.uid;
+    } catch (_) {
+      // FirebaseAuth not initialized (e.g., in tests)
+    }
     final ref = await _col.add(lab.toJson());
     unawaited(RemotePushService.notifyAdmins('medical_labs'));
+    await NotificationService.showLocalNotification(
+      title: '🧪 معمل تحاليل جديد',
+      body: 'تم إرسال "${lab.name}" للمراجعة',
+      payload: '/medical',
+    );
+    if (uid != null) {
+      unawaited(NotificationInboxService.instance.push(
+        userId: uid,
+        title: '🧪 تم إرسال طلبك',
+        body: 'تم إرسال "${lab.name}" للمراجعة وسيظهر بعد موافقة الإدارة',
+        route: '/medical',
+        kind: 'info',
+      ));
+    }
     return ref.id;
   }
 
@@ -264,8 +347,28 @@ class BloodBankService {
 
   // ── المتبرعون ──
   Future<String> addDonor(BloodDonor donor) async {
+    String? uid;
+    try {
+      uid = FirebaseAuth.instance.currentUser?.uid;
+    } catch (_) {
+      // FirebaseAuth not initialized (e.g., in tests)
+    }
     final ref = await _donors.add(donor.toJson());
     unawaited(RemotePushService.notifyAdmins('blood_donors'));
+    await NotificationService.showLocalNotification(
+      title: '🩸 متبرع دم جديد',
+      body: 'تم تسجيل المتبرع للمراجعة',
+      payload: '/medical',
+    );
+    if (uid != null) {
+      unawaited(NotificationInboxService.instance.push(
+        userId: uid,
+        title: '🩸 تم إرسال طلبك',
+        body: 'تم تسجيل بياناتك كمتبرع دم للمراجعة وستظهر بعد موافقة الإدارة',
+        route: '/medical',
+        kind: 'info',
+      ));
+    }
     return ref.id;
   }
 
@@ -303,8 +406,28 @@ class BloodBankService {
 
   // ── طلبات التبرع ──
   Future<String> createRequest(BloodRequest request) async {
+    String? uid;
+    try {
+      uid = FirebaseAuth.instance.currentUser?.uid;
+    } catch (_) {
+      // FirebaseAuth not initialized (e.g., in tests)
+    }
     final ref = await _requests.add(request.toJson());
     unawaited(RemotePushService.notifyAdmins('blood_requests'));
+    await NotificationService.showLocalNotification(
+      title: '🩸 طلب تبرع دم جديد',
+      body: 'تم إرسال طلب التبرع للمراجعة',
+      payload: '/medical',
+    );
+    if (uid != null) {
+      unawaited(NotificationInboxService.instance.push(
+        userId: uid,
+        title: '🩸 تم إرسال طلبك',
+        body: 'تم إرسال طلب التبرع بالدم للمراجعة وسيظهر بعد موافقة الإدارة',
+        route: '/medical',
+        kind: 'info',
+      ));
+    }
     return ref.id;
   }
 

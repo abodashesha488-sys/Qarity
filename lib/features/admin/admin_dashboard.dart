@@ -16,10 +16,12 @@ import '../../services/admin_service.dart';
 import '../../services/alert_service.dart';
 import '../../services/image_upload_service.dart';
 import '../../services/promo_service.dart';
+import '../../services/remote_push_service.dart';
 import '../../widgets/promo_host.dart';
 import '../../widgets/qurity_app_bar.dart';
 
 part 'admin_dashboard_alerts.dart';
+part 'admin_dashboard_broadcast.dart';
 part 'admin_dashboard_models.dart';
 part 'admin_dashboard_overview.dart';
 part 'admin_dashboard_promos.dart';
@@ -161,6 +163,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             onOpenUsers: () => setState(() => _navIndex = 2),
             onOpenReports: () => setState(() => _navIndex = 3),
             onOpenAlerts: () => setState(() => _navIndex = 5),
+            onOpenBroadcast: () => setState(() => _navIndex = 6),
           ),
           _ReviewPage(
             key: ValueKey('review_$_reviewNav'),
@@ -181,6 +184,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           const _ReportsPage(),
           _PromosPage(currentUid: _auth.currentUser?.uid),
           const _AlertsControlPage(),
+          _BroadcastPage(currentUid: _auth.currentUser?.uid),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -211,6 +215,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               icon: Icon(Icons.warning_amber_outlined),
               selectedIcon: Icon(Icons.warning_amber_rounded),
               label: 'التنبيهات'),
+          NavigationDestination(
+              icon: Icon(Icons.campaign_outlined),
+              selectedIcon: Icon(Icons.campaign_rounded),
+              label: 'الإرسال الجماعي'),
         ],
       ),
     );
@@ -223,6 +231,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     'تقارير وإحصائيات',
     'الإعلانات الدعائية المنبثقة',
     'التنبيهات العاجلة',
+    'إرسال إشعار لجميع المستخدمين',
   ];
 
   String? _selectedCat;
