@@ -7,7 +7,6 @@ import 'package:integration_test/integration_test.dart';
 import 'package:qurity/firebase_options.dart';
 import 'package:qurity/main.dart' as app;
 import 'package:qurity/models/data_models.dart';
-import 'package:qurity/models/medical_models.dart';
 import 'package:qurity/models/service_provider_model.dart';
 import 'package:qurity/routes/app_routes.dart';
 
@@ -77,17 +76,6 @@ void main() {
       userName: 'مستخدم',
       content: 'محتوى',
       createdAt: DateTime(2020),
-    );
-    final villageClinic = VillageClinic(
-      id: 'c1',
-      name: 'عيادة',
-      specialty: 'باطنة',
-      phone: '123',
-    );
-    final pharmacy = Pharmacy(
-      id: 'ph1',
-      name: 'صيدلية',
-      phone: '123',
     );
     final obituary = Obituary(
       id: 'o1',

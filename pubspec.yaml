@@ -68,7 +68,6 @@ flutter:
   assets:
     - assets/google_logo.png
     - assets/market/
-    - assets/animations/
     - assets/images/
     - assets/images/Qurity.png
     - assets/sounds/
