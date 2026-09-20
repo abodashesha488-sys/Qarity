@@ -5,7 +5,6 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../models/lost_item_model.dart';
 import '../../models/service_provider_model.dart';
 import '../../routes/app_routes.dart';
 import '../../services/image_upload_service.dart';
