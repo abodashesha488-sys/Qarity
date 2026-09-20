@@ -188,6 +188,8 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add pubspec.yaml build_number.txt
           git commit -m "chore: bump version to ${{ steps.version.outputs.new_version }}"
+          # Pull latest changes before push to avoid non-fast-forward rejection
+          git pull --rebase origin main
           git push origin main
 
       # ─── Install dependencies ───
@@ -299,7 +301,7 @@ jobs:
       # ─── Update update.json in repo (for app's UpdateService) ───
       - name: Update update.json
         run: |
-          # Stash any local changes (pubspec.yaml, build artifacts)
+          # Stash any local changes (build artifacts)
           git stash --include-untracked || true
           
           cat > update.json << EOF
@@ -318,6 +320,8 @@ jobs:
           # Only commit if there are changes
           if ! git diff --cached --quiet; then
             git commit -m "chore: update version to ${{ steps.version.outputs.new_name }}+${{ steps.version.outputs.new_build }}"
+            # Pull latest changes before push to avoid non-fast-forward rejection
+            git pull --rebase origin main
             git push origin main
           else
             echo "No changes to update.json, skipping commit"
