@@ -1,6 +1,5 @@
 part of 'data_models.dart';
 
-
 // ═══════════════════════════════════════════════════════════════
 // USER MODEL
 // ═══════════════════════════════════════════════════════════════
@@ -73,11 +72,15 @@ class UserModel implements BaseModel {
   bool get isModerator =>
       role == 'moderator' || role == 'admin' || role == 'medical_admin';
 
+  bool get isAgriculturalAdmin =>
+      role == 'agricultural_admin' || role == 'admin';
+
   static const Map<String, String> _roleLabels = {
     'user': 'مستخدم',
     'seller': 'بائع',
     'moderator': 'مشرف',
     'medical_admin': 'مدير المركز الطبي',
+    'agricultural_admin': 'مدير الخدمات الزراعية',
     'admin': 'مدير عام',
   };
 
@@ -287,7 +290,7 @@ class MarketProduct implements BaseModel {
     this.likedBy = const [],
   });
 
-factory MarketProduct.fromJson(Map<String, dynamic> json, String docId) {
+  factory MarketProduct.fromJson(Map<String, dynamic> json, String docId) {
     return MarketProduct(
       id: docId,
       name: json['name'] as String? ?? '',
@@ -553,7 +556,7 @@ class SellerProfile implements BaseModel {
           ? Timestamp.fromDate(updatedAt!)
           : FieldValue.serverTimestamp(),
     };
-}
+  }
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -571,7 +574,8 @@ class SellerRequest implements BaseModel {
   final String? shopAddress;
   final List<String> categories;
   final String status; // 'pending', 'approved', 'rejected'
-  final String requestedSellerType; // 'regular', 'superSeller', 'goldSeller', 'premiumSeller'
+  final String
+      requestedSellerType; // 'regular', 'superSeller', 'goldSeller', 'premiumSeller'
   final String? adminNotes;
   @override
   final DateTime? createdAt;
@@ -606,12 +610,16 @@ class SellerRequest implements BaseModel {
       shopName: json['shopName'] as String? ?? '',
       shopDescription: json['shopDescription'] as String?,
       shopAddress: json['shopAddress'] as String?,
-      categories: (json['categories'] as List<dynamic>?)?.cast<String>() ?? const [],
+      categories:
+          (json['categories'] as List<dynamic>?)?.cast<String>() ?? const [],
       status: json['status'] as String? ?? 'pending',
       requestedSellerType: json['requestedSellerType'] as String? ?? 'regular',
       adminNotes: json['adminNotes'] as String?,
-      createdAt: json['createdAt'] != null ? _parseTimestamp(json['createdAt']) : null,
-      reviewedAt: json['reviewedAt'] != null ? _parseTimestamp(json['reviewedAt']) : null,
+      createdAt:
+          json['createdAt'] != null ? _parseTimestamp(json['createdAt']) : null,
+      reviewedAt: json['reviewedAt'] != null
+          ? _parseTimestamp(json['reviewedAt'])
+          : null,
       reviewedBy: json['reviewedBy'] as String?,
     );
   }
@@ -714,7 +722,8 @@ class ItemRequest implements BaseModel {
       fulfilledAt: json['fulfilledAt'] != null
           ? _parseTimestamp(json['fulfilledAt'])
           : null,
-      updatedAt: json['updatedAt'] != null ? _parseTimestamp(json['updatedAt']) : null,
+      updatedAt:
+          json['updatedAt'] != null ? _parseTimestamp(json['updatedAt']) : null,
     );
   }
 
@@ -729,9 +738,8 @@ class ItemRequest implements BaseModel {
       'createdAt': createdAt != null
           ? Timestamp.fromDate(createdAt!)
           : FieldValue.serverTimestamp(),
-      'fulfilledAt': fulfilledAt != null
-          ? Timestamp.fromDate(fulfilledAt!)
-          : null,
+      'fulfilledAt':
+          fulfilledAt != null ? Timestamp.fromDate(fulfilledAt!) : null,
       'updatedAt': updatedAt != null
           ? Timestamp.fromDate(updatedAt!)
           : FieldValue.serverTimestamp(),
@@ -792,13 +800,13 @@ class DonationItem implements BaseModel {
       donatedBy: json['donatedBy'] as String? ?? '',
       status: json['status'] as String? ?? 'available',
       claimedBy: json['claimedBy'] as String?,
-      claimedAt: json['claimedAt'] != null
-          ? _parseTimestamp(json['claimedAt'])
-          : null,
+      claimedAt:
+          json['claimedAt'] != null ? _parseTimestamp(json['claimedAt']) : null,
       completedAt: json['completedAt'] != null
           ? _parseTimestamp(json['completedAt'])
           : null,
-      createdAt: json['createdAt'] != null ? _parseTimestamp(json['createdAt']) : null,
+      createdAt:
+          json['createdAt'] != null ? _parseTimestamp(json['createdAt']) : null,
     );
   }
 
@@ -810,12 +818,9 @@ class DonationItem implements BaseModel {
       'donatedBy': donatedBy,
       'status': status,
       'claimedBy': claimedBy,
-      'claimedAt': claimedAt != null
-          ? Timestamp.fromDate(claimedAt!)
-          : null,
-      'completedAt': completedAt != null
-          ? Timestamp.fromDate(completedAt!)
-          : null,
+      'claimedAt': claimedAt != null ? Timestamp.fromDate(claimedAt!) : null,
+      'completedAt':
+          completedAt != null ? Timestamp.fromDate(completedAt!) : null,
       'createdAt': createdAt != null
           ? Timestamp.fromDate(createdAt!)
           : FieldValue.serverTimestamp(),
@@ -853,4 +858,3 @@ enum SellerType {
 
   const SellerType(this.label, this.icon, this.maxImages);
 }
-

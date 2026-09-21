@@ -63,19 +63,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     _Cat('phone_directory', 'دليل الهاتف', Icons.phone_rounded, Colors.cyan),
     _Cat('service_providers', 'دليل الخدمات', Icons.category_rounded,
         Color(0xFF6D4C41)),
-    _Cat('lost_items', 'المفقودات', Icons.search_rounded,
-        Color(0xFF5E35B1)),
+    _Cat('lost_items', 'المفقودات', Icons.search_rounded, Color(0xFF5E35B1)),
     _Cat('medical_center_clinics', 'عيادات المركز الخيري',
         Icons.local_hospital_rounded, Color(0xFF00695C)),
     _Cat('village_clinics', 'عيادات القرية', Icons.add_business_rounded,
         Color(0xFF00897B)),
-    _Cat('pharmacies', 'الصيدليات', Icons.local_pharmacy_rounded, Color(0xFF6F4E37)),
+    _Cat('pharmacies', 'الصيدليات', Icons.local_pharmacy_rounded,
+        Color(0xFF6F4E37)),
     _Cat('medical_labs', 'معامل التحاليل', Icons.science_rounded,
         Color(0xFF6A1B9A)),
     _Cat('blood_requests', 'طلبات التبرع بالدم', Icons.bloodtype_rounded,
         Colors.red),
-    _Cat('blood_donors', 'المتبرعون بالدم', Icons.favorite_rounded,
-        Colors.pink),
+    _Cat(
+        'blood_donors', 'المتبرعون بالدم', Icons.favorite_rounded, Colors.pink),
   ];
 
   int get _totalPending => _pendingCounts.values.fold<int>(0, (p, e) => p + e);
@@ -115,6 +115,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     await Future.wait([_loadStats(), _loadPendingCounts()]);
   }
 
+  Future<void> _refreshDashboard() async {
+    await _refreshAll();
+    if (!mounted) return;
+    setState(() => _reviewNav++);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -140,10 +146,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           IconButton(
             tooltip: 'تحديث',
             icon: const Icon(Icons.refresh_rounded),
-            onPressed: () {
-              _refreshAll();
-              setState(() => _reviewNav = 1 - _reviewNav);
-            },
+            onPressed: _refreshDashboard,
           ),
         ],
       ),
@@ -155,6 +158,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             pendingCounts: _pendingCounts,
             isLoading: _isLoadingStats,
             totalPending: _totalPending,
+            onRefresh: _refreshDashboard,
             onOpenReview: (cat) => setState(() {
               _navIndex = 1;
               _selectedCat = cat;

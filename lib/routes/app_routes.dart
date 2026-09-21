@@ -39,9 +39,15 @@ import '../features/occasions/list.dart';
 import '../features/phone/add_directory.dart';
 import '../features/phone/directory.dart';
 import '../features/profile/main.dart';
+import '../features/services/agricultural_advisor_screen.dart';
+import '../features/services/crops_screen.dart';
+import '../features/services/farmer_services_screen.dart';
+import '../features/services/fertilizers_pesticides_screen.dart';
 import '../features/services/lost_items_screen.dart';
 import '../features/services/service_directory_screen.dart';
 import '../features/services/service_provider_detail_screen.dart';
+import '../features/services/weather_advisory_screen.dart';
+import '../features/services/workers_equipment_screen.dart';
 import '../features/settings/index.dart';
 import '../features/settings/notifications.dart';
 import '../features/village/about.dart';
@@ -49,7 +55,6 @@ import '../features/village/village_archive_screen.dart';
 import '../features/village/village_history_screen.dart';
 import '../features/village/village_institutions_screen.dart';
 import '../features/weather/weather_detail_screen.dart';
-import '../models/service_provider_model.dart';
 import '../services/admin_service.dart';
 
 /// 🛣️ Qarity App Routes
@@ -99,6 +104,11 @@ static const String marketProducts = '/market';
   static const String notificationsSettings = '/settings/notifications';
   static const String serviceCategory = '/services/category';
   static const String farmerServices = '/services/farmer';
+  static const String farmerWorkersEquipment = '/services/farmer/workers-equipment';
+  static const String farmerAdvisor = '/services/farmer/advisor';
+  static const String farmerCrops = '/services/farmer/crops';
+  static const String farmerFertilizersPesticides = '/services/farmer/fertilizers-pesticides';
+  static const String farmerWeather = '/services/farmer/weather';
   static const String serviceProviderDetail = '/services/detail';
   static const String lostItems = '/services/lost-items';
   static const String lostItemDetail = '/services/lost-item-detail';
@@ -151,6 +161,12 @@ obituariesAdd: (_) => const AddObituaryScreen(),
     serviceProviderDetail: (_ ) => const ServiceProviderDetailScreen(),
     lostItems: (_ ) => const LostItemsScreen(),
     lostItemDetail: (_ ) => const LostItemDetailScreen(),
+    farmerServices: (_ ) => const FarmerServicesScreen(),
+    farmerWorkersEquipment: (_ ) => const WorkersEquipmentScreen(),
+    farmerAdvisor: (_ ) => const AgriculturalAdvisorScreen(),
+    farmerCrops: (_ ) => const CropsScreen(),
+    farmerFertilizersPesticides: (_ ) => const FertilizersPesticidesScreen(),
+    farmerWeather: (_ ) => const WeatherAdvisoryScreen(),
     medicalClinicDetail: (_ ) => const VillageClinicDetailScreen(),
     medicalPharmacyDetail: (_ ) => const PharmacyDetailScreen(),
     medicalLabDetail: (_ ) => const MedicalLabDetailScreen(),
@@ -218,7 +234,37 @@ obituariesAdd: (_) => const AddObituaryScreen(),
     }
     if (settings.name == farmerServices) {
       return _buildSlideRoute(
-        (_) => const ProviderCategoryScreen(category: ServiceCategory.agricultural),
+        (_) => const FarmerServicesScreen(),
+        settings,
+      );
+    }
+    if (settings.name == farmerWorkersEquipment) {
+      return _buildSlideRoute(
+        (_) => const WorkersEquipmentScreen(),
+        settings,
+      );
+    }
+    if (settings.name == farmerAdvisor) {
+      return _buildSlideRoute(
+        (_) => const AgriculturalAdvisorScreen(),
+        settings,
+      );
+    }
+    if (settings.name == farmerCrops) {
+      return _buildSlideRoute(
+        (_) => const CropsScreen(),
+        settings,
+      );
+    }
+    if (settings.name == farmerFertilizersPesticides) {
+      return _buildSlideRoute(
+        (_) => const FertilizersPesticidesScreen(),
+        settings,
+      );
+    }
+    if (settings.name == farmerWeather) {
+      return _buildSlideRoute(
+        (_) => const WeatherAdvisoryScreen(),
         settings,
       );
     }

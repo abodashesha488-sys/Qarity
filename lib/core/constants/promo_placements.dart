@@ -34,6 +34,9 @@ const List<PromoPlacement> kPromoPlacements = [
   PromoPlacement('med_clinics', 'المركز الطبي — عيادات القرية', 'المركز الطبي'),
   PromoPlacement('med_pharmacies', 'المركز الطبي — الصيدليات', 'المركز الطبي'),
   PromoPlacement('med_labs', 'المركز الطبي — معامل التحاليل', 'المركز الطبي'),
+  PromoPlacement('agri_fertilizers', 'خدمات المزارع — الأسمدة', 'خدمات المزارع'),
+  PromoPlacement('agri_pesticides', 'خدمات المزارع — المبيدات', 'خدمات المزارع'),
+  PromoPlacement('agri_both', 'خدمات المزارع — الأسمدة والمبيدات', 'خدمات المزارع'),
 ];
 
 String promoPlacementLabel(String key) => kPromoPlacements

@@ -22,6 +22,12 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'medical_admin'];
     }
 
+    function isAgriculturalAdmin() {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
+          in ['admin', 'agricultural_admin'];
+    }
+
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
@@ -46,6 +52,7 @@ service cloud.firestore {
                     && request.resource.data.role != 'medical_admin'
                     && request.resource.data.role != 'moderator'
                     && request.resource.data.role != 'seller'
+                    && request.resource.data.role != 'agricultural_admin'
                     && request.resource.data.isActive == true;
 
       // الأدمن (مدير عام) يغيّر أي شيء في أي حساب (الأدوار/النوع/التفعيل).
@@ -178,6 +185,13 @@ service cloud.firestore {
     match /village_alerts/{docId} {
       allow list, get: if true;
       allow create, update, delete: if isAdmin();
+    }
+
+    // محتوى الخدمات الزراعية: قراءة عامة، وتحرير محصور بالمدير العام
+    // ومدير الخدمات الزراعية. لا يمنح هذا الدور صلاحيات لوحة الأدمن العامة.
+    match /agriculture_content/{docId} {
+      allow list, get: if true;
+      allow create, update, delete: if isAgriculturalAdmin();
     }
 
     // ───────────────────────── التعازي (مجموعة مستقلة) ─────────────────────────
@@ -446,7 +460,9 @@ service cloud.firestore {
     // قراءة عامة (تظهر لكل المستخدمين) — الإنشاء/التعديل/الحذف للأدمن فقط.
     match /promos/{docId} {
       allow list, get: if true;
-      allow write: if isAdmin();
+      allow write: if isAdmin() ||
+        (isAgriculturalAdmin() && request.resource.data.placement in
+          ['agri_fertilizers', 'agri_pesticides', 'agri_both']);
     }
   }
 }

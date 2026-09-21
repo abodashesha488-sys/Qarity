@@ -21,23 +21,53 @@ class AlertWisdomBar extends StatefulWidget {
 }
 
 class _AlertWisdomBarState extends State<AlertWisdomBar> {
-  late final Stream<VillageAlert?> _stream = AlertService().watchLiveAlert();
+  final AlertService _service = AlertService();
+  StreamSubscription<VillageAlert?>? _subscription;
+  VillageAlert? _alert;
   Timer? _expiryTimer;
+  String? _handledAlertStamp;
+
+  @override
+  void initState() {
+    super.initState();
+    _subscription = _service.watchLiveAlert().listen(_onAlertChanged);
+  }
+
+  void _onAlertChanged(VillageAlert? alert) {
+    if (!mounted) return;
+    final liveAlert =
+        alert != null && alert.liveAt(DateTime.now()) ? alert : null;
+    _alert = liveAlert;
+    if (liveAlert == null) _handledAlertStamp = null;
+    _expiryTimer?.cancel();
+    _expiryTimer = null;
+    if (liveAlert != null) {
+      _onAlertShown(liveAlert);
+    }
+    setState(() {});
+  }
 
   void _onAlertShown(VillageAlert alert) {
+    final stamp =
+        '${alert.updatedAt?.millisecondsSinceEpoch ?? 0}:${alert.message}';
+    if (_handledAlertStamp == stamp) return;
+    _handledAlertStamp = stamp;
     if (alert.mode == VillageAlertMode.sound) {
-      final stamp = alert.updatedAt?.millisecondsSinceEpoch ?? 0;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        unawaited(AlertSound.ringOnce('alert_ring_current_$stamp'));
+        if (mounted) {
+          unawaited(AlertSound.ringOnce('alert_ring_current_$stamp'));
+        }
       });
     }
-    _expiryTimer?.cancel();
     final expires = alert.expiresAt;
     if (expires != null) {
       final delay = expires.difference(DateTime.now());
       if (delay > Duration.zero) {
         _expiryTimer = Timer(delay, () {
-          if (mounted) setState(() {});
+          if (!mounted) return;
+          _alert = null;
+          _handledAlertStamp = null;
+          setState(() {});
         });
       }
     }
@@ -46,6 +76,7 @@ class _AlertWisdomBarState extends State<AlertWisdomBar> {
   @override
   void dispose() {
     _expiryTimer?.cancel();
+    _subscription?.cancel();
     super.dispose();
   }
 
@@ -69,7 +100,8 @@ class _AlertWisdomBarState extends State<AlertWisdomBar> {
         ),
         actions: [
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFC62828)),
+            style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFC62828)),
             onPressed: () => Navigator.pop(ctx),
             child: const Text('حسناً، فهمت'),
           ),
@@ -87,165 +119,151 @@ class _AlertWisdomBarState extends State<AlertWisdomBar> {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<VillageAlert?>(
-      stream: _stream,
-      builder: (context, snapshot) {
-        final data = snapshot.data;
-        final alert =
-            (data != null && data.liveAt(DateTime.now())) ? data : null;
-        if (alert != null) {
-          _onAlertShown(alert);
-          return Padding(
-            padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
+    final alert = _alert;
+    if (alert != null) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: () => _showAlertDialog(alert),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+              decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
-                onTap: () => _showAlertDialog(alert),
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    gradient: const LinearGradient(
-                        begin: Alignment.centerRight,
-                        end: Alignment.centerLeft,
-                        colors: [Color(0xFFB71C1C), Color(0xFFE53935)]),
-                    boxShadow: [
-                      BoxShadow(
-                          color:
-                              const Color(0xFFE53935).withValues(alpha: 0.4),
-                          blurRadius: 14,
-                          offset: const Offset(0, 4)),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.18),
-                            shape: BoxShape.circle),
-                        child: const Icon(Icons.campaign_rounded,
-                            color: Colors.white, size: 18),
-                      ).animate(onPlay: (c) => c.repeat()).scale(
-                          duration: 600.ms,
-                          curve: Curves.easeInOut,
-                          begin: const Offset(0.82, 0.82),
-                          end: const Offset(1.12, 1.12)),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 7, vertical: 1),
-                                  decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius:
-                                          BorderRadius.circular(6)),
-                                  child: const Text('عاجل',
-                                      style: TextStyle(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.w900,
-                                          color: Color(0xFFB71C1C))),
-                                ),
-                                const SizedBox(width: 6),
-                                Text('تنبيه القرية — اضغط لعرض التفاصيل',
-                                    style: TextStyle(
-                                        fontSize: 9.5,
-                                        fontWeight: FontWeight.w700,
-                                        color: Colors.white
-                                            .withValues(alpha: 0.85))),
-                              ],
-                            ),
-                            const SizedBox(height: 3),
-                            Text(alert.message,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 13.5,
-                                    height: 1.35)),
-                          ],
-                        ),
-                      ),
-                      const Icon(Icons.chevron_left_rounded,
-                          color: Colors.white70, size: 20),
-                    ],
-                  ),
-                ),
+                gradient: const LinearGradient(
+                    begin: Alignment.centerRight,
+                    end: Alignment.centerLeft,
+                    colors: [Color(0xFFB71C1C), Color(0xFFE53935)]),
+                boxShadow: [
+                  BoxShadow(
+                      color: const Color(0xFFE53935).withValues(alpha: 0.4),
+                      blurRadius: 14,
+                      offset: const Offset(0, 4)),
+                ],
               ),
-            ),
-          ).animate().fadeIn(duration: 350.ms);
-        }
-        final wisdom = WisdomCalendar.of(DateTime.now());
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(16),
-              onTap: _openWisdomDialog,
-              child: Container(
-                constraints: const BoxConstraints(minHeight: 58),
-                clipBehavior: Clip.antiAlias,
-                decoration: const BoxDecoration(
-                  borderRadius: BorderRadius.all(Radius.circular(16)),
-                  image: DecorationImage(
-                    image: AssetImage('assets/images/hekma.jpg'),
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                child: ColoredBox(
-                  color: Colors.black.withValues(alpha: 0.35),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 9),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.18),
+                        shape: BoxShape.circle),
+                    child: const Icon(Icons.campaign_rounded,
+                        color: Colors.white, size: 18),
+                  ).animate(onPlay: (c) => c.repeat()).scale(
+                      duration: 600.ms,
+                      curve: Curves.easeInOut,
+                      begin: const Offset(0.82, 0.82),
+                      end: const Offset(1.12, 1.12)),
+                  const SizedBox(width: 10),
+                  Expanded(
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.format_quote_rounded,
-                                size: 13,
-                                color:
-                                    Colors.white.withValues(alpha: 0.75)),
-                            Text('حكمة اليوم',
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 7, vertical: 1),
+                              decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(6)),
+                              child: const Text('عاجل',
+                                  style: TextStyle(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w900,
+                                      color: Color(0xFFB71C1C))),
+                            ),
+                            const SizedBox(width: 6),
+                            Text('تنبيه القرية — اضغط لعرض التفاصيل',
                                 style: TextStyle(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.w700,
                                     color:
-                                        Colors.white
-                                            .withValues(alpha: 0.85),
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700)),
+                                        Colors.white.withValues(alpha: 0.85))),
                           ],
                         ),
-                        const SizedBox(height: 2),
-                        Text(wisdom.text,
-                            textAlign: TextAlign.center,
+                        const SizedBox(height: 3),
+                        Text(alert.message,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w800,
                                 color: Colors.white,
-                                height: 1.45)),
+                                fontWeight: FontWeight.w800,
+                                fontSize: 13.5,
+                                height: 1.35)),
                       ],
                     ),
                   ),
+                  const Icon(Icons.chevron_left_rounded,
+                      color: Colors.white70, size: 20),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ).animate().fadeIn(duration: 350.ms);
+    }
+    final wisdom = WisdomCalendar.of(DateTime.now());
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: _openWisdomDialog,
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 58),
+            clipBehavior: Clip.antiAlias,
+            decoration: const BoxDecoration(
+              borderRadius: BorderRadius.all(Radius.circular(16)),
+              image: DecorationImage(
+                image: AssetImage('assets/images/hekma.jpg'),
+                fit: BoxFit.cover,
+              ),
+            ),
+            child: ColoredBox(
+              color: Colors.black.withValues(alpha: 0.35),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.format_quote_rounded,
+                            size: 13,
+                            color: Colors.white.withValues(alpha: 0.75)),
+                        Text('حكمة اليوم',
+                            style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.85),
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700)),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(wisdom.text,
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                            height: 1.45)),
+                  ],
                 ),
               ),
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }
@@ -286,8 +304,8 @@ class _WisdomDayDialogState extends State<_WisdomDayDialog> {
                 IconButton(
                     tooltip: 'اليوم السابق',
                     onPressed: () => _shift(-1),
-                    icon: const Icon(Icons.arrow_forward_ios_rounded,
-                        size: 16)),
+                    icon:
+                        const Icon(Icons.arrow_forward_ios_rounded, size: 16)),
                 Expanded(
                   child: Column(
                     children: [
@@ -313,7 +331,8 @@ class _WisdomDayDialogState extends State<_WisdomDayDialog> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: theme.colorScheme.primaryContainer.withValues(alpha: 0.35),
+                color:
+                    theme.colorScheme.primaryContainer.withValues(alpha: 0.35),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Text('«${wisdom.text}»',

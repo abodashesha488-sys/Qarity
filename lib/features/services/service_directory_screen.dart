@@ -21,6 +21,7 @@ class ServiceDirectoryScreen extends StatelessWidget {
   static const _categories = [
     ServiceCategory.technicians,
     ServiceCategory.agricultural,
+    ServiceCategory.educational,
   ];
 
   @override
@@ -89,9 +90,7 @@ class _CategoryTile extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 14,
-                      color: color)),
+                      fontWeight: FontWeight.w900, fontSize: 14, color: color)),
               const SizedBox(height: 3),
               Text(
                 switch (category) {
@@ -103,8 +102,7 @@ class _CategoryTile extends StatelessWidget {
                 textAlign: TextAlign.center,
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.labelSmall?.copyWith(
-                    fontSize: 10,
-                    color: theme.colorScheme.onSurfaceVariant),
+                    fontSize: 10, color: theme.colorScheme.onSurfaceVariant),
               ),
             ],
           ),
@@ -255,13 +253,11 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
                             BorderSide(color: _color.withValues(alpha: 0.4))),
                   ),
                   items: [
-                    const DropdownMenuItem(
-                        value: '', child: Text('كل الفئات')),
+                    const DropdownMenuItem(value: '', child: Text('كل الفئات')),
                     ..._groupOptions.map((g) => DropdownMenuItem(
                         value: g,
                         child: Text(g,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis))),
+                            maxLines: 1, overflow: TextOverflow.ellipsis))),
                     if (_isEdu)
                       const DropdownMenuItem(
                           value: 'مراحل أخرى', child: Text('مراحل أخرى')),
@@ -341,8 +337,7 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
                 final featured = visible.where((p) => p.isFeatured).toList();
                 final topRated = (visible
                     .where((p) => !p.isFeatured && p.ratingCount > 0)
-                    .toList()
-                  )
+                    .toList())
                   ..sort((a, b) => b.rating.compareTo(a.rating));
                 final top5 = topRated.take(5).toList();
                 final topIds = top5.map((p) => p.id).toSet();
@@ -428,8 +423,8 @@ class _MiniHead extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(title,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w900, color: color)),
+                    style: theme.textTheme.titleSmall
+                        ?.copyWith(fontWeight: FontWeight.w900, color: color)),
                 if (subtitle != null)
                   Text(subtitle!,
                       style: theme.textTheme.labelSmall?.copyWith(
@@ -439,16 +434,13 @@ class _MiniHead extends StatelessWidget {
           ),
           if (count != null)
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10)),
               child: Text('$count',
                   style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                      color: color)),
+                      fontSize: 11, fontWeight: FontWeight.w900, color: color)),
             ),
         ],
       ),
@@ -464,9 +456,7 @@ class _ProviderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = provider.isFeatured
-        ? const Color(0xFFB8860B)
-        : accent;
+    final color = provider.isFeatured ? const Color(0xFFB8860B) : accent;
     return Card(
       elevation: 0,
       margin: const EdgeInsets.only(top: 6),
@@ -480,7 +470,8 @@ class _ProviderCard extends StatelessWidget {
           : null,
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
-        onTap: () => Navigator.pushNamed(context, AppRoutes.serviceProviderDetail,
+        onTap: () => Navigator.pushNamed(
+            context, AppRoutes.serviceProviderDetail,
             arguments: provider),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -513,8 +504,7 @@ class _ProviderCard extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 13.5)),
+                                  fontWeight: FontWeight.w900, fontSize: 13.5)),
                         ),
                         if (provider.isFeatured) ...[
                           const SizedBox(width: 5),
@@ -583,8 +573,7 @@ class _ProviderCard extends StatelessWidget {
                 IconButton.filledTonal(
                   tooltip: 'اتصال',
                   onPressed: () async {
-                    final uri =
-                        Uri(scheme: 'tel', path: provider.phone);
+                    final uri = Uri(scheme: 'tel', path: provider.phone);
                     if (await canLaunchUrl(uri)) await launchUrl(uri);
                   },
                   icon: const Icon(Icons.call_rounded, size: 17),
@@ -599,12 +588,10 @@ class _ProviderCard extends StatelessWidget {
                     body: [
                       if (provider.displaySpecialty.isNotEmpty)
                         'التخصص: ${provider.displaySpecialty}',
-                      if (provider.description.isNotEmpty)
-                        provider.description,
+                      if (provider.description.isNotEmpty) provider.description,
                       if (provider.address.isNotEmpty)
                         'العنوان: ${provider.address}',
-                      if (provider.phone.isNotEmpty)
-                        'هاتف: ${provider.phone}',
+                      if (provider.phone.isNotEmpty) 'هاتف: ${provider.phone}',
                     ].join('\n')),
                 icon: const Icon(Icons.share_rounded,
                     size: 16, color: Colors.grey),
@@ -655,8 +642,7 @@ class _EmptyCategory extends StatelessWidget {
             Text(
               'كن أول من يضيف خدمة — استخدم زر الإضافة أسفل الصفحة',
               textAlign: TextAlign.center,
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: Colors.grey),
+              style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
             ),
           ],
         ),
@@ -717,8 +703,9 @@ class _ProviderFormSheetState extends State<_ProviderFormSheet> {
       setState(() => _photoUrl = url);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('خطأ في رفع الصورة: $e'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('خطأ في رفع الصورة: $e'),
+            backgroundColor: Colors.red));
       }
     } finally {
       if (mounted) setState(() => _uploading = false);
@@ -792,8 +779,7 @@ class _ProviderFormSheetState extends State<_ProviderFormSheet> {
                           ? CachedNetworkImageProvider(_photoUrl!)
                           : null,
                       child: _photoUrl == null
-                          ? Icon(Icons.person_rounded,
-                              size: 36, color: _accent)
+                          ? Icon(Icons.person_rounded, size: 36, color: _accent)
                           : null,
                     ),
                     Positioned(
@@ -851,7 +837,8 @@ class _ProviderFormSheetState extends State<_ProviderFormSheet> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                color:
+                    theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -884,8 +871,8 @@ class _ProviderFormSheetState extends State<_ProviderFormSheet> {
     );
   }
 
-  Widget _field(ThemeData theme, TextEditingController c, String label,
-      IconData icon,
+  Widget _field(
+      ThemeData theme, TextEditingController c, String label, IconData icon,
       {TextInputType? type, int maxLines = 1}) {
     return TextField(
       controller: c,
@@ -914,8 +901,7 @@ class _ProviderFormSheetState extends State<_ProviderFormSheet> {
       items: values
           .map((v) => DropdownMenuItem(
               value: v,
-              child: Text(v,
-                  maxLines: 1, overflow: TextOverflow.ellipsis)))
+              child: Text(v, maxLines: 1, overflow: TextOverflow.ellipsis)))
           .toList(),
       onChanged: (v) => onChanged(v ?? current),
       menuMaxHeight: 340,

@@ -2,19 +2,12 @@ import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 
 import '../models/village_alert.dart';
-import '../routes/app_routes.dart';
 import '../services/alert_service.dart';
 import '../services/alert_sound_service.dart';
 import '../services/weather_service.dart';
 
-/// الشريط الثاني أسفل الهيدر:
-/// — خبر عاجل مفعّل؟ شريط أصفر بكتابة زرقاء (الضغط = نص الخبر كاملاً).
-/// — غير ذلك؟ كارت «طقس القرية» بخلفية wither.jpg وعمودين (أيقونة+حالة+درجة
-///   الحرارة | العظمى/الصغرى فوق الرطوبة/الرياح) — الضغط = شاشة الطقس الكاملة.
-/// التنبيه الأحمر لا يحجبه — يظهران معاً كلٌّ في شريطه.
 class VillageWeatherBar extends StatefulWidget {
   const VillageWeatherBar({super.key});
 
@@ -26,40 +19,56 @@ class _VillageWeatherBarState extends State<VillageWeatherBar> {
   final AlertService _alerts = AlertService();
   Map<String, dynamic>? _weather;
   Timer? _refreshTimer;
-  Timer? _expiryTimer;
+  Timer? _breakingExpiryTimer;
+  StreamSubscription<VillageAlert?>? _breakingSubscription;
+  VillageAlert? _breaking;
 
   @override
   void initState() {
     super.initState();
     _loadWeather();
-    _refreshTimer =
-        Timer.periodic(const Duration(minutes: 15), (_) => _loadWeather());
+    _refreshTimer = Timer.periodic(
+      const Duration(minutes: 15),
+      (_) => _loadWeather(),
+    );
+    _breakingSubscription =
+        _alerts.watchLiveBreaking().listen(_onBreakingChanged);
   }
 
   @override
   void dispose() {
     _refreshTimer?.cancel();
-    _expiryTimer?.cancel();
+    _breakingExpiryTimer?.cancel();
+    _breakingSubscription?.cancel();
     super.dispose();
   }
 
-  void _onBreakingShown(VillageAlert breaking) {
-    if (breaking.mode == VillageAlertMode.sound) {
+  void _onBreakingChanged(VillageAlert? breaking) {
+    if (!mounted) return;
+    _breakingExpiryTimer?.cancel();
+    _breakingExpiryTimer = null;
+    _breaking = breaking;
+
+    if (breaking != null && breaking.mode == VillageAlertMode.sound) {
       final stamp = breaking.updatedAt?.millisecondsSinceEpoch ?? 0;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        unawaited(AlertSound.ringOnce('alert_ring_breaking_$stamp'));
+        if (mounted) {
+          unawaited(AlertSound.ringOnce('alert_ring_breaking_$stamp'));
+        }
       });
     }
-    _expiryTimer?.cancel();
-    final expires = breaking.expiresAt;
-    if (expires != null) {
-      final delay = expires.difference(DateTime.now());
+
+    final expiresAt = breaking?.expiresAt;
+    if (expiresAt != null) {
+      final delay = expiresAt.difference(DateTime.now());
       if (delay > Duration.zero) {
-        _expiryTimer = Timer(delay, () {
-          if (mounted) setState(() {});
+        _breakingExpiryTimer = Timer(delay, () {
+          if (!mounted) return;
+          setState(() => _breaking = null);
         });
       }
     }
+    setState(() {});
   }
 
   Future<void> _loadWeather() async {
@@ -67,138 +76,240 @@ class _VillageWeatherBarState extends State<VillageWeatherBar> {
     if (mounted) setState(() => _weather = data);
   }
 
+  @override
+  Widget build(BuildContext context) {
+    final data = _weather;
+    final weather = (data?['weather'] as List?)?.first as Map?;
+    final main = data?['main'] as Map?;
+    final wind = data?['wind'] as Map?;
+    final temp = (main?['temp'] as num?)?.round();
+    final tempMax = (main?['temp_max'] as num?)?.round();
+    final tempMin = (main?['temp_min'] as num?)?.round();
+    final humidity = (main?['humidity'] as num?)?.round();
+    final windSpeed = (wind?['speed'] as num?)?.toStringAsFixed(1) ?? '0';
+    final windDeg = wind?['deg'];
+    final windDir = windDeg != null ? _windDirection(windDeg) : '--';
+    final iconId = weather?['icon'] as String? ?? '01d';
+    final description = (weather?['description'] as String? ?? '').trim();
+    final arabicDesc = _conditionAr(iconId, description);
+
+    final breaking = _breaking;
+    if (breaking != null && breaking.liveAt(DateTime.now())) {
+      return _breakingStrip(breaking);
+    }
+    return _weatherStrip(
+      arabicDesc: arabicDesc,
+      temp: temp,
+      tempMax: tempMax,
+      tempMin: tempMin,
+      humidity: humidity,
+      windSpeed: windSpeed,
+      windDir: windDir,
+      iconId: iconId,
+    );
+  }
+
+  Widget _breakingStrip(VillageAlert breaking) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 2, 14, 6),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => _showBreakingDialog(breaking),
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 58),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              gradient: const LinearGradient(
+                colors: [Color(0xFFFFC107), Color(0xFFFFE082)],
+                begin: Alignment.centerRight,
+                end: Alignment.centerLeft,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFFFB300).withValues(alpha: 0.28),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.campaign_rounded,
+                    color: Color(0xFF0D47A1), size: 25),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('خبر عاجل',
+                          style: TextStyle(
+                              color: Color(0xFF0D47A1),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900)),
+                      const SizedBox(height: 2),
+                      Text(breaking.message,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              color: Color(0xFF0D47A1),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              height: 1.3)),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_left_rounded,
+                    color: Color(0xFF0D47A1), size: 20),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showBreakingDialog(VillageAlert breaking) {
     showDialog<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      builder: (dialogContext) => AlertDialog(
         title: const Row(
           children: [
-            Icon(Icons.bolt_rounded, color: Color(0xFF1565C0)),
+            Icon(Icons.campaign_rounded, color: Color(0xFFF9A825)),
             SizedBox(width: 8),
-            Text('خبر عاجل',
-                style: TextStyle(
-                    fontWeight: FontWeight.w900, color: Color(0xFF1565C0))),
+            Text('خبر عاجل'),
           ],
         ),
-        content: SingleChildScrollView(
-          child: Text(breaking.message,
-              style: const TextStyle(
-                  fontSize: 15, fontWeight: FontWeight.w700, height: 1.6)),
-        ),
+        content: Text(breaking.message,
+            style: const TextStyle(fontWeight: FontWeight.w700, height: 1.6)),
         actions: [
           FilledButton(
             style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFFF9A825),
-                foregroundColor: const Color(0xFF1565C0)),
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('حسناً'),
+                backgroundColor: const Color(0xFF0D47A1)),
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('حسنًا'),
           ),
         ],
       ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return StreamBuilder<VillageAlert?>(
-      stream: _alerts.watchLiveBreaking(),
-      builder: (context, breakingSnap) {
-        final data = breakingSnap.data;
-        final breaking =
-            (data != null && data.liveAt(DateTime.now())) ? data : null;
-        if (breaking != null) {
-          _onBreakingShown(breaking);
-          return Padding(
-            padding: const EdgeInsets.fromLTRB(14, 2, 14, 6),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(16),
-                onTap: () => _showBreakingDialog(breaking),
-                child: Container(
-                  constraints: const BoxConstraints(minHeight: 58),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 10),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    gradient: const LinearGradient(
-                        begin: Alignment.centerRight,
-                        end: Alignment.centerLeft,
-                        colors: [Color(0xFFFFD54F), Color(0xFFFBC02D)]),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: const BoxDecoration(
-                            color: Colors.white, shape: BoxShape.circle),
-                        child: const Icon(Icons.bolt_rounded,
-                            color: Color(0xFF1565C0), size: 18),
-                      )
-                          .animate(onPlay: (c) => c.repeat())
-                          .scale(
-                              duration: 600.ms,
-                              curve: Curves.easeInOut,
-                              begin: const Offset(0.85, 0.85),
-                              end: const Offset(1.1, 1.1)),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 7, vertical: 1),
-                                  decoration: BoxDecoration(
-                                      color: const Color(0xFF1565C0),
-                                      borderRadius:
-                                          BorderRadius.circular(6)),
-                                  child: const Text('عاجل',
-                                      style: TextStyle(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.w900,
-                                          color: Colors.white)),
-                                ),
-                                const SizedBox(width: 6),
-                                const Text('خبر القرية العاجل — اضغط للتفاصيل',
+  Widget _weatherStrip({
+    required String arabicDesc,
+    required int? temp,
+    required int? tempMax,
+    required int? tempMin,
+    required int? humidity,
+    required String windSpeed,
+    required String windDir,
+    required String iconId,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 2, 14, 6),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => Navigator.pushNamed(context, '/weather'),
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 58),
+            clipBehavior: Clip.antiAlias,
+            decoration: const BoxDecoration(
+              borderRadius: BorderRadius.all(Radius.circular(16)),
+              image: DecorationImage(
+                image: AssetImage('assets/images/wither.jpg'),
+                fit: BoxFit.cover,
+              ),
+            ),
+            child: ColoredBox(
+              color: Colors.black.withValues(alpha: 0.38),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                child: Row(
+                  children: [
+                    CachedNetworkImage(
+                      imageUrl:
+                          'https://openweathermap.org/img/wn/$iconId@2x.png',
+                      fit: BoxFit.contain,
+                      width: 36,
+                      height: 36,
+                      errorWidget: (_, __, ___) => const Icon(
+                          Icons.cloud_rounded,
+                          color: Colors.white,
+                          size: 22),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(
+                            children: [
+                              const Expanded(
+                                child: Text('طقس قرية أبودشيشة',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
-                                        fontSize: 9.5,
-                                        fontWeight: FontWeight.w700,
-                                        color: Color(0xFF1565C0))),
-                              ],
-                            ),
-                            const SizedBox(height: 3),
-                            Text(breaking.message,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
+                                        color: Colors.white,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w900,
+                                        height: 1.1)),
+                              ),
+                              Text(
+                                temp != null ? '$temp°م' : '—',
                                 style: const TextStyle(
-                                    color: Color(0xFF0D47A1),
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 12.5,
-                                    height: 1.35)),
-                          ],
-                        ),
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w900,
+                                    height: 1.1),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '$arabicDesc  •  العظمى ${tempMax != null ? '$tempMax°' : '—'} / الصغرى ${tempMin != null ? '$tempMin°' : '—'}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w700,
+                                height: 1.2),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'رطوبة ${humidity ?? 0}%  •  رياح $windSpeed م/ث $windDir',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 8.5,
+                                fontWeight: FontWeight.w600,
+                                height: 1.1),
+                          ),
+                        ],
                       ),
-                      const Icon(Icons.chevron_left_rounded,
-                          color: Color(0xFF1565C0), size: 18),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 6),
+                    const Icon(Icons.chevron_left_rounded,
+                        size: 18, color: Colors.white70),
+                  ],
                 ),
               ),
             ),
-          ).animate().fadeIn(duration: 350.ms);
-        }
-        return _weatherStrip(theme);
-      },
+          ),
+        ),
+      ),
     );
   }
 
-  static String _conditionAr(String? iconId, String apiDesc) {
+  String _conditionAr(String? iconId, String? apiDesc) {
     if (iconId != null && iconId.length >= 2) {
       switch (iconId.substring(0, 2)) {
         case '01':
@@ -220,149 +331,21 @@ class _VillageWeatherBarState extends State<VillageWeatherBar> {
           return 'ضباب';
       }
     }
-    return apiDesc.isNotEmpty ? apiDesc : '—';
+    return apiDesc ?? '—';
   }
 
-  Widget _weatherStrip(ThemeData theme) {
-    final w = _weather;
-    final weather = (w?['weather'] as List?)?.first as Map?;
-    final main = w?['main'] as Map?;
-    final wind = w?['wind'] as Map?;
-    final temp = (main?['temp'] as num?)?.round();
-    final desc = (weather?['description'] as String? ?? '').trim();
-    final iconId = weather?['icon'] as String?;
-
-    final lineStyle = TextStyle(
-        color: Colors.white.withValues(alpha: 0.92),
-        fontWeight: FontWeight.w700,
-        fontSize: 10.5);
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 2, 14, 6),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () => Navigator.pushNamed(context, AppRoutes.weather),
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 58),
-            clipBehavior: Clip.antiAlias,
-            decoration: const BoxDecoration(
-              borderRadius: BorderRadius.all(Radius.circular(16)),
-              image: DecorationImage(
-                image: AssetImage('assets/images/wither.jpg'),
-                fit: BoxFit.cover,
-              ),
-            ),
-            child: ColoredBox(
-              color: Colors.black.withValues(alpha: 0.38),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 6),
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: 56,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: w == null
-                                ? const Icon(Icons.cloud_rounded,
-                                    color: Colors.white, size: 16)
-                                : CachedNetworkImage(
-                                    imageUrl: WeatherFormat.iconUrl(
-                                        iconId ?? '01d'),
-                                    fit: BoxFit.contain,
-                                    errorWidget: (_, __, ___) => const Icon(
-                                        Icons.cloud_rounded,
-                                        color: Colors.white,
-                                        size: 16)),
-                          ),
-                          Text(
-                              w == null
-                                  ? 'جارٍ الجلب…'
-                                  : _conditionAr(iconId, desc),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 8.5,
-                                  height: 1.3)),
-                          Text(w == null ? '—' : '$temp°م',
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 14.5,
-                                  height: 1.2)),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      width: 1,
-                      height: 34,
-                      margin: const EdgeInsets.symmetric(horizontal: 8),
-                      color: Colors.white.withValues(alpha: 0.35),
-                    ),
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.call_merge_rounded,
-                                  size: 12,
-                                  color: Colors.white
-                                      .withValues(alpha: 0.85)),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                    w == null
-                                        ? 'جارٍ جلب حالة الطقس…'
-                                        : 'العظمى ${(main?['temp_max'] as num?)?.round()}°  •  الصغرى ${(main?['temp_min'] as num?)?.round()}°',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: lineStyle),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Icon(Icons.water_drop_rounded,
-                                  size: 12,
-                                  color: Colors.white
-                                      .withValues(alpha: 0.85)),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                    w == null
-                                        ? ' '
-                                        : 'رطوبة ${(main?['humidity'] as num?)?.round()}%  •  رياح ${(wind?['speed'] as num?)?.toStringAsFixed(1) ?? '—'} م/ث',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: lineStyle),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    Icon(Icons.chevron_left_rounded,
-                        size: 16,
-                        color: Colors.white.withValues(alpha: 0.8)),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
+  String _windDirection(num deg) {
+    const dirs = [
+      'شمالية',
+      'شمالية شرقية',
+      'شرقية',
+      'جنوبية شرقية',
+      'جنوبية',
+      'جنوبية غربية',
+      'غربية',
+      'شمالية غربية',
+    ];
+    final i = (((deg + 22.5) % 360) ~/ 45) % 8;
+    return dirs[i];
   }
 }

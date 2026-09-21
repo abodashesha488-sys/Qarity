@@ -7,6 +7,7 @@ class _OverviewPage extends StatelessWidget {
     required this.pendingCounts,
     required this.isLoading,
     required this.totalPending,
+    required this.onRefresh,
     required this.onOpenReview,
     required this.onOpenUsers,
     required this.onOpenReports,
@@ -18,6 +19,7 @@ class _OverviewPage extends StatelessWidget {
   final Map<String, int> pendingCounts;
   final bool isLoading;
   final int totalPending;
+  final Future<void> Function() onRefresh;
   final void Function(String cat) onOpenReview;
   final VoidCallback onOpenUsers;
   final VoidCallback onOpenReports;
@@ -28,7 +30,7 @@ class _OverviewPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return RefreshIndicator(
-      onRefresh: () async {},
+      onRefresh: onRefresh,
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -98,6 +100,86 @@ class _OverviewPage extends StatelessWidget {
                         onTap: () => onOpenReview('occasions')),
                   ],
                 ),
+          const SizedBox(height: 18),
+          Text('الخدمات والمحتوى الجديد',
+              style: theme.textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w900)),
+          const SizedBox(height: 12),
+          GridView.count(
+            crossAxisCount: 3,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: 10,
+            crossAxisSpacing: 10,
+            children: [
+              _StatCard(
+                  label: 'المحلات',
+                  value: stats['shops'] ?? 0,
+                  icon: Icons.storefront_rounded,
+                  color: Colors.amber.shade800,
+                  onTap: () => onOpenReview('shops')),
+              _StatCard(
+                  label: 'دليل الخدمات',
+                  value: stats['service_providers'] ?? 0,
+                  icon: Icons.category_rounded,
+                  color: const Color(0xFF6D4C41),
+                  onTap: () => onOpenReview('service_providers')),
+              _StatCard(
+                  label: 'دليل الهاتف',
+                  value: stats['phone_directory'] ?? 0,
+                  icon: Icons.phone_rounded,
+                  color: Colors.cyan,
+                  onTap: () => onOpenReview('phone_directory')),
+              _StatCard(
+                  label: 'المفقودات',
+                  value: stats['lost_items'] ?? 0,
+                  icon: Icons.search_rounded,
+                  color: const Color(0xFF5E35B1),
+                  onTap: () => onOpenReview('lost_items')),
+              _StatCard(
+                  label: 'عيادات القرية',
+                  value: stats['village_clinics'] ?? 0,
+                  icon: Icons.add_business_rounded,
+                  color: const Color(0xFF00897B),
+                  onTap: () => onOpenReview('village_clinics')),
+              _StatCard(
+                  label: 'عيادات المركز',
+                  value: stats['medical_center_clinics'] ?? 0,
+                  icon: Icons.local_hospital_rounded,
+                  color: const Color(0xFF00695C),
+                  onTap: () => onOpenReview('medical_center_clinics')),
+              _StatCard(
+                  label: 'الصيدليات',
+                  value: stats['pharmacies'] ?? 0,
+                  icon: Icons.local_pharmacy_rounded,
+                  color: const Color(0xFF6F4E37),
+                  onTap: () => onOpenReview('pharmacies')),
+              _StatCard(
+                  label: 'معامل التحاليل',
+                  value: stats['medical_labs'] ?? 0,
+                  icon: Icons.science_rounded,
+                  color: const Color(0xFF6A1B9A),
+                  onTap: () => onOpenReview('medical_labs')),
+              _StatCard(
+                  label: 'طلبات الدم',
+                  value: stats['blood_requests'] ?? 0,
+                  icon: Icons.bloodtype_rounded,
+                  color: Colors.red,
+                  onTap: () => onOpenReview('blood_requests')),
+              _StatCard(
+                  label: 'المتبرعون',
+                  value: stats['blood_donors'] ?? 0,
+                  icon: Icons.favorite_rounded,
+                  color: Colors.pink,
+                  onTap: () => onOpenReview('blood_donors')),
+              _StatCard(
+                  label: 'طلبات المتاجر',
+                  value: stats['seller_requests'] ?? 0,
+                  icon: Icons.storefront_rounded,
+                  color: Colors.orange,
+                  onTap: () => onOpenReview('seller_requests')),
+            ],
+          ),
           const SizedBox(height: 16),
           Text('المراجعة السريعة',
               style: theme.textTheme.titleMedium

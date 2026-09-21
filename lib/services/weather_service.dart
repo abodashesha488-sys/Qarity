@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/constants/app_config.dart';
 
@@ -12,11 +13,14 @@ class WeatherService {
 
   static const String _base = 'https://api.openweathermap.org/data/2.5';
   static const Duration _ttl = Duration(minutes: 10);
+  static const String _currentStorageKey = 'offline_weather_current';
+  static const String _forecastStorageKey = 'offline_weather_forecast';
 
   Map<String, dynamic>? _currentCache;
   DateTime? _currentAt;
   Map<String, dynamic>? _forecastCache;
   DateTime? _forecastAt;
+  bool _persistentCacheLoaded = false;
 
   Map<String, dynamic>? get cachedCurrent => _currentCache;
   Map<String, dynamic>? get cachedForecast => _forecastCache;
@@ -39,19 +43,20 @@ class WeatherService {
 
   /// طقس الآن — يرجع من الكاش إن كان طازجاً.
   Future<Map<String, dynamic>?> getCurrent() async {
+    await _loadPersistentCache();
     if (_currentCache != null &&
         _currentAt != null &&
         DateTime.now().difference(_currentAt!) < _ttl) {
       return _currentCache;
     }
     try {
-      final res = await http
-          .get(_uri('/weather'))
-          .timeout(const Duration(seconds: 12));
+      final res =
+          await http.get(_uri('/weather')).timeout(const Duration(seconds: 12));
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body) as Map<String, dynamic>;
         _currentCache = data;
         _currentAt = DateTime.now();
+        await _savePersistent(_currentStorageKey, data);
         final tz = (data['timezone'] as num?)?.toInt();
         if (tz != null) tzOffsetSeconds = tz;
         return data;
@@ -62,6 +67,7 @@ class WeatherService {
 
   /// توقع 5 أيام (كل 3 ساعات).
   Future<Map<String, dynamic>?> getForecast() async {
+    await _loadPersistentCache();
     if (_forecastCache != null &&
         _forecastAt != null &&
         DateTime.now().difference(_forecastAt!) < _ttl) {
@@ -75,6 +81,7 @@ class WeatherService {
         final data = jsonDecode(res.body) as Map<String, dynamic>;
         _forecastCache = data;
         _forecastAt = DateTime.now();
+        await _savePersistent(_forecastStorageKey, data);
         return data;
       }
     } catch (_) {}
@@ -87,6 +94,29 @@ class WeatherService {
     _forecastCache = null;
     _forecastAt = null;
   }
+
+  Future<void> _loadPersistentCache() async {
+    if (_persistentCacheLoaded) return;
+    _persistentCacheLoaded = true;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final current = prefs.getString(_currentStorageKey);
+      final forecast = prefs.getString(_forecastStorageKey);
+      if (_currentCache == null && current != null) {
+        _currentCache = jsonDecode(current) as Map<String, dynamic>;
+      }
+      if (_forecastCache == null && forecast != null) {
+        _forecastCache = jsonDecode(forecast) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _savePersistent(String key, Map<String, dynamic> data) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(key, jsonEncode(data));
+    } catch (_) {}
+  }
 }
 
 /// أدوات عرض موحّدة لبيانات الطقس.
@@ -98,8 +128,14 @@ class WeatherFormat {
 
   static String windDirection(num deg) {
     const dirs = [
-      'شمالية', 'شمالية شرقية', 'شرقية', 'جنوبية شرقية',
-      'جنوبية', 'جنوبية غربية', 'غربية', 'شمالية غربية',
+      'شمالية',
+      'شمالية شرقية',
+      'شرقية',
+      'جنوبية شرقية',
+      'جنوبية',
+      'جنوبية غربية',
+      'غربية',
+      'شمالية غربية',
     ];
     final i = (((deg + 22.5) % 360) ~/ 45) % 8;
     return dirs[i];

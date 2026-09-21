@@ -23,8 +23,21 @@ class _UsersPageState extends State<_UsersPage> {
     'user': ('مستخدم', Colors.teal, Icons.person_rounded),
     'seller': ('بائع', Colors.deepPurple, Icons.store_rounded),
     'moderator': ('مشرف', Colors.orange, Icons.verified_user_rounded),
-    'medical_admin': ('مدير المركز الطبي', Color(0xFF00897B), Icons.medical_services_rounded),
-    'admin': ('مدير عام', Color(0xFF1565C0), Icons.admin_panel_settings_rounded),
+    'medical_admin': (
+      'مدير المركز الطبي',
+      Color(0xFF00897B),
+      Icons.medical_services_rounded
+    ),
+    'agricultural_admin': (
+      'مدير الخدمات الزراعية',
+      Color(0xFF558B2F),
+      Icons.agriculture_rounded
+    ),
+    'admin': (
+      'مدير عام',
+      Color(0xFF1565C0),
+      Icons.admin_panel_settings_rounded
+    ),
   };
 
   static const _filters = <(String, String)>[
@@ -33,6 +46,7 @@ class _UsersPageState extends State<_UsersPage> {
     ('seller', 'بائعون'),
     ('moderator', 'مشرفون'),
     ('medical_admin', 'مدير طبي'),
+    ('agricultural_admin', 'مدير زراعي'),
     ('admin', 'مدراء'),
     ('disabled', 'معطّلون'),
   ];
@@ -58,7 +72,8 @@ class _UsersPageState extends State<_UsersPage> {
         final all = snapshot.data ?? [];
         final sellers = all.where((u) => (u['role'] ?? '') == 'seller').length;
         final managers = all
-            .where((u) => ['admin', 'medical_admin', 'moderator'].contains((u['role'] ?? '')))
+            .where((u) => ['admin', 'medical_admin', 'moderator']
+                .contains((u['role'] ?? '')))
             .length;
         final disabled = all.where((u) => u['isActive'] == false).length;
 
@@ -67,7 +82,9 @@ class _UsersPageState extends State<_UsersPage> {
           final role = (u['role'] ?? 'user').toString();
           final off = u['isActive'] == false;
           if (_filter == 'disabled' && !off) return false;
-          if (_filter != 'all' && _filter != 'disabled' && role != _filter) return false;
+          if (_filter != 'all' && _filter != 'disabled' && role != _filter) {
+            return false;
+          }
           if (q.isEmpty) return true;
           return (u['name']?.toString().toLowerCase().contains(q) ?? false) ||
               (u['email']?.toString().toLowerCase().contains(q) ?? false);
@@ -125,7 +142,8 @@ class _UsersPageState extends State<_UsersPage> {
               height: 46,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 itemCount: _filters.length,
                 separatorBuilder: (_, __) => const SizedBox(width: 8),
                 itemBuilder: (context, i) {
@@ -178,8 +196,8 @@ class _UsersPageState extends State<_UsersPage> {
                 style: TextStyle(
                     fontWeight: FontWeight.w900, color: color, fontSize: 16)),
             Text(label,
-                style: const TextStyle(
-                    fontSize: 10, fontWeight: FontWeight.w700)),
+                style:
+                    const TextStyle(fontSize: 10, fontWeight: FontWeight.w700)),
           ],
         ),
       ),
@@ -262,8 +280,7 @@ class _UsersPageState extends State<_UsersPage> {
         decoration: BoxDecoration(
             color: color.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(10),
-            border:
-                Border.all(color: color.withValues(alpha: 0.3))),
+            border: Border.all(color: color.withValues(alpha: 0.3))),
         child: Text(text,
             style: TextStyle(
                 fontSize: 11, fontWeight: FontWeight.w800, color: color)),
@@ -362,12 +379,12 @@ class _UsersPageState extends State<_UsersPage> {
                         value: e.key,
                         dense: true,
                         title: Text(e.value.$1,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w700)),
+                            style:
+                                const TextStyle(fontWeight: FontWeight.w700)),
                         subtitle: Text(_roleHint(e.key),
                             style: const TextStyle(fontSize: 11)),
-                        secondary: Icon(e.value.$3,
-                            size: 18, color: e.value.$2),
+                        secondary:
+                            Icon(e.value.$3, size: 18, color: e.value.$2),
                       ),
                   ],
                 ),
@@ -397,8 +414,8 @@ class _UsersPageState extends State<_UsersPage> {
                         value: t.name,
                         dense: true,
                         title: Text(t.label,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w700)),
+                            style:
+                                const TextStyle(fontWeight: FontWeight.w700)),
                         subtitle: Text('حتى ${t.maxImages} صور',
                             style: const TextStyle(fontSize: 11)),
                         secondary: Icon(t.icon, size: 18),
@@ -414,7 +431,9 @@ class _UsersPageState extends State<_UsersPage> {
                 title: const Text('الحساب مفعّل',
                     style: TextStyle(fontWeight: FontWeight.w700)),
                 subtitle: Text(
-                    active ? 'يمكنه استخدام التطبيق' : 'معطّل — لن يستطيع الوصول',
+                    active
+                        ? 'يمكنه استخدام التطبيق'
+                        : 'معطّل — لن يستطيع الوصول',
                     style: const TextStyle(fontSize: 11)),
                 value: active && !isSelf,
                 onChanged: isSelf

@@ -58,6 +58,12 @@ TESTING_NEWS.md
 # Local docs and build reports
 *.docx
 android/build/reports/
+analyze*.txt
+errors.txt
+temp.txt
+test_output.txt
+test_review.txt
+*.bak
 
 
 # Firebase service account keys (NEVER commit)

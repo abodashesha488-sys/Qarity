@@ -9,11 +9,13 @@ class ServiceCategory {
   static const technicians = 'technicians';
   static const agricultural = 'agricultural';
   static const educational = 'educational';
+  static const farmerWorkersEquipment = 'farmerWorkersEquipment';
 
   static String label(String c) => switch (c) {
         technicians => 'دليل الحرفيين',
         agricultural => 'خدمات المزارع',
         educational => 'خدمات تعليمية',
+        farmerWorkersEquipment => 'عمال و معدات',
         _ => c,
       };
 
@@ -21,6 +23,7 @@ class ServiceCategory {
         technicians => Icons.engineering_rounded,
         agricultural => Icons.agriculture_rounded,
         educational => Icons.school_rounded,
+        farmerWorkersEquipment => Icons.engineering_rounded,
         _ => Icons.category_rounded,
       };
 
@@ -28,6 +31,7 @@ class ServiceCategory {
         technicians => const Color(0xFFEF6C00),
         agricultural => const Color(0xFFAD1457),
         educational => const Color(0xFF1565C0),
+        farmerWorkersEquipment => const Color(0xFFEF6C00),
         _ => Colors.teal,
       };
 }

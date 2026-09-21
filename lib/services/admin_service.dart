@@ -50,7 +50,8 @@ class AdminService {
   Stream<int> getPendingObituariesCount() => _pendingCount('obituaries');
   Stream<int> getPendingOccasionsCount() => _pendingCount('occasions');
   Stream<int> getPendingForumPostsCount() => _pendingCount('forum_posts');
-  Stream<int> getPendingPhoneDirectoryCount() => _pendingCount('phone_directory');
+  Stream<int> getPendingPhoneDirectoryCount() =>
+      _pendingCount('phone_directory');
 
   Future<int> getPendingCountFuture(String collection) async {
     final comp = _pendingCount(collection);
@@ -65,25 +66,37 @@ class AdminService {
         .map((s) => s.docs.length);
   }
 
-  Stream<List<Map<String, dynamic>>> getPendingNewsStream() => _pendingStream('news');
-  Stream<List<Map<String, dynamic>>> getApprovedNewsStream() => _approvedStream('news');
+  Stream<List<Map<String, dynamic>>> getPendingNewsStream() =>
+      _pendingStream('news');
+  Stream<List<Map<String, dynamic>>> getApprovedNewsStream() =>
+      _approvedStream('news');
   Stream<List<Map<String, dynamic>>> getAllNewsStream() => _allStream('news');
-  Stream<List<Map<String, dynamic>>> getPendingProductsStream() => _pendingStream('market_products');
-  Stream<List<Map<String, dynamic>>> getApprovedProductsStream() => _approvedStream('market_products');
-  Stream<List<Map<String, dynamic>>> getAllProductsStream() => _allStream('market_products');
-  Stream<List<Map<String, dynamic>>> getPendingObituariesStream() => _pendingStream('obituaries');
-  Stream<List<Map<String, dynamic>>> getPendingOccasionsStream() => _pendingStream('occasions');
-  Stream<List<Map<String, dynamic>>> getPendingForumPostsStream() => _pendingStream('forum_posts');
+  Stream<List<Map<String, dynamic>>> getPendingProductsStream() =>
+      _pendingStream('market_products');
+  Stream<List<Map<String, dynamic>>> getApprovedProductsStream() =>
+      _approvedStream('market_products');
+  Stream<List<Map<String, dynamic>>> getAllProductsStream() =>
+      _allStream('market_products');
+  Stream<List<Map<String, dynamic>>> getPendingObituariesStream() =>
+      _pendingStream('obituaries');
+  Stream<List<Map<String, dynamic>>> getPendingOccasionsStream() =>
+      _pendingStream('occasions');
+  Stream<List<Map<String, dynamic>>> getPendingForumPostsStream() =>
+      _pendingStream('forum_posts');
 
   Future<void> approveNews(String docId) => approveItem('news', docId);
   Future<void> rejectNews(String docId) => rejectItem('news', docId);
   Future<void> deleteNews(String docId) => deleteItem('news', docId);
 
-  Future<void> approveProduct(String docId) => approveItem('market_products', docId);
-  Future<void> rejectProduct(String docId) => rejectItem('market_products', docId);
-  Future<void> deleteProduct(String docId) => deleteItem('market_products', docId);
+  Future<void> approveProduct(String docId) =>
+      approveItem('market_products', docId);
+  Future<void> rejectProduct(String docId) =>
+      rejectItem('market_products', docId);
+  Future<void> deleteProduct(String docId) =>
+      deleteItem('market_products', docId);
 
-  Future<void> approveObituary(String docId) => approveItem('obituaries', docId);
+  Future<void> approveObituary(String docId) =>
+      approveItem('obituaries', docId);
   Future<void> rejectObituary(String docId) => rejectItem('obituaries', docId);
   Future<void> deleteObituary(String docId) => deleteItem('obituaries', docId);
 
@@ -91,9 +104,12 @@ class AdminService {
   Future<void> rejectOccasion(String docId) => rejectItem('occasions', docId);
   Future<void> deleteOccasion(String docId) => deleteItem('occasions', docId);
 
-  Future<void> approveForumPost(String docId) => approveItem('forum_posts', docId);
-  Future<void> rejectForumPost(String docId) => rejectItem('forum_posts', docId);
-  Future<void> deleteForumPost(String docId) => deleteItem('forum_posts', docId);
+  Future<void> approveForumPost(String docId) =>
+      approveItem('forum_posts', docId);
+  Future<void> rejectForumPost(String docId) =>
+      rejectItem('forum_posts', docId);
+  Future<void> deleteForumPost(String docId) =>
+      deleteItem('forum_posts', docId);
 
   Stream<List<Map<String, dynamic>>> getActivityLogStream({int limit = 100}) {
     return _firestore
@@ -113,6 +129,18 @@ class AdminService {
       'obituaries',
       'occasions',
       'forum_posts',
+      'seller_requests',
+      'shops',
+      'phone_directory',
+      'service_providers',
+      'lost_items',
+      'medical_center_clinics',
+      'village_clinics',
+      'pharmacies',
+      'medical_labs',
+      'blood_requests',
+      'blood_donors',
+      'service_requests',
       'activity_log',
     ];
     for (final collection in collections) {
@@ -142,7 +170,8 @@ class AdminService {
           .where('isApproved', isEqualTo: true)
           .get();
       final docs = snapshot.docs.map((d) => {...d.data(), 'id': d.id}).toList();
-      docs.sort((a, b) => _toMillis(b['createdAt']).compareTo(_toMillis(a['createdAt'])));
+      docs.sort((a, b) =>
+          _toMillis(b['createdAt']).compareTo(_toMillis(a['createdAt'])));
       return docs.take(limit).toList();
     } catch (_) {
       return [];
@@ -169,7 +198,8 @@ class AdminService {
           .where('isApproved', isEqualTo: true)
           .get();
       final docs = snapshot.docs.map((d) => {...d.data(), 'id': d.id}).toList();
-      docs.sort((a, b) => _toMillis(b['createdAt']).compareTo(_toMillis(a['createdAt'])));
+      docs.sort((a, b) =>
+          _toMillis(b['createdAt']).compareTo(_toMillis(a['createdAt'])));
       return docs.take(10).toList();
     } catch (_) {
       return [];
@@ -177,7 +207,10 @@ class AdminService {
   }
 
   Future<List<Map<String, dynamic>>> getAdmins() async {
-    final snapshot = await _firestore.collection('users').where('role', isEqualTo: 'admin').get();
+    final snapshot = await _firestore
+        .collection('users')
+        .where('role', isEqualTo: 'admin')
+        .get();
     return snapshot.docs.map((d) => d.data()).toList();
   }
 
@@ -185,16 +218,16 @@ class AdminService {
   /// بدون orderBy في Firestore لتجنّب إخفاء من لا يملك createdAt.
   Stream<List<Map<String, dynamic>>> getAllUsersStream() {
     return _firestore.collection('users').snapshots().map((s) {
-      final list =
-          s.docs.map((d) => {...d.data(), 'id': d.id}).toList();
-      list.sort((a, b) => _toMillis(b['createdAt'])
-          .compareTo(_toMillis(a['createdAt'])));
+      final list = s.docs.map((d) => {...d.data(), 'id': d.id}).toList();
+      list.sort((a, b) =>
+          _toMillis(b['createdAt']).compareTo(_toMillis(a['createdAt'])));
       return list;
     });
   }
 
   /// نشر عنصر مباشرة من الأدمن (متجاوزاً المراجعة) عبر إضافة مع isApproved=true.
-  Future<String> publishContent(String collection, Map<String, dynamic> data) async {
+  Future<String> publishContent(
+      String collection, Map<String, dynamic> data) async {
     final ref = await _firestore.collection(collection).add({
       ...data,
       'isApproved': true,
@@ -214,9 +247,16 @@ class AdminService {
   }
 
   Future<void> setUserRole(String uid, String role) async {
-    await _firestore.collection('users').doc(uid).set({'role': role}, SetOptions(merge: true));
+    await _firestore
+        .collection('users')
+        .doc(uid)
+        .set({'role': role}, SetOptions(merge: true));
     await CacheService.invalidateUser(uid);
-    await _logActivity(action: 'set_role', targetCollection: 'users', targetDocId: uid, targetTitle: role);
+    await _logActivity(
+        action: 'set_role',
+        targetCollection: 'users',
+        targetDocId: uid,
+        targetTitle: role);
     if (role == 'seller') {
       final udoc = await _firestore.collection('users').doc(uid).get();
       final st = udoc.data()?['sellerType'] as String?;
@@ -225,12 +265,16 @@ class AdminService {
   }
 
   /// تعيين الدور + نوع البائع معاً من لوحة التحكم.
-  Future<void> updateUserAccess(String uid, {String? role, String? sellerType}) async {
+  Future<void> updateUserAccess(String uid,
+      {String? role, String? sellerType}) async {
     final updates = <String, dynamic>{};
     if (role != null) updates['role'] = role;
     if (sellerType != null) updates['sellerType'] = sellerType;
     if (updates.isEmpty) return;
-    await _firestore.collection('users').doc(uid).set(updates, SetOptions(merge: true));
+    await _firestore
+        .collection('users')
+        .doc(uid)
+        .set(updates, SetOptions(merge: true));
     await CacheService.invalidateUser(uid);
     await _logActivity(
       action: 'set_role',
@@ -314,8 +358,12 @@ class AdminService {
   }
 
   Future<void> removeAdmin(String uid) async {
-    await _firestore.collection('users').doc(uid).set({'role': 'user'}, SetOptions(merge: true));
-    await _logActivity(action: 'remove_admin', targetCollection: 'users', targetDocId: uid);
+    await _firestore
+        .collection('users')
+        .doc(uid)
+        .set({'role': 'user'}, SetOptions(merge: true));
+    await _logActivity(
+        action: 'remove_admin', targetCollection: 'users', targetDocId: uid);
   }
 
   /// تعطيل/تفعيل حساب مستخدم من لوحة التحكم (المعطّل يفقد واجهة الأدمن).
@@ -332,14 +380,22 @@ class AdminService {
     );
   }
 
-  Future<void> updateItem(String collection, String docId, Map<String, dynamic> data) => _update(collection, docId, data);
-  Future<void> updateNews(String docId, Map<String, dynamic> data) => _update('news', docId, data);
-  Future<void> updateProduct(String docId, Map<String, dynamic> data) => _update('market_products', docId, data);
-  Future<void> updateObituary(String docId, Map<String, dynamic> data) => _update('obituaries', docId, data);
-  Future<void> updateOccasion(String docId, Map<String, dynamic> data) => _update('occasions', docId, data);
-  Future<void> updateForumPost(String docId, Map<String, dynamic> data) => _update('forum_posts', docId, data);
+  Future<void> updateItem(
+          String collection, String docId, Map<String, dynamic> data) =>
+      _update(collection, docId, data);
+  Future<void> updateNews(String docId, Map<String, dynamic> data) =>
+      _update('news', docId, data);
+  Future<void> updateProduct(String docId, Map<String, dynamic> data) =>
+      _update('market_products', docId, data);
+  Future<void> updateObituary(String docId, Map<String, dynamic> data) =>
+      _update('obituaries', docId, data);
+  Future<void> updateOccasion(String docId, Map<String, dynamic> data) =>
+      _update('occasions', docId, data);
+  Future<void> updateForumPost(String docId, Map<String, dynamic> data) =>
+      _update('forum_posts', docId, data);
 
-  Future<void> _update(String collection, String docId, Map<String, dynamic> data) async {
+  Future<void> _update(
+      String collection, String docId, Map<String, dynamic> data) async {
     await _firestore.collection(collection).doc(docId).update(data);
   }
 
@@ -351,9 +407,12 @@ class AdminService {
   }
 
   /// تدفقات عامة تُستخدم في لوحة التحكم المعاد تصميمها.
-  Stream<List<Map<String, dynamic>>> itemsStream(String collection, {bool pendingOnly = false}) {
+  Stream<List<Map<String, dynamic>>> itemsStream(String collection,
+      {bool pendingOnly = false}) {
     if (!pendingOnly) return _allStream(collection);
-    if (collection == 'seller_requests') return getPendingSellerRequestsStream();
+    if (collection == 'seller_requests') {
+      return getPendingSellerRequestsStream();
+    }
     return _pendingStream(collection);
   }
 
@@ -398,8 +457,7 @@ class AdminService {
     } catch (_) {}
     _announceApproval(collection, title.toString(), itemId: docId);
     // إشعار شخصي لمقدم المحتوى: تمت الموافقة على منشورك.
-    _notifySubmitter(collection, doc.data(),
-        approved: true, itemId: docId);
+    _notifySubmitter(collection, doc.data(), approved: true, itemId: docId);
   }
 
   /// حقل المالك/المقدم لكل مجموعة (لإشعاره شخصياً ولcascade الاسم).
@@ -422,8 +480,7 @@ class AdminService {
     'service_requests': 'userId',
   };
 
-  Future<void> _notifySubmitter(
-      String collection, Map<String, dynamic>? data,
+  Future<void> _notifySubmitter(String collection, Map<String, dynamic>? data,
       {required bool approved, String? itemId}) async {
     try {
       final field = _submitterFieldByCollection[collection];
@@ -574,18 +631,21 @@ class AdminService {
       'service_requests' => ('🔔 طلب خدمة', preview, '/services'),
       'service_providers' => ('🧰 خدمة جديدة في الدليل', preview, '/services'),
       'lost_items' => (
-            '🔎 إعلان مفقودات جديد',
-            preview,
-            '/services/lost-items'
-          ),
+          '🔎 إعلان مفقودات جديد',
+          preview,
+          '/services/lost-items'
+        ),
       'shops' => ('🏬 محل جديد في السوق', preview, '/market'),
       'medical_center_clinics' => (
-            '🏥 عيادة جديدة بالمركز الطبي الخيري',
-            preview,
-            '/medical'
-          ),
+          '🏥 عيادة جديدة بالمركز الطبي الخيري',
+          preview,
+          '/medical'
+        ),
       'medical_labs' => ('🧪 معمل تحاليل جديد', preview, '/medical'),
-      'village_clinics' || 'pharmacies' || 'blood_requests' || 'blood_donors' =>
+      'village_clinics' ||
+      'pharmacies' ||
+      'blood_requests' ||
+      'blood_donors' =>
         ('🩺 خدمات طبية', preview, '/medical'),
       _ => ('محتوى جديد', preview, '/'),
     };
@@ -595,8 +655,7 @@ class AdminService {
     if (collection.isEmpty || docId.isEmpty) {
       throw Exception('بيانات غير صالحة: معرّف العنصر أو المجموعة فارغ');
     }
-    final snapshot =
-        await _firestore.collection(collection).doc(docId).get();
+    final snapshot = await _firestore.collection(collection).doc(docId).get();
     await _firestore.collection(collection).doc(docId).update({
       'isApproved': false,
       'rejectedAt': FieldValue.serverTimestamp(),
@@ -693,12 +752,11 @@ class AdminService {
 
   // Seller Requests — حالة الطلب تُحدَّد بالـ status ('pending' / 'approved' / 'rejected')
   // وليس بحقل isApproved، لذا نستخدم عدّاداً مخصصاً هنا.
-  Stream<int> getPendingSellerRequestsCount() =>
-      _firestore
-          .collection('seller_requests')
-          .where('status', isEqualTo: 'pending')
-          .snapshots()
-          .map((s) => s.docs.length);
+  Stream<int> getPendingSellerRequestsCount() => _firestore
+      .collection('seller_requests')
+      .where('status', isEqualTo: 'pending')
+      .snapshots()
+      .map((s) => s.docs.length);
 
   Future<Map<String, int>> fetchPendingCounts() async {
     final results = await Future.wait([
@@ -757,7 +815,8 @@ class AdminService {
         .where('status', isEqualTo: 'pending')
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList());
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList());
   }
 
   Stream<List<Map<String, dynamic>>> getAllSellerRequestsStream() {
@@ -765,7 +824,8 @@ class AdminService {
         .collection('seller_requests')
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList());
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList());
   }
 
   Future<void> approveSellerRequest(String docId, {String? notes}) async {
@@ -778,7 +838,8 @@ class AdminService {
     });
 
     // Create seller profile
-    final requestDoc = await _firestore.collection('seller_requests').doc(docId).get();
+    final requestDoc =
+        await _firestore.collection('seller_requests').doc(docId).get();
     if (requestDoc.exists) {
       final data = requestDoc.data()!;
       final reqType = (data['requestedSellerType'] as String?) ?? 'regular';
@@ -798,13 +859,14 @@ class AdminService {
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       };
-      await _firestore.collection('seller_profiles').doc(data['userId']).set(profile);
+      await _firestore
+          .collection('seller_profiles')
+          .doc(data['userId'])
+          .set(profile);
 
       // Apply the requested seller type + promote user to seller
-      await _firestore
-          .collection('users')
-          .doc(data['userId'])
-          .set({'role': 'seller', 'sellerType': reqType}, SetOptions(merge: true));
+      await _firestore.collection('users').doc(data['userId']).set(
+          {'role': 'seller', 'sellerType': reqType}, SetOptions(merge: true));
       await CacheService.invalidateUser(data['userId'] as String);
       _notifySellerRequest(data['userId'] as String?, approved: true);
     }
@@ -834,8 +896,7 @@ class AdminService {
       targetDocId: docId,
       targetTitle: 'طلب متجر',
     );
-    _notifySellerRequest(
-        reqSnap.data()?['userId'] as String?, approved: false);
+    _notifySellerRequest(reqSnap.data()?['userId'] as String?, approved: false);
   }
 
   /// إشعار شخصي لصاحب طلب البائعية عند القبول/الرفض.
@@ -843,7 +904,8 @@ class AdminService {
       {required bool approved}) async {
     if (uid == null || uid.isEmpty) return;
     try {
-      final title = approved ? '🎉 مبروك، أصبحت بائعاً' : '⚠️ بخصوص طلب البائعية';
+      final title =
+          approved ? '🎉 مبروك، أصبحت بائعاً' : '⚠️ بخصوص طلب البائعية';
       final body = approved
           ? 'تمت الموافقة على طلبك لفتح متجر — أصبحت الآن قادراً على إضافة منتجاتك ومحلك'
           : 'لم يُقبل طلب فتح المتجر — راجع السبب في ملفك الشخصي وأعد المحاولة';
@@ -874,7 +936,8 @@ class AdminService {
         .collection('seller_profiles')
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList());
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList());
   }
 
   // Product Reviews
@@ -883,6 +946,7 @@ class AdminService {
         .collection('product_reviews')
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList());
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList());
   }
 }
