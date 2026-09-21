@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../models/agriculture_content_model.dart';
 import '../../widgets/agriculture_content_panel.dart';
 import '../../widgets/qurity_app_bar.dart';
+import '../../widgets/agriculture_promo_banner.dart';
 
 /// شاشة مستشارك الزراعي — إرشادات موثقة لمحاصيل شمال ووسط الدلتا
 class AgriculturalAdvisorScreen extends StatefulWidget {
@@ -54,6 +55,7 @@ class _AgriculturalAdvisorScreenState extends State<AgriculturalAdvisorScreen> {
         padding: const EdgeInsets.all(16),
         children: [
           _buildHeroSection(theme, color),
+          const AgriculturePromoBanner(placement: 'svc_agricultural'),
           const AgricultureContentPanel(section: AgricultureSections.advisor),
           const SizedBox(height: 14),
           TextField(

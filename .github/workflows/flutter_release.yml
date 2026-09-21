@@ -1,0 +1,55 @@
+name: Qarity Flutter Build & Release
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: 📂 Checkout repository
+      uses: actions/checkout@v3
+
+      - name: � Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.19.0"
+          channel: "stable"
+
+      - name: 📦 Get dependencies
+        run: flutter pub get
+
+      - name: ✅ Run flutter analyze
+        run: flutter analyze
+
+      - name: 📱 Build APK Release
+        run: flutter build apk --release
+
+      - name: 📤 Deploy Firestore Rules
+        uses: w9jdt/actions/firebase-deploy@v2
+        with:
+          project: abudshisha
+          credentials: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          only: firestore:rules
+
+      - name: 📦 Deploy to Firebase Hosting
+        uses: w9jdt/actions/firebase-deploy@v2
+        with:
+          project: abudshisha
+          credentials: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          only: hosting
+
+      - name: 📋 Upload APK artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: qarity-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+      - name: 📱 Notify on success
+        if: success()
+        run: echo "✅ Build and release completed successfully!"

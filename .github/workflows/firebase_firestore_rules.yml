@@ -1,0 +1,43 @@
+name: Qarity Firestore Rules Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'firestore.rules'
+      - 'lib/services/**'
+      - 'lib/models/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'firestore.rules'
+
+jobs:
+  deploy:
+    runs-on: windows-latest
+
+    steps:
+      - name: 📂 Checkout repository
+      uses: actions/checkout@v3
+
+      - name: � Setup Flutter (for Firebase SDK)
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.19.0"
+          channel: "stable"
+
+      - name: 📦 Get dependencies
+        run: flutter pub get
+
+      - name: ✅ Verify flutter analyze
+        run: flutter analyze
+
+      - name: 📤 Deploy Firestore Rules
+        uses: w9jdt/actions/firebase-deploy@v2
+        with:
+          project: abudshisha
+          credentials: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          only: firestore:rules
+
+      - name: 📋 Success notification
+        run: echo "🔥 Firestore rules deployed successfully"
