@@ -1,15 +1,21 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:excel/excel.dart'
+    show Excel, CellIndex, CellStyle, HorizontalAlign, TextCellValue;
+import 'package:file_picker/file_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../core/constants/promo_placements.dart';
 import '../../models/data_models.dart';
 import '../../models/promo_model.dart';
-import '../../models/service_provider_model.dart';
 import '../../models/village_alert.dart';
 import '../../routes/app_routes.dart';
 import '../../services/admin_service.dart';
@@ -29,8 +35,7 @@ part 'admin_dashboard_reports.dart';
 part 'admin_dashboard_review.dart';
 part 'admin_dashboard_users.dart';
 
-/// لوحة تحكم عصرية — أربع وجهات: نظرة عامة، المراجعة، المستخدمون، التقارير.
-/// الملف مقسّم إلى `part` files حسب الصفحة لتسهيل الصيانة.
+/// لوحة تحكم احترافية محسّنة
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
 
@@ -38,17 +43,19 @@ class AdminDashboardScreen extends StatefulWidget {
   State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
 }
 
-class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
+class _AdminDashboardScreenState extends State<AdminDashboardScreen>
+    with SingleTickerProviderStateMixin {
   final AdminService _adminService = AdminService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  int _navIndex = 0;
-  int _reviewNav = 0; // used to force rebuild of review page
+  late TabController _tabController;
+  int _reviewNav = 0;
 
   bool _isLoadingStats = true;
   Map<String, int> _stats = {};
   Map<String, int> _pendingCounts = {};
   final Set<String> _busyActions = {};
+  String? _selectedCat;
 
   static const List<_Cat> _cats = [
     _Cat('news', 'الأخبار', Icons.newspaper_rounded, Colors.blue),
@@ -83,10 +90,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 7, vsync: this);
+    _tabController.addListener(_onTabChanged);
     _loadStats();
     _loadPendingCounts();
-    // إصلاح تأسيسي للمنتجات القديمة غير المصنّفة بنوع بائع.
     unawaited(_adminService.backfillSellerTypes());
+  }
+
+  void _onTabChanged() {
+    // تحديث عند التبديل بين التبويبات
+    if (_tabController.indexIsChanging) {
+      setState(() {});
+    }
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadStats() async {
@@ -123,35 +144,111 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
       appBar: QurityAppBar(
-        title: 'لوحة التحكم • ${_navTitles[_navIndex]}',
+        title: 'لوحة التحكم الإدارية',
         actions: [
+          // إشعار العناصر المعلقة
           if (_totalPending > 0)
             Padding(
               padding: const EdgeInsets.only(left: 4),
               child: Badge.count(
                 count: _totalPending,
-                backgroundColor: Theme.of(context).colorScheme.error,
+                backgroundColor: Colors.orange,
                 child: IconButton(
-                  tooltip: 'عناصر بانتظار المراجعة',
+                  tooltip: '$_totalPending عنصر بانتظار المراجعة',
                   icon: const Icon(Icons.notifications_active_rounded),
-                  onPressed: () => setState(() {
-                    _navIndex = 1;
-                    _reviewNav = 1;
-                  }),
+                  onPressed: () => _tabController.animateTo(1),
+                ),
+              ).animate().fadeIn(duration: 300.ms).scale(begin: const Offset(0.8, 0.8)),
+            ),
+          // زر التحديث
+          IconButton(
+            tooltip: 'تحديث البيانات',
+            icon: _isLoadingStats
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.refresh_rounded),
+            onPressed: _isLoadingStats ? null : _refreshDashboard,
+          ),
+          const SizedBox(width: 4),
+        ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(50),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: theme.scaffoldBackgroundColor,
+              border: Border(
+                bottom: BorderSide(
+                  color: theme.colorScheme.outlineVariant.withValues(alpha: 0.2),
                 ),
               ),
             ),
-          IconButton(
-            tooltip: 'تحديث',
-            icon: const Icon(Icons.refresh_rounded),
-            onPressed: _refreshDashboard,
-          ),
-        ],
+            child: TabBar(
+              controller: _tabController,
+              isScrollable: true,
+              tabAlignment: TabAlignment.start,
+              indicatorColor: const Color(0xFF6F4E37),
+              indicatorWeight: 3,
+              labelColor: const Color(0xFF6F4E37),
+              unselectedLabelColor: Colors.grey,
+              labelStyle: const TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 13,
+              ),
+              unselectedLabelStyle: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              tabs: const [
+                Tab(
+                  icon: Icon(Icons.space_dashboard_rounded, size: 20),
+                  text: 'نظرة عامة',
+                  height: 50,
+                ),
+                Tab(
+                  icon: Icon(Icons.rule_folder_rounded, size: 20),
+                  text: 'المراجعة',
+                  height: 50,
+                ),
+                Tab(
+                  icon: Icon(Icons.group_rounded, size: 20),
+                  text: 'المستخدمون',
+                  height: 50,
+                ),
+                Tab(
+                  icon: Icon(Icons.assessment_rounded, size: 20),
+                  text: 'التقارير',
+                  height: 50,
+                ),
+                Tab(
+                  icon: Icon(Icons.campaign_rounded, size: 20),
+                  text: 'الإعلانات',
+                  height: 50,
+                ),
+                Tab(
+                  icon: Icon(Icons.warning_amber_rounded, size: 20),
+                  text: 'التنبيهات',
+                  height: 50,
+                ),
+                Tab(
+                  icon: Icon(Icons.send_rounded, size: 20),
+                  text: 'الإرسال',
+                  height: 50,
+                ),
+              ],
+            ),
+            ),
+        ),
       ),
-      body: IndexedStack(
-        index: _navIndex,
+      body: TabBarView(
+        controller: _tabController,
+        physics: const NeverScrollableScrollPhysics(), // منع السحب الجانبي
         children: [
           _OverviewPage(
             stats: _stats,
@@ -159,15 +256,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             isLoading: _isLoadingStats,
             totalPending: _totalPending,
             onRefresh: _refreshDashboard,
-            onOpenReview: (cat) => setState(() {
-              _navIndex = 1;
-              _selectedCat = cat;
+            onOpenReview: (cat) {
+              _tabController.animateTo(1);
+              setState(() => _selectedCat = cat);
               _reviewNav = 1 - _reviewNav;
-            }),
-            onOpenUsers: () => setState(() => _navIndex = 2),
-            onOpenReports: () => setState(() => _navIndex = 3),
-            onOpenAlerts: () => setState(() => _navIndex = 5),
-            onOpenBroadcast: () => setState(() => _navIndex = 6),
+            },
+            onOpenUsers: () => _tabController.animateTo(2),
+            onOpenReports: () => _tabController.animateTo(3),
+            onOpenAlerts: () => _tabController.animateTo(5),
+            onOpenBroadcast: () => _tabController.animateTo(6),
           ),
           _ReviewPage(
             key: ValueKey('review_$_reviewNav'),
@@ -191,54 +288,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           _BroadcastPage(currentUid: _auth.currentUser?.uid),
         ],
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _navIndex,
-        onDestinationSelected: (i) => setState(() => _navIndex = i),
-        destinations: const [
-          NavigationDestination(
-              icon: Icon(Icons.space_dashboard_outlined),
-              selectedIcon: Icon(Icons.space_dashboard_rounded),
-              label: 'نظرة عامة'),
-          NavigationDestination(
-              icon: Icon(Icons.rule_folder_outlined),
-              selectedIcon: Icon(Icons.rule_folder_rounded),
-              label: 'المراجعة'),
-          NavigationDestination(
-              icon: Icon(Icons.group_outlined),
-              selectedIcon: Icon(Icons.group_rounded),
-              label: 'المستخدمون'),
-          NavigationDestination(
-              icon: Icon(Icons.insights_outlined),
-              selectedIcon: Icon(Icons.insights_rounded),
-              label: 'التقارير'),
-          NavigationDestination(
-              icon: Icon(Icons.campaign_outlined),
-              selectedIcon: Icon(Icons.campaign_rounded),
-              label: 'الإعلانات'),
-          NavigationDestination(
-              icon: Icon(Icons.warning_amber_outlined),
-              selectedIcon: Icon(Icons.warning_amber_rounded),
-              label: 'التنبيهات'),
-          NavigationDestination(
-              icon: Icon(Icons.campaign_outlined),
-              selectedIcon: Icon(Icons.campaign_rounded),
-              label: 'الإرسال الجماعي'),
-        ],
-      ),
     );
   }
-
-  static const List<String> _navTitles = [
-    'نظرة عامة على المنصة',
-    'مراجعة المحتوى والطلبات',
-    'إدارة المستخدمين والأدوار',
-    'تقارير وإحصائيات',
-    'الإعلانات الدعائية المنبثقة',
-    'التنبيهات العاجلة',
-    'إرسال إشعار لجميع المستخدمين',
-  ];
-
-  String? _selectedCat;
 
   // ─────────────────────────── actions ───────────────────────────
   Future<void> _handleAction(

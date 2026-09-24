@@ -1,7 +1,7 @@
 part of 'admin_dashboard.dart';
 
-// ═══════════════════════════ Overview ═══════════════════════════
-class _OverviewPage extends StatelessWidget {
+/// صفحة النظرة العامة المحسّنة
+class _OverviewPage extends StatefulWidget {
   const _OverviewPage({
     required this.stats,
     required this.pendingCounts,
@@ -27,208 +27,62 @@ class _OverviewPage extends StatelessWidget {
   final VoidCallback onOpenBroadcast;
 
   @override
+  State<_OverviewPage> createState() => _OverviewPageState();
+}
+
+class _OverviewPageState extends State<_OverviewPage> {
+  @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return RefreshIndicator(
-      onRefresh: onRefresh,
+      onRefresh: widget.onRefresh,
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _WelcomeHeader(isLoading: isLoading, users: stats['users'] ?? 0),
-          const SizedBox(height: 16),
-          _LiveAlertSummary(onOpenAlerts: onOpenAlerts),
-          const SizedBox(height: 12),
-          const SizedBox(height: 16),
-          if (totalPending > 0)
-            _PendingAlert(
-                    count: totalPending, onTap: () => onOpenReview('news'))
-                .animate()
-                .fadeIn()
-                .slideY(begin: 0.1),
-          const SizedBox(height: 16),
-          Text('الإحصائيات',
-              style: theme.textTheme.titleMedium
-                  ?.copyWith(fontWeight: FontWeight.w900)),
-          const SizedBox(height: 12),
-          isLoading
-              ? const Padding(
-                  padding: EdgeInsets.all(32),
-                  child: Center(child: CircularProgressIndicator()),
-                )
-              : GridView.count(
-                  crossAxisCount: 3,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: 10,
-                  crossAxisSpacing: 10,
-                  children: [
-                    _StatCard(
-                        label: 'المستخدمون',
-                        value: stats['users'] ?? 0,
-                        icon: Icons.people_rounded,
-                        color: Colors.teal,
-                        onTap: onOpenUsers),
-                    _StatCard(
-                        label: 'الأخبار',
-                        value: stats['news'] ?? 0,
-                        icon: Icons.newspaper_rounded,
-                        color: Colors.blue,
-                        onTap: () => onOpenReview('news')),
-                    _StatCard(
-                        label: 'المنتجات',
-                        value: stats['market_products'] ?? 0,
-                        icon: Icons.store_rounded,
-                        color: Colors.deepPurple,
-                        onTap: () => onOpenReview('market_products')),
-                    _StatCard(
-                        label: 'المنشورات',
-                        value: stats['forum_posts'] ?? 0,
-                        icon: Icons.forum_rounded,
-                        color: Colors.brown,
-                        onTap: () => onOpenReview('forum_posts')),
-                    _StatCard(
-                        label: 'العزاء',
-                        value: stats['obituaries'] ?? 0,
-                        icon: Icons.volunteer_activism_rounded,
-                        color: Colors.indigo,
-                        onTap: () => onOpenReview('obituaries')),
-                    _StatCard(
-                        label: 'المناسبات',
-                        value: stats['occasions'] ?? 0,
-                        icon: Icons.celebration_rounded,
-                        color: Colors.teal,
-                        onTap: () => onOpenReview('occasions')),
-                  ],
-                ),
-          const SizedBox(height: 18),
-          Text('الخدمات والمحتوى الجديد',
-              style: theme.textTheme.titleMedium
-                  ?.copyWith(fontWeight: FontWeight.w900)),
-          const SizedBox(height: 12),
-          GridView.count(
-            crossAxisCount: 3,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 10,
-            crossAxisSpacing: 10,
-            children: [
-              _StatCard(
-                  label: 'المحلات',
-                  value: stats['shops'] ?? 0,
-                  icon: Icons.storefront_rounded,
-                  color: Colors.amber.shade800,
-                  onTap: () => onOpenReview('shops')),
-              _StatCard(
-                  label: 'دليل الخدمات',
-                  value: stats['service_providers'] ?? 0,
-                  icon: Icons.category_rounded,
-                  color: const Color(0xFF6D4C41),
-                  onTap: () => onOpenReview('service_providers')),
-              _StatCard(
-                  label: 'دليل الهاتف',
-                  value: stats['phone_directory'] ?? 0,
-                  icon: Icons.phone_rounded,
-                  color: Colors.cyan,
-                  onTap: () => onOpenReview('phone_directory')),
-              _StatCard(
-                  label: 'المفقودات',
-                  value: stats['lost_items'] ?? 0,
-                  icon: Icons.search_rounded,
-                  color: const Color(0xFF5E35B1),
-                  onTap: () => onOpenReview('lost_items')),
-              _StatCard(
-                  label: 'عيادات القرية',
-                  value: stats['village_clinics'] ?? 0,
-                  icon: Icons.add_business_rounded,
-                  color: const Color(0xFF00897B),
-                  onTap: () => onOpenReview('village_clinics')),
-              _StatCard(
-                  label: 'عيادات المركز',
-                  value: stats['medical_center_clinics'] ?? 0,
-                  icon: Icons.local_hospital_rounded,
-                  color: const Color(0xFF00695C),
-                  onTap: () => onOpenReview('medical_center_clinics')),
-              _StatCard(
-                  label: 'الصيدليات',
-                  value: stats['pharmacies'] ?? 0,
-                  icon: Icons.local_pharmacy_rounded,
-                  color: const Color(0xFF6F4E37),
-                  onTap: () => onOpenReview('pharmacies')),
-              _StatCard(
-                  label: 'معامل التحاليل',
-                  value: stats['medical_labs'] ?? 0,
-                  icon: Icons.science_rounded,
-                  color: const Color(0xFF6A1B9A),
-                  onTap: () => onOpenReview('medical_labs')),
-              _StatCard(
-                  label: 'طلبات الدم',
-                  value: stats['blood_requests'] ?? 0,
-                  icon: Icons.bloodtype_rounded,
-                  color: Colors.red,
-                  onTap: () => onOpenReview('blood_requests')),
-              _StatCard(
-                  label: 'المتبرعون',
-                  value: stats['blood_donors'] ?? 0,
-                  icon: Icons.favorite_rounded,
-                  color: Colors.pink,
-                  onTap: () => onOpenReview('blood_donors')),
-              _StatCard(
-                  label: 'طلبات المتاجر',
-                  value: stats['seller_requests'] ?? 0,
-                  icon: Icons.storefront_rounded,
-                  color: Colors.orange,
-                  onTap: () => onOpenReview('seller_requests')),
-            ],
+          // بطاقة الترحيب
+          _WelcomeHeader(
+            isLoading: widget.isLoading,
+            users: widget.stats['users'] ?? 0,
           ),
-          const SizedBox(height: 16),
-          Text('المراجعة السريعة',
-              style: theme.textTheme.titleMedium
-                  ?.copyWith(fontWeight: FontWeight.w900)),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final c in _AdminDashboardScreenState._cats)
-                ActionChip(
-                  avatar: Icon(c.icon,
-                      size: 16,
-                      color: (pendingCounts[c.collection] ?? 0) > 0
-                          ? Colors.red
-                          : c.color),
-                  label: Text(c.label),
-                  backgroundColor: (pendingCounts[c.collection] ?? 0) > 0
-                      ? theme.colorScheme.errorContainer.withValues(alpha: 0.4)
-                      : theme.colorScheme.surfaceContainerHighest
-                          .withValues(alpha: 0.5),
-                  onPressed: () => onOpenReview(c.collection),
-                ),
-            ],
+          const SizedBox(height: 20),
+
+          // الإحصائيات السريعة
+          _QuickStatsGrid(
+            stats: widget.stats,
+            pendingCounts: widget.pendingCounts,
+            totalPending: widget.totalPending,
           ),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: onOpenReports,
-            icon: const Icon(Icons.insights_rounded),
-            label: const Text('عرض التقارير والإحصائيات'),
-          ),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: onOpenBroadcast,
-            icon: const Icon(Icons.campaign_rounded),
-            label: const Text('إرسال إشعار لجميع المستخدمين'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.red,
-              side: const BorderSide(color: Colors.red),
+          const SizedBox(height: 20),
+
+          const SizedBox(height: 20),
+
+          // عناصر تحتاج مراجعة
+          if (widget.totalPending > 0) ...[
+            _PendingReviewSection(
+              pendingCounts: widget.pendingCounts,
+              onOpenReview: widget.onOpenReview,
             ),
+            const SizedBox(height: 20),
+          ],
+
+          // روابط سريعة
+          _QuickActionsGrid(
+            onOpenUsers: widget.onOpenUsers,
+            onOpenReports: widget.onOpenReports,
+            onOpenAlerts: widget.onOpenAlerts,
+            onOpenBroadcast: widget.onOpenBroadcast,
           ),
+          const SizedBox(height: 20),
+
+          // نشاط حديث
+          _RecentActivitySection(),
           const SizedBox(height: 24),
-          _ActivityPreview(),
         ],
       ),
     );
   }
 }
 
+/// بطاقة الترحيب
 class _WelcomeHeader extends StatelessWidget {
   const _WelcomeHeader({required this.isLoading, required this.users});
   final bool isLoading;
@@ -237,96 +91,530 @@ class _WelcomeHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        gradient: LinearGradient(
-          colors: [
-            theme.colorScheme.primary,
-            theme.colorScheme.primary.withValues(alpha: 0.7),
-          ],
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
-        ),
+    final hour = DateTime.now().hour;
+    String greeting = 'مساء الخير';
+    if (hour < 12) {
+      greeting = 'صباح الخير';
+    } else if (hour < 18) {
+      greeting = 'مساء الخير';
+    } else {
+      greeting = 'مساء الخير';
+    }
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(
+            color: theme.colorScheme.primary.withValues(alpha: 0.2), width: 1.5),
       ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(16)),
-            child: const Icon(Icons.admin_panel_settings_rounded,
-                color: Colors.white, size: 28),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: LinearGradient(
+            begin: Alignment.topRight,
+            end: Alignment.bottomLeft,
+            colors: [
+              const Color(0xFF6F4E37).withValues(alpha: 0.05),
+              const Color(0xFF6F4E37).withValues(alpha: 0.02),
+            ],
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('مرحباً بك 👋',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                        color: Colors.white, fontWeight: FontWeight.w800)),
-                const SizedBox(height: 2),
-                Text('إدارة كاملة لمحتوى القرية في مكان واحد',
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: Colors.white70)),
-              ],
+        ),
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topRight,
+                  end: Alignment.bottomLeft,
+                  colors: [
+                    Color(0xFF6F4E37),
+                    Color(0xFF8B6347),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF6F4E37).withValues(alpha: 0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.dashboard_rounded,
+                  color: Colors.white, size: 32),
             ),
-          ),
-        ],
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    greeting,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'لوحة تحكم قَرية',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 20,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '$users مستخدم نشط',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (isLoading)
+              const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2.5),
+              ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _PendingAlert extends StatelessWidget {
-  const _PendingAlert({required this.count, required this.onTap});
-  final int count;
-  final VoidCallback onTap;
+/// شبكة الإحصائيات السريعة
+class _QuickStatsGrid extends StatelessWidget {
+  const _QuickStatsGrid({
+    required this.stats,
+    required this.pendingCounts,
+    required this.totalPending,
+  });
+
+  final Map<String, int> stats;
+  final Map<String, int> pendingCounts;
+  final int totalPending;
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 2,
+      mainAxisSpacing: 12,
+      crossAxisSpacing: 12,
+      childAspectRatio: 1.5,
+      children: [
+        _StatCardOverview(
+          title: 'المستخدمون',
+          value: '${stats['users'] ?? 0}',
+          icon: Icons.people_rounded,
+          color: Colors.teal,
+          trend: '+${stats['users_trend'] ?? 0}',
+        ),
+        _StatCardOverview(
+          title: 'المحتوى',
+          value:
+              '${(stats['news'] ?? 0) + (stats['market_products'] ?? 0) + (stats['forum_posts'] ?? 0)}',
+          icon: Icons.article_rounded,
+          color: Colors.deepPurple,
+          trend: '+${stats['content_trend'] ?? 0}',
+        ),
+        _StatCardOverview(
+          title: 'بانتظار المراجعة',
+          value: '$totalPending',
+          icon: Icons.pending_actions_rounded,
+          color: totalPending > 0 ? Colors.orange : Colors.green,
+          highlight: totalPending > 0,
+        ),
+        _StatCardOverview(
+          title: 'الخدمات الطبية',
+          value:
+              '${(stats['village_clinics'] ?? 0) + (stats['pharmacies'] ?? 0) + (stats['medical_labs'] ?? 0)}',
+          icon: Icons.local_hospital_rounded,
+          color: const Color(0xFF00897B),
+        ),
+      ],
+    );
+  }
+}
+
+/// بطاقة إحصائية (نسخة النظرة العامة)
+class _StatCardOverview extends StatelessWidget {
+  const _StatCardOverview({
+    required this.title,
+    required this.value,
+    required this.icon,
+    required this.color,
+    this.trend,
+    this.highlight = false,
+  });
+
+  final String title;
+  final String value;
+  final IconData icon;
+  final Color color;
+  final String? trend;
+  final bool highlight;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Material(
-      color: theme.colorScheme.errorContainer,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Icon(Icons.pending_actions_rounded,
-                  color: theme.colorScheme.error),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text('لديك $count عنصر بانتظار المراجعة والموافقة',
-                    style: TextStyle(
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(
+          color: highlight
+              ? color.withValues(alpha: 0.4)
+              : theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+          width: highlight ? 2 : 1,
+        ),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          gradient: highlight
+              ? LinearGradient(
+                  begin: Alignment.topRight,
+                  end: Alignment.bottomLeft,
+                  colors: [
+                    color.withValues(alpha: 0.08),
+                    color.withValues(alpha: 0.03),
+                  ],
+                )
+              : null,
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(icon, color: color, size: 22),
+                ),
+                if (trend != null)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      trend!,
+                      style: const TextStyle(
+                        fontSize: 11,
                         fontWeight: FontWeight.w800,
-                        color: theme.colorScheme.onErrorContainer)),
+                        color: Colors.green,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const Spacer(),
+            Text(
+              value,
+              style: TextStyle(
+                fontWeight: FontWeight.w900,
+                color: color,
+                fontSize: 28,
               ),
-              Icon(Icons.chevron_left_rounded, color: theme.colorScheme.error),
-            ],
-          ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              title,
+              style: theme.textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _StatCard extends StatelessWidget {
-  const _StatCard({
-    required this.label,
-    required this.value,
+/// قسم العناصر المعلقة
+class _PendingReviewSection extends StatelessWidget {
+  const _PendingReviewSection({
+    required this.pendingCounts,
+    required this.onOpenReview,
+  });
+
+  final Map<String, int> pendingCounts;
+  final void Function(String) onOpenReview;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final pending = pendingCounts.entries
+        .where((e) => e.value > 0)
+        .map((e) => MapEntry(_getLabelForCollection(e.key), e.value))
+        .toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    if (pending.isEmpty) return const SizedBox.shrink();
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(
+          color: Colors.orange.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          gradient: LinearGradient(
+            begin: Alignment.topRight,
+            end: Alignment.bottomLeft,
+            colors: [
+              Colors.orange.withValues(alpha: 0.08),
+              Colors.orange.withValues(alpha: 0.03),
+            ],
+          ),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.pending_actions_rounded,
+                      color: Colors.orange, size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'عناصر تحتاج مراجعة',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      Text(
+                        '${pending.length} فئة بها محتوى معلق',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Divider(height: 1),
+            const SizedBox(height: 12),
+            ...pending.take(5).map((e) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: InkWell(
+                    onTap: () => onOpenReview(_getCollectionForLabel(e.key)),
+                    borderRadius: BorderRadius.circular(10),
+                    child: Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 32,
+                            height: 32,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: Colors.orange.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              '${e.value}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                                color: Colors.orange,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              e.key,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          const Icon(Icons.chevron_left_rounded,
+                              size: 20, color: Colors.grey),
+                        ],
+                      ),
+                    ),
+                  ),
+                )),
+            if (pending.length > 5) ...[
+              const SizedBox(height: 8),
+              Center(
+                child: TextButton.icon(
+                  onPressed: () => onOpenReview('news'),
+                  icon: const Icon(Icons.visibility_rounded, size: 16),
+                  label: const Text('عرض الكل'),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _getLabelForCollection(String collection) {
+    const map = {
+      'news': 'الأخبار',
+      'market_products': 'المنتجات',
+      'shops': 'المحلات',
+      'obituaries': 'العزاء',
+      'occasions': 'المناسبات',
+      'forum_posts': 'المنتدى',
+      'seller_requests': 'طلبات المتاجر',
+      'phone_directory': 'دليل الهاتف',
+      'service_providers': 'دليل الخدمات',
+      'lost_items': 'المفقودات',
+      'medical_center_clinics': 'عيادات المركز',
+      'village_clinics': 'عيادات القرية',
+      'pharmacies': 'الصيدليات',
+      'medical_labs': 'معامل التحاليل',
+      'blood_requests': 'طلبات الدم',
+      'blood_donors': 'المتبرعون بالدم',
+    };
+    return map[collection] ?? collection;
+  }
+
+  String _getCollectionForLabel(String label) {
+    const map = {
+      'الأخبار': 'news',
+      'المنتجات': 'market_products',
+      'المحلات': 'shops',
+      'العزاء': 'obituaries',
+      'المناسبات': 'occasions',
+      'المنتدى': 'forum_posts',
+      'طلبات المتاجر': 'seller_requests',
+      'دليل الهاتف': 'phone_directory',
+      'دليل الخدمات': 'service_providers',
+      'المفقودات': 'lost_items',
+      'عيادات المركز': 'medical_center_clinics',
+      'عيادات القرية': 'village_clinics',
+      'الصيدليات': 'pharmacies',
+      'معامل التحاليل': 'medical_labs',
+      'طلبات الدم': 'blood_requests',
+      'المتبرعون بالدم': 'blood_donors',
+    };
+    return map[label] ?? 'news';
+  }
+}
+
+/// شبكة الإجراءات السريعة
+class _QuickActionsGrid extends StatelessWidget {
+  const _QuickActionsGrid({
+    required this.onOpenUsers,
+    required this.onOpenReports,
+    required this.onOpenAlerts,
+    required this.onOpenBroadcast,
+  });
+
+  final VoidCallback onOpenUsers;
+  final VoidCallback onOpenReports;
+  final VoidCallback onOpenAlerts;
+  final VoidCallback onOpenBroadcast;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+          child: Text(
+            'إجراءات سريعة',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w900,
+                ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: 2,
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          childAspectRatio: 1.8,
+          children: [
+            _QuickActionCard(
+              title: 'إدارة المستخدمين',
+              icon: Icons.people_rounded,
+              color: Colors.teal,
+              onTap: onOpenUsers,
+            ),
+            _QuickActionCard(
+              title: 'التقارير',
+              icon: Icons.insights_rounded,
+              color: Colors.deepPurple,
+              onTap: onOpenReports,
+            ),
+            _QuickActionCard(
+              title: 'التنبيهات',
+              icon: Icons.warning_amber_rounded,
+              color: Colors.orange,
+              onTap: onOpenAlerts,
+            ),
+            _QuickActionCard(
+              title: 'الإرسال الجماعي',
+              icon: Icons.send_rounded,
+              color: Colors.blue,
+              onTap: onOpenBroadcast,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// بطاقة إجراء سريع
+class _QuickActionCard extends StatelessWidget {
+  const _QuickActionCard({
+    required this.title,
     required this.icon,
     required this.color,
     required this.onTap,
   });
-  final String label;
-  final int value;
+
+  final String title;
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
@@ -334,50 +622,43 @@ class _StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Material(
-      color: theme.colorScheme.surface,
-      borderRadius: BorderRadius.circular(18),
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+        ),
+      ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(18),
         onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: color.withValues(alpha: 0.25)),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                color.withValues(alpha: 0.12),
-                color.withValues(alpha: 0.02),
-              ],
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(6),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.16),
-                    borderRadius: BorderRadius.circular(9)),
-                child: Icon(icon, color: color, size: 14),
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: color, size: 24),
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('$value',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w900, color: color)),
-                  Text(label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.labelSmall
-                          ?.copyWith(fontWeight: FontWeight.w700)),
-                ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
+              Icon(Icons.chevron_left_rounded,
+                  size: 20, color: theme.colorScheme.onSurfaceVariant),
             ],
           ),
         ),
@@ -386,113 +667,69 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-class _ActivityPreview extends StatelessWidget {
+/// قسم النشاط الحديث
+class _RecentActivitySection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('آخر النشاطات',
-            style: theme.textTheme.titleMedium
-                ?.copyWith(fontWeight: FontWeight.w900)),
-        const SizedBox(height: 12),
-        StreamBuilder<List<Map<String, dynamic>>>(
-          stream: AdminService().getActivityLogStream(limit: 6),
-          builder: (context, snapshot) {
-            final log = snapshot.data ?? [];
-            if (log.isEmpty) {
-              return const Padding(
-                padding: EdgeInsets.all(16),
-                child: Text('لا يوجد نشاط بعد',
-                    style: TextStyle(color: Colors.grey)),
-              );
-            }
-            return Column(
-              children: log
-                  .map((e) => Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: ListTile(
-                          dense: true,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              side: BorderSide(
-                                  color: theme.colorScheme.outlineVariant
-                                      .withValues(alpha: 0.3))),
-                          leading: Icon(_actionIcon(e['action']),
-                              color: _actionColor(e['action'], theme)),
-                          title: Text(
-                              '${_actionLabel(e['action'])}: ${e['targetTitle'] ?? ''}',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w700, fontSize: 13)),
-                        ),
-                      ))
-                  .toList(),
-            );
-          },
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
         ),
-      ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(Icons.history_rounded,
+                      color: theme.colorScheme.primary, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'النشاط الأخير',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: Column(
+                  children: [
+                    Icon(Icons.timeline_rounded,
+                        size: 48,
+                        color: theme.colorScheme.onSurfaceVariant
+                            .withValues(alpha: 0.3)),
+                    const SizedBox(height: 12),
+                    Text(
+                      'سيتم عرض النشاط الأخير هنا',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
-
-  static IconData _actionIcon(dynamic action) {
-    switch (action) {
-      case 'approve':
-        return Icons.check_circle_rounded;
-      case 'reject':
-        return Icons.cancel_rounded;
-      case 'delete':
-        return Icons.delete_rounded;
-      case 'publish':
-        return Icons.publish_rounded;
-      case 'set_role':
-      case 'remove_admin':
-        return Icons.shield_rounded;
-      case 'enable_user':
-        return Icons.toggle_on_rounded;
-      case 'disable_user':
-        return Icons.toggle_off_rounded;
-      default:
-        return Icons.info_rounded;
-    }
-  }
-
-  static Color _actionColor(dynamic action, ThemeData theme) {
-    switch (action) {
-      case 'approve':
-      case 'publish':
-        return const Color(0xFF6F4E37);
-      case 'reject':
-        return Colors.orange;
-      case 'delete':
-        return Colors.red;
-      default:
-        return theme.colorScheme.primary;
-    }
-  }
-
-  static String _actionLabel(dynamic action) {
-    switch (action) {
-      case 'approve':
-        return 'موافقة';
-      case 'reject':
-        return 'رفض';
-      case 'delete':
-        return 'حذف';
-      case 'publish':
-        return 'نشر';
-      case 'set_role':
-        return 'تغيير دور';
-      case 'remove_admin':
-        return 'إزالة إدارة';
-      case 'enable_user':
-        return 'تفعيل حساب';
-      case 'disable_user':
-        return 'تعطيل حساب';
-      default:
-        return '$action';
-    }
-  }
 }
+

@@ -772,21 +772,6 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
         hintStyle: TextStyle(
             color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
         prefixIcon: Icon(icon, color: theme.colorScheme.primary),
-        border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none),
-        enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(
-                color:
-                    theme.colorScheme.outlineVariant.withValues(alpha: 0.3))),
-        focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide:
-                BorderSide(color: theme.colorScheme.primary, width: 2)),
-        filled: true,
-        fillColor: theme.colorScheme.surfaceContainerHighest
-            .withValues(alpha: 0.3),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
@@ -807,17 +792,6 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
           labelText: label,
           prefixIcon:
               Icon(Icons.calendar_today_rounded, color: theme.colorScheme.primary),
-          border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none),
-          enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
-                  color: theme.colorScheme.outlineVariant
-                      .withValues(alpha: 0.3))),
-          filled: true,
-          fillColor: theme.colorScheme.surfaceContainerHighest
-              .withValues(alpha: 0.3),
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         ),

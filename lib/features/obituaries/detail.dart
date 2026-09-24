@@ -531,7 +531,7 @@ class _CondolenceSectionState extends State<_CondolenceSection> {
           textCapitalization: TextCapitalization.sentences,
           decoration: InputDecoration(
             hintText: 'رسالتك إلى أهل المتوفى ${widget.obituaryName}',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
         ),
         actions: [

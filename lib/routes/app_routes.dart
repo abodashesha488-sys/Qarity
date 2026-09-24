@@ -51,9 +51,28 @@ import '../features/services/workers_equipment_screen.dart';
 import '../features/settings/index.dart';
 import '../features/settings/notifications.dart';
 import '../features/village/about.dart';
+import '../features/village/village_achievements_screen.dart';
+import '../features/village/village_agriculture_history_screen.dart';
+import '../features/village/village_archive_list_screen.dart';
 import '../features/village/village_archive_screen.dart';
+import '../features/village/village_before_after_screen.dart';
+import '../features/village/village_contribution_screen.dart';
+import '../features/village/village_contributions_review_screen.dart';
+import '../features/village/village_development_timeline_screen.dart';
+import '../features/village/village_digital_archive_screen.dart';
+import '../features/village/village_education_history_screen.dart';
+import '../features/village/village_family_screen.dart';
+import '../features/village/village_heritage_screen.dart';
 import '../features/village/village_history_screen.dart';
 import '../features/village/village_institutions_screen.dart';
+import '../features/village/village_landmarks_screen.dart';
+import '../features/village/village_life_screen.dart';
+import '../features/village/village_map_screen.dart';
+import '../features/village/village_memorial_screen.dart';
+import '../features/village/village_memory_screen.dart';
+import '../features/village/village_notable_people_screen.dart';
+import '../features/village/village_people_screen.dart';
+import '../features/village/village_profile_screen.dart';
 import '../features/weather/weather_detail_screen.dart';
 import '../services/admin_service.dart';
 
@@ -71,6 +90,26 @@ class AppRoutes {
   static const String villageHistory = '/village/history';
   static const String villageArchive = '/village/archive';
   static const String villageInstitutions = '/village/institutions';
+  static const String villageProfile = '/village/profile';
+  static const String villageMemory = '/village/memory';
+  static const String villageMemoryList = '/village/memory/list';
+  static const String villagePeople = '/village/people';
+  static const String villageFamily = '/village/family';
+  static const String villageNotablePeople = '/village/notable-people';
+  static const String villageMemorial = '/village/memorial';
+  static const String villageHeritage = '/village/heritage';
+  static const String villageLife = '/village/life';
+  static const String villageLandmarks = '/village/landmarks';
+  static const String villageMap = '/village/map';
+  static const String villageBeforeAfter = '/village/before-after';
+  static const String villageAgricultureHistory = '/village/agriculture-history';
+  static const String villageEducationHistory = '/village/education-history';
+  static const String villageDevelopment = '/village/development';
+  static const String villageAchievements = '/village/achievements';
+  static const String villageDigitalArchive = '/village/digital-archive';
+  static const String villageContribute = '/village/contribute';
+  static const String villageContributionsReview =
+      '/village/contributions-review';
   static const String obituariesList = '/obituaries';
   static const String obituariesDetail = '/obituaries/detail';
   static const String obituariesAdd = '/obituaries/add';
@@ -131,6 +170,25 @@ static const String marketProducts = '/market';
     villageHistory: (_) => const VillageHistoryScreen(),
     villageArchive: (_) => const VillageArchiveScreen(),
     villageInstitutions: (_) => const VillageInstitutionsScreen(),
+    villageProfile: (_) => const VillageProfileScreen(),
+    villageMemory: (_) => const VillageMemoryScreen(),
+    villagePeople: (_) => const VillagePeopleScreen(),
+    villageFamily: (_) => const VillageFamilyScreen(),
+    villageNotablePeople: (_) => const VillageNotablePeopleScreen(),
+    villageMemorial: (_) => const VillageMemorialScreen(),
+    villageHeritage: (_) => const VillageHeritageScreen(),
+    villageLife: (_) => const VillageLifeScreen(),
+    villageLandmarks: (_) => const VillageLandmarksScreen(),
+    villageMap: (_) => const VillageMapScreen(),
+    villageBeforeAfter: (_) => const VillageBeforeAfterScreen(),
+    villageAgricultureHistory: (_) => const VillageAgricultureHistoryScreen(),
+    villageEducationHistory: (_) => const VillageEducationHistoryScreen(),
+    villageDevelopment: (_) => const VillageDevelopmentTimelineScreen(),
+    villageAchievements: (_) => const VillageAchievementsScreen(),
+    villageDigitalArchive: (_) => const VillageDigitalArchiveScreen(),
+    villageContribute: (_) => const VillageContributionScreen(),
+    villageContributionsReview: (_) =>
+        const VillageContributionsReviewScreen(),
     obituariesList: (_) => const ObituariesListScreen(),
     obituariesDetail: (_) => const ObituaryDetailScreen(),
 obituariesAdd: (_) => const AddObituaryScreen(),
@@ -229,6 +287,13 @@ obituariesAdd: (_) => const AddObituaryScreen(),
       final category = settings.arguments as String? ?? 'technicians';
       return _buildSlideRoute(
         (_) => ProviderCategoryScreen(category: category),
+        settings,
+      );
+    }
+    if (settings.name == villageMemoryList) {
+      final category = settings.arguments as String? ?? 'photos';
+      return _buildSlideRoute(
+        (_) => VillageArchiveListScreen(category: category),
         settings,
       );
     }

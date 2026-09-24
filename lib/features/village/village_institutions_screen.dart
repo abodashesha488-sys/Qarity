@@ -8,8 +8,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../models/village_content_models.dart';
 import '../../services/village_content_service.dart';
 import '../../widgets/qurity_app_bar.dart';
+import '../../widgets/village_ornament.dart';
 import 'village_content_admin.dart';
-import 'village_ornament.dart';
 
 const Color kVillageInstitutionsColor = Color(0xFF1565C0);
 
@@ -22,8 +22,7 @@ class VillageInstitutionsScreen extends StatefulWidget {
       _VillageInstitutionsScreenState();
 }
 
-class _VillageInstitutionsScreenState
-    extends State<VillageInstitutionsScreen> {
+class _VillageInstitutionsScreenState extends State<VillageInstitutionsScreen> {
   final VillageContentService _service = VillageContentService();
   late final Stream<List<VillageInstitution>> _stream =
       _service.watchInstitutions();
@@ -62,8 +61,7 @@ class _VillageInstitutionsScreenState
                 stream: _stream,
                 nameOf: (n) => n.name,
                 subtitleOf: (n) => InstitutionType.label(n.type),
-                remove: (id) =>
-                    _service.deleteDoc('village_institutions', id),
+                remove: (id) => _service.deleteDoc('village_institutions', id),
                 formBuilder: (ctx, editing) =>
                     InstitutionForm(editing: editing),
               ),
@@ -108,9 +106,8 @@ class _VillageInstitutionsScreenState
               for (final i in items) {
                 grouped.putIfAbsent(i.type, () => []).add(i);
               }
-              final types = InstitutionType.ordered
-                  .where(grouped.containsKey)
-                  .toList();
+              final types =
+                  InstitutionType.ordered.where(grouped.containsKey).toList();
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -130,18 +127,16 @@ class _VillageInstitutionsScreenState
                                       .withValues(alpha: 0.4)),
                             ),
                             child: Icon(InstitutionType.icon(t),
-                                size: 18,
-                                color: InstitutionType.color(t)),
+                                size: 18, color: InstitutionType.color(t)),
                           ),
                           const SizedBox(width: 9),
                           Text(InstitutionType.label(t),
                               style: VillageOrnament.amiri(
-                                  size: 18,
-                                  color: InstitutionType.color(t))),
+                                  size: 18, color: InstitutionType.color(t))),
                           Expanded(
                             child: Padding(
-                              padding: const EdgeInsets.only(
-                                  right: 10, left: 4),
+                              padding:
+                                  const EdgeInsets.only(right: 10, left: 4),
                               child: Divider(
                                   color: InstitutionType.color(t)
                                       .withValues(alpha: 0.25)),
@@ -153,8 +148,7 @@ class _VillageInstitutionsScreenState
                     for (var i = 0; i < grouped[t]!.length; i++)
                       Padding(
                         padding: const EdgeInsets.fromLTRB(14, 6, 14, 0),
-                        child: _InstitutionCard(
-                            item: grouped[t]![i], index: i),
+                        child: _InstitutionCard(item: grouped[t]![i], index: i),
                       ),
                   ],
                 ],
@@ -182,8 +176,7 @@ class _InstitutionCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side:
-            BorderSide(color: color.withValues(alpha: 0.32), width: 1.2),
+        side: BorderSide(color: color.withValues(alpha: 0.32), width: 1.2),
       ),
       child: InkWell(
         onTap: () => _showDetail(context),
@@ -200,10 +193,10 @@ class _InstitutionCard extends StatelessWidget {
                       fit: BoxFit.cover,
                       width: 64,
                       height: 78,
-                      errorWidget: (_, __, ___) =>
-                          Icon(InstitutionType.icon(item.type),
-                              size: 26,
-                              color: color.withValues(alpha: 0.6))),
+                      errorWidget: (_, __, ___) => Icon(
+                          InstitutionType.icon(item.type),
+                          size: 26,
+                          color: color.withValues(alpha: 0.6))),
             ),
             Expanded(
               child: Padding(
@@ -229,16 +222,14 @@ class _InstitutionCard extends StatelessWidget {
                     Row(
                       children: [
                         if (item.location.isNotEmpty) ...[
-                          Icon(Icons.place_rounded,
-                              size: 12, color: color),
+                          Icon(Icons.place_rounded, size: 12, color: color),
                           const SizedBox(width: 3),
                           Flexible(
                             child: Text(item.location,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700)),
+                                    fontSize: 10, fontWeight: FontWeight.w700)),
                           ),
                           const SizedBox(width: 8),
                         ],
@@ -297,8 +288,7 @@ class _InstitutionCard extends StatelessWidget {
                                 errorWidget: (_, __, ___) => ColoredBox(
                                     color: color.withValues(alpha: 0.08),
                                     child: const Center(
-                                        child: Icon(
-                                            Icons.broken_image_rounded,
+                                        child: Icon(Icons.broken_image_rounded,
                                             color: Colors.black26)))),
                           ),
                         ),
@@ -311,9 +301,7 @@ class _InstitutionCard extends StatelessWidget {
                   Icon(InstitutionType.icon(item.type), color: color, size: 20),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(item.name,
-                        style: VillageOrnament.amiri(
-                            )),
+                    child: Text(item.name, style: VillageOrnament.amiri()),
                   ),
                 ],
               ),

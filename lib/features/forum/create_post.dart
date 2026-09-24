@@ -200,22 +200,9 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                                 textCapitalization: TextCapitalization.sentences,
                                 textInputAction: TextInputAction.next,
                                 style: theme.textTheme.titleMedium,
-                                decoration: InputDecoration(
+                                decoration: const InputDecoration(
                                   hintText: 'عنوان الموضوع',
-                                  filled: true,
-                                  fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(14),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(14),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(14),
-                                    borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.5),
-                                  ),
+                                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                                 ),
                                 validator: (v) =>
                                     (v == null || v.trim().isEmpty) ? 'العنوان مطلوب' : null,
@@ -255,26 +242,10 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                                 autofocus: true,
                                 textCapitalization: TextCapitalization.sentences,
                                 style: theme.textTheme.bodyLarge?.copyWith(height: 1.6),
-                                decoration: InputDecoration(
+                                decoration: const InputDecoration(
                                   hintText: 'شارك فكرتك مع المجتمع...',
                                   alignLabelWithHint: true,
-                                  filled: true,
-                                  fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                    borderSide: BorderSide(
-                                      color: theme.colorScheme.primary.withValues(alpha: 0.4),
-                                      width: 1.5,
-                                    ),
-                                  ),
+                                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                                 ),
                                 validator: (v) => (v == null || v.trim().isEmpty) ? 'يرجى إدخال المحتوى' : null,
                               ),

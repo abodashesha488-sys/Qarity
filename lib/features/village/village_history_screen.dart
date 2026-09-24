@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -7,12 +5,13 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../models/village_content_models.dart';
 import '../../services/village_content_service.dart';
 import '../../widgets/qurity_app_bar.dart';
+import '../../widgets/village_ornament.dart';
 import 'village_content_admin.dart';
-import 'village_ornament.dart';
 
 const Color kVillageHistoryColor = Color(0xFF5D4037);
 
-/// «تاريخ القرية» — خط زمني مزخرف لحقبات أبوديشيشة.
+/// «تاريخ القرية» — خط زمني ذهبي مرقّم لعصور القرية ومراحلها:
+/// النشأة، الستينات، التسعينات، والحاضر.
 class VillageHistoryScreen extends StatefulWidget {
   const VillageHistoryScreen({super.key});
 
@@ -22,23 +21,27 @@ class VillageHistoryScreen extends StatefulWidget {
 
 class _VillageHistoryScreenState extends State<VillageHistoryScreen> {
   final VillageContentService _service = VillageContentService();
-  late final Stream<List<HistoryEra>> _stream = _service.watchEras();
+  late final Stream<List<HistoryEra>> _eras = _service.watchEras();
   bool _isAdmin = false;
 
   @override
   void initState() {
     super.initState();
-    _initAdmin();
+    canManageVillageContent().then((v) {
+      if (mounted) setState(() => _isAdmin = v);
+    });
   }
 
-  Future<void> _initAdmin() async {
-    final admin = await canManageVillageContent();
-    if (!mounted) return;
-    setState(() => _isAdmin = admin);
-    if (admin) {
-      unawaited(_service.migrateLegacyIfNeeded().catchError((_) => 0));
-    }
-  }
+  Future<void> _manage() => manageVillageContent<HistoryEra>(
+        context,
+        title: 'عصور تاريخ القرية',
+        accent: kVillageHistoryColor,
+        stream: _eras,
+        nameOf: (e) => e.title,
+        subtitleOf: (e) => e.years,
+        remove: (id) => _service.deleteDoc('village_history', id),
+        formBuilder: (ctx, editing) => HistoryEraForm(editing: editing),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -48,239 +51,207 @@ class _VillageHistoryScreenState extends State<VillageHistoryScreen> {
           title: 'تاريخ القرية', color: kVillageHistoryColor),
       floatingActionButton: _isAdmin
           ? FloatingActionButton.extended(
-              heroTag: 'village_history_manage',
+              onPressed: _manage,
               backgroundColor: kVillageHistoryColor,
               foregroundColor: Colors.white,
-              onPressed: () => manageVillageContent<HistoryEra>(
-                context,
-                title: 'حقبات التاريخ',
-                accent: kVillageHistoryColor,
-                stream: _stream,
-                nameOf: (e) => e.title,
-                subtitleOf: (e) => e.years,
-                remove: (id) => _service.deleteDoc('village_history', id),
-                formBuilder: (ctx, editing) => HistoryEraForm(editing: editing),
-              ),
-              icon: const Icon(Icons.tune_rounded),
-              label: const Text('إدارة الحقبات',
-                  style: TextStyle(fontWeight: FontWeight.w800)),
+              icon: const Icon(Icons.edit_note_rounded),
+              label: const Text('إدارة'),
             )
           : null,
-      body: ListView(
-        padding: const EdgeInsets.only(bottom: 96),
-        children: [
-          const VillageSectionHeader(
-            accent: kVillageHistoryColor,
-            title: 'تاريخ القرية',
-            subtitle: 'حيث تبدأ حكاية أبوديشيشة — حقبة أثر حقبة، سطرًا سطراً في ذاكرة الوطن الصغير',
-            icon: Icons.history_edu_rounded,
-          ),
-          const SizedBox(height: 18),
-          StreamBuilder<List<HistoryEra>>(
-            stream: _stream,
-            builder: (context, snap) {
-              if (!snap.hasData) {
-                return const Padding(
-                  padding: EdgeInsets.all(40),
-                  child: Center(child: CircularProgressIndicator()),
-                );
-              }
-              final eras = snap.data!;
-              if (eras.isEmpty) {
-                return Padding(
+      body: StreamBuilder<List<HistoryEra>>(
+        stream: _eras,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting &&
+              !snapshot.hasData) {
+            return const Center(
+                child: CircularProgressIndicator(strokeWidth: 2));
+          }
+          final eras = snapshot.data ?? const [];
+          return ListView(
+            padding: const EdgeInsets.only(bottom: 32),
+            children: [
+              const VillageSectionHeader(
+                accent: kVillageHistoryColor,
+                title: 'تاريخ القرية',
+                subtitle: 'رحلة أبودشيشة عبر الزمن… من النشأة إلى اليوم',
+                icon: Icons.account_balance_rounded,
+              ),
+              const SizedBox(height: 10),
+              if (eras.isEmpty)
+                Padding(
                   padding: const EdgeInsets.all(32),
-                  child: Column(
-                    children: [
-                      Icon(Icons.auto_stories_rounded,
-                          size: 52,
-                          color: kVillageHistoryColor.withValues(alpha: 0.4)),
+                  child: Center(
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(Icons.history_rounded,
+                          size: 54,
+                          color: kVillageHistoryColor.withValues(alpha: 0.35)),
                       const SizedBox(height: 10),
-                      Text('لم تُدوَّن حقبات بعد',
-                          style: theme.textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w800)),
-                      if (_isAdmin)
-                        const Padding(
-                          padding: EdgeInsets.only(top: 6),
-                          child: Text('ابدأ من زر «إدارة الحقبات» ＋',
-                              style: TextStyle(
-                                  fontSize: 12, color: Colors.black54)),
-                        ),
-                    ],
+                      Text('لم يُضف محتوى تاريخي بعد',
+                          style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: theme.colorScheme.onSurfaceVariant)),
+                    ]),
                   ),
-                );
-              }
-              return Column(
-                children: [
-                  const OrnamentDivider(),
-                  const SizedBox(height: 10),
-                  for (var i = 0; i < eras.length; i++)
-                    _EraNode(
-                      era: eras[i],
-                      isFirst: i == 0,
-                      isLast: i == eras.length - 1,
-                      index: i,
-                    ),
-                  const SizedBox(height: 10),
-                  const OrnamentDivider(),
-                ],
-              );
-            },
-          ),
-        ],
+                )
+              else ...[
+                for (var i = 0; i < eras.length; i++)
+                  _TimelineNode(
+                      era: eras[i], index: i, isLast: i == eras.length - 1),
+              ],
+              const SizedBox(height: 10),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 48),
+                child: OrnamentDivider(),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 }
 
-class _EraNode extends StatelessWidget {
-  const _EraNode({
-    required this.era,
-    required this.isFirst,
-    required this.isLast,
-    required this.index,
-  });
+/// عقدة الخط الزمني: رقم ذهبي + بطاقة العصر (صورة، سنوات، سرد).
+class _TimelineNode extends StatelessWidget {
+  const _TimelineNode(
+      {required this.era, required this.index, required this.isLast});
+
   final HistoryEra era;
-  final bool isFirst;
-  final bool isLast;
   final int index;
+  final bool isLast;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 0, 14, 0),
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // عمود الخط الزمني + العقدة
-            SizedBox(
-              width: 42,
-              child: Column(
-                children: [
-                  Container(
-                      height: 2,
-                      color: isFirst
-                          ? Colors.transparent
-                          : VillageOrnament.goldDark.withValues(alpha: 0.45)),
-                  Container(
-                    width: 34,
-                    height: 34,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: const RadialGradient(colors: [
-                        VillageOrnament.gold,
-                        VillageOrnament.goldDark
-                      ]),
-                      border: Border.all(color: Colors.white, width: 2.4),
-                      boxShadow: const [
-                        BoxShadow(
-                            color: Color(0x40000000),
-                            blurRadius: 6,
-                            offset: Offset(0, 2))
-                      ],
-                    ),
-                    child: Center(
-                      child: Text('${index + 1}',
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 13)),
-                    ),
-                  ),
-                  Expanded(
-                      child: Container(
-                          width: 2,
-                          color: isLast
-                              ? Colors.transparent
-                              : VillageOrnament.goldDark
-                                  .withValues(alpha: 0.45))),
-                ],
-              ),
-            ),
-            const SizedBox(width: 10),
-            // بطاقة الحقبة
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 18),
-                child: Container(
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // العمود الزمني: رقم + خط
+          SizedBox(
+            width: 54,
+            child: Column(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                        color: kVillageHistoryColor.withValues(alpha: 0.22)),
-                    boxShadow: const [
+                    shape: BoxShape.circle,
+                    gradient: const LinearGradient(
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
+                      colors: [VillageOrnament.gold, Color(0xFFB8860B)],
+                    ),
+                    boxShadow: [
                       BoxShadow(
-                          color: Color(0x14000000),
-                          blurRadius: 10,
-                          offset: Offset(0, 4))
+                          color: VillageOrnament.gold.withValues(alpha: 0.45),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2)),
                     ],
+                    border: Border.all(color: Colors.white, width: 2),
                   ),
-                  clipBehavior: Clip.antiAlias,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (era.imageUrl.isNotEmpty)
-                        SizedBox(
-                          height: 150,
-                          width: double.infinity,
-                          child: CachedNetworkImage(
-                              imageUrl: era.imageUrl,
-                              fit: BoxFit.cover,
-                              errorWidget: (_, __, ___) =>
-                                  const SizedBox.shrink()),
-                        ),
-                      Padding(
-                        padding: const EdgeInsets.all(14),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(era.title,
-                                      style: VillageOrnament.amiri(
-                                          size: 19,
-                                          color: kVillageHistoryColor)),
-                                ),
-                                if (era.years.isNotEmpty)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 9, vertical: 3),
-                                    decoration: BoxDecoration(
-                                        color: const Color(0xFFFFF8E1),
-                                        borderRadius:
-                                            BorderRadius.circular(9),
-                                        border: Border.all(
-                                            color: VillageOrnament.goldDark
-                                                .withValues(alpha: 0.5))),
-                                    child: Text(era.years,
-                                        style: const TextStyle(
-                                            fontSize: 10.5,
-                                            fontWeight: FontWeight.w900,
-                                            color: Color(0xFF8D6E00))),
-                                  ),
-                              ],
-                            ),
-                            if (era.narrative.isNotEmpty) ...[
-                              const SizedBox(height: 8),
-                              Text(era.narrative,
-                                  style: TextStyle(
-                                      fontSize: 13,
-                                      height: 1.85,
-                                      color: theme.colorScheme.onSurface)),
-                            ],
+                  child: Text('${index + 1}',
+                      style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white)),
+                ),
+                if (!isLast)
+                  Expanded(
+                    child: Container(
+                      width: 2,
+                      margin: const EdgeInsets.symmetric(vertical: 4),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            VillageOrnament.gold.withValues(alpha: 0.7),
+                            VillageOrnament.gold.withValues(alpha: 0.15),
                           ],
                         ),
                       ),
-                    ],
+                    ),
                   ),
+              ],
+            ),
+          ),
+          // بطاقة العصر
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(left: 16, bottom: 18),
+              child: Card(
+                elevation: 1.5,
+                shadowColor: kVillageHistoryColor.withValues(alpha: 0.3),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (era.imageUrl.isNotEmpty)
+                      ClipRRect(
+                        borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(18)),
+                        child: CachedNetworkImage(
+                          imageUrl: era.imageUrl,
+                          height: 150,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorWidget: (context, url, error) =>
+                              const SizedBox(),
+                        ),
+                      ),
+                    Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(era.title,
+                              style: VillageOrnament.amiri(
+                                  size: 18, color: kVillageHistoryColor)),
+                          if (era.years.isNotEmpty) ...[
+                            const SizedBox(height: 5),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: VillageOrnament.gold
+                                    .withValues(alpha: 0.14),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                    color: VillageOrnament.gold
+                                        .withValues(alpha: 0.4)),
+                              ),
+                              child: Text(era.years,
+                                  style: const TextStyle(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: kVillageHistoryColor)),
+                            ),
+                          ],
+                          if (era.narrative.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Text(era.narrative,
+                                style: TextStyle(
+                                    fontSize: 12.5,
+                                    height: 1.85,
+                                    color: theme.colorScheme.onSurface)),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
-    ).animate(delay: (index * 60).ms).fadeIn(duration: 350.ms);
+    )
+        .animate()
+        .fadeIn(duration: 350.ms, delay: (60 * index).ms)
+        .slideX(begin: 0.04, end: 0, duration: 350.ms, delay: (60 * index).ms);
   }
 }

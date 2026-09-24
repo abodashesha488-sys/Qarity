@@ -138,17 +138,7 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
                             onPressed: _search.clear,
                           )
                         : null,
-                    isDense: true,
-                    filled: true,
-                    fillColor: theme.colorScheme.surface,
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                            color: kLostItemsColor.withValues(alpha: 0.4))),
-                    enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                            color: kLostItemsColor.withValues(alpha: 0.4))),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
                 ),
                 const SizedBox(height: 10),

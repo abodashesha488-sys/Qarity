@@ -243,32 +243,25 @@ class _NewsScreenState extends State<NewsScreen>
       actions: CommonAppBarActions.actions(context),
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(74),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-          child: TextField(
-            controller: _searchController,
-            style: const TextStyle(color: Colors.black87),
-            decoration: InputDecoration(
-              hintText: 'ابحث في الأخبار...',
-              hintStyle: TextStyle(color: Colors.grey.shade600, fontSize: 14),
-              prefixIcon: const Icon(Icons.search_rounded, color: Colors.grey),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear_rounded),
-                      onPressed: _clearSearch,
-                    )
-                  : null,
-              filled: true,
-              fillColor: Colors.white,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide.none,
+child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+            child: TextField(
+              controller: _searchController,
+              style: const TextStyle(color: Colors.black87),
+              decoration: InputDecoration(
+                hintText: 'ابحث في الأخبار...',
+                hintStyle: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                prefixIcon: const Icon(Icons.search_rounded, color: Colors.grey),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear_rounded),
+                        onPressed: _clearSearch,
+                      )
+                    : null,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             ),
           ),
-        ),
       ),
     );
   }

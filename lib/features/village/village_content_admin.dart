@@ -6,10 +6,12 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/constants/app_config.dart';
+import '../../models/data_models.dart';
 import '../../models/village_content_models.dart';
 import '../../services/admin_service.dart';
 import '../../services/image_upload_service.dart';
 import '../../services/village_content_service.dart';
+import '../../services/village_info_service.dart';
 import '../../widgets/qurity_app_bar.dart';
 
 /// هل المستخدم الحالي يسمح له بإدارة محتوى «تعرف على القرية»؟
@@ -172,8 +174,7 @@ Future<void> manageVillageContent<T>(
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14),
                               side: BorderSide(
-                                  color:
-                                      accent.withValues(alpha: 0.35)),
+                                  color: accent.withValues(alpha: 0.35)),
                             ),
                             child: ListTile(
                               dense: true,
@@ -181,12 +182,12 @@ Future<void> manageVillageContent<T>(
                                   style: const TextStyle(
                                       fontWeight: FontWeight.w800,
                                       fontSize: 13)),
-                              subtitle: (subtitleOf?.call(item) ?? '')
-                                      .isNotEmpty
-                                  ? Text(subtitleOf!(item),
-                                      maxLines: 1,
-                                      style: const TextStyle(fontSize: 11))
-                                  : null,
+                              subtitle:
+                                  (subtitleOf?.call(item) ?? '').isNotEmpty
+                                      ? Text(subtitleOf!(item),
+                                          maxLines: 1,
+                                          style: const TextStyle(fontSize: 11))
+                                      : null,
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
@@ -200,7 +201,8 @@ Future<void> manageVillageContent<T>(
                                     tooltip: 'حذف',
                                     icon: const Icon(
                                         Icons.delete_outline_rounded,
-                                        size: 17, color: Colors.red),
+                                        size: 17,
+                                        color: Colors.red),
                                     onPressed: () async {
                                       final id = switch (item) {
                                         final HistoryEra e => e.id,
@@ -238,10 +240,8 @@ class HistoryEraForm extends StatefulWidget {
 }
 
 class _HistoryEraFormState extends State<HistoryEraForm> {
-  late final _title =
-      TextEditingController(text: widget.editing?.title ?? '');
-  late final _years =
-      TextEditingController(text: widget.editing?.years ?? '');
+  late final _title = TextEditingController(text: widget.editing?.title ?? '');
+  late final _years = TextEditingController(text: widget.editing?.years ?? '');
   late final _narrative =
       TextEditingController(text: widget.editing?.narrative ?? '');
   late final _order =
@@ -351,8 +351,10 @@ class _HistoryEraFormState extends State<HistoryEraForm> {
         clipBehavior: Clip.antiAlias,
         child: _uploading
             ? const Center(
-                child:
-                    SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)))
+                child: SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2)))
             : _imageUrl.isEmpty
                 ? const Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -360,7 +362,8 @@ class _HistoryEraFormState extends State<HistoryEraForm> {
                       Icon(Icons.add_photo_alternate_rounded,
                           size: 20, color: Colors.black38),
                       Text('صورة (اختياري)',
-                          style: TextStyle(fontSize: 10, color: Colors.black38)),
+                          style:
+                              TextStyle(fontSize: 10, color: Colors.black38)),
                     ],
                   )
                 : CachedNetworkImage(imageUrl: _imageUrl, fit: BoxFit.cover),
@@ -385,8 +388,7 @@ class _FigureFormState extends State<FigureForm> {
   late final _bio = TextEditingController(text: widget.editing?.bio ?? '');
   late final _order =
       TextEditingController(text: '${widget.editing?.sortOrder ?? 0}');
-  late String _category =
-      widget.editing?.category ?? FigureCategory.elders;
+  late String _category = widget.editing?.category ?? FigureCategory.elders;
   late String _photoUrl = widget.editing?.photoUrl ?? '';
   bool _uploading = false;
   bool _saving = false;
@@ -457,7 +459,8 @@ class _FigureFormState extends State<FigureForm> {
           const SizedBox(height: 10),
           TextField(
               controller: _title,
-              decoration: vdec('مثال: عمدة القرية 1970 — 1982', label: 'المنصب/اللقب')),
+              decoration:
+                  vdec('مثال: عمدة القرية 1970 — 1982', label: 'المنصب/اللقب')),
           const SizedBox(height: 10),
           TextField(
               controller: _era,
@@ -515,8 +518,7 @@ class _FigureFormState extends State<FigureForm> {
                                       size: 20, color: Colors.black38),
                                   Text('الصورة',
                                       style: TextStyle(
-                                          fontSize: 10,
-                                          color: Colors.black38)),
+                                          fontSize: 10, color: Colors.black38)),
                                 ],
                               )
                             : CachedNetworkImage(
@@ -552,8 +554,7 @@ class ArchivePhotoForm extends StatefulWidget {
 }
 
 class _ArchivePhotoFormState extends State<ArchivePhotoForm> {
-  late final _title =
-      TextEditingController(text: widget.editing?.title ?? '');
+  late final _title = TextEditingController(text: widget.editing?.title ?? '');
   late final _year = TextEditingController(text: widget.editing?.year ?? '');
   late final _description =
       TextEditingController(text: widget.editing?.description ?? '');
@@ -688,8 +689,7 @@ class _InstitutionFormState extends State<InstitutionForm> {
       TextEditingController(text: widget.editing?.description ?? '');
   late final _location =
       TextEditingController(text: widget.editing?.location ?? '');
-  late final _phone =
-      TextEditingController(text: widget.editing?.phone ?? '');
+  late final _phone = TextEditingController(text: widget.editing?.phone ?? '');
   late final _hours =
       TextEditingController(text: widget.editing?.workingHours ?? '');
   late final _order =
@@ -763,7 +763,8 @@ class _InstitutionFormState extends State<InstitutionForm> {
           const SizedBox(height: 10),
           TextField(
               controller: _name,
-              decoration: vdec('مثال: مدرسة أبوديشيشة الابتدائية', label: 'الاسم *')),
+              decoration:
+                  vdec('مثال: مدرسة أبوديشيشة الابتدائية', label: 'الاسم *')),
           const SizedBox(height: 10),
           TextField(
               controller: _description,
@@ -804,7 +805,10 @@ class _InstitutionFormState extends State<InstitutionForm> {
                     ClipRRect(
                         borderRadius: BorderRadius.circular(10),
                         child: CachedNetworkImage(
-                            imageUrl: u, width: 70, height: 70, fit: BoxFit.cover)),
+                            imageUrl: u,
+                            width: 70,
+                            height: 70,
+                            fit: BoxFit.cover)),
                     Positioned(
                         top: 2,
                         right: 2,
@@ -842,8 +846,7 @@ class _InstitutionFormState extends State<InstitutionForm> {
                           child: SizedBox(
                               width: 16,
                               height: 16,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2)))
+                              child: CircularProgressIndicator(strokeWidth: 2)))
                       : const Icon(Icons.add_photo_alternate_rounded,
                           size: 22, color: Colors.black38),
                 ),
@@ -863,5 +866,239 @@ class _InstitutionFormState extends State<InstitutionForm> {
                       style: TextStyle(fontWeight: FontWeight.w800)))),
           const SizedBox(height: 8),
         ],
+      );
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// بطاقة تعريف القرية (village_info/main)
+// ══════════════════════════════════════════════════════════════════════
+
+/// نموذج تحرير «بطاقة تعريف القرية» — يفتح كأسفل-شاشة من شاشة «عن أبودشيشة».
+class VillageIntroForm extends StatefulWidget {
+  const VillageIntroForm({super.key, this.info});
+
+  final VillageInfo? info;
+
+  @override
+  State<VillageIntroForm> createState() => _VillageIntroFormState();
+}
+
+class _VillageIntroFormState extends State<VillageIntroForm> {
+  final _name = TextEditingController();
+  final _desc = TextEditingController();
+  final _pop = TextEditingController();
+  final _area = TextEditingController();
+  final _founded = TextEditingController();
+  final _origin = TextEditingController();
+  final _location = TextEditingController();
+  final _admin = TextEditingController();
+  final _nature = TextEditingController();
+  final _famous = TextEditingController();
+  final _mapUrl = TextEditingController();
+  String _imageUrl = '';
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final info = widget.info;
+    if (info != null) {
+      _name.text = info.name;
+      _desc.text = info.description;
+      _pop.text = info.population;
+      _area.text = info.area;
+      _founded.text = info.founded;
+      _origin.text = info.nameOrigin;
+      _location.text = info.location;
+      _admin.text = info.administrative;
+      _nature.text = info.nature;
+      _famous.text = info.famousFor;
+      _mapUrl.text = info.mapUrl;
+      _imageUrl = info.imageUrl;
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final c in [
+      _name,
+      _desc,
+      _pop,
+      _area,
+      _founded,
+      _origin,
+      _location,
+      _admin,
+      _nature,
+      _famous,
+      _mapUrl,
+    ]) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (_name.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('اسم القرية مطلوب'), backgroundColor: Colors.orange));
+      return;
+    }
+    setState(() => _saving = true);
+    await VillageInfoService().saveInfo(VillageInfo(
+      id: 'main',
+      name: _name.text.trim(),
+      description: _desc.text.trim(),
+      population: _pop.text.trim(),
+      area: _area.text.trim(),
+      founded: _founded.text.trim(),
+      nameOrigin: _origin.text.trim(),
+      location: _location.text.trim(),
+      administrative: _admin.text.trim(),
+      nature: _nature.text.trim(),
+      famousFor: _famous.text.trim(),
+      mapUrl: _mapUrl.text.trim(),
+      imageUrl: _imageUrl,
+      // الحقول القديمة تُدار من شاشاتها — نحافظ عليها كما هي
+      history: widget.info?.history ?? const [],
+      institutions: widget.info?.institutions ?? const [],
+      archive: widget.info?.archive ?? const [],
+    ));
+    if (mounted) Navigator.pop(context, true);
+  }
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 18,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 22,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('بطاقة تعريف القرية',
+                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
+              const SizedBox(height: 12),
+              // صورة القرية
+              GestureDetector(
+                onTap: _saving
+                    ? null
+                    : () async {
+                        final url = await pickAndUploadImage(context,
+                            current: _imageUrl);
+                        if (mounted) {
+                          setState(() => _imageUrl = url ?? '');
+                        }
+                      },
+                child: Container(
+                  height: 130,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: const Color(0x0F000000),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0x22000000)),
+                    image: _imageUrl.isNotEmpty
+                        ? DecorationImage(
+                            image: CachedNetworkImageProvider(_imageUrl),
+                            fit: BoxFit.cover)
+                        : null,
+                  ),
+                  child: _imageUrl.isEmpty
+                      ? const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.add_photo_alternate_rounded,
+                                size: 30, color: Colors.black38),
+                            SizedBox(height: 4),
+                            Text('صورة القرية (اختيارية)',
+                                style: TextStyle(
+                                    fontSize: 11, color: Colors.black45)),
+                          ],
+                        )
+                      : null,
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                  controller: _name,
+                  decoration: vdec('اسم القرية', label: 'الاسم')),
+              const SizedBox(height: 10),
+              TextField(
+                  controller: _desc,
+                  maxLines: 4,
+                  decoration:
+                      vdec('نبذة مختصرة عن القرية…', label: 'نبذة مختصرة')),
+              const SizedBox(height: 10),
+              Row(children: [
+                Expanded(
+                    child: TextField(
+                        controller: _pop,
+                        decoration: vdec('عدد السكان', label: 'السكان'))),
+                const SizedBox(width: 8),
+                Expanded(
+                    child: TextField(
+                        controller: _area,
+                        decoration: vdec('المساحة', label: 'المساحة'))),
+                const SizedBox(width: 8),
+                Expanded(
+                    child: TextField(
+                        controller: _founded,
+                        decoration: vdec('التأسيس', label: 'التأسيس'))),
+              ]),
+              const SizedBox(height: 10),
+
+              TextField(
+                  controller: _origin,
+                  maxLines: 2,
+                  decoration: vdec('لماذا سُميت القرية بهذا الاسم؟',
+                      label: 'سبب التسمية')),
+              const SizedBox(height: 10),
+              TextField(
+                  controller: _location,
+                  decoration: vdec('أين تقع القرية؟', label: 'الموقع')),
+              const SizedBox(height: 10),
+              TextField(
+                  controller: _admin,
+                  decoration: vdec('المحافظة / المركز / الوحدة المحلية…',
+                      label: 'التبعية الإدارية')),
+              const SizedBox(height: 10),
+              TextField(
+                  controller: _nature,
+                  maxLines: 2,
+                  decoration: vdec('زراعية، سكانها، طبيعة الحياة فيها…',
+                      label: 'طبيعة القرية')),
+              const SizedBox(height: 10),
+              TextField(
+                  controller: _famous,
+                  maxLines: 2,
+                  decoration:
+                      vdec('محاصيل، صناعات، عادات…', label: 'اشتهرت بـ')),
+              const SizedBox(height: 10),
+              TextField(
+                  controller: _mapUrl,
+                  decoration: vdec('رابط الموقع على خريطة جوجل (اختياري)',
+                      label: 'رابط الخريطة')),
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _saving ? null : _save,
+                  icon: _saving
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.save_rounded),
+                  label: Text(_saving ? 'جارٍ الحفظ…' : 'حفظ بطاقة التعريف'),
+                ),
+              ),
+            ],
+          ),
+        ),
       );
 }

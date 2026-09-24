@@ -7,8 +7,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../models/village_content_models.dart';
 import '../../services/village_content_service.dart';
 import '../../widgets/qurity_app_bar.dart';
+import '../../widgets/village_ornament.dart';
 import 'village_content_admin.dart';
-import 'village_ornament.dart';
 
 const Color kVillageArchiveColor = Color(0xFF6A1B9A);
 
@@ -61,8 +61,7 @@ class _VillageArchiveScreenState extends State<VillageArchiveScreen> {
         stream: _photos,
         nameOf: (p) => p.title,
         subtitleOf: (p) => p.year,
-        remove: (id) =>
-            _service.deleteDoc('village_archive_photos', id),
+        remove: (id) => _service.deleteDoc('village_archive_photos', id),
         formBuilder: (ctx, editing) => ArchivePhotoForm(editing: editing),
       );
 
@@ -87,8 +86,7 @@ class _VillageArchiveScreenState extends State<VillageArchiveScreen> {
                         leading: const Icon(Icons.portrait_rounded,
                             color: kVillageArchiveColor),
                         title: const Text('إدارة الشخصيات',
-                            style:
-                                TextStyle(fontWeight: FontWeight.w800)),
+                            style: TextStyle(fontWeight: FontWeight.w800)),
                         onTap: () {
                           Navigator.pop(ctx);
                           _manageFigures();
@@ -99,8 +97,7 @@ class _VillageArchiveScreenState extends State<VillageArchiveScreen> {
                         leading: const Icon(Icons.photo_library_rounded,
                             color: kVillageArchiveColor),
                         title: const Text('إدارة الصور والوثائق',
-                            style:
-                                TextStyle(fontWeight: FontWeight.w800)),
+                            style: TextStyle(fontWeight: FontWeight.w800)),
                         onTap: () {
                           Navigator.pop(ctx);
                           _managePhotos();
@@ -134,8 +131,7 @@ class _VillageArchiveScreenState extends State<VillageArchiveScreen> {
               children: [
                 _catChip('', 'الكل', Icons.apps_rounded),
                 for (final c in FigureCategory.all)
-                  _catChip(c, FigureCategory.label(c),
-                      FigureCategory.icon(c)),
+                  _catChip(c, FigureCategory.label(c), FigureCategory.icon(c)),
               ],
             ),
           ),
@@ -149,8 +145,7 @@ class _VillageArchiveScreenState extends State<VillageArchiveScreen> {
                 const SizedBox(width: 7),
                 Text('شخصيات القرية',
                     style: VillageOrnament.amiri(
-                        size: 19,
-                        color: kVillageArchiveColor)),
+                        size: 19, color: kVillageArchiveColor)),
               ],
             ),
           ),
@@ -169,9 +164,7 @@ class _VillageArchiveScreenState extends State<VillageArchiveScreen> {
                   padding: const EdgeInsets.all(24),
                   child: Center(
                     child: Text(
-                      snap.hasData
-                          ? 'لا توجد شخصيات في هذا التصنيف بعد'
-                          : '',
+                      snap.hasData ? 'لا توجد شخصيات في هذا التصنيف بعد' : '',
                       style: TextStyle(
                           color: theme.colorScheme.onSurfaceVariant,
                           fontWeight: FontWeight.w700),
@@ -184,16 +177,15 @@ class _VillageArchiveScreenState extends State<VillageArchiveScreen> {
                 child: GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
                     mainAxisSpacing: 14,
                     crossAxisSpacing: 14,
                     childAspectRatio: 0.74,
                   ),
                   itemCount: figures.length,
-                  itemBuilder: (context, i) => _FigureCard(
-                      figure: figures[i], index: i),
+                  itemBuilder: (context, i) =>
+                      _FigureCard(figure: figures[i], index: i),
                 ),
               );
             },
@@ -208,8 +200,7 @@ class _VillageArchiveScreenState extends State<VillageArchiveScreen> {
                 const SizedBox(width: 7),
                 Text('صور تاريخية ووثائق',
                     style: VillageOrnament.amiri(
-                        size: 19,
-                        color: kVillageArchiveColor)),
+                        size: 19, color: kVillageArchiveColor)),
               ],
             ),
           ),
@@ -238,16 +229,15 @@ class _VillageArchiveScreenState extends State<VillageArchiveScreen> {
                 child: GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
                     mainAxisSpacing: 14,
                     crossAxisSpacing: 14,
                     childAspectRatio: 0.82,
                   ),
                   itemCount: photos.length,
-                  itemBuilder: (context, i) => _ArchivePhotoCard(
-                      photo: photos[i], index: i),
+                  itemBuilder: (context, i) =>
+                      _ArchivePhotoCard(photo: photos[i], index: i),
                 ),
               );
             },
@@ -326,12 +316,10 @@ class _FigureCard extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
-                style: VillageOrnament.amiri(
-                    size: 15)),
+                style: VillageOrnament.amiri(size: 15)),
             const SizedBox(height: 2),
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(7)),
@@ -342,9 +330,7 @@ class _FigureCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.w900,
-                      color: color)),
+                      fontSize: 9, fontWeight: FontWeight.w900, color: color)),
             ),
             if (figure.era.isNotEmpty) ...[
               const SizedBox(height: 3),
@@ -359,8 +345,10 @@ class _FigureCard extends StatelessWidget {
           ],
         ),
       ),
-    ).animate(delay: (index * 45).ms).fadeIn().scale(
-        begin: const Offset(0.94, 0.94), duration: 280.ms);
+    )
+        .animate(delay: (index * 45).ms)
+        .fadeIn()
+        .scale(begin: const Offset(0.94, 0.94), duration: 280.ms);
   }
 
   void _showBio(BuildContext context) {
@@ -384,8 +372,7 @@ class _FigureCard extends StatelessWidget {
                     color: color.withValues(alpha: 0.08),
                     child: figure.photoUrl.isEmpty
                         ? Icon(FigureCategory.icon(figure.category),
-                            size: 56,
-                            color: color.withValues(alpha: 0.5))
+                            size: 56, color: color.withValues(alpha: 0.5))
                         : CachedNetworkImage(
                             imageUrl: figure.photoUrl,
                             fit: BoxFit.cover,
@@ -399,12 +386,11 @@ class _FigureCard extends StatelessWidget {
                 const SizedBox(height: 12),
                 Text(figure.name,
                     textAlign: TextAlign.center,
-                    style: VillageOrnament.amiri(
-                        size: 21)),
+                    style: VillageOrnament.amiri(size: 21)),
                 const SizedBox(height: 6),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 3),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                   decoration: BoxDecoration(
                       color: color.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(8)),
@@ -431,10 +417,10 @@ class _FigureCard extends StatelessWidget {
                 if (figure.bio.isNotEmpty)
                   Text(figure.bio,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
-                          fontSize: 13.5, height: 1.9))
+                      style: const TextStyle(fontSize: 13.5, height: 1.9))
                 else
-                  Text('لم تُدوَّن سيرة هذه الشخصية بعد — '
+                  Text(
+                      'لم تُدوَّن سيرة هذه الشخصية بعد — '
                       'أرشيف القرية يرحّب بأي معلومة موثّقة عنها',
                       style: TextStyle(
                           fontSize: 12,
@@ -467,8 +453,7 @@ class _ArchivePhotoCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-            color: kVillageArchiveColor.withValues(alpha: 0.3)),
+        side: BorderSide(color: kVillageArchiveColor.withValues(alpha: 0.3)),
       ),
       child: InkWell(
         onTap: () => _showFull(context, theme),
@@ -481,8 +466,7 @@ class _ArchivePhotoCard extends StatelessWidget {
                 child: photo.imageUrl.isEmpty
                     ? const Center(
                         child: Icon(Icons.photo_album_rounded,
-                            size: 36,
-                            color: Color(0x55000000)))
+                            size: 36, color: Color(0x55000000)))
                     : CachedNetworkImage(
                         imageUrl: photo.imageUrl,
                         fit: BoxFit.cover,
@@ -529,8 +513,7 @@ class _ArchivePhotoCard extends StatelessWidget {
     showDialog<void>(
       context: context,
       builder: (ctx) => Dialog(
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
         insetPadding: const EdgeInsets.all(20),
         child: SingleChildScrollView(
           child: Column(
@@ -539,23 +522,20 @@ class _ArchivePhotoCard extends StatelessWidget {
             children: [
               if (photo.imageUrl.isNotEmpty)
                 ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(22)),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(22)),
                   child: CachedNetworkImage(
                       imageUrl: photo.imageUrl,
                       width: double.infinity,
                       fit: BoxFit.contain,
-                      errorWidget: (_, __, ___) =>
-                          const SizedBox.shrink()),
+                      errorWidget: (_, __, ___) => const SizedBox.shrink()),
                 ),
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(photo.title,
-                        style: VillageOrnament.amiri(
-                            size: 18)),
+                    Text(photo.title, style: VillageOrnament.amiri(size: 18)),
                     if (photo.year.isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.only(top: 3),
@@ -570,8 +550,7 @@ class _ArchivePhotoCard extends StatelessWidget {
                       const OrnamentDivider(),
                       const SizedBox(height: 10),
                       Text(photo.description,
-                          style: const TextStyle(
-                              fontSize: 13, height: 1.8)),
+                          style: const TextStyle(fontSize: 13, height: 1.8)),
                     ],
                     if (photo.source.isNotEmpty)
                       Padding(

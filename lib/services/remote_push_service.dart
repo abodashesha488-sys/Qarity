@@ -184,6 +184,7 @@ const Set<String> kAdminNotifyCollections = {
   'blood_requests',
   'blood_donors',
   'medical_center_clinics',
+  'village_contributions',
 };
 
 /// خريطة مجموعة Firestore → Topic FCM الخاص بها.

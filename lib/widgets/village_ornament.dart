@@ -10,9 +10,12 @@ class VillageOrnament {
   static const Color gold = Color(0xFFF1C40F);
   static const Color goldDark = Color(0xFFB8860B);
 
-  /// مرشح سيبيا دافئ للصور الأرشيفية.
-  static TextStyle amiri(
-          {double size = 20, FontWeight weight = FontWeight.w700, Color? color}) =>
+  /// خط Amiri للنصوص العربية.
+  static TextStyle amiri({
+    double size = 20,
+    FontWeight weight = FontWeight.w700,
+    Color? color,
+  }) =>
       GoogleFonts.amiri(fontSize: size, fontWeight: weight, color: color);
 }
 

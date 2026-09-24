@@ -3,8 +3,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../models/agriculture_content_model.dart';
 import '../../widgets/agriculture_content_panel.dart';
-import '../../widgets/qurity_app_bar.dart';
 import '../../widgets/agriculture_promo_banner.dart';
+import '../../widgets/qurity_app_bar.dart';
 
 /// شاشة مستشارك الزراعي — إرشادات موثقة لمحاصيل شمال ووسط الدلتا
 class AgriculturalAdvisorScreen extends StatefulWidget {
@@ -73,11 +73,7 @@ class _AgriculturalAdvisorScreenState extends State<AgriculturalAdvisorScreen> {
                       },
                       icon: const Icon(Icons.clear_rounded),
                     ),
-              filled: true,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide.none,
-              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
           ),
           const SizedBox(height: 24),

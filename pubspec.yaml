@@ -28,6 +28,8 @@ dependencies:
   share_plus: ^13.2.0
   path_provider: ^2.1.4
   shared_preferences: ^2.0.0
+  file_picker: ^13.1.0
+  excel: ^4.0.6
   shimmer: ^3.0.0
   cached_network_image: ^3.0.0
   flutter_staggered_animations: ^1.1.1

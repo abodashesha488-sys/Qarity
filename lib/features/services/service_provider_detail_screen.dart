@@ -316,12 +316,9 @@ class _ServiceProviderDetailScreenState
             controller: _textC,
             maxLines: 3,
             maxLength: 240,
-            decoration: InputDecoration(
+            decoration: const InputDecoration(
               hintText: 'أضف تعليقك (اختياري)...',
-              filled: true,
-              fillColor: theme.colorScheme.surface,
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12)),
+              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
           ),
           const SizedBox(height: 6),

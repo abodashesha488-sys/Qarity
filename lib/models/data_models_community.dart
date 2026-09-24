@@ -326,6 +326,27 @@ class VillageInfo implements BaseModel {
   final List<Map<String, dynamic>> institutions;
   final List<String> archive;
 
+  /// سبب التسمية (لماذا سميت أبودشيشة؟).
+  final String nameOrigin;
+
+  /// الموقع الجغرافي.
+  final String location;
+
+  /// التبعية الإدارية (مركز/محافظة).
+  final String administrative;
+
+  /// طبيعة القرية (زراعية/سكنية...).
+  final String nature;
+
+  /// ما تشتهر به القرية.
+  final String famousFor;
+
+  /// صورة حقيقية للقرية (رابط ImgBB).
+  final String imageUrl;
+
+  /// رابط الموقع على خرائط جوجل.
+  final String mapUrl;
+
   const VillageInfo({
     required this.id,
     required this.name,
@@ -336,6 +357,13 @@ class VillageInfo implements BaseModel {
     this.history = const [],
     this.institutions = const [],
     this.archive = const [],
+    this.nameOrigin = '',
+    this.location = '',
+    this.administrative = '',
+    this.nature = '',
+    this.famousFor = '',
+    this.imageUrl = '',
+    this.mapUrl = '',
   });
 
   factory VillageInfo.fromJson(Map<String, dynamic> json, String docId) {
@@ -352,6 +380,13 @@ class VillageInfo implements BaseModel {
               ?.map((e) => e.toString())
               .toList() ??
           const [],
+      nameOrigin: json['nameOrigin'] as String? ?? '',
+      location: json['location'] as String? ?? '',
+      administrative: json['administrative'] as String? ?? '',
+      nature: json['nature'] as String? ?? '',
+      famousFor: json['famousFor'] as String? ?? '',
+      imageUrl: json['imageUrl'] as String? ?? '',
+      mapUrl: json['mapUrl'] as String? ?? '',
     );
   }
 
@@ -366,6 +401,13 @@ class VillageInfo implements BaseModel {
       'history': history,
       'institutions': institutions,
       'archive': archive,
+      'nameOrigin': nameOrigin,
+      'location': location,
+      'administrative': administrative,
+      'nature': nature,
+      'famousFor': famousFor,
+      'imageUrl': imageUrl,
+      'mapUrl': mapUrl,
     };
   }
 

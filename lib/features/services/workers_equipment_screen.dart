@@ -126,13 +126,7 @@ class _WorkersEquipmentScreenState extends State<WorkersEquipmentScreen> {
                       onPressed: () => _searchController.clear(),
                       icon: const Icon(Icons.clear_rounded))
                   : null,
-              filled: true,
-              fillColor: theme.colorScheme.surfaceContainerHighest
-                  .withValues(alpha: 0.5),
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none),
-              contentPadding: EdgeInsets.zero,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
           ),
           const SizedBox(height: 10),

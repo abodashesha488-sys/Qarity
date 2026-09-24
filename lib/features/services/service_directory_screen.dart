@@ -241,16 +241,7 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
                     prefixIcon:
                         Icon(Icons.filter_alt_rounded, size: 20, color: _color),
                     isDense: true,
-                    filled: true,
-                    fillColor: theme.colorScheme.surface,
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            BorderSide(color: _color.withValues(alpha: 0.4))),
-                    enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            BorderSide(color: _color.withValues(alpha: 0.4))),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
                   items: [
                     const DropdownMenuItem(value: '', child: Text('كل الفئات')),
@@ -287,17 +278,7 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
                             onPressed: () => _search.clear(),
                           )
                         : null,
-                    isDense: true,
-                    filled: true,
-                    fillColor: theme.colorScheme.surface,
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            BorderSide(color: _color.withValues(alpha: 0.4))),
-                    enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            BorderSide(color: _color.withValues(alpha: 0.4))),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
                 ),
               ],

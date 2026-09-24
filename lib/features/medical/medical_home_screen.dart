@@ -907,7 +907,6 @@ class _ClinicsTabState extends State<_ClinicsTab> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return StreamBuilder<List<VillageClinic>>(
       stream: _stream,
       builder: (context, snapshot) {
@@ -931,17 +930,11 @@ class _ClinicsTabState extends State<_ClinicsTab> {
               child: TextField(
                 controller: _search,
                 onChanged: (_) => setState(() {}),
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   hintText: 'ابحث عن عيادة أو تخصص...',
                   isDense: true,
-                  prefixIcon: const Icon(Icons.search_rounded, size: 20),
-                  filled: true,
-                  fillColor: theme.colorScheme.surfaceContainerHighest
-                      .withValues(alpha: 0.5),
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none),
-                  contentPadding: EdgeInsets.zero,
+                  prefixIcon: Icon(Icons.search_rounded, size: 20),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
               ),
             ),
@@ -1079,7 +1072,6 @@ class _PharmaciesTabState extends State<_PharmaciesTab> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return StreamBuilder<List<Pharmacy>>(
       stream: _stream,
       builder: (context, snapshot) {
@@ -1103,17 +1095,11 @@ class _PharmaciesTabState extends State<_PharmaciesTab> {
               child: TextField(
                 controller: _search,
                 onChanged: (_) => setState(() {}),
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   hintText: 'ابحث عن صيدلية...',
                   isDense: true,
-                  prefixIcon: const Icon(Icons.search_rounded, size: 20),
-                  filled: true,
-                  fillColor: theme.colorScheme.surfaceContainerHighest
-                      .withValues(alpha: 0.5),
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none),
-                  contentPadding: EdgeInsets.zero,
+                  prefixIcon: Icon(Icons.search_rounded, size: 20),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
               ),
             ),
@@ -1287,7 +1273,6 @@ class _LabsTabState extends State<_LabsTab> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return StreamBuilder<List<MedicalLab>>(
       stream: _stream,
       builder: (context, snapshot) {
@@ -1312,17 +1297,11 @@ class _LabsTabState extends State<_LabsTab> {
               child: TextField(
                 controller: _search,
                 onChanged: (_) => setState(() {}),
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   hintText: 'ابحث عن معمل أو نوع تحليل...',
                   isDense: true,
-                  prefixIcon: const Icon(Icons.search_rounded, size: 20),
-                  filled: true,
-                  fillColor: theme.colorScheme.surfaceContainerHighest
-                      .withValues(alpha: 0.5),
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none),
-                  contentPadding: EdgeInsets.zero,
+                  prefixIcon: Icon(Icons.search_rounded, size: 20),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
               ),
             ),

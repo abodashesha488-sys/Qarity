@@ -95,27 +95,8 @@ class _MarketTabState extends State<_MarketTab> {
                         },
                       )
                     : null,
-                filled: true,
-                fillColor: theme.colorScheme.surface,
-                isDense: true,
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(
-                        color:
-                            theme.colorScheme.primary.withValues(alpha: 0.55),
-                        width: 1.3)),
-                enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(
-                        color:
-                            theme.colorScheme.primary.withValues(alpha: 0.55),
-                        width: 1.3)),
-                focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide:
-                        BorderSide(color: theme.colorScheme.primary, width: 1.8)),
                 contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),
             ),
           ),

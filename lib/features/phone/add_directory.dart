@@ -256,10 +256,6 @@ class _AddPhoneDirectoryScreenState extends State<AddPhoneDirectoryScreen> {
       InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon, color: theme.colorScheme.primary),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        enabledBorder:
-            OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        focusedBorder:
-            OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       );
 }

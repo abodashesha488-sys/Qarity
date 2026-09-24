@@ -1056,7 +1056,7 @@ class _ProductCard extends StatelessWidget {
         ),
       ),
     );
-  }
+}
 }
 
 class _HomeFooter extends StatelessWidget {

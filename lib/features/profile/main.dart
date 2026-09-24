@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../core/utils/role_style.dart';
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
+import '../../services/cache_service.dart';
 import '../../services/image_upload_service.dart';
 import '../../services/market_service.dart';
 import '../../services/theme_service.dart';
@@ -42,7 +43,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _loadUser();
+    _loadUserFromCache();
+    _loadUser(); // Load fresh data in background
+  }
+
+  Future<void> _loadUserFromCache() async {
+    try {
+      final cached = await CacheService.getUser(_userService.currentUserId ?? '');
+      if (cached != null && mounted) {
+        setState(() {
+          _user = UserModel.fromJson(cached, _userService.currentUserId ?? '');
+          _nameController.text = _user?.name ?? '';
+          _phoneController.text = _user?.phone ?? '';
+          _isLoading = false;
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _fetchData() async {
@@ -71,7 +87,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _loadUser() async {
     if (!mounted) return;
     setState(() {
-      _isLoading = true;
       _loadError = null;
     });
     try {
@@ -583,22 +598,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 16),
               TextField(
                 controller: _nameController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'الاسم',
-                  prefixIcon: const Icon(Icons.person_rounded),
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14)),
+                  prefixIcon: Icon(Icons.person_rounded),
                 ),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: _phoneController,
                 keyboardType: TextInputType.phone,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'رقم الهاتف',
-                  prefixIcon: const Icon(Icons.phone_rounded),
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14)),
+                  prefixIcon: Icon(Icons.phone_rounded),
                 ),
               ),
               const SizedBox(height: 16),
