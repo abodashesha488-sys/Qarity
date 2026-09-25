@@ -152,30 +152,36 @@ if (-not $remoteHead) {
 }
 
 # تحديد العلاقة
-$localAhead = $false
-$remoteAhead = $false
-$diverged = $false
+# استخدام HEAD المحلي بعد أي commits (إذا تمت إضافتها)
+$currentLocalHead = $afterCommitLocalHead
 
-if ($remoteHead) {
-    # مقارنة الأنساب
-    $localAncestry = git merge-base --is-ancestor $initialLocalHead $remoteHead 2>$null
-    $remoteAncestry = git merge-base --is-ancestor $remoteHead $initialLocalHead 2>$null
-
-    if ($localAncestry -eq "true") {
-        $localAhead = $true
-        Write-Host "📈 الفرع المحلي متقدم على الفرع البعيد بمقدار $(git rev-list --count --merge-base $remoteHead $initialLocalHead) commit(s)." -ForegroundColor Green
-    } elseif ($remoteAncestry -eq "true") {
-        $remoteAhead = $true
-        Write-Host "📥 الفرع البعيد متقدم على الفرع المحلي بمقدار $(git rev-list --count --merge-base $initialLocalHead $remoteHead) commit(s)." -ForegroundColor Yellow
+# دالة مساعدة للتحقق من العلاقة البعيدة الآمنة
+function Test-RemoteRelationship {
+    param(
+        [string]$localHead,
+        [string]$remoteHead,
+        [string]$branchName
+    )
+    
+    # الحالة A: متطابقان تمامًا
+    if ($localHead -eq $remoteHead) {
+        return "identical"
+    }
+    
+    # التحقق من الأنساب فقط إذا كانت هناك اختلافات
+    $localIsAncestor = git merge-base --is-ancestor $localHead $remoteHead 2>$null
+    $remoteIsAncestor = git merge-base --is-ancestor $remoteHead $localHead 2>$null
+    
+    if ($localIsAncestor -eq "true") {
+        return "local_ahead"
+    } elseif ($remoteIsAncestor -eq "true") {
+        return "remote_ahead"
     } else {
-        $diverged = $true
-        Write-Host "⚠️ تم اكتشاف تباعد: الفرع المحلي والبعيد لهما سجلين غير متطابقين." -ForegroundColor Red
-        Write-Host "   سجل HEAD المحلي: $initialLocalHead" -ForegroundColor Gray
-        Write-Host "   سجل HEAD البعيد: $remoteHead" -ForegroundColor Gray
+        return "diverged"
     }
 }
 
-# E) تحديد الإجراء المطلوب
+# E) تحديد الإجراء المطلوب بناءً على علاقة الفرع
 $actionTaken = "none"
 
 if (-not $remoteHead) {
@@ -190,9 +196,9 @@ if (-not $remoteHead) {
             exit 1
         }
     }
-} elseif ($localAhead) {
+} elseif ($relationshipStatus -eq "local_ahead") {
     # الفرع المحلي متقدم - قم push بشكل طبيعي
-    Write-Host "🚀 الدفع إلى GitHub (الفرع المحلي متقدم)..." -ForegroundColor Yellow
+    Write-Host "🚀 الدفع إلى GitHub (الفرع المحلي متقدم)..." -ForegroundColor Green
     try {
         git push origin $currentBranch
         $actionTaken = "push"
@@ -200,25 +206,25 @@ if (-not $remoteHead) {
         Write-Host "❌ فشل في push: $_" -ForegroundColor Red
         exit 1
     }
-} elseif ($remoteAhead) {
-    # الفرع البعيد متقدم - توقف حسب المتطلبات
+} elseif ($relationshipStatus -eq "remote_ahead") {
+    # الفرع البعيد متقدم - توقف بشكل آمن
     Write-Host "🛑 توقف: الفرع البعيد يحتوي علىCommits غير موجودة في الفرع المحلي." -ForegroundColor Red
     Write-Host "   الحل: راجع التغييرات البعيدة وقم بتنفيذها محلياً، ثم قم بالمزامنة مرة أخرى." -ForegroundColor Yellow
     exit 1
-} elseif ($diverged) {
-    # تم اكتشاف تباعد - توقف حسب المتطلبات
+} elseif ($relationshipStatus -eq "diverged") {
+    # تم اكتشاف تباعد - توقف بشكل آمن
     Write-Host "🛑 توقف: الفرع المحلي والبعيد متباعدان." -ForegroundColor Red
     Write-Host "   الحل: راجع التغييرات البعيدة، قم بالدمج أو rebase يدوياً، ثم قم بالمزامنة مرة أخرى." -ForegroundColor Yellow
     exit 1
-} else {
-    # متطابقان - كل شيء جيد
+} elseif ($relationshipStatus -eq "identical") {
+    # متطابقان تمامًا - كل شيء جيد
     Write-Host "✅ المستودع المحلي متطابق تماماً مع الفرع البعيد." -ForegroundColor Green
     $actionTaken = "identical"
 }
 
 # F) وضع Force Remote الاختياري
 if ($ForceRemote) {
-    if (-not ($diverged -or $remoteAhead)) {
+    if (-not ($relationshipStatus -eq "diverged" -or $relationshipStatus -eq "remote_ahead")) {
         Write-Host "⚠️ تحذير: تم استخدام -ForceRemote ولكن الحالة ليست diverged أو remote-ahead. تجاهل -ForceRemote." -ForegroundColor Yellow
     } else {
         Write-Host "" -ForegroundColor White
