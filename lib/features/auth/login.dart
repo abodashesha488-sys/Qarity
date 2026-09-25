@@ -271,7 +271,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     _FeatureItem(text: 'أخبار القرية والمناسبات', delay: 400),
                     _FeatureItem(text: 'سوق القرية والمنتجات المحلية', delay: 500),
-                    _FeatureItem(text: 'منتدى المجتمع المحلي', delay: 600),
+                    _FeatureItem(text: 'حوارات المندرة', delay: 600),
                     _FeatureItem(text: 'أرقام الطوارئ ودليل الهاتف', delay: 700),
                   ],
                 ),

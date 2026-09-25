@@ -40,7 +40,7 @@ class _NotificationsSettingsScreenState
         'المناسبات القادمة في القرية', Icons.celebration_rounded, Colors.purple),
     _Service('village_market', 'إشعارات السوق', 'المنتجات والمحلات الجديدة',
         Icons.shopping_bag_rounded, Colors.deepOrange),
-    _Service('village_forum', 'إشعارات المنتدى', 'المنشورات والنقاشات الجديدة',
+    _Service('village_forum', 'إشعارات حوارات المندرة', 'المنشورات والنقاشات الجديدة',
         Icons.forum_rounded, Colors.brown),
     _Service('village_services', 'إشعارات الخدمات',
         'الفنيون والخدمات الزراعية والتعليمية الجديدة في الدليل',

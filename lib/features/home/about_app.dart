@@ -12,7 +12,7 @@ class AboutScreen extends StatefulWidget {
     _Feature(icon: Icons.home_rounded, text: 'الرئيسية وخدمات القرية'),
     _Feature(icon: Icons.newspaper_rounded, text: 'أخبار القرية والمناسبات'),
     _Feature(icon: Icons.store_rounded, text: 'سوق القرية الإلكتروني'),
-    _Feature(icon: Icons.forum_rounded, text: 'منتدى المجتمع المحلي'),
+    _Feature(icon: Icons.forum_rounded, text: 'حوارات المندرة'),
     _Feature(icon: Icons.contact_phone_rounded, text: 'دليل الهاتف وحالات الطوارئ'),
     _Feature(icon: Icons.add_task_rounded, text: 'طلب الخدمات العامة'),
     _Feature(icon: Icons.person_rounded, text: 'الملف الشخصي والإعدادات'),
@@ -94,7 +94,7 @@ class _AboutScreenState extends State<AboutScreen> {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    'قرية أبوديشيشة منصة الخدمات الرقمية للقرية، تجمع الأخبار، السوق، المنتدى، الطوارئ وخدمات المجتمع في مكان واحد.',
+                    'قرية أبوديشيشة منصة الخدمات الرقمية للقرية، تجمع الأخبار، السوق، حوارات المندرة، الطوارئ وخدمات المجتمع في مكان واحد.',
                     style: theme.textTheme.bodyMedium?.copyWith(height: 1.6, color: theme.colorScheme.onSurfaceVariant),
                   ),
                 ],

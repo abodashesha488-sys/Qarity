@@ -215,7 +215,7 @@ class HomeDrawer extends StatelessWidget {
             _buildDrawerItem(context, 'سجل العزاء', Icons.grade_rounded, AppRoutes.obituariesList),
             _buildDrawerItem(context, 'المناسبات', Icons.card_giftcard_rounded, AppRoutes.occasionsList),
             _buildDrawerItem(context, 'سوق القرية', Icons.store_rounded, AppRoutes.marketProducts),
-            _buildDrawerItem(context, 'مندرة القرية', Icons.forum_rounded, AppRoutes.forumPosts),
+            _buildDrawerItem(context, 'حوارات المندرة', Icons.forum_rounded, AppRoutes.forumPosts),
             _buildDrawerItem(context, 'الطوارئ', Icons.contact_phone_rounded, AppRoutes.emergencyContacts),
             _buildDrawerItem(context, 'دليل الهاتف', Icons.phone_rounded, AppRoutes.phoneDirectory),
             _buildDrawerItem(context, 'الملف الشخصي', Icons.person_rounded, AppRoutes.profileMain),
@@ -307,7 +307,7 @@ class HomeContent extends StatelessWidget {
                 SliverToBoxAdapter(child: _buildLiveNews(context)),
                 const SliverToBoxAdapter(
                     child: _SectionHead(
-                        title: 'من المنتدى',
+                        title: 'حوارات المندرة',
                         subtitle: 'نقاشات أهل القرية وآخر المنشورات',
                         icon: Icons.forum_rounded,
                         actionRoute: AppRoutes.forumPosts)),
@@ -329,7 +329,7 @@ class HomeContent extends StatelessWidget {
       final items = latest.take(8).toList();
       if (items.isEmpty) return const SizedBox(height: 170);
       return SizedBox(
-        height: 205,
+        height: 152,
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -365,7 +365,7 @@ class HomeContent extends StatelessWidget {
       final latest = sorted.take(6).toList();
       if (latest.isEmpty) return const SizedBox(height: 150);
       return SizedBox(
-        height: 158,
+        height: 128,
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -388,7 +388,7 @@ class HomeContent extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SizedBox(
-                      height: 78,
+                      height: 58,
                       width: double.infinity,
                       child: CachedNetworkImage(
                           imageUrl: latest[index].imageUrl,
@@ -400,11 +400,24 @@ class HomeContent extends StatelessWidget {
                     ),
                   Padding(
                     padding: const EdgeInsets.all(9),
-                    child: Text(latest[index].title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.tajawal(
-                            fontSize: 11.5, fontWeight: FontWeight.w700)),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(latest[index].title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.tajawal(
+                                fontSize: 11.5, fontWeight: FontWeight.w700)),
+                        const SizedBox(height: 3),
+                        Text(latest[index].subtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                color: theme.colorScheme.onSurfaceVariant,
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w600)),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -436,7 +449,7 @@ class HomeContent extends StatelessWidget {
       final latest = posts.take(5).toList();
       if (latest.isEmpty) return const SizedBox(height: 185);
       return SizedBox(
-        height: 192,
+        height: 128,
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -462,7 +475,7 @@ class HomeContent extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     SizedBox(
-                        height: 82,
+                        height: 58,
                         width: double.infinity,
                         child: post.imageUrl != null &&
                                 post.imageUrl!.isNotEmpty
@@ -488,7 +501,7 @@ class HomeContent extends StatelessWidget {
                           const SizedBox(height: 3),
                           Text(post.content,
                               style: GoogleFonts.tajawal(fontSize: 10.5),
-                              maxLines: 2,
+                              maxLines: 1,
                               overflow: TextOverflow.ellipsis),
                         ],
                       ),
@@ -987,7 +1000,7 @@ class _ProductCard extends StatelessWidget {
             Stack(
               children: [
                 SizedBox(
-                  height: 100,
+                  height: 70,
                   width: double.infinity,
                   child: CachedNetworkImage(
                       imageUrl: product.imageUrl,

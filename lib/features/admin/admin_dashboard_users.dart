@@ -1242,7 +1242,7 @@ class _UsersPageState extends State<_UsersPage> {
       case 'seller':
         return 'فتح متجر ورفع منتجات بعدد صور حسب نوعه';
       case 'moderator':
-        return 'مراجعة محتوى الأخبار/السوق/المنتدى';
+        return 'مراجعة محتوى الأخبار/السوق/حوارات المندرة';
       case 'medical_admin':
         return 'إدارة المركز الطبي ومراجعة العيادات/الصيدليات/بنك الدم';
       case 'admin':

@@ -185,7 +185,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                                           style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
                                         ),
                                         Text(
-                                          'ينشر في المنتدى المجتمعي',
+                                          'ينشر في حوارات المندرة',
                                           style: theme.textTheme.bodySmall
                                               ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                                         ),
@@ -372,7 +372,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
-                                'تتم مراجعة المنشورات من الإدارة قبل ظهورها في المنتدى',
+                                 'تتم مراجعة المنشورات من الإدارة قبل ظهورها في حوارات المندرة',
                                 style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface),
                               ),
                             ),

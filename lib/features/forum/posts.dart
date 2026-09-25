@@ -131,7 +131,7 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: const QurityAppBar(title: 'المنتدى المجتمعي'),
+      appBar: const QurityAppBar(title: 'حوارات المندرة'),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Navigator.pushNamed(context, AppRoutes.forumCreatePost),
         icon: const Icon(Icons.add_rounded),
@@ -295,7 +295,7 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  isSearching ? 'جرّب كلمة بحث أخرى' : 'كن أول من يبدأ موضوعاً في المنتدى',
+                   isSearching ? 'جرّب كلمة بحث أخرى' : 'كن أول من يبدأ موضوعاً في حوارات المندرة',
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                 ),
