@@ -45,12 +45,17 @@ class AppHelpers {
     }
   }
 
-  static String formatCurrency(num amount) {
-    return '${NumberFormat('#,###', 'ar').format(amount)} ج.م';
-  }
-
   static String formatDate(DateTime date) {
     return DateFormat('yyyy/MM/dd', 'ar').format(date);
+  }
+
+  static String formatRelativeDate(DateTime date) {
+    final now = DateTime.now();
+    final diff = now.difference(date);
+    if (diff.inMinutes < 60) return '${diff.inMinutes} دقيقة';
+    if (diff.inHours < 24) return '${diff.inHours} ساعة';
+    if (diff.inDays < 7) return '${diff.inDays} يوم';
+    return '${date.day}/${date.month}/${date.year}';
   }
 
   static Color colorFromString(String text) {
@@ -65,15 +70,6 @@ class AppHelpers {
   static Color darken(Color color, [double amount = 0.1]) {
     final hsl = HSLColor.fromColor(color);
     return hsl.withLightness((hsl.lightness - amount).clamp(0.0, 1.0)).toColor();
-  }
-
-  static String formatRelativeDate(DateTime date) {
-    final now = DateTime.now();
-    final diff = now.difference(date);
-    if (diff.inMinutes < 60) return '${diff.inMinutes} دقيقة';
-    if (diff.inHours < 24) return '${diff.inHours} ساعة';
-    if (diff.inDays < 7) return '${diff.inDays} يوم';
-    return '${date.day}/${date.month}/${date.year}';
   }
 }
 
