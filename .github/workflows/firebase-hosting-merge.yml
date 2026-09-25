@@ -3,7 +3,7 @@ name: Deploy to Firebase Hosting on Merge
 on:
   push:
     branches:
-      - main
+      - refactor/improve-admin-dashboard-ui
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
