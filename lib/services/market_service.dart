@@ -12,7 +12,10 @@ import 'notification_service.dart';
 import 'remote_push_service.dart';
 
 class MarketService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  MarketService({FirebaseFirestore? firestore})
+      : _firestore = firestore ?? FirebaseFirestore.instance;
+
+  final FirebaseFirestore _firestore;
 
   // Filter and Sort Options
   static const List<String> sortOptions = [
@@ -53,6 +56,7 @@ class MarketService {
           sortBy: sortBy,
           isFeatured: isFeatured,
           isOnOffer: isOnOffer,
+          productStatus: productStatus,
         );
         return products;
       }
@@ -78,13 +82,25 @@ class MarketService {
     }
 
     final snapshot = await query.get();
-    var products = snapshot.docs
+    final fetched = snapshot.docs
         .map((doc) =>
             MarketProduct.fromJson(doc.data() as Map<String, dynamic>, doc.id))
         .toList();
 
-    products = _applyFiltersAndSort(
-      products,
+    // الكاش العام لا يخزن إلا الكتالوج غير المفلتر، وإلا ضيّق استعلامٌ واحد
+    // بنتيجةٍ جزئية الكاش الذي تقرأ منه بقية الشاشات بلا فلاتر.
+    final isGeneralQuery =
+        (category == null || category == 'الكل') &&
+            sellerId == null &&
+            isFeatured == null &&
+            isOnOffer == null &&
+            (productStatus == null || productStatus.isEmpty);
+    if (isGeneralQuery) {
+      await CacheService.saveProducts(fetched.map((p) => p.toJson()).toList());
+    }
+
+    return _applyFiltersAndSort(
+      fetched,
       category: category,
       minPrice: minPrice,
       maxPrice: maxPrice,
@@ -96,9 +112,6 @@ class MarketService {
       isOnOffer: isOnOffer,
       productStatus: productStatus,
     );
-
-    await CacheService.saveProducts(products.map((p) => p.toJson()).toList());
-    return products;
   }
 
   List<MarketProduct> _applyFiltersAndSort(
@@ -109,17 +122,28 @@ class MarketService {
     bool? inStockOnly,
     double? minRating,
     String? sellerId,
-    String sortBy = 'الأحداث',
+    String sortBy = 'الأحدث',
     bool? isFeatured,
     bool? isOnOffer,
     String? productStatus,
   }) {
+    // كل الفلاتر تُطبّق هنا حتى يتطابق مسار الكاش مع مسار الخادم
     final filtered = products.where((p) {
+      if (category != null && category != 'الكل' && p.category != category) {
+        return false;
+      }
+      if (sellerId != null && p.sellerId != sellerId) return false;
+      if (isFeatured != null && p.isFeatured != isFeatured) return false;
+      if (isOnOffer != null && p.isOnOffer != isOnOffer) return false;
       if (minPrice != null && p.effectivePrice < minPrice) return false;
       if (maxPrice != null && p.effectivePrice > maxPrice) return false;
       if (inStockOnly == true && !p.isInStock) return false;
       if (minRating != null && p.rating < minRating) return false;
-      if (productStatus != null && productStatus.isNotEmpty && p.productStatus != productStatus) return false;
+      if (productStatus != null &&
+          productStatus.isNotEmpty &&
+          p.productStatus != productStatus) {
+        return false;
+      }
       return true;
     }).toList();
 

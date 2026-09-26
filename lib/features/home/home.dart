@@ -9,6 +9,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/utils/helpers.dart';
+import '../../core/utils/navigator_key.dart';
 import '../../core/utils/role_style.dart';
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
@@ -17,6 +19,7 @@ import '../../services/forum_service.dart';
 import '../../services/market_service.dart';
 import '../../services/news_service.dart';
 import '../../services/notification_service.dart';
+import '../../services/update_service.dart';
 import '../../services/user_service.dart';
 import '../../services/weather_service.dart';
 import '../../widgets/alert_wisdom_bar.dart';
@@ -231,7 +234,7 @@ class HomeDrawer extends StatelessWidget {
                   RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               onTap: () {
                 Navigator.pop(context);
-                Navigator.pushNamed(context, AppRoutes.home);
+                _checkForUpdate();
               },
             ),
             _buildDrawerItem(context, 'لوحة التحكم', Icons.admin_panel_settings_rounded, AppRoutes.admin),
@@ -239,6 +242,18 @@ class HomeDrawer extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// 🔁 فحص يدوي لتحديث التطبيق من الدرج — نفس سلوك بطاقة الإعدادات.
+  Future<void> _checkForUpdate() async {
+    final info = await UpdateService().getUpdateInfo();
+    final ctx = navigatorKey.currentContext;
+    if (ctx == null || !ctx.mounted) return;
+    if (info != null) {
+      await UpdateService.showUpdateDialog(ctx, info);
+    } else {
+      AppHelpers.showToast('أنت على أحدث إصدار');
+    }
   }
 
   Widget _buildDrawerItem(BuildContext context, String title, IconData icon,
@@ -1025,7 +1040,7 @@ class _ProductCard extends StatelessWidget {
                           color: theme.colorScheme.surfaceContainerHighest,
                           child: const Icon(Icons.image_rounded))),
                 ),
-                if (product.isOnOffer)
+                if (product.hasActiveOffer)
                   Positioned(
                     top: 6,
                     right: 6,
@@ -1059,7 +1074,7 @@ class _ProductCard extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          '${((product.isOnOffer && product.offerPrice != null) ? product.offerPrice! : product.price).toStringAsFixed(0)} ج.م',
+                          '${product.effectivePrice.toStringAsFixed(0)} ج.م',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -1068,7 +1083,7 @@ class _ProductCard extends StatelessWidget {
                               color: theme.colorScheme.primary),
                         ),
                       ),
-                      if (product.isOnOffer && product.offerPrice != null)
+                      if (product.hasActiveOffer)
                         Text(
                           product.price.toStringAsFixed(0),
                           style: const TextStyle(

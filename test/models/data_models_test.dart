@@ -68,8 +68,7 @@ void main() {
       expect(p.isInStock, isFalse); // stock 0
     });
 
-    test('no discount when not on offer', () {
-      const p = MarketProduct(
+    test('no discount when not on offer', () {      const p = MarketProduct(
         id: 'p2',
         name: 'سلعة',
         description: 'وصف',
@@ -83,6 +82,54 @@ void main() {
       expect(p.effectivePrice, 100);
       expect(p.discountPercent, 0);
       expect(p.isInStock, isTrue);
+    });
+
+    test('عرض غير مخفّض فعليًا لا يُغيّر السعر ولا النسبة', () {
+      MarketProduct offer({required double price, required double? offerPrice}) =>
+          MarketProduct(
+            id: 'p',
+            name: 'سلعة',
+            description: 'وصف',
+            price: price,
+            imageUrl: '',
+            category: 'عام',
+            sellerName: 'بائع',
+            sellerPhone: '123',
+            isOnOffer: true,
+            offerPrice: offerPrice,
+          );
+
+      // سعر العرض أعلى من الأصلي (خطأ إدخال) ⇒ يُتجاهل بدل سعر أعلى + خصم سالب
+      final higher = offer(price: 100, offerPrice: 120);
+      expect(higher.hasActiveOffer, isFalse);
+      expect(higher.effectivePrice, 100);
+      expect(higher.discountPercent, 0);
+
+      // سعر العرض يساوي الأصلي ⇒ لا عرض
+      final equal = offer(price: 100, offerPrice: 100);
+      expect(equal.hasActiveOffer, isFalse);
+      expect(equal.discountPercent, 0);
+
+      // السعر صفر ⇒ لا قسمة على صفر
+      final zero = offer(price: 0, offerPrice: 0);
+      expect(zero.discountPercent, 0);
+      expect(zero.effectivePrice, 0);
+      expect(zero.discountPercent.isNaN, isFalse);
+
+      // العرض السليم ما زال يعمل
+      final good = offer(price: 100, offerPrice: 80);
+      expect(good.hasActiveOffer, isTrue);
+      expect(good.effectivePrice, 80);
+      expect(good.discountPercent, 20);
+    });
+
+    test('سلّم صور البائعين يتصاعد مع ترتيب الفئات', () {
+      final limits = SellerType.values.map((t) => t.maxImages).toList();
+      final sorted = [...limits]..sort();
+      expect(limits, sorted, reason: 'ترتيب الفئات يجب أن يساوي ترتيب الحدود');
+      expect(limits, [1, 3, 5, 10]);
+      expect(SellerType.premiumSeller.maxImages,
+          greaterThan(SellerType.goldSeller.maxImages));
     });
 
     test('copyWithApproved preserves fields', () {

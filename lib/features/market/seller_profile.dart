@@ -504,7 +504,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                       ),
                     ),
                   ),
-                  if (product.isOnOffer)
+                  if (product.hasActiveOffer)
                     Positioned(
                       top: 8,
                       left: 8,

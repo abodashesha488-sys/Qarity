@@ -223,7 +223,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                 color: theme.colorScheme.primary,
                                 fontWeight: FontWeight.w900)),
                       ),
-                      if (product.isOnOffer && product.discountPercent > 0) ...[
+                      if (product.hasActiveOffer) ...[
                         const SizedBox(width: 10),
                         Container(
                           padding: const EdgeInsets.symmetric(

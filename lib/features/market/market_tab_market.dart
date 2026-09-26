@@ -187,7 +187,7 @@ class _MiniProductCard extends StatelessWidget {
                           ? product.imageUrls.first
                           : product.imageUrl,
                       theme),
-                  if (product.isOnOffer)
+                  if (product.hasActiveOffer)
                     Positioned(
                       top: 6,
                       right: 6,

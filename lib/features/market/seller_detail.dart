@@ -316,7 +316,7 @@ class _SellerDetailScreenState extends State<SellerDetailScreen> {
                     ),
                   ),
                 ),
-                if (product.isOnOffer)
+                if (product.hasActiveOffer)
                   Positioned(
                     top: 8,
                     left: 8,

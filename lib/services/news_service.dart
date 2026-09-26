@@ -10,8 +10,13 @@ import 'notification_service.dart';
 import 'remote_push_service.dart';
 
 class NewsService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  NewsService([FirebaseFirestore? firestore])
+      : _firestore = firestore ?? FirebaseFirestore.instance;
+
+  final FirebaseFirestore _firestore;
+
+  /// مؤجّل حتى استخدامه فعليًا حتى تُختبر مسارات الأخبار بلا تهيئة Firebase.
+  FirebaseAuth get _auth => FirebaseAuth.instance;
 
   Stream<List<NewsItem>> getNewsStream({int? limit}) {
     Query<Map<String, dynamic>> query =
@@ -34,17 +39,6 @@ class NewsService {
     final news = snapshot.docs.map((doc) => NewsItem.fromJson(doc.data(), doc.id)).toList();
     await CacheService.saveNews(news.map((n) => n.toJson()).toList());
     return news;
-  }
-
-  Future<void> likeNews(String newsId, {String? userId}) async {
-    final doc = await _firestore.collection('news').doc(newsId).get();
-    final likedBy = List<String>.from(doc.data()?['likedBy'] as List<dynamic>? ?? []);
-    if (userId != null && !likedBy.contains(userId)) {
-      likedBy.add(userId);
-      await _firestore.collection('news').doc(newsId).update({'likes': FieldValue.increment(1), 'likedBy': likedBy});
-    } else if (userId == null) {
-      await _firestore.collection('news').doc(newsId).update({'likes': FieldValue.increment(1)});
-    }
   }
 
   /// Live stream for a single news item so detail screens keep

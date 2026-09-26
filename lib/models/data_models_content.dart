@@ -388,11 +388,16 @@ class MarketProduct implements BaseModel {
     );
   }
 
-  double get effectivePrice =>
-      isOnOffer && offerPrice != null ? offerPrice! : price;
-  double get discountPercent => isOnOffer && offerPrice != null
-      ? ((price - offerPrice!) / price * 100).roundToDouble()
+  /// ✅ عرض سارٍ فعليًا: مفعّل وسعره موجب وأقل من السعر الأصلي.
+  bool get hasActiveOffer =>
+      isOnOffer && offerPrice != null && price > 0 && offerPrice! < price;
+
+  double get effectivePrice => hasActiveOffer ? offerPrice! : price;
+
+  double get discountPercent => hasActiveOffer
+      ? ((price - offerPrice!) / price * 100).clamp(0, 100).roundToDouble()
       : 0.0;
+
   bool get isInStock => stock > 0;
 }
 
@@ -684,173 +689,13 @@ class SellerRequest implements BaseModel {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// ITEM REQUEST MODEL
-// ═══════════════════════════════════════════════════════════════
-class ItemRequest implements BaseModel {
-  @override
-  final String id;
-  final String itemName;
-  final String description;
-  final String requestedBy;
-  final String status; // 'pending', 'approved', 'completed', 'cancelled'
-  final String? requestedByPhone;
-  @override
-  final DateTime? createdAt;
-  final DateTime? fulfilledAt;
-  final DateTime? updatedAt;
-
-  const ItemRequest({
-    required this.id,
-    required this.itemName,
-    required this.description,
-    required this.requestedBy,
-    this.requestedByPhone,
-    this.status = 'pending',
-    this.fulfilledAt,
-    this.createdAt,
-    this.updatedAt,
-  });
-
-  factory ItemRequest.fromJson(Map<String, dynamic> json, String docId) {
-    return ItemRequest(
-      id: docId,
-      itemName: json['itemName'] as String? ?? '',
-      description: json['description'] as String? ?? '',
-      requestedBy: json['requestedBy'] as String? ?? '',
-      requestedByPhone: json['requestedByPhone'] as String?,
-      status: json['status'] as String? ?? 'pending',
-      fulfilledAt: json['fulfilledAt'] != null
-          ? _parseTimestamp(json['fulfilledAt'])
-          : null,
-      updatedAt:
-          json['updatedAt'] != null ? _parseTimestamp(json['updatedAt']) : null,
-    );
-  }
-
-  @override
-  Map<String, dynamic> toJson() {
-    return {
-      'itemName': itemName,
-      'description': description,
-      'requestedBy': requestedBy,
-      'requestedByPhone': requestedByPhone,
-      'status': status,
-      'createdAt': createdAt != null
-          ? Timestamp.fromDate(createdAt!)
-          : FieldValue.serverTimestamp(),
-      'fulfilledAt':
-          fulfilledAt != null ? Timestamp.fromDate(fulfilledAt!) : null,
-      'updatedAt': updatedAt != null
-          ? Timestamp.fromDate(updatedAt!)
-          : FieldValue.serverTimestamp(),
-    };
-  }
-
-  String get statusLabel => _statusLabels[status] ?? status;
-  Color get statusColor => _statusColors[status] ?? Colors.grey;
-
-  static const Map<String, String> _statusLabels = {
-    'pending': 'قيد الانتظار',
-    'approved': '已批准',
-    'completed': 'مكتمل',
-    'cancelled': 'ملغي',
-  };
-
-  static const Map<String, Color> _statusColors = {
-    'pending': Color(0xFFFF9800),
-    'approved': Color(0xFF6F4E37),
-    'completed': Color(0xFF6F4E37),
-    'cancelled': Color(0xFFE53935),
-  };
-}
-
-// ═══════════════════════════════════════════════════════════════
-// DONATION ITEM MODEL
-// ═══════════════════════════════════════════════════════════════
-class DonationItem implements BaseModel {
-  @override
-  final String id;
-  final String itemName;
-  final String description;
-  final String donatedBy;
-  final String status; // 'available', 'claimed', 'completed'
-  final String? claimedBy;
-  final DateTime? claimedAt;
-  final DateTime? completedAt;
-  @override
-  final DateTime? createdAt;
-
-  const DonationItem({
-    required this.id,
-    required this.itemName,
-    required this.description,
-    required this.donatedBy,
-    this.status = 'available',
-    this.claimedBy,
-    this.claimedAt,
-    this.completedAt,
-    this.createdAt,
-  });
-
-  factory DonationItem.fromJson(Map<String, dynamic> json, String docId) {
-    return DonationItem(
-      id: docId,
-      itemName: json['itemName'] as String? ?? '',
-      description: json['description'] as String? ?? '',
-      donatedBy: json['donatedBy'] as String? ?? '',
-      status: json['status'] as String? ?? 'available',
-      claimedBy: json['claimedBy'] as String?,
-      claimedAt:
-          json['claimedAt'] != null ? _parseTimestamp(json['claimedAt']) : null,
-      completedAt: json['completedAt'] != null
-          ? _parseTimestamp(json['completedAt'])
-          : null,
-      createdAt:
-          json['createdAt'] != null ? _parseTimestamp(json['createdAt']) : null,
-    );
-  }
-
-  @override
-  Map<String, dynamic> toJson() {
-    return {
-      'itemName': itemName,
-      'description': description,
-      'donatedBy': donatedBy,
-      'status': status,
-      'claimedBy': claimedBy,
-      'claimedAt': claimedAt != null ? Timestamp.fromDate(claimedAt!) : null,
-      'completedAt':
-          completedAt != null ? Timestamp.fromDate(completedAt!) : null,
-      'createdAt': createdAt != null
-          ? Timestamp.fromDate(createdAt!)
-          : FieldValue.serverTimestamp(),
-    };
-  }
-
-  String get statusLabel => _statusLabels[status] ?? status;
-  Color get statusColor => _statusColors[status] ?? Colors.grey;
-
-  static const Map<String, String> _statusLabels = {
-    'available': 'متوفر',
-    'claimed': '已索取',
-    'completed': 'مكتمل',
-  };
-
-  static const Map<String, Color> _statusColors = {
-    'available': Color(0xFF6F4E37),
-    'claimed': Color(0xFF6F4E37),
-    'completed': Color(0xFF6F4E37),
-  };
-}
-
-// ═══════════════════════════════════════════════════════════════
 // RELATIVE MODEL (أقارب المتوفى)
 // ═══════════════════════════════════════════════════════════════
 enum SellerType {
   regular('بائع عادي', Icons.store_rounded, 1),
   superSeller('بائع سوبر', Icons.storefront_rounded, 3),
-  goldSeller('بائع ذهبي', Icons.star_rounded, 10),
-  premiumSeller('بائع متميز', Icons.emergency_rounded, 5);
+  goldSeller('بائع ذهبي', Icons.star_rounded, 5),
+  premiumSeller('بائع متميز', Icons.emergency_rounded, 10);
 
   final String label;
   final IconData icon;
