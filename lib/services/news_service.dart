@@ -62,19 +62,27 @@ class NewsService {
   }
 
   /// Toggles the like of [userId] on [newsId] and keeps `likes` in sync with
-  /// `likedBy`. Returns the new like state.
+  /// `likedBy`. Returns the new like state. المعاملة تمنع فقدان إعجاب متزامن
+  /// (كانت القراءة-ثم-الكتابة last-write-wins) وتُبقي العدّاد بحجم المصفوفة.
   Future<bool> toggleNewsLike(String newsId, String userId) async {
     final docRef = _firestore.collection('news').doc(newsId);
-    final doc = await docRef.get();
-    final likedBy = List<String>.from(doc.data()?['likedBy'] as List<dynamic>? ?? []);
-    final wasLiked = likedBy.contains(userId);
-    if (wasLiked) {
-      likedBy.remove(userId);
-    } else {
-      likedBy.add(userId);
-    }
-    await docRef.update({'likes': likedBy.length, 'likedBy': likedBy});
-    return !wasLiked;
+    var nowLiked = false;
+    await _firestore.runTransaction((tx) async {
+      final doc = await tx.get(docRef);
+      final likedBy =
+          List<String>.from(doc.data()?['likedBy'] as List<dynamic>? ?? []);
+      final wasLiked = likedBy.contains(userId);
+      nowLiked = !wasLiked;
+      tx.update(docRef, {
+        'likedBy': wasLiked
+            ? FieldValue.arrayRemove([userId])
+            : FieldValue.arrayUnion([userId]),
+        'likes': wasLiked
+            ? (likedBy.length - 1).clamp(0, 1 << 31)
+            : likedBy.length + 1,
+      });
+    });
+    return nowLiked;
   }
 
   Future<void> addComment(String newsId, String userName, String text) async {

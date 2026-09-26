@@ -38,10 +38,14 @@ class UserNotification {
 }
 
 class NotificationInboxService {
-  NotificationInboxService._();
-  static final NotificationInboxService instance = NotificationInboxService._();
+  NotificationInboxService([FirebaseFirestore? firestore])
+      : _firestore = firestore ?? FirebaseFirestore.instance;
 
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  /// المثيل الافتراضي للتطبيق؛ يهيَّأ عند أول استخدام فقط حتى لا تلمسه
+  /// اختبارات الخدمات التي تمرّر Firestore وهميًا.
+  static final NotificationInboxService instance = NotificationInboxService();
+
+  final FirebaseFirestore _firestore;
 
   CollectionReference<Map<String, dynamic>> get _col =>
       _firestore.collection('notifications');

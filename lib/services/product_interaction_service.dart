@@ -2,24 +2,33 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class ProductInteractionService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore;
 
-  static final ProductInteractionService _instance = ProductInteractionService._internal();
+  static final ProductInteractionService _instance =
+      ProductInteractionService._internal();
   factory ProductInteractionService() => _instance;
-  ProductInteractionService._internal();
+  ProductInteractionService._internal() : _firestore = FirebaseFirestore.instance;
+
+  /// نسخة للاختبار بـ Firestore وهمي (لا تلمس Singleton الإنتاج).
+  ProductInteractionService.withFirestore(FirebaseFirestore firestore)
+      : _firestore = firestore;
 
   Future<void> toggleLike({required String productId, required String userId}) async {
     final productRef = _firestore.collection('market_products').doc(productId);
     final likeRef = productRef.collection('likes').doc(userId);
 
-    final liked = await likeRef.get();
-    if (liked.exists) {
-      await likeRef.delete();
-      await productRef.update({'likes': FieldValue.increment(-1)});
-    } else {
-      await likeRef.set({'userId': userId, 'createdAt': Timestamp.now()});
-      await productRef.update({'likes': FieldValue.increment(1)});
-    }
+    // المعاملة تمنع انفصال العدّاد عن المجموعة الفرعية عند ضغطة مزدوجة
+    // أو جهازين: الوثيقة والحذف والعدّاد تُلتزم معًا أو تُعاد المحاولة.
+    await _firestore.runTransaction((tx) async {
+      final like = await tx.get(likeRef);
+      if (like.exists) {
+        tx.delete(likeRef);
+        tx.update(productRef, {'likes': FieldValue.increment(-1)});
+      } else {
+        tx.set(likeRef, {'userId': userId, 'createdAt': Timestamp.now()});
+        tx.update(productRef, {'likes': FieldValue.increment(1)});
+      }
+    });
   }
 
   Stream<bool> hasUserLikedStream({required String productId, required String userId}) {

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../core/utils/notification_deeplink.dart';
 import '../models/data_models.dart';
 import 'cache_service.dart';
 import 'notification_inbox_service.dart';
@@ -10,7 +11,16 @@ import 'notification_service.dart';
 import 'remote_push_service.dart';
 
 class ForumService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  ForumService([FirebaseFirestore? firestore, NotificationInboxService? inbox])
+      : _firestore = firestore ?? FirebaseFirestore.instance,
+        _inboxOverride = inbox;
+
+  final FirebaseFirestore _firestore;
+  final NotificationInboxService? _inboxOverride;
+
+  /// صندوق الوارد العام قابل للتبديل في الاختبارات (Firestore وهمي).
+  NotificationInboxService get _inbox =>
+      _inboxOverride ?? NotificationInboxService.instance;
 
   Stream<List<ForumPost>> getPostsStream({int? limit}) {
     Query<Map<String, dynamic>> query = _firestore
@@ -71,36 +81,80 @@ class ForumService {
     }
   }
 
+  /// يسجّل/يلغي إعجاب [userId] على [postId] داخل معاملة واحدة: القراءة ثم
+  /// التعديل الذرّيان يمنعان فقدان إعجاب متزامن (was last-write-wins)، ويبقي
+  /// `likes` مطابقًا لحجم `likedBy`. يُبلّغ صاحب المنشور فقط عند إعجاب جديد.
   Future<void> toggleLike(String postId, String userId) async {
     final postRef = _firestore.collection('forum_posts').doc(postId);
-    final post = await postRef.get();
-    final likedBy = List<String>.from(post.data()?['likedBy'] as List<dynamic>? ?? []);
-    final wasLiked = likedBy.contains(userId);
-    if (wasLiked) {
-      likedBy.remove(userId);
-    } else {
-      likedBy.add(userId);
-      _sendLikeNotification(postId, post.data()?['content'] as String? ?? 'منشور جديد');
+    var newlyLiked = false;
+    var ownerUid = '';
+    var excerpt = '';
+
+    await _firestore.runTransaction((tx) async {
+      final post = await tx.get(postRef);
+      final likedBy =
+          List<String>.from(post.data()?['likedBy'] as List<dynamic>? ?? []);
+      final wasLiked = likedBy.contains(userId);
+      final count = wasLiked
+          ? (likedBy.length - 1).clamp(0, 1 << 31)
+          : likedBy.length + 1;
+      tx.update(postRef, {
+        'likedBy': wasLiked
+            ? FieldValue.arrayRemove([userId])
+            : FieldValue.arrayUnion([userId]),
+        'likes': count,
+      });
+      if (!wasLiked) {
+        newlyLiked = true;
+        ownerUid = (post.data()?['userId'] ?? '').toString();
+        final title = (post.data()?['title'] ?? '').toString().trim();
+        final content = (post.data()?['content'] ?? '').toString().trim();
+        final source = title.isNotEmpty ? title : content;
+        excerpt = source.length > 60 ? '${source.substring(0, 60)}…' : source;
+      }
+    });
+
+    if (newlyLiked) {
+      await _notifyPostOwnerOfLike(
+          postId: postId, ownerUid: ownerUid, excerpt: excerpt, likerUid: userId);
     }
-    await postRef.update({'likes': likedBy.length, 'likedBy': likedBy});
   }
 
-  Future<void> _sendLikeNotification(String postId, String postTitle) async {
+  /// إشعار إعجاب يصل صاحب المنشور فعلًا: صندوق الوارد الداخلي (يعمل على كل
+  /// المنصات) + FCM مباشر لجهازه إن كان له توكن. تتجاهل إعجاب الذات.
+  Future<void> _notifyPostOwnerOfLike(
+      {required String postId,
+      required String ownerUid,
+      required String excerpt,
+      required String likerUid}) async {
+    if (ownerUid.isEmpty || ownerUid == likerUid) return;
+    const title = '💗 إعجاب جديد';
+    final body =
+        excerpt.isEmpty ? 'أعجب أحدهم بمنشورك' : 'أعجب أحدهم بمنشورك: $excerpt';
     try {
-      // بوابة الإخطار هي تسجيل الدخول (وليس توكن FCM): هكذا يبقى صندوق
-      // الوارد داخل التطبيق يعمل على الويب/القناة التي لا توكن فيها.
-      if (FirebaseAuth.instance.currentUser != null) {
-        await _firestore.collection('notifications').add({
-          'type': 'like',
-          'targetId': postId,
-          'title': 'إعجاب جديد',
-          'body': 'أعجب أحدهم بمنشورك: $postTitle',
-          'isRead': false,
-          'createdAt': FieldValue.serverTimestamp(),
-        });
+      await _inbox.push(
+        userId: ownerUid,
+        title: title,
+        body: body,
+        route:
+            NotificationDeepLink.encode('/forum/detail', 'forum_posts', postId),
+        kind: 'like',
+      );
+      final udoc =
+          await _firestore.collection('users').doc(ownerUid).get();
+      final token = udoc.data()?['fcmToken'] as String?;
+      if (token != null && token.isNotEmpty) {
+        unawaited(RemotePushService.sendToDevice(
+          fcmToken: token,
+          title: title,
+          body: body,
+          route: '/forum/detail',
+          collection: 'forum_posts',
+          itemId: postId,
+        ));
       }
     } catch (_) {
-      // Silently fail - notification is optional
+      // الإشعار اختياري: لا يكسر الإعجاب نفسه
     }
   }
 
