@@ -90,7 +90,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       final bytes = await image.readAsBytes();
       final url = await _imageUploadService.uploadImage(bytes);
       if (!mounted) return;
-      setState(() => _uploadedImageUrl = url);
+      setState(() => _uploadedImageUrl = url.imageUrl);
       AppHelpers.showSnackBar(context, 'تم رفع الصورة بنجاح', isSuccess: true);
     } catch (e) {
       if (mounted) AppHelpers.showSnackBar(context, 'خطأ في اختيار الصورة: $e', isError: true);

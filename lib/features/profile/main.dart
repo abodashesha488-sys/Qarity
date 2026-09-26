@@ -122,7 +122,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<String?> _uploadProfileImage() async {
     if (_profileBytes == null) return null;
-    return _imageUploadService.uploadImage(_profileBytes!);
+    final result = await _imageUploadService.uploadImage(_profileBytes!);
+    return result.imageUrl;
   }
 
   Future<void> _pickProfileImage() async {

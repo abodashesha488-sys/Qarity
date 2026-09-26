@@ -9,6 +9,7 @@ class ArabicLetter {
     required this.finalForm,
     required this.word,
     required this.emoji,
+    required this.image,
     required this.colorIndex,
   });
 
@@ -20,6 +21,9 @@ class ArabicLetter {
   final String finalForm;
   final String word;
   final String emoji;
+
+  /// مسار صورة توضيحية داخل الأصول (معبّرة عن كلمة المثال).
+  final String image;
   final int colorIndex;
 }
 
@@ -33,7 +37,8 @@ const List<ArabicLetter> kArabicLetters = [
       finalForm: 'ـا',
       word: 'أَسَد',
       emoji: '🦁',
-      colorIndex: 0),
+      colorIndex: 0,
+      image: 'assets/images/letters/l01.jpg'),
   ArabicLetter(
       letter: 'ب',
       name: 'باء',
@@ -43,7 +48,8 @@ const List<ArabicLetter> kArabicLetters = [
       finalForm: 'ـب',
       word: 'بَطَّة',
       emoji: '🦆',
-      colorIndex: 1),
+      colorIndex: 1,
+      image: 'assets/images/letters/l02.jpg'),
   ArabicLetter(
       letter: 'ت',
       name: 'تاء',
@@ -53,7 +59,8 @@ const List<ArabicLetter> kArabicLetters = [
       finalForm: 'ـت',
       word: 'تُفَّاح',
       emoji: '🍎',
-      colorIndex: 2),
+      colorIndex: 2,
+      image: 'assets/images/letters/l03.jpg'),
   ArabicLetter(
       letter: 'ث',
       name: 'ثاء',
@@ -63,7 +70,8 @@ const List<ArabicLetter> kArabicLetters = [
       finalForm: 'ـث',
       word: 'ثُعْبان',
       emoji: '🐍',
-      colorIndex: 3),
+      colorIndex: 3,
+      image: 'assets/images/letters/l04.jpg'),
   ArabicLetter(
       letter: 'ج',
       name: 'جيم',
@@ -73,7 +81,8 @@ const List<ArabicLetter> kArabicLetters = [
       finalForm: 'ـج',
       word: 'جَمَل',
       emoji: '🐪',
-      colorIndex: 4),
+      colorIndex: 4,
+      image: 'assets/images/letters/l05.jpg'),
   ArabicLetter(
       letter: 'ح',
       name: 'حاء',
@@ -83,7 +92,8 @@ const List<ArabicLetter> kArabicLetters = [
       finalForm: 'ـح',
       word: 'حِصان',
       emoji: '🐴',
-      colorIndex: 5),
+      colorIndex: 5,
+      image: 'assets/images/letters/l06.jpg'),
   ArabicLetter(
       letter: 'خ',
       name: 'خاء',
@@ -93,7 +103,8 @@ const List<ArabicLetter> kArabicLetters = [
       finalForm: 'ـخ',
       word: 'خَروف',
       emoji: '🐑',
-      colorIndex: 6),
+      colorIndex: 6,
+      image: 'assets/images/letters/l07.jpg'),
   ArabicLetter(
       letter: 'د',
       name: 'دال',
@@ -103,7 +114,8 @@ const List<ArabicLetter> kArabicLetters = [
       finalForm: 'ـد',
       word: 'دُبّ',
       emoji: '🐻',
-      colorIndex: 7),
+      colorIndex: 7,
+      image: 'assets/images/letters/l08.jpg'),
   ArabicLetter(
       letter: 'ذ',
       name: 'ذال',
@@ -113,7 +125,8 @@ const List<ArabicLetter> kArabicLetters = [
       finalForm: 'ـذ',
       word: 'ذُرَة',
       emoji: '🌽',
-      colorIndex: 8),
+      colorIndex: 8,
+      image: 'assets/images/letters/l09.jpg'),
   ArabicLetter(
       letter: 'ر',
       name: 'راء',
@@ -123,7 +136,8 @@ const List<ArabicLetter> kArabicLetters = [
       finalForm: 'ـر',
       word: 'رِيشة',
       emoji: '🪶',
-      colorIndex: 9),
+      colorIndex: 9,
+      image: 'assets/images/letters/l10.jpg'),
   ArabicLetter(
       letter: 'ز',
       name: 'زاي',
@@ -133,7 +147,8 @@ const List<ArabicLetter> kArabicLetters = [
       finalForm: 'ـز',
       word: 'زَرافة',
       emoji: '🦒',
-      colorIndex: 10),
+      colorIndex: 10,
+      image: 'assets/images/letters/l11.jpg'),
   ArabicLetter(
       letter: 'س',
       name: 'سين',
@@ -143,7 +158,8 @@ const List<ArabicLetter> kArabicLetters = [
       finalForm: 'ـس',
       word: 'سَمَكة',
       emoji: '🐟',
-      colorIndex: 11),
+      colorIndex: 11,
+      image: 'assets/images/letters/l12.jpg'),
   ArabicLetter(
       letter: 'ش',
       name: 'شين',
@@ -153,7 +169,8 @@ const List<ArabicLetter> kArabicLetters = [
       finalForm: 'ـش',
       word: 'شَمْس',
       emoji: '☀️',
-      colorIndex: 12),
+      colorIndex: 12,
+      image: 'assets/images/letters/l13.jpg'),
   ArabicLetter(
       letter: 'ص',
       name: 'صاد',
@@ -163,7 +180,8 @@ const List<ArabicLetter> kArabicLetters = [
       finalForm: 'ـص',
       word: 'صَقْر',
       emoji: '🦅',
-      colorIndex: 13),
+      colorIndex: 13,
+      image: 'assets/images/letters/l14.jpg'),
   ArabicLetter(
       letter: 'ض',
       name: 'ضاد',
@@ -173,7 +191,8 @@ const List<ArabicLetter> kArabicLetters = [
       finalForm: 'ـض',
       word: 'ضِفْدَع',
       emoji: '🐸',
-      colorIndex: 14),
+      colorIndex: 14,
+      image: 'assets/images/letters/l15.jpg'),
   ArabicLetter(
       letter: 'ط',
       name: 'طاء',
@@ -183,7 +202,8 @@ const List<ArabicLetter> kArabicLetters = [
       finalForm: 'ـط',
       word: 'طائِرة',
       emoji: '✈️',
-      colorIndex: 15),
+      colorIndex: 15,
+      image: 'assets/images/letters/l16.jpg'),
   ArabicLetter(
       letter: 'ظ',
       name: 'ظاء',
@@ -193,7 +213,8 @@ const List<ArabicLetter> kArabicLetters = [
       finalForm: 'ـظ',
       word: 'ظَرْف',
       emoji: '✉️',
-      colorIndex: 16),
+      colorIndex: 16,
+      image: 'assets/images/letters/l17.jpg'),
   ArabicLetter(
       letter: 'ع',
       name: 'عين',
@@ -203,7 +224,8 @@ const List<ArabicLetter> kArabicLetters = [
       finalForm: 'ـع',
       word: 'عِنَب',
       emoji: '🍇',
-      colorIndex: 17),
+      colorIndex: 17,
+      image: 'assets/images/letters/l18.jpg'),
   ArabicLetter(
       letter: 'غ',
       name: 'غين',
@@ -213,7 +235,8 @@ const List<ArabicLetter> kArabicLetters = [
       finalForm: 'ـغ',
       word: 'غُراب',
       emoji: '🐦',
-      colorIndex: 18),
+      colorIndex: 18,
+      image: 'assets/images/letters/l19.jpg'),
   ArabicLetter(
       letter: 'ف',
       name: 'فاء',
@@ -223,7 +246,8 @@ const List<ArabicLetter> kArabicLetters = [
       finalForm: 'ـف',
       word: 'فِيل',
       emoji: '🐘',
-      colorIndex: 19),
+      colorIndex: 19,
+      image: 'assets/images/letters/l20.jpg'),
   ArabicLetter(
       letter: 'ق',
       name: 'قاف',
@@ -233,7 +257,8 @@ const List<ArabicLetter> kArabicLetters = [
       finalForm: 'ـق',
       word: 'قِطّة',
       emoji: '🐱',
-      colorIndex: 20),
+      colorIndex: 20,
+      image: 'assets/images/letters/l21.jpg'),
   ArabicLetter(
       letter: 'ك',
       name: 'كاف',
@@ -243,7 +268,8 @@ const List<ArabicLetter> kArabicLetters = [
       finalForm: 'ـك',
       word: 'كُرة',
       emoji: '⚽',
-      colorIndex: 21),
+      colorIndex: 21,
+      image: 'assets/images/letters/l22.jpg'),
   ArabicLetter(
       letter: 'ل',
       name: 'لام',
@@ -253,7 +279,8 @@ const List<ArabicLetter> kArabicLetters = [
       finalForm: 'ـل',
       word: 'لَيْمون',
       emoji: '🍋',
-      colorIndex: 22),
+      colorIndex: 22,
+      image: 'assets/images/letters/l23.jpg'),
   ArabicLetter(
       letter: 'م',
       name: 'ميم',
@@ -263,7 +290,8 @@ const List<ArabicLetter> kArabicLetters = [
       finalForm: 'ـم',
       word: 'مَوْز',
       emoji: '🍌',
-      colorIndex: 23),
+      colorIndex: 23,
+      image: 'assets/images/letters/l24.jpg'),
   ArabicLetter(
       letter: 'ن',
       name: 'نون',
@@ -273,7 +301,8 @@ const List<ArabicLetter> kArabicLetters = [
       finalForm: 'ـن',
       word: 'نَجْمة',
       emoji: '⭐',
-      colorIndex: 24),
+      colorIndex: 24,
+      image: 'assets/images/letters/l25.jpg'),
   ArabicLetter(
       letter: 'ه',
       name: 'هاء',
@@ -283,7 +312,8 @@ const List<ArabicLetter> kArabicLetters = [
       finalForm: 'ـه',
       word: 'هِلال',
       emoji: '🌙',
-      colorIndex: 25),
+      colorIndex: 25,
+      image: 'assets/images/letters/l26.jpg'),
   ArabicLetter(
       letter: 'و',
       name: 'واو',
@@ -293,7 +323,8 @@ const List<ArabicLetter> kArabicLetters = [
       finalForm: 'ـو',
       word: 'وَرْدَة',
       emoji: '🌹',
-      colorIndex: 26),
+      colorIndex: 26,
+      image: 'assets/images/letters/l27.jpg'),
   ArabicLetter(
       letter: 'ي',
       name: 'ياء',
@@ -303,5 +334,6 @@ const List<ArabicLetter> kArabicLetters = [
       finalForm: 'ـي',
       word: 'يَد',
       emoji: '✋',
-      colorIndex: 27),
+      colorIndex: 27,
+      image: 'assets/images/letters/l28.jpg'),
 ];

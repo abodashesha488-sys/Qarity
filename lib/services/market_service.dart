@@ -150,7 +150,7 @@ class MarketService {
     return filtered;
   }
 
-  Future<void> addProduct(MarketProduct product) async {
+  Future<void> addProduct(MarketProduct product, {List<String>? imageDeleteUrls}) async {
     String? uid;
     try {
       uid = FirebaseAuth.instance.currentUser?.uid;
@@ -159,6 +159,9 @@ class MarketService {
     }
     await _firestore.collection('market_products').add({
       ...product.toJson(),
+      'imageDeleteUrl': imageDeleteUrls != null && imageDeleteUrls.isNotEmpty
+          ? imageDeleteUrls.first
+          : null,
       'isApproved': false,
       'sellerId': uid ?? '',
     });
@@ -181,12 +184,25 @@ class MarketService {
   }
 
   Future<void> deleteProduct(String productId, List<String> imageUrls) async {
+    final doc = await _firestore.collection('market_products').doc(productId).get();
+    final imageData = doc.data();
+
+    final imageDeleteUrl = imageData?['imageDeleteUrl'] as String?;
+
     final uploader = ImageUploadService();
-    for (final url in imageUrls) {
+
+    if (imageDeleteUrl != null && imageDeleteUrl.isNotEmpty) {
       try {
-        await uploader.deleteImage(url);
+        await uploader.deleteImageByUrl(imageDeleteUrl);
       } catch (_) {}
+    } else {
+      for (final url in imageUrls.toSet()) {
+        try {
+          await uploader.deleteImage(url);
+        } catch (_) {}
+      }
     }
+
     await ContentCleanupService.cleanupForDeleted(
         _firestore, 'market_products', productId);
     await _firestore.collection('market_products').doc(productId).delete();

@@ -681,7 +681,7 @@ class _ProviderFormSheetState extends State<_ProviderFormSheet> {
       final bytes = await image.readAsBytes();
       final url = await ImageUploadService().uploadImage(bytes);
       if (!mounted) return;
-      setState(() => _photoUrl = url);
+      setState(() => _photoUrl = url.imageUrl);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(

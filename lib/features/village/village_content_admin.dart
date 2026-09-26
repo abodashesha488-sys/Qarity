@@ -75,7 +75,7 @@ Future<String?> pickAndUploadImage(BuildContext context,
     final bytes = await x.readAsBytes();
     final url = await ImageUploadService().uploadImage(bytes);
     if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
-    return url;
+    return url.imageUrl;
   } catch (_) {
     if (context.mounted) {
       Navigator.of(context, rootNavigator: true).pop();

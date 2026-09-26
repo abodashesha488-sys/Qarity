@@ -94,6 +94,9 @@ void main() {
   testWidgets('portal lists four activities and opens parents report',
       (tester) async {
     SharedPreferences.setMockInitialValues({});
+    tester.view.physicalSize = const Size(1200, 4200);
+    tester.view.devicePixelRatio = 3.0;
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(const MaterialApp(home: ChildrenScreen()));
     await tester.pumpAndSettle();
 

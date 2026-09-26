@@ -125,7 +125,8 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
     try {
       String? newPhotoUrl = _user?.photoUrl;
       if (_profileBytes != null) {
-        newPhotoUrl = await _imageUploadService.uploadImage(_profileBytes!);
+        newPhotoUrl = (await _imageUploadService.uploadImage(_profileBytes!))
+            .imageUrl;
       }
 
       final now = DateTime.now();

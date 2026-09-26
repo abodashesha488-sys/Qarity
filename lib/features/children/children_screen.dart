@@ -4,8 +4,10 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../widgets/qurity_app_bar.dart';
 import 'arabic_letters.dart';
+import 'children_lessons.dart';
 import 'coloring_screen.dart';
 import 'kids_progress.dart';
+import 'lessons_screen.dart';
 import 'letters_game_screen.dart';
 import 'letters_learn_screen.dart';
 import 'numbers_game_screen.dart';
@@ -96,6 +98,71 @@ class _ChildrenScreenState extends State<ChildrenScreen> {
           ),
           _ActivityCard(
             index: 3,
+            emoji: '🔢',
+            title: 'تعلّم الأرقام',
+            subtitle: 'من ١ إلى ١٠ بالعدّ بالأصابع والفواكه',
+            colors: const [Color(0xFFFFE082), Color(0xFFF9A825)],
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => LessonsScreen(
+                    title: 'تعلّم الأرقام',
+                    subtitle: 'عُدّ الفواكه وتعرّف على الأرقام من ١ إلى ١٠ 🍎',
+                    accent: const Color(0xFFF9A825),
+                    lessons: kNumberLessons))),
+          ),
+          _ActivityCard(
+            index: 4,
+            emoji: '💧',
+            title: 'تعلّم الوضوء',
+            subtitle: 'خطوات الوضوء بالترتيب والنصوص المبسّطة',
+            colors: const [Color(0xFF80DEEA), Color(0xFF00838F)],
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => const LessonsScreen(
+                    title: 'تعلّم الوضوء',
+                    subtitle: 'توضّأ معي خطوة بخطوة كما علّمنا النبي ﷺ 💧',
+                    accent: Color(0xFF00838F),
+                    lessons: kWuduLessons))),
+          ),
+          _ActivityCard(
+            index: 5,
+            emoji: '🕌',
+            title: 'تعلّم الصلاة',
+            subtitle: 'أركان الصلاة وأذكارها في ثماني خطوات',
+            colors: const [Color(0xFFC5E1A5), Color(0xFF33691E)],
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => const LessonsScreen(
+                    title: 'تعلّم الصلاة',
+                    subtitle: 'صلِّ معي خطوة خطوة — الله أكبر حتى السلام عليكم 🕌',
+                    accent: Color(0xFF33691E),
+                    lessons: kSalahLessons))),
+          ),
+          _ActivityCard(
+            index: 6,
+            emoji: '📖',
+            title: 'قصص الأنبياء',
+            subtitle: 'قصص مختصرة للأطفال مع العبرة',
+            colors: const [Color(0xFFFFCC80), Color(0xFF6D4C41)],
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => const LessonsScreen(
+                    title: 'قصص الأنبياء',
+                    subtitle: 'من آدم إلى محمد ﷺ — قصص قصيرة وعبرة لكل نبي 🌟',
+                    accent: Color(0xFF6D4C41),
+                    lessons: kProphetStories))),
+          ),
+          _ActivityCard(
+            index: 7,
+            emoji: '🌟',
+            title: 'آداب وسلوكيات',
+            subtitle: 'أدب الطعام والسلام والصدق وبرّ الوالدين',
+            colors: const [Color(0xFFFFAB91), Color(0xFFD84315)],
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => const LessonsScreen(
+                    title: 'آداب وسلوكيات',
+                    subtitle: 'أجمل السلوكيات نتعلّمها ونعمل بها كل يوم 🌟',
+                    accent: Color(0xFFD84315),
+                    lessons: kMannersLessons))),
+          ),
+          _ActivityCard(
+            index: 8,
             emoji: '🎨',
             title: 'لوحة التلوين',
             subtitle: 'ارسم ولوّح بألوانك المفضلة',

@@ -54,7 +54,7 @@ class _AddOccasionScreenState extends State<AddOccasionScreen> {
       final bytes = await image.readAsBytes();
       final url = await ImageUploadService().uploadImage(bytes);
       if (!mounted) return;
-      setState(() => _imageUrl = url);
+      setState(() => _imageUrl = url.imageUrl);
       AppHelpers.showSnackBar(context, 'تم رفع الصورة بنجاح', isSuccess: true);
     } catch (e) {
       if (!mounted) return;

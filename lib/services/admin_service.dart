@@ -687,18 +687,26 @@ class AdminService {
         _firestore, collection, docId);
     await _firestore.collection(collection).doc(docId).delete();
     if (collection == 'market_products') {
+      final imageData = doc.data();
+      final imageDeleteUrl = imageData?['imageDeleteUrl'] as String?;
       final urls = <String>[
-        ...((doc.data()?['imageUrls'] as List?)?.whereType<String>() ??
+        ...((imageData?['imageUrls'] as List?)?.whereType<String>() ??
             const <String>[]),
-        if ((doc.data()?['imageUrl'] ?? '') is String &&
-            (doc.data()?['imageUrl'] as String?)?.isNotEmpty == true)
-          doc.data()!['imageUrl'] as String,
+        if ((imageData?['imageUrl'] ?? '') is String &&
+            (imageData?['imageUrl'] as String?)?.isNotEmpty == true)
+          imageData!['imageUrl'] as String,
       ];
       final uploader = ImageUploadService();
-      for (final url in urls.toSet()) {
+      if (imageDeleteUrl != null && imageDeleteUrl.isNotEmpty) {
         try {
-          await uploader.deleteImage(url);
+          await uploader.deleteImageByUrl(imageDeleteUrl);
         } catch (_) {}
+      } else {
+        for (final url in urls.toSet()) {
+          try {
+            await uploader.deleteImage(url);
+          } catch (_) {}
+        }
       }
     }
     _invalidateContentCache(collection);

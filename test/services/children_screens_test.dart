@@ -16,7 +16,7 @@ void main() {
 
   testWidgets('learn screen shows 28 letters and opens a letter card',
       (tester) async {
-    tester.view.physicalSize = const Size(1200, 4200);
+    tester.view.physicalSize = const Size(1200, 6000);
     tester.view.devicePixelRatio = 3.0;
     addTearDown(tester.view.reset);
 

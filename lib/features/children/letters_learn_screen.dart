@@ -32,10 +32,10 @@ class LearnLettersScreen extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
         itemCount: kArabicLetters.length,
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 4,
+          crossAxisCount: 3,
           mainAxisSpacing: 12,
           crossAxisSpacing: 12,
-          childAspectRatio: 0.82,
+          childAspectRatio: 0.78,
         ),
         itemBuilder: (context, index) {
           final letter = kArabicLetters[index];
@@ -126,7 +126,22 @@ class LearnLettersScreen extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(letter.emoji, style: const TextStyle(fontSize: 40)),
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                          color: colors[1].withValues(alpha: 0.35), width: 2),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: Image.asset(letter.image,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stack) =>
+                            Center(child: Text(letter.emoji,
+                                style: const TextStyle(fontSize: 34)))),
+                  ),
                   const SizedBox(width: 14),
                   Text.rich(
                     TextSpan(children: [
@@ -224,12 +239,32 @@ class _LetterTile extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              Container(
+                width: 62,
+                height: 62,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: [
+                    BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.18),
+                        blurRadius: 5,
+                        offset: const Offset(0, 2)),
+                  ],
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Image.asset(letter.image,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stack) =>
+                        Center(child: Text(letter.emoji,
+                            style: const TextStyle(fontSize: 30)))),
+              ),
+              const SizedBox(height: 8),
               Text(letter.letter,
                   style: GoogleFonts.amiri(
-                      fontSize: 38,
+                      fontSize: 30,
                       fontWeight: FontWeight.w700,
                       color: Colors.white)),
-              const SizedBox(height: 2),
               Text(letter.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

@@ -548,7 +548,7 @@ class _ImageFieldState extends State<_ImageField> {
       if (file == null) return;
       final bytes = await file.readAsBytes();
       final url = await ImageUploadService().uploadImage(bytes);
-      setState(() => _urls.add(url));
+      setState(() => _urls.add(url.imageUrl));
       widget.onChanged(List.of(_urls));
     } catch (_) {
     } finally {

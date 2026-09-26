@@ -367,7 +367,7 @@ class _PromoFormSheetState extends State<_PromoFormSheet> {
       final url = await ImageUploadService().uploadImage(bytes);
       if (mounted) {
         setState(() {
-          _imageUrl = url;
+          _imageUrl = url.imageUrl;
           _uploading = false;
         });
       }
