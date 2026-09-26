@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../widgets/qurity_app_bar.dart';
 import 'children_lessons.dart';
 import 'children_speech.dart';
+import 'numbers_game_screen.dart' show toArabicDigits;
 
 /// 📖 شاشة دروس عامة — تُعرض فيها قائمة دروس (وضوء/صلاة/قصص/آداب)
 /// ببطاقات ملونة، والنقر يفتح بطاقة الدرس مع النطق الصوتي.
@@ -51,8 +52,7 @@ class LessonsScreen extends StatelessWidget {
                 color: Colors.transparent,
                 child: InkWell(
                   borderRadius: BorderRadius.circular(22),
-                  onTap: () => showLessonCard(context, lessons[i], accent,
-                      asset: _assetFor(i)),
+                  onTap: () => _showLessonCard(context, i),
                   child: Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
@@ -123,29 +123,92 @@ class LessonsScreen extends StatelessWidget {
               fontWeight: FontWeight.w900,
               color: accent)));
 
-  /// 🔊 بطاقة الدرس: نص كامل + نصيحة + زر استماع، مع نطق تلقائي عند الفتح.
-  static void showLessonCard(BuildContext context, ChildLesson lesson,
-      Color accent,
-      {String? asset}) {
-    ChildrenSpeech.speak('${lesson.title}. ${lesson.body}');
+  /// 🔊 بطاقة الدرس: نص كامل + نصيحة + زر استماع، مع نطق تلقائي عند الفتح،
+  /// وأزرار «السابق/التالي» للتسلسل داخل القسم (مناسب خطوات الوضوء والصلاة).
+  void _showLessonCard(BuildContext context, int startIndex) {
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) => Container(
-        constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.75),
-        margin: const EdgeInsets.all(12),
-        padding: const EdgeInsets.fromLTRB(20, 22, 20, 26),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: accent.withValues(alpha: 0.4), width: 2),
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+      builder: (context) => _LessonCard(
+        lessons: lessons,
+        accent: accent,
+        startIndex: startIndex,
+        assetFor: _assetFor,
+      ),
+    );
+  }
+}
+
+class _LessonCard extends StatefulWidget {
+  const _LessonCard({
+    required this.lessons,
+    required this.accent,
+    required this.startIndex,
+    required this.assetFor,
+  });
+
+  final List<ChildLesson> lessons;
+  final Color accent;
+  final int startIndex;
+  final String? Function(int index) assetFor;
+
+  @override
+  State<_LessonCard> createState() => _LessonCardState();
+}
+
+class _LessonCardState extends State<_LessonCard> {
+  late int _index = widget.startIndex;
+
+  ChildLesson get _lesson => widget.lessons[_index];
+
+  @override
+  void initState() {
+    super.initState();
+    ChildrenSpeech.speak('${_lesson.title}. ${_lesson.body}');
+  }
+
+  void _goTo(int next) {
+    setState(() => _index = next);
+    ChildrenSpeech.speak('${_lesson.title}. ${_lesson.body}');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final lesson = _lesson;
+    final asset = widget.assetFor(_index);
+    final accent = widget.accent;
+    final hasPrev = _index > 0;
+    final hasNext = _index < widget.lessons.length - 1;
+    return Padding(
+      padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom + 12),
+      child: DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.85,
+        builder: (context, scrollController) => Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: accent.withValues(alpha: 0.4), width: 2),
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+          child: ListView(
+            controller: scrollController,
             children: [
+              Center(
+                child: Container(
+                  width: 44,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 14),
+                  decoration: BoxDecoration(
+                    color: Colors.black12,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
               Row(
                 children: [
                   Container(
@@ -209,13 +272,12 @@ class LessonsScreen extends StatelessWidget {
                 const SizedBox(height: 14),
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   decoration: BoxDecoration(
                     color: accent.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                        color: accent.withValues(alpha: 0.3)),
+                    border: Border.all(color: accent.withValues(alpha: 0.3)),
                   ),
                   child: Text('💡 ${lesson.tip}',
                       textDirection: TextDirection.rtl,
@@ -229,10 +291,53 @@ class LessonsScreen extends StatelessWidget {
                               const Color(0xFF4E342E)))),
                 ),
               ],
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: hasPrev
+                          ? () => _goTo(_index - 1)
+                          : null,
+                      icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+                      label: Text('السابق',
+                          style: GoogleFonts.tajawal(
+                              fontWeight: FontWeight.w800)),
+                      style: OutlinedButton.styleFrom(
+                          foregroundColor: accent,
+                          side: BorderSide(
+                              color: accent.withValues(alpha: 0.5))),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    child: Text(
+                        '${toArabicDigits(_index + 1)} / ${toArabicDigits(widget.lessons.length)}',
+                        style: GoogleFonts.tajawal(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.brown.shade400)),
+                  ),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: hasNext
+                          ? () => _goTo(_index + 1)
+                          : null,
+                      icon: const Icon(Icons.check_rounded, size: 18),
+                      label: Text('التالي',
+                          style: GoogleFonts.tajawal(
+                              fontWeight: FontWeight.w800)),
+                      style: FilledButton.styleFrom(
+                          backgroundColor: accent,
+                          foregroundColor: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
-      ).animate().fadeIn(duration: 200.ms).slideY(begin: 0.3, end: 0),
+      ).animate().fadeIn(duration: 200.ms),
     );
   }
 }

@@ -111,6 +111,49 @@ void main() {
     expect(find.byTooltip('اسمع'), findsOneWidget);
   });
 
+  testWidgets('بطاقة الدرس تتنقل تسلسليًا السابق/التالي مع عدّاد الموضع',
+      (tester) async {
+    await tester.pumpWidget(const MaterialApp(
+      home: LessonsScreen(
+        title: 'تعلّم الوضوء',
+        subtitle: 'خطوات الوضوء',
+        accent: Color(0xFF00838F),
+        lessons: kWuduLessons,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('١. النيّة والبسملة'));
+    await tester.pumpAndSettle();
+
+    // الموضع الأول: النقر على «السابق» المعطّل لا يغيّر شيئًا
+    expect(find.text('١ / ٨'), findsOneWidget);
+    await tester.tap(find.text('السابق'));
+    await tester.pumpAndSettle();
+    expect(find.text('١ / ٨'), findsOneWidget);
+
+    // التالي ينقل للخطوة الثانية
+    await tester.tap(find.text('التالي'));
+    await tester.pumpAndSettle();
+    expect(find.text('٢ / ٨'), findsOneWidget);
+    expect(find.text(kWuduLessons[1].title), findsWidgets);
+
+    // إلى الخطوة الأخيرة، بعدها «التالي» المعطّل لا يتقدم
+    for (var i = 2; i < kWuduLessons.length; i++) {
+      await tester.tap(find.text('التالي'));
+      await tester.pumpAndSettle();
+    }
+    expect(find.text('٨ / ٨'), findsOneWidget);
+    await tester.tap(find.text('التالي'));
+    await tester.pumpAndSettle();
+    expect(find.text('٨ / ٨'), findsOneWidget);
+
+    // والرجوع يعمل
+    await tester.tap(find.text('السابق'));
+    await tester.pumpAndSettle();
+    expect(find.text('٧ / ٨'), findsOneWidget);
+  });
+
   testWidgets('بوابة الأطفال تعرض الأقسام الجديدة', (tester) async {
     SharedPreferences.setMockInitialValues({});
     tester.view.physicalSize = const Size(1200, 4200);

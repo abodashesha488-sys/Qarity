@@ -21,8 +21,9 @@ class _PromosPageState extends State<_PromosPage> {
       builder: (_) =>
           _PromoFormSheet(promo: promo, adminUid: widget.currentUid),
     );
-    if (saved == true)
+    if (saved == true) {
       _snack(promo == null ? 'تم نشر الإعلان' : 'تم تحديث الإعلان');
+    }
   }
 
   void _snack(String msg) {
@@ -382,8 +383,8 @@ class _PromoFormSheetState extends State<_PromoFormSheet> {
       lastDate: now.add(const Duration(days: 365 * 2)),
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
-            dialogTheme:
-                DialogThemeData(backgroundColor: const Color(0xFF6F4E37))),
+            dialogTheme: const
+                DialogThemeData(backgroundColor: Color(0xFF6F4E37))),
         child: child!,
       ),
     );
