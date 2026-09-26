@@ -32,7 +32,6 @@ class _AddMarketProductScreenState extends State<AddMarketProductScreen> {
       kProductCategories.where((c) => c != 'عام').toList();
   String _selectedCategory = 'مواد غذائية';
   final List<String> _uploadedImageUrls = [];
-  final List<String> _uploadedImageDeleteUrls = [];
   String _sellerName = 'عام';
   String _sellerPhone = '';
   String? _sellerId;
@@ -70,10 +69,9 @@ class _AddMarketProductScreenState extends State<AddMarketProductScreen> {
       final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
       if (image == null) return;
       final bytes = await image.readAsBytes();
-      final result = await ImageUploadService().uploadImage(bytes);
+      final url = await ImageUploadService().uploadImage(bytes);
       setState(() {
-        _uploadedImageUrls.add(result.imageUrl);
-        _uploadedImageDeleteUrls.add(result.deleteUrl);
+        _uploadedImageUrls.add(url);
       });
       if (mounted) {
         AppHelpers.showSnackBar(context, 'تم رفع الصورة بنجاح', isSuccess: true);
@@ -90,9 +88,6 @@ class _AddMarketProductScreenState extends State<AddMarketProductScreen> {
   void _removeImage(int index) {
     setState(() {
       _uploadedImageUrls.removeAt(index);
-      if (index < _uploadedImageDeleteUrls.length) {
-        _uploadedImageDeleteUrls.removeAt(index);
-      }
     });
   }
 
@@ -123,8 +118,7 @@ class _AddMarketProductScreenState extends State<AddMarketProductScreen> {
         sellerType: _sellerType.name,
         stock: 10,
       );
-      await _marketService.addProduct(product,
-          imageDeleteUrls: List.of(_uploadedImageDeleteUrls));
+      await _marketService.addProduct(product);
       await CacheService.invalidateProducts();
       if (mounted) {
         AppHelpers.showSnackBar(context, 'تمت الإضافة بنجاح', isSuccess: true);

@@ -15,6 +15,31 @@ void main() {
     expect(toArabicDigits(7), '٧');
   });
 
+  test('مجموع رموز لعبة الأرقام لا يحتوي فارغًا ولا رموزًا مركّبة', () {
+    expect(kNumbersEmojiPool, hasLength(8));
+    for (final e in kNumbersEmojiPool) {
+      expect(e.isNotEmpty, isTrue);
+      expect(e.runes.length, 1, reason: 'رمز أحادي النقطة فقط: $e');
+    }
+  });
+
+  testWidgets('لعبة الأرقام لا تعرض سؤالًا بلا صورة أبدًا', (tester) async {
+    for (final seed in [1, 2, 3, 4, 5, 6, 7, 8]) {
+      await tester.pumpWidget(
+          MaterialApp(home: NumbersGameScreen(random: Random(seed))));
+      await tester.pump();
+      final wrap = tester.widget<Wrap>(find.byType(Wrap));
+      final texts = wrap.children.cast<Text>();
+      expect(texts, isNotEmpty, reason: 'seed $seed — لا جولات فارغة');
+      for (final t in texts) {
+        expect(kNumbersEmojiPool, contains(t.data), reason: 'seed $seed');
+      }
+      await tester.pumpAndSettle();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    }
+  });
+
   test('kids progress stores best score and weakest letters', () async {
     SharedPreferences.setMockInitialValues({});
     await KidsProgress.recordGameResult(KidsProgress.lettersGame, 40, 2);
@@ -43,10 +68,9 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('كَم عدد الأشياء؟'), findsOneWidget);
 
-    // عدد الإيموجي المعروض = الهدف
-    const pool = ['🍎', '🐤', '⭐', '🎈', '', '', '', ''];
+    // عدد الإيموجي المعروض = الهدف (يُقرأ من المجموع العامة نفسها).
     var count = 0;
-    for (final e in pool.toSet()) {
+    for (final e in kNumbersEmojiPool.toSet()) {
       count += tester.widgetList(find.text(e)).length;
     }
     expect(count, greaterThanOrEqualTo(1));

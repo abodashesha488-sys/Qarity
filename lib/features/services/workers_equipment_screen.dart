@@ -414,7 +414,7 @@ class _ImageFieldState extends State<_ImageField> {
       final bytes = await image.readAsBytes();
       final url = await ImageUploadService().uploadImage(bytes);
       if (!mounted) return;
-      setState(() => _images.add(url.imageUrl));
+      setState(() => _images.add(url));
       widget.onChanged(_images);
     } catch (e) {
       if (!mounted) return;

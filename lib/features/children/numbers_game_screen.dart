@@ -39,11 +39,21 @@ String toArabicDigits(int n) {
   return n.toString().split('').map((d) => digits[int.parse(d)]).join();
 }
 
+/// 🧺 رموز العدّ في اللعبة — كلها إيموجي أحادي النقطة قابل للعرض على كل
+/// المنصات، ولا يُسمح أبدًا بمدخل فارغ (كان يسبب جولات بلا صورة).
+const List<String> kNumbersEmojiPool = [
+  '\u{1F34E}', // 🍎 تفاحة
+  '\u{1F424}', // 🐤 فرخ
+  '\u{2B50}', // ⭐ نجمة
+  '\u{1F388}', // 🎈 بالون
+  '\u{1F41F}', // 🐟 سمكة
+  '\u{1F347}', // 🍇 عنب
+  '\u{1F338}', // 🌸 زهرة
+  '\u{1F353}', // 🍓 فراولة
+];
+
 class _NumbersGameScreenState extends State<NumbersGameScreen> {
   static const int _totalQuestions = 10;
-  static const List<String> _emojiPool = [
-    '🍎', '🐤', '⭐', '🎈', '🐟', '', '', '',
-  ];
 
   late final Random _rng = widget._random ?? Random();
   late List<_Round> _rounds;
@@ -63,7 +73,7 @@ class _NumbersGameScreenState extends State<NumbersGameScreen> {
   List<_Round> _buildRounds() {
     return List.generate(_totalQuestions, (_) {
       final count = 1 + _rng.nextInt(10);
-      final emoji = _emojiPool[_rng.nextInt(_emojiPool.length)];
+      final emoji = kNumbersEmojiPool[_rng.nextInt(kNumbersEmojiPool.length)];
       final others = List<int>.generate(10, (i) => i + 1)
         ..removeWhere((n) => n == count);
       final distractors = (others..shuffle(_rng)).take(3).toList();

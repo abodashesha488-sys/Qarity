@@ -48,7 +48,7 @@ class _AddPhoneDirectoryScreenState extends State<AddPhoneDirectoryScreen> {
       final bytes = await image.readAsBytes();
       final url = await ImageUploadService().uploadImage(bytes);
       if (!mounted) return;
-      setState(() => _photoUrl = url.imageUrl);
+      setState(() => _photoUrl = url);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

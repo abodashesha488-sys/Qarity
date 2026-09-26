@@ -101,7 +101,7 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
       final bytes = await image.readAsBytes();
       final url = await ImageUploadService().uploadImage(bytes);
       if (!mounted) return;
-      setState(() => _imageUrl = url.imageUrl);
+      setState(() => _imageUrl = url);
       AppHelpers.showSnackBar(context, 'تم رفع الصورة بنجاح', isSuccess: true);
     } catch (e) {
       if (mounted) {

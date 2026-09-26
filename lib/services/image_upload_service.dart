@@ -4,18 +4,14 @@ import 'package:http/http.dart' as http;
 
 import '../core/constants/app_config.dart';
 
-class ImageUploadResult {
-  final String imageUrl;
-  final String deleteUrl;
-  const ImageUploadResult({required this.imageUrl, required this.deleteUrl});
-}
-
 class ImageUploadService {
   static const String _uploadUrl = 'https://api.imgbb.com/1/upload';
   static const String _deleteUrl = 'https://api.imgbb.com/1/delete';
   static const String _apiKey = AppConfig.imgbbApiKey;
 
-  Future<ImageUploadResult> uploadImage(Uint8List bytes) async {
+  /// يرفع صورة إلى ImgBB ويعيد URL بنتيجة الرفع.
+  /// يُخزّن مفتاح الحذف (delete_key) داخل URL كمعلمة استعلام.
+  Future<String> uploadImage(Uint8List bytes) async {
     final request = http.MultipartRequest('POST', Uri.parse('$_uploadUrl?key=$_apiKey'));
     request.files.add(http.MultipartFile.fromBytes('image', bytes, filename: 'upload.jpg'));
 
@@ -24,14 +20,13 @@ class ImageUploadService {
 
     if (response.statusCode == 200) {
       final data = json.decode(responseBody);
-      return ImageUploadResult(
-        imageUrl: data['data']['url'] as String? ?? '',
-        deleteUrl: data['data']['delete_url'] as String? ?? '',
-      );
+      return data['data']['url'] as String? ?? '';
     }
     throw Exception('Failed to upload image: ${response.statusCode}');
   }
 
+  /// يستخرج مفتاح الحذف من URL الصورة.
+  /// مفتاح الحذف مخزّن داخل URL كمعلمة query: ?delete_key=xxx
   String? extractDeleteKey(String imageUrl) {
     try {
       final uri = Uri.parse(imageUrl);
@@ -41,6 +36,8 @@ class ImageUploadService {
     }
   }
 
+  /// يحذف صورة من ImgBB باستخدام مفتاح الحذف المستخرج من URL الصورة.
+  /// النهج الحالي آمن لأن مفتاح الحذف غير هو مفتاح API.
   Future<void> deleteImage(String imageUrl) async {
     final deleteKey = extractDeleteKey(imageUrl);
     if (deleteKey != null && deleteKey.isNotEmpty) {
@@ -51,13 +48,5 @@ class ImageUploadService {
         );
       } catch (_) {}
     }
-  }
-
-  Future<void> deleteImageByUrl(String deleteUrl) async {
-    if (deleteUrl.isEmpty) return;
-    try {
-      final uri = Uri.parse(deleteUrl);
-      await http.get(uri);
-    } catch (_) {}
   }
 }

@@ -2,14 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:qurity/features/children/children_screen.dart';
 import 'package:qurity/features/children/letters_learn_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  testWidgets('children portal lists both activities', (tester) async {
+  testWidgets('children portal grid lists activities', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    tester.view.physicalSize = const Size(1200, 4200);
+    tester.view.devicePixelRatio = 3.0;
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(const MaterialApp(home: ChildrenScreen()));
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
-    expect(find.text('تعلّم والعب معنا! 🎈'), findsOneWidget);
+    expect(find.text('أهلًا بك في ركن الأطفال!'), findsOneWidget);
     expect(find.text('تعلّم الحروف'), findsOneWidget);
     expect(find.text('لعبة الحروف'), findsOneWidget);
   });

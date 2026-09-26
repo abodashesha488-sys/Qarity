@@ -6,8 +6,10 @@ import '../../widgets/qurity_app_bar.dart';
 import 'children_lessons.dart';
 import 'children_speech.dart';
 
-/// 📖 شاشة دروس عامة — تُعرض فيها قائمة دروس (أرقام/وضوء/صلاة/قصص/آداب)
+/// 📖 شاشة دروس عامة — تُعرض فيها قائمة دروس (وضوء/صلاة/قصص/آداب)
 /// ببطاقات ملونة، والنقر يفتح بطاقة الدرس مع النطق الصوتي.
+/// عند تمرير `imageFolder` تُعرض صورة الدرس من
+/// `assets/images/kids/<folder>/NN.jpg`، ومع غيابها يرجع البند للإيموجي.
 class LessonsScreen extends StatelessWidget {
   const LessonsScreen({
     super.key,
@@ -15,12 +17,17 @@ class LessonsScreen extends StatelessWidget {
     required this.subtitle,
     required this.accent,
     required this.lessons,
+    this.imageFolder,
   });
 
   final String title;
   final String subtitle;
   final Color accent;
   final List<ChildLesson> lessons;
+  final String? imageFolder;
+
+  String? _assetFor(int index) =>
+      imageFolder == null ? null : kidLessonImage(imageFolder!, index);
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +51,8 @@ class LessonsScreen extends StatelessWidget {
                 color: Colors.transparent,
                 child: InkWell(
                   borderRadius: BorderRadius.circular(22),
-                  onTap: () => showLessonCard(context, lessons[i], accent),
+                  onTap: () => showLessonCard(context, lessons[i], accent,
+                      asset: _assetFor(i)),
                   child: Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
@@ -68,14 +76,13 @@ class LessonsScreen extends StatelessWidget {
                             color: accent.withValues(alpha: 0.1),
                             shape: BoxShape.circle,
                           ),
-                          child: Center(
-                              child: Text(lessons[i].emoji,
-                                  style: GoogleFonts.tajawal(
-                                      fontSize: lessons[i].emoji.length > 1
-                                          ? 24
-                                          : 32,
-                                      fontWeight: FontWeight.w900,
-                                      color: accent))),
+                          clipBehavior: Clip.antiAlias,
+                          child: _assetFor(i) == null
+                              ? _emojiBadge(lessons[i], 32, accent)
+                              : Image.asset(_assetFor(i)!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stack) =>
+                                      _emojiBadge(lessons[i], 32, accent)),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -109,9 +116,17 @@ class LessonsScreen extends StatelessWidget {
     );
   }
 
+  Widget _emojiBadge(ChildLesson lesson, double size, Color accent) => Center(
+      child: Text(lesson.emoji,
+          style: GoogleFonts.tajawal(
+              fontSize: lesson.emoji.length > 1 ? size - 8 : size,
+              fontWeight: FontWeight.w900,
+              color: accent)));
+
   /// 🔊 بطاقة الدرس: نص كامل + نصيحة + زر استماع، مع نطق تلقائي عند الفتح.
-  static void showLessonCard(
-      BuildContext context, ChildLesson lesson, Color accent) {
+  static void showLessonCard(BuildContext context, ChildLesson lesson,
+      Color accent,
+      {String? asset}) {
     ChildrenSpeech.speak('${lesson.title}. ${lesson.body}');
     showModalBottomSheet<void>(
       context: context,
@@ -145,12 +160,20 @@ class LessonsScreen extends StatelessWidget {
                           begin: Alignment.topLeft),
                       shape: BoxShape.circle,
                     ),
-                    child: Center(
-                        child: Text(lesson.emoji,
-                            style: GoogleFonts.tajawal(
-                                fontSize: lesson.emoji.length > 1 ? 26 : 34,
-                                fontWeight: FontWeight.w900,
-                                color: Colors.white))),
+                    clipBehavior: Clip.antiAlias,
+                    child: asset == null
+                        ? Center(
+                            child: Text(lesson.emoji,
+                                style: GoogleFonts.tajawal(
+                                    fontSize:
+                                        lesson.emoji.length > 1 ? 26 : 34,
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.white)))
+                        : Image.asset(asset,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stack) => Center(
+                                child: Text(lesson.emoji,
+                                    style: const TextStyle(fontSize: 30)))),
                   ),
                   const SizedBox(width: 12),
                   Expanded(

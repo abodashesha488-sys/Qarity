@@ -11,8 +11,10 @@ import 'lessons_screen.dart';
 import 'letters_game_screen.dart';
 import 'letters_learn_screen.dart';
 import 'numbers_game_screen.dart';
+import 'numbers_learn_screen.dart';
 
-/// 🧒 ركن الأطفال — بوابة ملوّنة لألعاب وأنشطة تعليمية مع إنجازات محفوظة.
+/// 🧒 ركن الأطفال — بوابة شبكية حديثة: بطاقات ملونة بأيقونات دائرية
+/// لتسعة أنشطة تعليمية مع إنجازات محفوظة وتقارير للأهل.
 class ChildrenScreen extends StatefulWidget {
   const ChildrenScreen({super.key});
 
@@ -39,13 +41,113 @@ class _ChildrenScreenState extends State<ChildrenScreen> {
     final best = _progress.bestScores[game] ?? 0;
     if (best <= 0) return null;
     final stars = _progress.stars[game] ?? 0;
-    return '🏆 $best  ·  ${'⭐' * stars}';
+    return '🏆 $best · ${'⭐' * stars}';
   }
+
+  void _push(BuildContext context, Widget screen) =>
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
+
+  List<_Activity> _activities(BuildContext context) => [
+        _Activity(
+          emoji: '📚',
+          title: 'تعلّم الحروف',
+          subtitle: '٢٨ حرفًا بصور وكلمات',
+          colors: const [Color(0xFFB39DDB), Color(0xFF5E35B1)],
+          onTap: () => _push(context, const LearnLettersScreen()),
+        ),
+        _Activity(
+          emoji: '🔢',
+          title: 'تعلّم الأرقام',
+          subtitle: 'من ١ إلى ١٠ بالصور',
+          colors: const [Color(0xFFFFE082), Color(0xFFF9A825)],
+          onTap: () => _push(context, const LearnNumbersScreen()),
+        ),
+        _Activity(
+          emoji: '🎮',
+          title: 'لعبة الحروف',
+          subtitle: 'أكمل الكلمة الناقصة',
+          chip: _chipFor(KidsProgress.lettersGame),
+          colors: const [Color(0xFFB9F6CA), Color(0xFF43A047)],
+          onTap: () => _push(context, const LettersGameScreen()),
+        ),
+        _Activity(
+          emoji: '🎯',
+          title: 'لعبة الأرقام',
+          subtitle: 'عُدّ واختر الصحيح',
+          chip: _chipFor(KidsProgress.numbersGame),
+          colors: const [Color(0xFF80D8FF), Color(0xFF1E88E5)],
+          onTap: () => _push(context, const NumbersGameScreen()),
+        ),
+        _Activity(
+          emoji: '💧',
+          title: 'تعلّم الوضوء',
+          subtitle: '٨ خطوات بالصور',
+          colors: const [Color(0xFF84FFFF), Color(0xFF00838F)],
+          onTap: () => _push(
+              context,
+              const LessonsScreen(
+                  title: 'تعلّم الوضوء',
+                  subtitle: 'توضّأ معي خطوة بخطوة 💧',
+                  accent: Color(0xFF00838F),
+                  imageFolder: 'wudu',
+                  lessons: kWuduLessons)),
+        ),
+        _Activity(
+          emoji: '🕌',
+          title: 'تعلّم الصلاة',
+          subtitle: 'من التكبير إلى السلام',
+          colors: const [Color(0xFFC5E1A5), Color(0xFF33691E)],
+          onTap: () => _push(
+              context,
+              const LessonsScreen(
+                  title: 'تعلّم الصلاة',
+                  subtitle: 'صلِّ معي خطوة خطوة 🕌',
+                  accent: Color(0xFF33691E),
+                  imageFolder: 'salah',
+                  lessons: kSalahLessons)),
+        ),
+        _Activity(
+          emoji: '🌟',
+          title: 'قصص الأنبياء',
+          subtitle: '٨ قصص قصيرة بالعبرة',
+          colors: const [Color(0xFFFFCC80), Color(0xFF6D4C41)],
+          onTap: () => _push(
+              context,
+              const LessonsScreen(
+                  title: 'قصص الأنبياء',
+                  subtitle: 'من آدم إلى محمد ﷺ 🌟',
+                  accent: Color(0xFF6D4C41),
+                  imageFolder: 'prophets',
+                  lessons: kProphetStories)),
+        ),
+        _Activity(
+          emoji: '🤝',
+          title: 'آداب وسلوكيات',
+          subtitle: 'أجمل العادات كل يوم',
+          colors: const [Color(0xFFFFAB91), Color(0xFFD84315)],
+          onTap: () => _push(
+              context,
+              const LessonsScreen(
+                  title: 'آداب وسلوكيات',
+                  subtitle: 'نتعلّمها ونعمل بها 🌟',
+                  accent: Color(0xFFD84315),
+                  imageFolder: 'manners',
+                  lessons: kMannersLessons)),
+        ),
+        _Activity(
+          emoji: '🎨',
+          title: 'لوحة التلوين',
+          subtitle: 'ارسم بألوانك المفضلة',
+          colors: const [Color(0xFFF8BBD0), Color(0xFFD81B60)],
+          onTap: () => _push(context, const ColoringScreen()),
+        ),
+      ];
 
   @override
   Widget build(BuildContext context) {
+    final activities = _activities(context);
     return Scaffold(
-      backgroundColor: const Color(0xFFFFF8E7),
+      backgroundColor: const Color(0xFFFFF3DC),
       appBar: QurityAppBar(
         title: 'ركن الأطفال',
         color: const Color(0xFF6A1B9A),
@@ -58,121 +160,208 @@ class _ChildrenScreenState extends State<ChildrenScreen> {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
+        padding: EdgeInsets.zero,
         children: [
-          Text('تعلّم والعب معنا! 🎈',
+          const _PortalBanner(),
+          const SizedBox(height: 6),
+          Text('اختَر نشاطك 🎈',
               textAlign: TextAlign.center,
               style: GoogleFonts.tajawal(
-                  fontSize: 22,
+                  fontSize: 15,
                   fontWeight: FontWeight.w900,
-                  color: const Color(0xFF5E35B1))),
-          const SizedBox(height: 18),
-          _ActivityCard(
-            index: 0,
-            emoji: '📚',
-            title: 'تعلّم الحروف',
-            subtitle: 'الحروف العربية بأشكالها وكلماتها',
-            colors: const [Color(0xFFB39DDB), Color(0xFF5E35B1)],
-            onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const LearnLettersScreen())),
-          ),
-          _ActivityCard(
-            index: 1,
-            emoji: '🎮',
-            title: 'لعبة الحروف',
-            subtitle: 'أكمل الكلمة بالحرف الناقص واجمع النجوم',
-            chip: _chipFor(KidsProgress.lettersGame),
-            colors: const [Color(0xFFB9F6CA), Color(0xFF43A047)],
-            onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const LettersGameScreen())),
-          ),
-          _ActivityCard(
-            index: 2,
-            emoji: '🔢',
-            title: 'لعبة الأرقام',
-            subtitle: 'عُدّ الأشياء واختر العدد الصحيح',
-            chip: _chipFor(KidsProgress.numbersGame),
-            colors: const [Color(0xFF80D8FF), Color(0xFF1E88E5)],
-            onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const NumbersGameScreen())),
-          ),
-          _ActivityCard(
-            index: 3,
-            emoji: '🔢',
-            title: 'تعلّم الأرقام',
-            subtitle: 'من ١ إلى ١٠ بالعدّ بالأصابع والفواكه',
-            colors: const [Color(0xFFFFE082), Color(0xFFF9A825)],
-            onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => LessonsScreen(
-                    title: 'تعلّم الأرقام',
-                    subtitle: 'عُدّ الفواكه وتعرّف على الأرقام من ١ إلى ١٠ 🍎',
-                    accent: const Color(0xFFF9A825),
-                    lessons: kNumberLessons))),
-          ),
-          _ActivityCard(
-            index: 4,
-            emoji: '💧',
-            title: 'تعلّم الوضوء',
-            subtitle: 'خطوات الوضوء بالترتيب والنصوص المبسّطة',
-            colors: const [Color(0xFF80DEEA), Color(0xFF00838F)],
-            onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => const LessonsScreen(
-                    title: 'تعلّم الوضوء',
-                    subtitle: 'توضّأ معي خطوة بخطوة كما علّمنا النبي ﷺ 💧',
-                    accent: Color(0xFF00838F),
-                    lessons: kWuduLessons))),
-          ),
-          _ActivityCard(
-            index: 5,
-            emoji: '🕌',
-            title: 'تعلّم الصلاة',
-            subtitle: 'أركان الصلاة وأذكارها في ثماني خطوات',
-            colors: const [Color(0xFFC5E1A5), Color(0xFF33691E)],
-            onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => const LessonsScreen(
-                    title: 'تعلّم الصلاة',
-                    subtitle: 'صلِّ معي خطوة خطوة — الله أكبر حتى السلام عليكم 🕌',
-                    accent: Color(0xFF33691E),
-                    lessons: kSalahLessons))),
-          ),
-          _ActivityCard(
-            index: 6,
-            emoji: '📖',
-            title: 'قصص الأنبياء',
-            subtitle: 'قصص مختصرة للأطفال مع العبرة',
-            colors: const [Color(0xFFFFCC80), Color(0xFF6D4C41)],
-            onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => const LessonsScreen(
-                    title: 'قصص الأنبياء',
-                    subtitle: 'من آدم إلى محمد ﷺ — قصص قصيرة وعبرة لكل نبي 🌟',
-                    accent: Color(0xFF6D4C41),
-                    lessons: kProphetStories))),
-          ),
-          _ActivityCard(
-            index: 7,
-            emoji: '🌟',
-            title: 'آداب وسلوكيات',
-            subtitle: 'أدب الطعام والسلام والصدق وبرّ الوالدين',
-            colors: const [Color(0xFFFFAB91), Color(0xFFD84315)],
-            onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => const LessonsScreen(
-                    title: 'آداب وسلوكيات',
-                    subtitle: 'أجمل السلوكيات نتعلّمها ونعمل بها كل يوم 🌟',
-                    accent: Color(0xFFD84315),
-                    lessons: kMannersLessons))),
-          ),
-          _ActivityCard(
-            index: 8,
-            emoji: '🎨',
-            title: 'لوحة التلوين',
-            subtitle: 'ارسم ولوّح بألوانك المفضلة',
-            colors: const [Color(0xFFF8BBD0), Color(0xFFD81B60)],
-            onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const ColoringScreen())),
+                  color: const Color(0xFF6A1B9A))),
+          const SizedBox(height: 10),
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 26),
+            mainAxisSpacing: 14,
+            crossAxisSpacing: 14,
+            childAspectRatio: 0.92,
+            children: [
+              for (var i = 0; i < activities.length; i++)
+                _ActivityTile(activity: activities[i], index: i),
+            ],
           ),
         ],
       ),
     );
+  }
+}
+
+/// 🌈 بانر الترحيب — تدرّج بنفسجي مع قباب ووجوه مرحة.
+class _PortalBanner extends StatelessWidget {
+  const _PortalBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(14, 14, 14, 10),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+            colors: [Color(0xFF8E24AA), Color(0xFF5E35B1), Color(0xFF3949AB)]),
+        borderRadius: BorderRadius.circular(26),
+        boxShadow: [
+          BoxShadow(
+              color: const Color(0xFF5E35B1).withValues(alpha: 0.35),
+              blurRadius: 14,
+              offset: const Offset(0, 6)),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+              border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.5), width: 2),
+            ),
+            child: const Center(
+                child: Text('🧒', style: TextStyle(fontSize: 34))),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('أهلًا بك في ركن الأطفال!',
+                    textDirection: TextDirection.rtl,
+                    style: GoogleFonts.tajawal(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white)),
+                const SizedBox(height: 3),
+                Text('تعلّم والعب واجمع النجوم ⭐',
+                    textDirection: TextDirection.rtl,
+                    style: GoogleFonts.tajawal(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white.withValues(alpha: 0.9))),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ).animate().fadeIn(duration: 300.ms).scaleXY(begin: 0.96, end: 1);
+  }
+}
+
+class _Activity {
+  const _Activity({
+    required this.emoji,
+    required this.title,
+    required this.subtitle,
+    required this.colors,
+    required this.onTap,
+    this.chip,
+  });
+  final String emoji;
+  final String title;
+  final String subtitle;
+  final List<Color> colors;
+  final VoidCallback onTap;
+  final String? chip;
+}
+
+/// 🧱 بلاطة نشاط: تدرّج لوني + أيقونة دائرية بارزة + عنوان ووصف.
+class _ActivityTile extends StatelessWidget {
+  const _ActivityTile({required this.activity, required this.index});
+  final _Activity activity;
+  final int index;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(24),
+        onTap: activity.onTap,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(10, 16, 10, 10),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+                colors: activity.colors,
+                begin: AlignmentDirectional.topStart,
+                end: AlignmentDirectional.bottomEnd),
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                  color: activity.colors[1].withValues(alpha: 0.4),
+                  blurRadius: 10,
+                  offset: const Offset(0, 5)),
+            ],
+          ),
+          child: Column(
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.28),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.55), width: 2.5),
+                  boxShadow: [
+                    BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.12),
+                        blurRadius: 6,
+                        offset: const Offset(0, 3)),
+                  ],
+                ),
+                child: Center(
+                    child: Text(activity.emoji,
+                        style: const TextStyle(fontSize: 38))),
+              ),
+              const SizedBox(height: 10),
+              Text(activity.title,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.tajawal(
+                      fontSize: 15.5,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white)),
+              const SizedBox(height: 2),
+              Text(activity.subtitle,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.tajawal(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white.withValues(alpha: 0.92))),
+              Expanded(
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: activity.chip == null
+                      ? const SizedBox.shrink()
+                      : Container(
+                          margin: const EdgeInsets.only(bottom: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.25),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(activity.chip!,
+                              style: GoogleFonts.tajawal(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white)),
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ).animate(delay: (index * 60).ms).fadeIn(duration: 300.ms).scaleXY(
+        begin: 0.9, end: 1, curve: Curves.easeOutBack);
   }
 }
 
@@ -247,8 +436,8 @@ void showParentsReport(BuildContext context, KidsSnapshot snap) {
                 for (final entry in snap.weakestLetters)
                   GestureDetector(
                     onTap: () {
-                      final letter = kArabicLetters.firstWhere(
-                          (l) => l.letter == entry.key);
+                      final letter =
+                          kArabicLetters.firstWhere((l) => l.letter == entry.key);
                       Navigator.of(context).pop();
                       LearnLettersScreen.showLetterCard(context, letter);
                     },
@@ -259,8 +448,8 @@ void showParentsReport(BuildContext context, KidsSnapshot snap) {
                         color: const Color(0xFFC62828).withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                            color: const Color(0xFFC62828)
-                                .withValues(alpha: 0.4)),
+                            color:
+                                const Color(0xFFC62828).withValues(alpha: 0.4)),
                       ),
                       child: Text('${entry.key}  (×${entry.value})',
                           style: GoogleFonts.amiri(
@@ -295,109 +484,5 @@ class _StatChip extends StatelessWidget {
           style: GoogleFonts.tajawal(
               fontSize: 12.5, fontWeight: FontWeight.w800, color: color)),
     );
-  }
-}
-
-class _ActivityCard extends StatelessWidget {
-  const _ActivityCard({
-    required this.index,
-    required this.emoji,
-    required this.title,
-    required this.subtitle,
-    required this.colors,
-    required this.onTap,
-    this.chip,
-  });
-
-  final int index;
-  final String emoji;
-  final String title;
-  final String subtitle;
-  final List<Color> colors;
-  final VoidCallback onTap;
-  final String? chip;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(24),
-          onTap: onTap,
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                  colors: colors,
-                  begin: AlignmentDirectional.centerStart,
-                  end: AlignmentDirectional.centerEnd),
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                    color: colors[1].withValues(alpha: 0.35),
-                    blurRadius: 12,
-                    offset: const Offset(0, 5)),
-              ],
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.25),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                      child: Text(emoji, style: const TextStyle(fontSize: 34))),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(title,
-                          style: GoogleFonts.tajawal(
-                              fontSize: 19,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white)),
-                      const SizedBox(height: 3),
-                      Text(subtitle,
-                          style: GoogleFonts.tajawal(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white.withValues(alpha: 0.92))),
-                      if (chip != null) ...[
-                        const SizedBox(height: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.25),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(chip!,
-                              style: GoogleFonts.tajawal(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white)),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                const Icon(Icons.arrow_back_ios_new_rounded,
-                    color: Colors.white, size: 18),
-              ],
-            ),
-          ),
-        ),
-      ),
-    )
-        .animate(delay: (index * 80).ms)
-        .fadeIn(duration: 300.ms)
-        .slideX(begin: 0.08, end: 0, curve: Curves.easeOutCubic);
   }
 }

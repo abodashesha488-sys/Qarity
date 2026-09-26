@@ -16,20 +16,26 @@ class ChildLesson {
   final String? tip;
 }
 
-const List<String> _numberNames = [
+/// 🖼 مسار صورة درس داخل `assets/images/kids/<folder>/` — الصفّ بترتيب
+/// العناصر (01..NN). الملفات مولّدة خارج الكود؛ عند غيابها تعرض الواجهات
+/// الرجوع إلى الإيموجي تلقائيًا عبر errorBuilder.
+String kidLessonImage(String folder, int index) =>
+    'assets/images/kids/$folder/${(index + 1).toString().padLeft(2, '0')}.jpg';
+
+const List<String> kNumberNames = [
   'واحد', 'اثنان', 'ثلاثة', 'أربعة', 'خمسة',
   'ستة', 'سبعة', 'ثمانية', 'تسعة', 'عشرة',
 ];
 
-const List<String> _arabicDigits = ['١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩', '١٠'];
+const List<String> kNumberDigits = ['١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩', '١٠'];
 
 /// 🔢 تعليم الأرقام من ١ إلى ١٠ بالعدّ البصري بالإيموجي.
 final List<ChildLesson> kNumberLessons = List.generate(10, (i) {
   final n = i + 1;
   return ChildLesson(
-    emoji: _arabicDigits[i],
-    title: '${_numberNames[i]}  —  ${_arabicDigits[i]}',
-    body: '${'🍎' * n}  (عِدّ معي: ${_arabicDigits[i]})',
+    emoji: kNumberDigits[i],
+    title: '${kNumberNames[i]}  —  ${kNumberDigits[i]}',
+    body: '${'🍎' * n}  (عِدّ معي: ${kNumberDigits[i]})',
   );
 });
 

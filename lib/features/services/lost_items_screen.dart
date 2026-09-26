@@ -686,7 +686,7 @@ class _LostFormSheetState extends State<_LostFormSheet> {
       final url = await ImageUploadService().uploadImage(bytes);
       if (mounted) {
         setState(() {
-          _imageUrl = url.imageUrl;
+          _imageUrl = url;
           _uploading = false;
         });
       }

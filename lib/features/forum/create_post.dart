@@ -82,16 +82,16 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   Future<void> _pickImage() async {
     setState(() => _isUploading = true);
     try {
-      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-      if (image == null) {
-        if (mounted) setState(() => _isUploading = false);
-        return;
-      }
-      final bytes = await image.readAsBytes();
-      final url = await _imageUploadService.uploadImage(bytes);
-      if (!mounted) return;
-      setState(() => _uploadedImageUrl = url.imageUrl);
-      AppHelpers.showSnackBar(context, 'تم رفع الصورة بنجاح', isSuccess: true);
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    if (image == null) {
+      if (mounted) setState(() => _isUploading = false);
+      return;
+    }
+    final bytes = await image.readAsBytes();
+    final url = await _imageUploadService.uploadImage(bytes);
+    if (!mounted) return;
+    setState(() => _uploadedImageUrl = url);
+    AppHelpers.showSnackBar(context, 'تم رفع الصورة بنجاح', isSuccess: true);
     } catch (e) {
       if (mounted) AppHelpers.showSnackBar(context, 'خطأ في اختيار الصورة: $e', isError: true);
     } finally {

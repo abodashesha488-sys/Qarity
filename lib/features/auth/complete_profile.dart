@@ -109,6 +109,17 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
     });
   }
 
+  Future<void> _removeProfileImage() async {
+    setState(() {
+      _profileBytes = null;
+    });
+    try {
+      if (_user?.photoUrl != null) {
+        await _imageUploadService.deleteImage(_user!.photoUrl!);
+      }
+    } catch (_) {}
+  }
+
   Future<void> _saveProfile() async {
     final name = _nameController.text.trim();
     final phone = _phoneController.text.trim();
@@ -118,15 +129,13 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       );
       return;
     }
-
     if (_isSaving) return;
 
     setState(() => _isSaving = true);
     try {
       String? newPhotoUrl = _user?.photoUrl;
       if (_profileBytes != null) {
-        newPhotoUrl = (await _imageUploadService.uploadImage(_profileBytes!))
-            .imageUrl;
+        newPhotoUrl = await _imageUploadService.uploadImage(_profileBytes!);
       }
 
       final now = DateTime.now();
@@ -154,8 +163,8 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       await NotificationService.subscribeToTopic('village_forum');
       await NotificationService.subscribeToTopic('village_services');
       await NotificationService.subscribeToTopic('village_medical');
-    await NotificationService.subscribeToTopic('village_alerts');
-    await NotificationService.subscribeToTopic('village_breaking');
+      await NotificationService.subscribeToTopic('village_alerts');
+      await NotificationService.subscribeToTopic('village_breaking');
 
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, AppRoutes.home);

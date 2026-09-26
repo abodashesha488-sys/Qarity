@@ -367,7 +367,7 @@ class _PromoFormSheetState extends State<_PromoFormSheet> {
       final url = await ImageUploadService().uploadImage(bytes);
       if (mounted) {
         setState(() {
-          _imageUrl = url.imageUrl;
+          _imageUrl = url;
           _uploading = false;
         });
       }
@@ -387,6 +387,11 @@ class _PromoFormSheetState extends State<_PromoFormSheet> {
           ? now.subtract(const Duration(days: 365))
           : (_start ?? now),
       lastDate: now.add(const Duration(days: 365 * 2)),
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+            dialogBackgroundColor: const Color(0xFF6F4E37)),
+        child: child!,
+      ),
     );
     if (picked == null) return;
     setState(() {

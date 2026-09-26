@@ -4,8 +4,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:qurity/features/children/arabic_letters.dart';
 import 'package:qurity/features/children/children_lessons.dart';
 import 'package:qurity/features/children/children_screen.dart';
+import 'package:qurity/features/children/children_speech.dart';
 import 'package:qurity/features/children/lessons_screen.dart';
 import 'package:qurity/features/children/letters_learn_screen.dart';
+import 'package:qurity/features/children/numbers_learn_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -93,6 +95,45 @@ void main() {
     ]) {
       expect(find.text(title), findsOneWidget, reason: title);
     }
+  });
+
+  test('kidLessonImage يصفّر المسار بترتيب الدرس', () {
+    expect(kidLessonImage('wudu', 0), 'assets/images/kids/wudu/01.jpg');
+    expect(kidLessonImage('num', 9), 'assets/images/kids/num/10.jpg');
+    expect(kidLessonImage('prophets', 2), 'assets/images/kids/prophets/03.jpg');
+  });
+
+  test('normalize يُطهّر النص للنطق المصري', () {
+    // ﷺ يُمدّ قائله نصًا صريحًا.
+    expect(ChildrenSpeech.normalize('النبي ﷺ رحمة'),
+        contains('صلى الله عليه وسلم'));
+    // التشكيل والتطويل يُزالان.
+    expect(ChildrenSpeech.normalize('بِسْـمِ'), 'بسم');
+    // علامات الاقتباس تختفي والشرطة الطويلة وقفة.
+    expect(ChildrenSpeech.normalize('قال «الحمد لله» — ثمّ مشى'),
+        'قال الحمد لله ، ثم مشى');
+    // لا أرقام لاتينية دخلة ولا مسافات متعددة.
+    expect(ChildrenSpeech.normalize('  رقم   ٥  '), 'رقم ٥');
+  });
+
+  testWidgets('شبكة الأرقام تعرض رقمًا وصورة وتفتح بطاقة العدّ', (tester) async {
+    tester.view.physicalSize = const Size(1200, 4200);
+    tester.view.devicePixelRatio = 3.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(const MaterialApp(home: LearnNumbersScreen()));
+    await tester.pumpAndSettle();
+
+    expect(find.text('تعلّم الأرقام'), findsOneWidget);
+    expect(find.text('خمسة'), findsOneWidget);
+    expect(find.text('٥'), findsOneWidget);
+    // بلاطة لكل رقم: صورة (أو بديل مرسوم) داخل الشبكة.
+    expect(find.byType(LearnNumbersScreen), findsOneWidget);
+
+    await tester.tap(find.text('خمسة'));
+    await tester.pumpAndSettle();
+    expect(find.text('عِدّ معي: ٥'), findsOneWidget);
+    expect(find.byTooltip('اسمع'), findsOneWidget);
+    expect(find.text('🍎'), findsNWidgets(5));
   });
 
   testWidgets('شبكة الحروف تعرض صورًا بجانب الحروف', (tester) async {
