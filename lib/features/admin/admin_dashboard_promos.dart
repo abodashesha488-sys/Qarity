@@ -18,9 +18,11 @@ class _PromosPageState extends State<_PromosPage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
-      builder: (_) => _PromoFormSheet(promo: promo, adminUid: widget.currentUid),
+      builder: (_) =>
+          _PromoFormSheet(promo: promo, adminUid: widget.currentUid),
     );
-    if (saved == true) _snack(promo == null ? 'تم نشر الإعلان' : 'تم تحديث الإعلان');
+    if (saved == true)
+      _snack(promo == null ? 'تم نشر الإعلان' : 'تم تحديث الإعلان');
   }
 
   void _snack(String msg) {
@@ -44,7 +46,8 @@ class _PromosPageState extends State<_PromosPage> {
               onPressed: () => Navigator.pop(ctx, false),
               child: const Text('إلغاء')),
           FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
+              style:
+                  FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
               onPressed: () => Navigator.pop(ctx, true),
               child: const Text('حذف')),
         ],
@@ -158,14 +161,10 @@ class _PromoCard extends StatelessWidget {
 
   String get _linkSummary => switch (promo.linkType) {
         'none' => 'بدون رابط',
-        'app' => 'داخل التطبيق: ${kPromoInternalLinks
-            .firstWhere((l) => l.encoded == promo.linkValue,
-                orElse: () => const PromoInternalLink('؟', ''))
-            .label}',
-        _ => '${kPromoExternalKinds
-                .firstWhere((k) => k.key == promo.linkType,
-                    orElse: () => kPromoExternalKinds.first)
-                .label}: ${promo.linkValue}',
+        'app' =>
+          'داخل التطبيق: ${kPromoInternalLinks.firstWhere((l) => l.encoded == promo.linkValue, orElse: () => const PromoInternalLink('؟', '')).label}',
+        _ =>
+          '${kPromoExternalKinds.firstWhere((k) => k.key == promo.linkType, orElse: () => kPromoExternalKinds.first).label}: ${promo.linkValue}',
       };
 
   @override
@@ -177,8 +176,8 @@ class _PromoCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-            color: status.color.withValues(alpha: 0.4), width: 1.2),
+        side:
+            BorderSide(color: status.color.withValues(alpha: 0.4), width: 1.2),
       ),
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -201,12 +200,11 @@ class _PromoCard extends StatelessWidget {
                           child: const Center(
                               child: Icon(Icons.image_rounded,
                                   size: 22, color: Colors.black26))),
-                      errorWidget: (_, __, ___) =>
-                          const ColoredBox(
-                              color: Colors.black12,
-                              child: Center(
-                                  child: Icon(Icons.broken_image_rounded,
-                                      size: 22))),
+                      errorWidget: (_, __, ___) => const ColoredBox(
+                          color: Colors.black12,
+                          child: Center(
+                              child:
+                                  Icon(Icons.broken_image_rounded, size: 22))),
                     ),
                   ),
                 ),
@@ -228,10 +226,7 @@ class _PromoCard extends StatelessWidget {
                           _miniChip(status.label, status.color, solid: true),
                           _miniChip(promoPlacementLabel(promo.placement),
                               QurityAppBar.headerColor),
-                          _miniChip(
-                              promo.showOnce
-                                  ? 'مرة واحدة'
-                                  : 'كل زيارة',
+                          _miniChip(promo.showOnce ? 'مرة واحدة' : 'كل زيارة',
                               const Color(0xFF1565C0)),
                           if (promo.playSound)
                             _miniChip('🔊 صوت', Colors.black38),
@@ -287,13 +282,13 @@ class _PromoCard extends StatelessWidget {
     );
   }
 
-  Widget _miniChip(String text, Color color, {bool solid = false}) =>
-      Container(
+  Widget _miniChip(String text, Color color, {bool solid = false}) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
         decoration: BoxDecoration(
           color: solid ? color : color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
-          border: solid ? null : Border.all(color: color.withValues(alpha: 0.35)),
+          border:
+              solid ? null : Border.all(color: color.withValues(alpha: 0.35)),
         ),
         child: Text(text,
             style: TextStyle(
@@ -346,8 +341,7 @@ class _PromoFormSheetState extends State<_PromoFormSheet> {
     _playSound = p?.playSound ?? false;
     _vibrate = p?.vibrate ?? false;
     _start = p?.startsAt ?? DateTime.now();
-    _end = p?.endsAt ??
-        DateTime.now().add(const Duration(days: 7));
+    _end = p?.endsAt ?? DateTime.now().add(const Duration(days: 7));
   }
 
   @override
@@ -383,13 +377,13 @@ class _PromoFormSheetState extends State<_PromoFormSheet> {
       initialDate: isStart
           ? (_start ?? now)
           : (_end ?? now.add(const Duration(days: 7))),
-      firstDate: isStart
-          ? now.subtract(const Duration(days: 365))
-          : (_start ?? now),
+      firstDate:
+          isStart ? now.subtract(const Duration(days: 365)) : (_start ?? now),
       lastDate: now.add(const Duration(days: 365 * 2)),
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
-            dialogBackgroundColor: const Color(0xFF6F4E37)),
+            dialogTheme:
+                DialogThemeData(backgroundColor: const Color(0xFF6F4E37))),
         child: child!,
       ),
     );
@@ -493,8 +487,7 @@ class _PromoFormSheetState extends State<_PromoFormSheet> {
             borderSide: BorderSide.none),
       );
 
-  Widget _dateTile(String title, DateTime? d, VoidCallback onTap) =>
-      Expanded(
+  Widget _dateTile(String title, DateTime? d, VoidCallback onTap) => Expanded(
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
           onTap: onTap,
@@ -586,21 +579,18 @@ class _PromoFormSheetState extends State<_PromoFormSheet> {
                     color: QurityAppBar.headerColor.withValues(alpha: 0.06),
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                        color:
-                            QurityAppBar.headerColor.withValues(alpha: 0.4)),
+                        color: QurityAppBar.headerColor.withValues(alpha: 0.4)),
                   ),
                   clipBehavior: Clip.antiAlias,
                   child: _uploading
                       ? const Center(
-                          child:
-                              CircularProgressIndicator(strokeWidth: 2.6))
+                          child: CircularProgressIndicator(strokeWidth: 2.6))
                       : _imageUrl.isEmpty
                           ? const Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Icon(Icons.add_photo_alternate_rounded,
-                                    size: 30,
-                                    color: QurityAppBar.headerColor),
+                                    size: 30, color: QurityAppBar.headerColor),
                                 SizedBox(height: 6),
                                 Text('اضغط لاختيار صورة الإعلان',
                                     style: TextStyle(
@@ -613,8 +603,7 @@ class _PromoFormSheetState extends State<_PromoFormSheet> {
                               fit: StackFit.expand,
                               children: [
                                 CachedNetworkImage(
-                                    imageUrl: _imageUrl,
-                                    fit: BoxFit.contain),
+                                    imageUrl: _imageUrl, fit: BoxFit.contain),
                                 Positioned(
                                   top: 6,
                                   left: 6,
@@ -654,8 +643,8 @@ class _PromoFormSheetState extends State<_PromoFormSheet> {
                   for (final p in kPromoPlacements)
                     DropdownMenuItem(value: p.key, child: Text(p.label)),
                 ],
-                onChanged: (v) => setState(
-                    () => _placement = (v == null || v.startsWith('h_')) ? _placement : v),
+                onChanged: (v) => setState(() => _placement =
+                    (v == null || v.startsWith('h_')) ? _placement : v),
               ),
               const SizedBox(height: 12),
               // الرابط
@@ -670,8 +659,7 @@ class _PromoFormSheetState extends State<_PromoFormSheet> {
                       value: 'app', child: Text('داخل التطبيق')),
                   ...kPromoExternalKinds.map(
                     (k) => DropdownMenuItem(
-                        value: k.key,
-                        child: Text('${k.label} (رابط خارجي)')),
+                        value: k.key, child: Text('${k.label} (رابط خارجي)')),
                   ),
                 ],
                 onChanged: (v) => setState(() {
@@ -682,16 +670,14 @@ class _PromoFormSheetState extends State<_PromoFormSheet> {
               if (_linkType == 'app') ...[
                 const SizedBox(height: 10),
                 DropdownButtonFormField<String>(
-                  initialValue: _linkValue.text.isEmpty
-                      ? null
-                      : _linkValue.text,
+                  initialValue:
+                      _linkValue.text.isEmpty ? null : _linkValue.text,
                   borderRadius: BorderRadius.circular(16),
                   menuMaxHeight: 380,
                   decoration: _dec('', label: 'شاشة الهدف *'),
                   items: [
                     for (final l in kPromoInternalLinks)
-                      DropdownMenuItem(
-                          value: l.encoded, child: Text(l.label)),
+                      DropdownMenuItem(value: l.encoded, child: Text(l.label)),
                   ],
                   onChanged: (v) => setState(() {
                     _linkValue.text = v ?? '';
@@ -736,8 +722,7 @@ class _PromoFormSheetState extends State<_PromoFormSheet> {
                       label: Text('كل زيارة', style: TextStyle(fontSize: 11))),
                 ],
                 selected: {_showOnce},
-                onSelectionChanged: (s) =>
-                    setState(() => _showOnce = s.first),
+                onSelectionChanged: (s) => setState(() => _showOnce = s.first),
               ),
               const SizedBox(height: 6),
               SwitchListTile(
@@ -768,8 +753,7 @@ class _PromoFormSheetState extends State<_PromoFormSheet> {
                           foregroundColor: QurityAppBar.headerColor,
                           side: const BorderSide(
                               color: QurityAppBar.headerColor, width: 1.4),
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 14)),
+                          padding: const EdgeInsets.symmetric(vertical: 14)),
                       icon: const Icon(Icons.visibility_rounded, size: 18),
                       label: const Text('معاينة حية',
                           style: TextStyle(fontWeight: FontWeight.w800)),
@@ -778,13 +762,11 @@ class _PromoFormSheetState extends State<_PromoFormSheet> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: FilledButton.icon(
-                      onPressed:
-                          _saving || _uploading ? null : _save,
+                      onPressed: _saving || _uploading ? null : _save,
                       style: FilledButton.styleFrom(
                           backgroundColor: QurityAppBar.headerColor,
                           foregroundColor: Colors.white,
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 14)),
+                          padding: const EdgeInsets.symmetric(vertical: 14)),
                       icon: _saving
                           ? const SizedBox(
                               width: 16,
@@ -793,8 +775,7 @@ class _PromoFormSheetState extends State<_PromoFormSheet> {
                                   strokeWidth: 2, color: Colors.white))
                           : const Icon(Icons.check_rounded, size: 18),
                       label: Text(_isEdit ? 'حفظ التعديلات' : 'نشر الإعلان',
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w800)),
+                          style: const TextStyle(fontWeight: FontWeight.w800)),
                     ),
                   ),
                 ],
