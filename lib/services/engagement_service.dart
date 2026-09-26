@@ -46,9 +46,12 @@ class EngagementService {
   }
 
   Stream<int> condolencesCount(String obituaryId) {
+    // ملاحظة: SDK لا يدعم بثّ count() aggregation، والعدّ هنا محصور
+    // بتعازي عزاء واحد (مستندات قليلة) — السقف يمنع أسوأ الحالات.
     return _firestore
         .collection('condolences')
         .where('obituaryId', isEqualTo: obituaryId)
+        .limit(500)
         .snapshots()
         .map((snapshot) => snapshot.docs.length);
   }
@@ -102,9 +105,12 @@ class EngagementService {
   }
 
   Stream<int> attendeesCount(String occasionId) {
+    // مثل condolencesCount — بثّ حي بعدّ المستندات (لا يوجد count() stream
+    // في الـSDK)، مع سقف يحمي من المناسبات الضخمة.
     return _firestore
         .collection('occasion_attendees')
         .where('occasionId', isEqualTo: occasionId)
+        .limit(500)
         .snapshots()
         .map((snapshot) => snapshot.docs.length);
   }

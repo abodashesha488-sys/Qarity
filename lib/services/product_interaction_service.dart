@@ -33,12 +33,13 @@ class ProductInteractionService {
   }
 
   Stream<int> getLikeCountStream(String productId) {
+    // عدّاد الإعجابات من مستند المنتج نفسه (مستمع مستند واحد رخيص) بدل
+    // بثّ مجموعة likes الفرعية كاملة — الحقل يبقى متزامناً عبر toggleLike.
     return _firestore
         .collection('market_products')
         .doc(productId)
-        .collection('likes')
         .snapshots()
-        .map((snapshot) => snapshot.docs.length);
+        .map((doc) => (doc.data()?['likes'] as num?)?.toInt() ?? 0);
   }
 
   Future<void> addComment({required String productId, required String userName, required String text}) async {

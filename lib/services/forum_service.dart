@@ -12,8 +12,14 @@ import 'remote_push_service.dart';
 class ForumService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  Stream<List<ForumPost>> getPostsStream() {
-    return _firestore.collection('forum_posts').where('isApproved', isEqualTo: true).snapshots().map((snapshot) => snapshot.docs.map((doc) => ForumPost.fromJson(doc.data(), doc.id)).toList());
+  Stream<List<ForumPost>> getPostsStream({int? limit}) {
+    Query<Map<String, dynamic>> query = _firestore
+        .collection('forum_posts')
+        .where('isApproved', isEqualTo: true);
+    if (limit != null) {
+      query = query.orderBy('createdAt', descending: true).limit(limit);
+    }
+    return query.snapshots().map((snapshot) => snapshot.docs.map((doc) => ForumPost.fromJson(doc.data(), doc.id)).toList());
   }
 
   /// Live stream for a single post so the detail screen shows fresh

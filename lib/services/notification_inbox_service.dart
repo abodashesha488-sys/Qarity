@@ -74,8 +74,12 @@ class NotificationInboxService {
 
   Stream<List<UserNotification>> streamFor(String userId) {
     if (userId.isEmpty) return Stream.value(const []);
+    // آخر 50 إشعاراً فقط (orderBy+limit) — المجموعة تنمو بلا حدود وكان
+    // المستمع يحمّلها كلها عند كل فتح للجرس/الصندوق.
     return _col
         .where('userId', isEqualTo: userId)
+        .orderBy('createdAt', descending: true)
+        .limit(50)
         .snapshots()
         .map((s) {
       final list = s.docs.map((d) {
@@ -91,9 +95,13 @@ class NotificationInboxService {
 
   Stream<int> unreadCount(String userId) {
     if (userId.isEmpty) return Stream.value(0);
+    // بثّ حي (لا يوجد count().snapshots() في الـSDK) لكن بسقف 100 مستند:
+    // الشارة تعرض «99+» أصلاً، فكان تحميل كل غير المقروء هدراً — خاصة أن
+    // الجرس يظهر في AppBar كل شاشة.
     return _col
         .where('userId', isEqualTo: userId)
         .where('read', isEqualTo: false)
+        .limit(100)
         .snapshots()
         .map((s) => s.docs.length);
   }

@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/constants/promo_placements.dart';
 import '../../models/data_models.dart';
@@ -94,7 +95,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     _tabController.addListener(_onTabChanged);
     _loadStats();
     _loadPendingCounts();
-    unawaited(_adminService.backfillSellerTypes());
+    unawaited(_backfillSellerTypesOnce());
+  }
+
+  /// الترحيل التأسيسي لسellerType يعمل مرة واحدة ناجحة لكل جهاز —
+  /// كان يمسح market_products + shops + seller_profiles كاملة عند كل فتح.
+  Future<void> _backfillSellerTypesOnce() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.getBool('seller_type_backfill_v1') == true) return;
+      final ok = await _adminService.backfillSellerTypes();
+      if (ok) await prefs.setBool('seller_type_backfill_v1', true);
+    } catch (_) {}
   }
 
   void _onTabChanged() {

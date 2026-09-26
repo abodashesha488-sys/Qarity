@@ -52,7 +52,11 @@ class ReviewService {
   }
 
   Future<int> getReviewCount(String sellerId) async {
-    final snapshot = await _firestore.collection('reviews').where('sellerId', isEqualTo: sellerId).get();
-    return snapshot.docs.length;
+    final snapshot = await _firestore
+        .collection('reviews')
+        .where('sellerId', isEqualTo: sellerId)
+        .count()
+        .get();
+    return snapshot.count ?? 0;
   }
 }

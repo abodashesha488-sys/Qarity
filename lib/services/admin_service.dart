@@ -45,25 +45,22 @@ class AdminService {
     }
   }
 
-  Stream<int> getPendingNewsCount() => _pendingCount('news');
-  Stream<int> getPendingProductsCount() => _pendingCount('market_products');
-  Stream<int> getPendingObituariesCount() => _pendingCount('obituaries');
-  Stream<int> getPendingOccasionsCount() => _pendingCount('occasions');
-  Stream<int> getPendingForumPostsCount() => _pendingCount('forum_posts');
-  Stream<int> getPendingPhoneDirectoryCount() =>
-      _pendingCount('phone_directory');
+  Future<int> getPendingCountFuture(String collection) =>
+      _pendingCountOnce(collection);
 
-  Future<int> getPendingCountFuture(String collection) async {
-    final comp = _pendingCount(collection);
-    return comp.first;
-  }
-
-  Stream<int> _pendingCount(String collection) {
-    return _firestore
-        .collection(collection)
-        .where('isApproved', isEqualTo: false)
-        .snapshots()
-        .map((s) => s.docs.length);
+  /// عدّ لحظي رخيص عبر count() aggregation (يقرأ مداخل الفهرس فقط ولا
+  /// يحمّل المستندات) — كان كل عدّ يحمّل كل مستندات المجموعة المؤجلة.
+  Future<int> _pendingCountOnce(String collection) async {
+    try {
+      final snap = await _firestore
+          .collection(collection)
+          .where('isApproved', isEqualTo: false)
+          .count()
+          .get();
+      return snap.count ?? 0;
+    } catch (_) {
+      return 0;
+    }
   }
 
   Stream<List<Map<String, dynamic>>> getPendingNewsStream() =>
@@ -168,11 +165,10 @@ class AdminService {
       final snapshot = await _firestore
           .collection('market_products')
           .where('isApproved', isEqualTo: true)
+          .orderBy('createdAt', descending: true)
+          .limit(limit)
           .get();
-      final docs = snapshot.docs.map((d) => {...d.data(), 'id': d.id}).toList();
-      docs.sort((a, b) =>
-          _toMillis(b['createdAt']).compareTo(_toMillis(a['createdAt'])));
-      return docs.take(limit).toList();
+      return snapshot.docs.map((d) => {...d.data(), 'id': d.id}).toList();
     } catch (_) {
       return [];
     }
@@ -196,11 +192,10 @@ class AdminService {
       final snapshot = await _firestore
           .collection('occasions')
           .where('isApproved', isEqualTo: true)
+          .orderBy('createdAt', descending: true)
+          .limit(10)
           .get();
-      final docs = snapshot.docs.map((d) => {...d.data(), 'id': d.id}).toList();
-      docs.sort((a, b) =>
-          _toMillis(b['createdAt']).compareTo(_toMillis(a['createdAt'])));
-      return docs.take(10).toList();
+      return snapshot.docs.map((d) => {...d.data(), 'id': d.id}).toList();
     } catch (_) {
       return [];
     }
@@ -320,8 +315,10 @@ class AdminService {
   }
 
   /// إصلاح تأسيسي: المنتجات القديمة أُنشئت قبل وجود sellerType.
-  /// تستدعيها لوحة الأدمن مرة واحدة عند الفتح (best-effort، للمدير فقط عملياً).
-  Future<void> backfillSellerTypes() async {
+  /// تُستدعى مرة واحدة لكل جهاز (بوابة SharedPreferences في لوحة الأدمن) —
+  /// كانت تُمسح 3 مجموعات كاملة عند **كل** فتح للوحة.
+  /// تُرجع true عند النجاح الكامل ليُختم الجهاز.
+  Future<bool> backfillSellerTypes() async {
     try {
       final sellerTypeCache = <String, String?>{};
       Future<String?> typeFor(String uid) async {
@@ -352,8 +349,10 @@ class AdminService {
       await backfillCol('market_products', 'sellerId', 'sellerType');
       await backfillCol('shops', 'ownerUid', 'ownerSellerType');
       await backfillCol('seller_profiles', 'userId', 'sellerType');
+      return true;
     } catch (e) {
       debugPrint('backfillSellerTypes failed: $e');
+      return false;
     }
   }
 
@@ -750,32 +749,24 @@ class AdminService {
     return 0;
   }
 
-  // Seller Requests — حالة الطلب تُحدَّد بالـ status ('pending' / 'approved' / 'rejected')
-  // وليس بحقل isApproved، لذا نستخدم عدّاداً مخصصاً هنا.
-  Stream<int> getPendingSellerRequestsCount() => _firestore
-      .collection('seller_requests')
-      .where('status', isEqualTo: 'pending')
-      .snapshots()
-      .map((s) => s.docs.length);
-
   Future<Map<String, int>> fetchPendingCounts() async {
     final results = await Future.wait([
-      _pendingCount('news').first,
-      _pendingCount('market_products').first,
-      _pendingCount('obituaries').first,
-      _pendingCount('occasions').first,
-      _pendingCount('forum_posts').first,
+      _pendingCountOnce('news'),
+      _pendingCountOnce('market_products'),
+      _pendingCountOnce('obituaries'),
+      _pendingCountOnce('occasions'),
+      _pendingCountOnce('forum_posts'),
       _statusPendingCount('seller_requests'),
-      _pendingCount('phone_directory').first,
-      _pendingCount('village_clinics').first,
-      _pendingCount('pharmacies').first,
-      _pendingCount('blood_requests').first,
-      _pendingCount('blood_donors').first,
-      _pendingCount('shops').first,
-      _pendingCount('service_providers').first,
-      _pendingCount('medical_center_clinics').first,
-      _pendingCount('medical_labs').first,
-      _pendingCount('lost_items').first,
+      _pendingCountOnce('phone_directory'),
+      _pendingCountOnce('village_clinics'),
+      _pendingCountOnce('pharmacies'),
+      _pendingCountOnce('blood_requests'),
+      _pendingCountOnce('blood_donors'),
+      _pendingCountOnce('shops'),
+      _pendingCountOnce('service_providers'),
+      _pendingCountOnce('medical_center_clinics'),
+      _pendingCountOnce('medical_labs'),
+      _pendingCountOnce('lost_items'),
     ]);
     return {
       'news': results[0],
@@ -802,8 +793,9 @@ class AdminService {
       final snap = await _firestore
           .collection(collection)
           .where('status', isEqualTo: 'pending')
+          .count()
           .get();
-      return snap.docs.length;
+      return snap.count ?? 0;
     } catch (_) {
       return 0;
     }

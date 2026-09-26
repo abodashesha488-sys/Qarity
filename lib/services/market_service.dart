@@ -193,10 +193,14 @@ class MarketService {
     await CacheService.invalidateProducts();
   }
 
-  Stream<List<MarketProduct>> getProductsStream() {
-    return _firestore
+  Stream<List<MarketProduct>> getProductsStream({int? limit}) {
+    Query<Map<String, dynamic>> query = _firestore
         .collection('market_products')
-        .where('isApproved', isEqualTo: true)
+        .where('isApproved', isEqualTo: true);
+    if (limit != null) {
+      query = query.orderBy('createdAt', descending: true).limit(limit);
+    }
+    return query
         .snapshots()
         .map((snapshot) => snapshot.docs
             .map((doc) => MarketProduct.fromJson(doc.data(), doc.id))
@@ -330,11 +334,17 @@ class MarketService {
   }
 
   Future<void> _updateProductRating(String productId) async {
-    final avgRating = await getAverageRating(productId);
-    final reviewCount = (await getProductReviews(productId)).length;
+    // قراءة واحدة للمراجعات (كانت تُقرأ مرتين: للمتوسط ثم للعدد).
+    final snapshot = await _firestore
+        .collection('product_reviews')
+        .where('productId', isEqualTo: productId)
+        .get();
+    final count = snapshot.docs.length;
+    final sum = snapshot.docs.fold<double>(0.0,
+        (sum, doc) => sum + (doc.data()['rating'] as num? ?? 0.0).toDouble());
     await _firestore.collection('market_products').doc(productId).update({
-      'rating': avgRating,
-      'reviewCount': reviewCount,
+      'rating': count == 0 ? 0.0 : sum / count,
+      'reviewCount': count,
     });
   }
 

@@ -72,15 +72,17 @@ class ContentCleanupService {
       FirebaseFirestore fs, Query query, String label) async {
     try {
       final snap = await query.get();
-      for (final d in snap.docs) {
-        try {
-          await d.reference.delete();
-        } catch (e) {
-          debugPrint('content cleanup doc ($label) failed: $e');
+      final docs = snap.docs;
+      // حذف دفعي (batch) بدل حذف فردي — كتابة واحدة لكل 400 مستند.
+      for (var i = 0; i < docs.length; i += 400) {
+        final batch = fs.batch();
+        for (final d in docs.skip(i).take(400)) {
+          batch.delete(d.reference);
         }
+        await batch.commit();
       }
     } catch (e) {
-      debugPrint('content cleanup ($label) skipped: $e');
+      debugPrint('content cleanup ($label) failed: $e');
     }
   }
 }

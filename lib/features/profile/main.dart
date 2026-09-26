@@ -40,6 +40,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _checkingRequest = false;
   String? _loadError;
 
+  // stream منتجاتي مثبت لكل مستخدم — إنشاؤه داخل build كان يعيد الاشتراك
+  // (وفوترة قراءة كاملة) عند كل إعادة بناء للشاشة.
+  String? _productsStreamUid;
+  Stream<List<MarketProduct>>? _productsStream;
+
+  Stream<List<MarketProduct>> _myProductsStream(String uid) {
+    if (_productsStream == null || _productsStreamUid != uid) {
+      _productsStreamUid = uid;
+      _productsStream = _marketService.getSellerProductsStream(uid);
+    }
+    return _productsStream!;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -870,7 +883,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 12),
             StreamBuilder<List<MarketProduct>>(
-              stream: _marketService.getSellerProductsStream(_user!.id),
+              stream: _myProductsStream(_user!.id),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator(strokeWidth: 2));

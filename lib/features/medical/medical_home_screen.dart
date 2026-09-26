@@ -14,21 +14,17 @@ import '../../services/user_service.dart';
 import '../../widgets/qurity_app_bar.dart';
 import 'medical_admin_screen.dart';
 
-/// بوابة الخدمات الطبية — شبكة أيقونات، كل أيقونة تفتح شاشة قسمها.
+/// بوابة الخدمات الطبية — شبكة صور بلا إطارات أو عناوين (مثل الشبكة
+/// الرئيسية وبوابة خدمات المزارع)، كل صورة تفتح شاشة قسمها.
 class MedicalHomeScreen extends StatelessWidget {
   const MedicalHomeScreen({super.key});
 
-  static const List<(String, IconData, Color, String)> _sections = [
-    ('المركز الطبي الخيري', Icons.local_hospital_rounded, Color(0xFF00695C),
-        'عيادات بأجور رمزية ومواعيدها'),
-    ('بنك دم القرية', Icons.bloodtype_rounded, Color(0xFFC62828),
-        'متبرعون وطلبات تبرع بالدم'),
-    ('عيادات القرية', Icons.add_business_rounded, Color(0xFF00897B),
-        'عيادات الأهالي المعتمدة وتخصصاتها'),
-    ('صيدليات القرية', Icons.local_pharmacy_rounded, Color(0xFF6F4E37),
-        'صيدليات القرية ومواعيدها'),
-    ('معامل التحاليل', Icons.science_rounded, Color(0xFF6A1B9A),
-        'تحاليل معتمدة وسحب عينة بالمنزل'),
+  static const List<(String, String)> _sections = [
+    ('المركز الطبي الخيري', 'assets/images/tebkhairy.jpg'),
+    ('بنك دم القرية', 'assets/images/blood.jpg'),
+    ('عيادات القرية', 'assets/images/doctor2.jpg'),
+    ('صيدليات القرية', 'assets/images/doctor3.jpg'),
+    ('معامل التحاليل', 'assets/images/doctor4.jpg'),
   ];
 
   static const List<Color> colors = [
@@ -44,22 +40,19 @@ class MedicalHomeScreen extends StatelessWidget {
     return Scaffold(
       appBar: const QurityAppBar(
           title: 'الخدمات الطبية', color: Color(0xFF00897B)),
-      body: GridView.count(
-        padding: const EdgeInsets.all(16),
-        crossAxisCount: 2,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        childAspectRatio: 0.98,
-        children: [
-          for (var i = 0; i < _sections.length; i++)
-            _MedicalSectionTile(
-              index: i,
-              label: _sections[i].$1,
-              icon: _sections[i].$2,
-              color: _sections[i].$3,
-              subtitle: _sections[i].$4,
-            ),
-        ],
+      body: GridView.builder(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+        itemCount: _sections.length,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            mainAxisSpacing: 14,
+            crossAxisSpacing: 14,
+            childAspectRatio: 0.95),
+        itemBuilder: (context, index) => _MedicalSectionTile(
+          index: index,
+          label: _sections[index].$1,
+          image: _sections[index].$2,
+        ),
       ),
     );
   }
@@ -67,71 +60,48 @@ class MedicalHomeScreen extends StatelessWidget {
 
 class _MedicalSectionTile extends StatelessWidget {
   const _MedicalSectionTile(
-      {required this.index,
-      required this.label,
-      required this.icon,
-      required this.color,
-      required this.subtitle});
+      {required this.index, required this.label, required this.image});
   final int index;
   final String label;
-  final IconData icon;
-  final Color color;
-  final String subtitle;
+  final String image;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Card(
-      elevation: 0,
-      color: color.withValues(alpha: 0.07),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: color.withValues(alpha: 0.35)),
+    final radius = BorderRadius.circular(18);
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.26),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: () =>
-            Navigator.pushNamed(context, '/medical/section', arguments: index),
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                      colors: [color, color.withValues(alpha: 0.72)]),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                        color: color.withValues(alpha: 0.35),
-                        blurRadius: 12,
-                        offset: const Offset(0, 5)),
-                  ],
-                ),
-                child: Icon(icon, color: Colors.white, size: 26),
-              ),
-              const SizedBox(height: 10),
-              Text(label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      fontWeight: FontWeight.w900, fontSize: 14, color: color)),
-              const SizedBox(height: 3),
-              Text(subtitle,
-                  maxLines: 2,
-                  textAlign: TextAlign.center,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                      fontSize: 10,
-                      color: theme.colorScheme.onSurfaceVariant)),
-            ],
+      clipBehavior: Clip.antiAlias,
+      child: Material(
+        color: Theme.of(context).colorScheme.surface,
+        child: InkWell(
+          borderRadius: radius,
+          onTap: () =>
+              Navigator.pushNamed(context, '/medical/section', arguments: index),
+          child: Image.asset(
+            image,
+            width: double.infinity,
+            height: double.infinity,
+            fit: BoxFit.cover,
+            cacheWidth: 280,
+            semanticLabel: label,
+            errorBuilder: (context, error, stackTrace) => Center(
+              child: Text(label, textAlign: TextAlign.center),
+            ),
           ),
         ),
       ),
-    ).animate().fadeIn(duration: 250.ms).scale(begin: const Offset(0.94, 0.94));
+    ).animate(delay: (index * 45).ms).fadeIn(duration: 350.ms).scale(
+          begin: const Offset(0.92, 0.92),
+        );
   }
 }
 

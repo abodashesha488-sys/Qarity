@@ -92,10 +92,12 @@ class _HomeIdentityBarState extends State<HomeIdentityBar> {
     final photo = (u.photoUrl ?? '').trim();
     // إصلاح ذاتي مرة واحدة لكل هوية جديدة: يحدّث المحتوى والتعليقات
     // التي أُنشئت قديماً باسم Google قبل تعديل الاسم في الملف الشخصي.
+    // الختم لا يعتمد على الاسم/الصورة: التعديلات اللاحقة تغطيها
+    // syncIdentityToContent داخل updateUser مباشرة (بدون إعادة مسح كاملة).
     final prefs = await SharedPreferences.getInstance();
-    final stamp = '$name|$photo';
-    if (prefs.getString('identity_repair_v1_${u.id}') != stamp) {
-      await prefs.setString('identity_repair_v1_${u.id}', stamp);
+    final stampKey = 'identity_repair_v1_${u.id}';
+    if (!prefs.containsKey(stampKey)) {
+      await prefs.setString(stampKey, '1');
       unawaited(svc.syncIdentityToContent(u.id,
           name: name, photoUrl: photo.isEmpty ? null : photo));
     }
@@ -254,7 +256,7 @@ class HomeDrawer extends StatelessWidget {
   }
 }
 
-class HomeContent extends StatelessWidget {
+class HomeContent extends StatefulWidget {
   const HomeContent({super.key});
 
   static String greeting() {
@@ -274,10 +276,24 @@ class HomeContent extends StatelessWidget {
   }
 
   @override
+  State<HomeContent> createState() => _HomeContentState();
+}
+
+class _HomeContentState extends State<HomeContent> {
+  // Streams مثبتة مرة واحدة لكل State: إنشاؤها داخل build() كان يمزّق
+  // الاشتراك ويعيد قراءة المجموعات كاملة (فوترة Firestore) عند كل إعادة بناء.
+  late final Stream<List<MarketProduct>> _productsStream =
+      MarketService().getProductsStream(limit: 8);
+  late final Stream<List<NewsItem>> _newsStream =
+      NewsService().getNewsStream(limit: 6);
+  late final Stream<List<ForumPost>> _postsStream =
+      ForumService().getPostsStream(limit: 5);
+
+  @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        _HeroHeader(dateLabel: _dateLabel()),
+        _HeroHeader(dateLabel: HomeContent._dateLabel()),
         const AlertWisdomBar(),
         const VillageWeatherBar(),
         Expanded(
@@ -341,7 +357,7 @@ class HomeContent extends StatelessWidget {
     }
 
     return OfflineStreamBuilder<List<MarketProduct>>(
-      stream: MarketService().getProductsStream(),
+      stream: _productsStream,
       onlineBuilder: (context, snapshot) => list(snapshot.data ?? []),
       cacheBuilder: (context) => FutureBuilder(
         future: CacheService.getProducts(),
@@ -428,7 +444,7 @@ class HomeContent extends StatelessWidget {
     }
 
     return OfflineStreamBuilder<List<NewsItem>>(
-      stream: NewsService().getNewsStream(),
+      stream: _newsStream,
       onlineBuilder: (context, snapshot) => list(snapshot.data ?? []),
       cacheBuilder: (context) => FutureBuilder(
         future: CacheService.getNews(),
@@ -516,7 +532,7 @@ class HomeContent extends StatelessWidget {
     }
 
     return OfflineStreamBuilder<List<ForumPost>>(
-      stream: ForumService().getPostsStream(),
+      stream: _postsStream,
       onlineBuilder: (context, snapshot) => list(snapshot.data ?? []),
       cacheBuilder: (context) => FutureBuilder(
         future: CacheService.getForumPosts(),

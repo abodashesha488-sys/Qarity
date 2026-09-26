@@ -13,8 +13,13 @@ class NewsService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  Stream<List<NewsItem>> getNewsStream() {
-    return _firestore.collection('news').where('isApproved', isEqualTo: true).snapshots().map((snapshot) =>
+  Stream<List<NewsItem>> getNewsStream({int? limit}) {
+    Query<Map<String, dynamic>> query =
+        _firestore.collection('news').where('isApproved', isEqualTo: true);
+    if (limit != null) {
+      query = query.orderBy('createdAt', descending: true).limit(limit);
+    }
+    return query.snapshots().map((snapshot) =>
         snapshot.docs.map((doc) => NewsItem.fromJson(doc.data(), doc.id)).toList());
   }
 

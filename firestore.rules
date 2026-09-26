@@ -517,8 +517,10 @@ service cloud.firestore {
     // المساهمة قيد المراجعة وحده يستطيع تعديلها دون حقن أي حقول حساسة.
     match /village_contributions/{docId} {
       allow get: if isAdmin() || resource.data.approvalStatus == 'approved';
-      allow list: if isAdmin()
-        || request.query.where['approvalStatus'].isEqualTo('approved');
+      // القواعد لا تفحص فلاتر الاستعلام (request.query.where غير موجود):
+      // الشرط يُقيَّم لكل مستند قد يرجعه الاستعلام، فيُرفض أي list لا يقيّد
+      // نفسه بالمعتمد فقط — وهو ما يفعله استعلام التطبيق العام أصلاً.
+      allow list: if isAdmin() || resource.data.approvalStatus == 'approved';
       allow create: if isSignedIn()
         && request.resource.data.userId == request.auth.uid
         && request.resource.data.approvalStatus == 'pending'
