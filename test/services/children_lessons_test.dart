@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -12,6 +14,36 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   setUp(() => GoogleFonts.config.allowRuntimeFetching = false);
+
+  test('صور الأطفال: كل مجلد مكتمل مسجّل، والمسجّل سليم بالكامل', () {
+    const expectedCount = {
+      'num': 10,
+      'wudu': 8,
+      'salah': 8,
+      'prophets': 8,
+      'manners': 10,
+    };
+    final pubspec = File('pubspec.yaml').readAsStringSync();
+    expectedCount.forEach((folder, count) {
+      final dir = Directory('assets/images/kids/$folder');
+      final have = dir.existsSync()
+          ? dir.listSync().where((e) => e.path.endsWith('.jpg')).length
+          : 0;
+      final complete = have == count;
+      final registered = pubspec.contains('assets/images/kids/$folder/');
+      // التسجيل يجب أن يطابق الاكتمال تمامًا (لا فراغ ولا صور يتيمة)
+      expect(registered, complete,
+          reason: '$folder: $have/$count صور، مسجّل=$registered');
+      if (!complete) return;
+      for (var i = 0; i < count; i++) {
+        final path = kidLessonImage(folder, i);
+        final file = File(path);
+        expect(file.existsSync(), isTrue, reason: 'مفقود: $path');
+        final bytes = file.readAsBytesSync();
+        expect(bytes.sublist(0, 3), [0xFF, 0xD8, 0xFF], reason: 'ليس JPG: $path');
+      }
+    });
+  });
 
   test('بيانات الدروس مكتملة وسليمة', () {
     expect(kNumberLessons.length, 10);

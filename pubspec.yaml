@@ -70,6 +70,8 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/letters/
+    - assets/images/kids/num/
+    - assets/images/kids/wudu/
     - assets/google_logo.png
     - assets/market/
     - assets/images/
