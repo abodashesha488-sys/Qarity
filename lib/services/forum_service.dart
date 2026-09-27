@@ -3,24 +3,29 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import '../core/utils/notification_deeplink.dart';
 import '../models/data_models.dart';
 import 'cache_service.dart';
 import 'notification_inbox_service.dart';
 import 'notification_service.dart';
 import 'remote_push_service.dart';
 
+/// توصيل إشعار الإعجاب لصاحب المنشور. قابل للحقن في الاختبارات؛ الإنتاج
+/// يستخدم عامل Vercel عبر `RemotePushService.notifyLikeOwner` (admin SDK
+/// يتجاوز قواعد الأمان، ويتحقق أن المُرسل داخل likedBy فعلًا).
+typedef LikeNotifier = Future<void> Function({
+  required String collection,
+  required String itemId,
+});
+
 class ForumService {
-  ForumService([FirebaseFirestore? firestore, NotificationInboxService? inbox])
-      : _firestore = firestore ?? FirebaseFirestore.instance,
-        _inboxOverride = inbox;
+  ForumService([
+    FirebaseFirestore? firestore,
+    LikeNotifier? likeNotifier,
+  ])  : _firestore = firestore ?? FirebaseFirestore.instance,
+        _likeNotifier = likeNotifier ?? RemotePushService.notifyLikeOwner;
 
   final FirebaseFirestore _firestore;
-  final NotificationInboxService? _inboxOverride;
-
-  /// صندوق الوارد العام قابل للتبديل في الاختبارات (Firestore وهمي).
-  NotificationInboxService get _inbox =>
-      _inboxOverride ?? NotificationInboxService.instance;
+  final LikeNotifier _likeNotifier;
 
   Stream<List<ForumPost>> getPostsStream({int? limit}) {
     Query<Map<String, dynamic>> query = _firestore
@@ -88,7 +93,6 @@ class ForumService {
     final postRef = _firestore.collection('forum_posts').doc(postId);
     var newlyLiked = false;
     var ownerUid = '';
-    var excerpt = '';
 
     await _firestore.runTransaction((tx) async {
       final post = await tx.get(postRef);
@@ -107,52 +111,27 @@ class ForumService {
       if (!wasLiked) {
         newlyLiked = true;
         ownerUid = (post.data()?['userId'] ?? '').toString();
-        final title = (post.data()?['title'] ?? '').toString().trim();
-        final content = (post.data()?['content'] ?? '').toString().trim();
-        final source = title.isNotEmpty ? title : content;
-        excerpt = source.length > 60 ? '${source.substring(0, 60)}…' : source;
       }
     });
 
     if (newlyLiked) {
       await _notifyPostOwnerOfLike(
-          postId: postId, ownerUid: ownerUid, excerpt: excerpt, likerUid: userId);
+          postId: postId, ownerUid: ownerUid, likerUid: userId);
     }
   }
 
-  /// إشعار إعجاب يصل صاحب المنشور فعلًا: صندوق الوارد الداخلي (يعمل على كل
-  /// المنصات) + FCM مباشر لجهازه إن كان له توكن. تتجاهل إعجاب الذات.
+  /// يوصّل إشعار الإعجاب لصاحب المنشور عبر عامل Vercel. قواعد Firestore
+  /// ترفض أن يكتب مستخدم إشعاراً موجّهاً لآخر، لذا التوصيل كله خادمي (admin
+  /// SDK يتجاوز القواعد، ويتحقق من وجود المُعجب في likedBy). تتجاهل الإعجاب
+  /// الذاتي محلياً (والخادم يتحقق منها أيضاً كحماية مزدوجة) وتتجاهل المنشور
+  /// بلا مالك. الإشعار اختياري: فشله لا يكسر الإعجاب نفسه.
   Future<void> _notifyPostOwnerOfLike(
       {required String postId,
       required String ownerUid,
-      required String excerpt,
       required String likerUid}) async {
     if (ownerUid.isEmpty || ownerUid == likerUid) return;
-    const title = '💗 إعجاب جديد';
-    final body =
-        excerpt.isEmpty ? 'أعجب أحدهم بمنشورك' : 'أعجب أحدهم بمنشورك: $excerpt';
     try {
-      await _inbox.push(
-        userId: ownerUid,
-        title: title,
-        body: body,
-        route:
-            NotificationDeepLink.encode('/forum/detail', 'forum_posts', postId),
-        kind: 'like',
-      );
-      final udoc =
-          await _firestore.collection('users').doc(ownerUid).get();
-      final token = udoc.data()?['fcmToken'] as String?;
-      if (token != null && token.isNotEmpty) {
-        unawaited(RemotePushService.sendToDevice(
-          fcmToken: token,
-          title: title,
-          body: body,
-          route: '/forum/detail',
-          collection: 'forum_posts',
-          itemId: postId,
-        ));
-      }
+      await _likeNotifier(collection: 'forum_posts', itemId: postId);
     } catch (_) {
       // الإشعار اختياري: لا يكسر الإعجاب نفسه
     }
