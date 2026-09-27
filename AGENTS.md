@@ -352,5 +352,27 @@ lib/
 The app is deployed on Firebase Hosting:
 - URL: https://abudshisha.web.app
 
+### One-command publish (`sync.ps1`)
+نشر كامل في خطوة واحدة: جودة → رفع → بناء APK → تحديث Firestore.
+```
+.\sync.ps1 -Message "fix: ..." -ReleaseNotes "نص التحديث للمستخدم"
+```
+- **Stage 1a** quality gates: `flutter analyze` (إلزامي، `-SkipAnalyze` للتجاوز) و
+  `flutter test` (`-SkipTests` للتجاوز).
+- **Stage 1b** git: يستثني دائمًا `.kilo`/`.kilocode` من المنطقة المؤقتة ويرفض
+  الرفع إذا تبقّى منها ملف. لا يستخدم pull/merge/rebase/reset/checkout على عملك
+  المحلي أبدًا (LOCAL = SOURCE OF TRUTH).
+- **Stage 2+3** يشغّل workflow `release-apk.yml` (`workflow_dispatch` عبر GitHub API
+  بالتوكن من `git credential fill`)، يبني APK موقّعًا، ينشئ GitHub Release، ويحدّث
+  `app_version/current` في Firestore. خرج التوكن الوحيد: exit 2 (توكن/workflow)،
+  exit 3 (لم يُعثر على التشغيل/انتهت المهلة)، exit 4 (فشل البناء).
+- **بعد كل نشر** يضيف الـ workflow التزامَي `chore: bump/update version` على GitHub،
+  فالنشر التالي يكون متباعدًا (diverged) — مرّر `-AllowPullWorkflow` في النشر
+  التالي ليعيد بناء عملك المحلي فوقهما (rebase آمن، ملفاتهما منفصلة عن عملك).
+  `-SkipRelease` لرفع الكود فقط. `-ForceRemote` لاستبدال تاريخ GitHub (يسأل YES).
+- مقارنات التاريخ في السكربت تُجرى عبر `[datetime]::UtcNow.Ticks` وليس عوامل
+  `-lt/-ge` على `DateTime` مباشرة (PS 5.1 يرمي `NotIComparable` على مقارنة
+  `Get-Date).ToUniversalTime()`).
+
 ## Last Updated
-2026-09-27T20:55:00+03:00
+2026-09-27T22:50:00+03:00
