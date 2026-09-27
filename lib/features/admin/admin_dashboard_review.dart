@@ -28,12 +28,10 @@ class _ReviewPage extends StatefulWidget {
   State<_ReviewPage> createState() => _ReviewPageState();
 }
 
-class _ReviewPageState extends State<_ReviewPage> {
+class _ReviewPageState extends State<_ReviewPage> with _ReviewBulkMixin {
   bool _pendingOnly = true;
   final _search = TextEditingController();
   String _sortBy = 'newest'; // newest, oldest, title
-  final Set<String> _selectedIds = {};
-  bool _isSelectionMode = false;
 
   // تثبيت الـStream لكل (مجموعة، وضع) — إعادة إنشائه مع كل ضغطة كتابة
   Stream<List<Map<String, dynamic>>>? _itemsStream;
@@ -60,150 +58,19 @@ class _ReviewPageState extends State<_ReviewPage> {
       widget.cats.firstWhere((c) => c.collection == widget.selected,
           orElse: () => widget.cats.first);
 
-  void _toggleSelection(String id) {
-    setState(() {
-      if (_selectedIds.contains(id)) {
-        _selectedIds.remove(id);
-        if (_selectedIds.isEmpty) _isSelectionMode = false;
-      } else {
-        _selectedIds.add(id);
-        _isSelectionMode = true;
-      }
-    });
-  }
-
-  void _clearSelection() {
-    setState(() {
-      _selectedIds.clear();
-      _isSelectionMode = false;
-    });
-  }
-
-  Future<void> _bulkAction(String action) async {
-    if (_selectedIds.isEmpty) return;
-
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-            'تأكيد ${action == 'approve' ? 'الموافقة' : action == 'reject' ? 'الرفض' : 'الحذف'} الجماعي'),
-        content: Text(
-            'سيتم ${action == 'approve' ? 'الموافقة على' : action == 'reject' ? 'رفض' : 'حذف'} ${_selectedIds.length} عنصر. هل أنت متأكد؟'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('إلغاء')),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(
-                backgroundColor: action == 'delete' ? Colors.red : null),
-            child: Text(action == 'approve'
-                ? 'موافقة'
-                : action == 'reject'
-                    ? 'رفض'
-                    : 'حذف'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm != true) return;
-
-    if (!mounted) return;
-    final notes = action == 'reject'
-        ? await widget.notesProvider(context, isReject: true)
-        : null;
-    if (action == 'reject' && (notes == null || notes.isEmpty)) return;
-
-    for (final id in _selectedIds) {
-      try {
-        if (widget.cats.any((c) =>
-            c.collection == _cat.collection &&
-            c.collection == 'seller_requests')) {
-          if (action == 'approve') {
-            await widget.onAction(_cat.collection, id, 'approve');
-          } else if (action == 'reject') {
-            await widget.onAction(_cat.collection, id, 'reject');
-          } else {
-            await widget.onAction(_cat.collection, id, 'delete');
-          }
-        } else {
-          switch (action) {
-            case 'approve':
-              await widget.onAction(_cat.collection, id, 'approve');
-              break;
-            case 'reject':
-              await widget.onAction(_cat.collection, id, 'reject');
-              break;
-            case 'delete':
-              await widget.onAction(_cat.collection, id, 'delete');
-              break;
-          }
-        }
-      } catch (_) {}
-    }
-
-    _clearSelection();
-    widget.onItemChanged();
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Column(
       children: [
-        // ── عنوان الصفحة ─────────────────────────────────
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topRight,
-              end: Alignment.bottomLeft,
-              colors: [
-                _cat.color.withValues(alpha: 0.08),
-                _cat.color.withValues(alpha: 0.03),
-              ],
-            ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: _cat.color,
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: _cat.color.withValues(alpha: 0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: Icon(_cat.icon, color: Colors.white, size: 24),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'مراجعة ${_cat.label}',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    Text(
-                      _pendingOnly ? 'عرض العناصر المعلقة فقط' : 'عرض جميع العناصر',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+        // ── عنوان الصفحة الموحّد ─────────────────────────────────
+        _PageHeader(
+          icon: _cat.icon,
+          title: 'مراجعة ${_cat.label}',
+          subtitle: _pendingOnly ? 'عرض العناصر المعلقة فقط' : 'عرض جميع العناصر',
+          color: _cat.color,
+          count: _pendingOnly ? (widget.pendingCounts[_cat.collection] ?? 0) : null,
+          countLabel: 'معلّق',
         ),
 
         // ── شريط الفئات المحسّن ─────────────────────────────────
@@ -254,8 +121,8 @@ class _ReviewPageState extends State<_ReviewPage> {
                     color: theme.colorScheme.outlineVariant
                         .withValues(alpha: 0.2))),
           ),
-          child: _isSelectionMode
-              ? _buildSelectionToolbar(theme)
+          child: isSelectionMode
+              ? buildSelectionToolbar(theme)
               : _buildMainToolbar(theme),
         ),
 
@@ -340,11 +207,11 @@ class _ReviewPageState extends State<_ReviewPage> {
                   onAction: widget.onAction,
                   busyActions: widget.busyActions,
                   onChanged: widget.onItemChanged,
-                  isSelected: _selectedIds.contains(items[i]['id']),
-                  onSelectionChanged: _isSelectionMode
-                      ? (v) => _toggleSelection(items[i]['id'])
+                  isSelected: selectedIds.contains(items[i]['id']),
+                  onSelectionChanged: isSelectionMode
+                      ? (v) => toggleSelection(items[i]['id'])
                       : null,
-                  selectionMode: _isSelectionMode,
+                  selectionMode: isSelectionMode,
                 ),
               );
             },
@@ -463,7 +330,7 @@ class _ReviewPageState extends State<_ReviewPage> {
           child: IconButton(
             icon:
                 Icon(Icons.checklist_rounded, color: theme.colorScheme.primary),
-            onPressed: () => setState(() => _isSelectionMode = true),
+            onPressed: () => setState(() => isSelectionMode = true),
           ),
         ),
         const SizedBox(width: 4),
@@ -491,63 +358,6 @@ class _ReviewPageState extends State<_ReviewPage> {
       default:
         return 'الأحدث';
     }
-  }
-
-  Widget _buildSelectionToolbar(ThemeData theme) {
-    return Row(
-      children: [
-        Text('${_selectedIds.length} محدد',
-            style: theme.textTheme.titleSmall
-                ?.copyWith(fontWeight: FontWeight.w800)),
-        const SizedBox(width: 12),
-        Expanded(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                _buildBulkActionBtn(context, 'موافقة', Icons.check_rounded,
-                    const Color(0xFF6F4E37), () => _bulkAction('approve')),
-                const SizedBox(width: 8),
-                _buildBulkActionBtn(context, 'رفض', Icons.close_rounded,
-                    Colors.orange, () => _bulkAction('reject')),
-                const SizedBox(width: 8),
-                _buildBulkActionBtn(context, 'حذف', Icons.delete_rounded,
-                    Colors.red, () => _bulkAction('delete')),
-                const SizedBox(width: 8),
-                _buildBulkActionBtn(context, 'إلغاء', Icons.clear_rounded,
-                    Colors.grey, _clearSelection),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBulkActionBtn(BuildContext context, String label, IconData icon,
-      Color color, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 16, color: color),
-            const SizedBox(width: 6),
-            Text(label,
-                style: TextStyle(
-                    fontWeight: FontWeight.w800, color: color, fontSize: 12)),
-          ],
-        ),
-      ),
-    );
   }
 }
 

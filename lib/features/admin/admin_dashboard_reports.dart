@@ -56,45 +56,14 @@ class _ReportsPageState extends State<_ReportsPage> {
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                // عنوان الصفحة
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF6F4E37), Color(0xFF8B6347)],
-                          ),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: const Icon(Icons.assessment_rounded,
-                            color: Colors.white, size: 24),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'التقارير والإحصائيات',
-                              style: theme.textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                            Text(
-                              'عرض شامل لأداء التطبيق',
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                // عنوان الصفحة الموحّد
+                const _PageHeader(
+                  icon: Icons.assessment_rounded,
+                  title: 'التقارير والإحصائيات',
+                  subtitle: 'عرض شامل لأداء التطبيق',
+                  color: Color(0xFF6F4E37),
                 ),
+                const SizedBox(height: 20),
 
                 // ملخص عام
                 _buildSummaryCards(theme),
@@ -429,19 +398,157 @@ class _ReportsPageState extends State<_ReportsPage> {
     );
   }
 
-  Future<void> _exportToExcel() async {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-          content: Text('جاري تطوير ميزة تصدير Excel...'),
-          backgroundColor: Color(0xFF6F4E37)),
-    );
+  Future<void> _exportToJson() async {
+    if (_reportData.isEmpty) {
+      _snack('لا توجد بيانات للتصدير');
+      return;
+    }
+    try {
+      final payload = {
+        'exportedAt': DateTime.now().toIso8601String(),
+        'statistics': _reportData['stats'] ?? {},
+        'pendingCounts': _reportData['pendingCounts'] ?? {},
+        'activeUsers': _reportData['activeUsers'] ?? 0,
+        'topProducts': _reportData['topProducts'] ?? [],
+        'occasionsStats': _reportData['recentOccasions'] ?? [],
+        'serviceRequests': _reportData['serviceRequests'] ?? [],
+      };
+      final jsonStr = const JsonEncoder.withIndent('  ').convert(payload);
+      final output = await FilePicker.saveFile(
+        dialogTitle: 'حفظ ملف JSON',
+        fileName: 'report_export_${DateTime.now().millisecondsSinceEpoch}.json',
+        type: FileType.custom,
+        allowedExtensions: ['json'],
+        bytes: utf8.encode(jsonStr),
+      );
+      if (output != null) {
+        await SharePlus.instance.share(ShareParams(
+            files: [XFile(output.toString())], text: 'تصدير التقارير JSON'));
+        _snack('تم تصدير JSON بنجاح');
+      }
+    } catch (e) {
+      _snack('خطأ في التصدير: $e');
+    }
   }
 
-  Future<void> _exportToJson() async {
+  Future<void> _exportToExcel() async {
+    if (_reportData.isEmpty) {
+      _snack('لا توجد بيانات للتصدير');
+      return;
+    }
+    try {
+      final excel = Excel.createExcel();
+
+      // شيت ملخص الإحصائيات
+      final summary = excel['الملخص'];
+      _writeRow(summary, 0, ['المؤشر', 'القيمة'], bold: true);
+      final stats = (_reportData['stats'] as Map).cast<String, dynamic>();
+      final pending =
+          (_reportData['pendingCounts'] as Map).cast<String, dynamic>();
+      final rows = <List<String>>[
+        ['المستخدمون النشطون', '${_reportData['activeUsers'] ?? 0}'],
+        ['إجمالي المحتوى', '${stats.values.fold<int>(0, (p, e) => p + ((e as num?)?.toInt() ?? 0))}'],
+        ['بانتظار المراجعة', '${pending.values.fold<int>(0, (p, e) => p + ((e as num?)?.toInt() ?? 0))}'],
+        ...stats.entries.map((e) => [_statLabel(e.key), '${e.value}']),
+        ...pending.entries.map((e) => ['بانتظار: ${_statLabel(e.key)}', '${e.value}']),
+      ];
+      for (int i = 0; i < rows.length; i++) {
+        _writeRow(summary, i + 1, rows[i]);
+      }
+      summary.setColumnWidth(0, 30.0);
+      summary.setColumnWidth(1, 16.0);
+
+      // شيت أفضل المنتجات (العمود الرابع: الإعجابات — `views` حقل الأخبار لا المنتجات)
+      final products = excel['المنتجات'];
+      _writeRow(products, 0,
+          ['المنتج', 'السعر', 'البائع', 'الإعجابات'], bold: true);
+      final top = (_reportData['topProducts'] as List?)?.cast<Map>();
+      if (top != null && top.isNotEmpty) {
+        for (int i = 0; i < top.length; i++) {
+          final p = top[i];
+          _writeRow(products, i + 1, [
+            '${p['name'] ?? 'بدون اسم'}',
+            '${p['price'] ?? 0}',
+            '${p['sellerName'] ?? ''}',
+            '${p['likes'] ?? 0}',
+          ]);
+        }
+        for (int c = 0; c < 4; c++) {
+          products.setColumnWidth(c, 24.0);
+        }
+      } else {
+        _writeRow(products, 1, ['لا توجد منتجات', '', '', '']);
+      }
+
+      excel.delete('Sheet1');
+
+      final fileBytes = excel.encode();
+      if (fileBytes == null) throw Exception('فشل في إنشاء ملف Excel');
+
+      final output = await FilePicker.saveFile(
+        dialogTitle: 'حفظ ملف Excel',
+        fileName: 'report_export_${DateTime.now().millisecondsSinceEpoch}.xlsx',
+        type: FileType.custom,
+        allowedExtensions: ['xlsx'],
+        bytes: Uint8List.fromList(fileBytes),
+      );
+
+      if (output != null) {
+        await SharePlus.instance.share(ShareParams(
+            files: [XFile(output.toString())], text: 'تصدير التقارير Excel'));
+        _snack('تم تصدير Excel بنجاح');
+      }
+    } catch (e) {
+      _snack('خطأ في التصدير: $e');
+    }
+  }
+
+  void _writeRow(dynamic sheet, int rowIndex, List<String> values,
+      {bool bold = false}) {
+    for (int c = 0; c < values.length; c++) {
+      final cell =
+          sheet.cell(CellIndex.indexByColumnRow(columnIndex: c, rowIndex: rowIndex));
+      cell.value = TextCellValue(values[c]);
+      cell.cellStyle = CellStyle(
+        bold: bold,
+        horizontalAlign: HorizontalAlign.Center,
+        backgroundColorHex: bold ? '#6F4E37' as dynamic : null,
+        fontColorHex: bold ? '#FFFFFF' as dynamic : null,
+      );
+    }
+  }
+
+  String _statLabel(String key) {
+    const labels = {
+      'users': 'المستخدمون',
+      'news': 'الأخبار',
+      'market_products': 'المنتجات',
+      'obituaries': 'التعازي',
+      'occasions': 'المناسبات',
+      'forum_posts': 'منشورات المنتدى',
+      'shops': 'المحلات',
+      'service_providers': 'دليل الخدمات',
+      'phone_directory': 'دليل الهاتف',
+      'lost_items': 'المفقودات',
+      'village_clinics': 'عيادات القرية',
+      'pharmacies': 'الصيدليات',
+      'medical_labs': 'معامل التحاليل',
+      'blood_donors': 'المتبرعون بالدم',
+      'blood_requests': 'طلبات الدم',
+      'medical_center_clinics': 'عيادات المركز',
+      'seller_requests': 'طلبات البائعية',
+      'service_requests': 'طلبات الخدمة',
+      'buy_requests': 'الطلبات الشرائية',
+      'donations': 'التبرعات',
+    };
+    return labels[key] ?? key;
+  }
+
+  void _snack(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-          content: Text('جاري تطوير ميزة تصدير JSON...'),
-          backgroundColor: Color(0xFF6F4E37)),
+      SnackBar(
+          content: Text(message), backgroundColor: const Color(0xFF6F4E37)),
     );
   }
 

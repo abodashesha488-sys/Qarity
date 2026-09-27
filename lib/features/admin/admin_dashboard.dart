@@ -34,6 +34,7 @@ part 'admin_dashboard_overview.dart';
 part 'admin_dashboard_promos.dart';
 part 'admin_dashboard_reports.dart';
 part 'admin_dashboard_review.dart';
+part 'admin_dashboard_review_bulk.dart';
 part 'admin_dashboard_users.dart';
 
 /// لوحة تحكم احترافية محسّنة

@@ -7,30 +7,19 @@ class _AlertsControlPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return ListView(
       padding: const EdgeInsets.all(16),
-      children: [
-        Row(
-          children: [
-            const Icon(Icons.warning_amber_rounded,
-                color: Color(0xFFC62828), size: 22),
-            const SizedBox(width: 8),
-            Text('إدارة التنبيهات العاجلة',
-                style: theme.textTheme.titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w900)),
-          ],
+      children: const [
+        _PageHeader(
+          icon: Icons.warning_amber_rounded,
+          title: 'إدارة التنبيهات العاجلة',
+          subtitle: 'التنبيه يظهر أعلى شاشة كل المستخدمين فورًا. «إعادة إرسال الإشعار» هي وحدها ما يوقظ هواتف الأهالي — التعديل العادي صامت.',
+          color: Color(0xFFC62828),
         ),
-        const SizedBox(height: 4),
-        Text(
-          'التنبيه يظهر أعلى شاشة كل المستخدمين فورًا. «إعادة إرسال الإشعار» هي وحدها ما يوقظ هواتف الأهالي — التعديل العادي صامت.',
-          style: theme.textTheme.labelMedium
-              ?.copyWith(color: theme.colorScheme.onSurfaceVariant, height: 1.6),
-        ),
-        const SizedBox(height: 14),
-        const _ManagedAlertCard(),
-        const SizedBox(height: 14),
-        const _ManagedAlertCard(breaking: true),
+        SizedBox(height: 14),
+        _ManagedAlertCard(),
+        SizedBox(height: 14),
+        _ManagedAlertCard(breaking: true),
       ],
     );
   }

@@ -38,10 +38,14 @@ class _OverviewPageState extends State<_OverviewPage> {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // بطاقة الترحيب
-          _WelcomeHeader(
-            isLoading: widget.isLoading,
-            users: widget.stats['users'] ?? 0,
+          // ترويسة الصفحة الموحّدة (شارة المعلّقات تجذب الانتباه للمراجعة)
+          _PageHeader(
+            icon: Icons.space_dashboard_rounded,
+            title: 'نظرة عامة',
+            subtitle: '${widget.stats['users'] ?? 0} مستخدم نشط',
+            color: const Color(0xFF6F4E37),
+            count: widget.totalPending > 0 ? widget.totalPending : null,
+            countLabel: 'معلّق',
           ),
           const SizedBox(height: 20),
 
@@ -77,114 +81,6 @@ class _OverviewPageState extends State<_OverviewPage> {
           _RecentActivitySection(),
           const SizedBox(height: 24),
         ],
-      ),
-    );
-  }
-}
-
-/// بطاقة الترحيب
-class _WelcomeHeader extends StatelessWidget {
-  const _WelcomeHeader({required this.isLoading, required this.users});
-  final bool isLoading;
-  final int users;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final hour = DateTime.now().hour;
-    String greeting = 'مساء الخير';
-    if (hour < 12) {
-      greeting = 'صباح الخير';
-    } else if (hour < 18) {
-      greeting = 'مساء الخير';
-    } else {
-      greeting = 'مساء الخير';
-    }
-
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(
-            color: theme.colorScheme.primary.withValues(alpha: 0.2), width: 1.5),
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          gradient: LinearGradient(
-            begin: Alignment.topRight,
-            end: Alignment.bottomLeft,
-            colors: [
-              const Color(0xFF6F4E37).withValues(alpha: 0.05),
-              const Color(0xFF6F4E37).withValues(alpha: 0.02),
-            ],
-          ),
-        ),
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.topRight,
-                  end: Alignment.bottomLeft,
-                  colors: [
-                    Color(0xFF6F4E37),
-                    Color(0xFF8B6347),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF6F4E37).withValues(alpha: 0.3),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: const Icon(Icons.dashboard_rounded,
-                  color: Colors.white, size: 32),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    greeting,
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      fontSize: 13,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'لوحة تحكم قَرية',
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 20,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '$users مستخدم نشط',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (isLoading)
-              const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(strokeWidth: 2.5),
-              ),
-          ],
-        ),
       ),
     );
   }
@@ -668,7 +564,14 @@ class _QuickActionCard extends StatelessWidget {
 }
 
 /// قسم النشاط الحديث
-class _RecentActivitySection extends StatelessWidget {
+class _RecentActivitySection extends StatefulWidget {
+  @override
+  State<_RecentActivitySection> createState() => _RecentActivitySectionState();
+}
+
+class _RecentActivitySectionState extends State<_RecentActivitySection> {
+  final AdminService _service = AdminService();
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -705,31 +608,132 @@ class _RecentActivitySection extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 20),
-                child: Column(
-                  children: [
-                    Icon(Icons.timeline_rounded,
-                        size: 48,
-                        color: theme.colorScheme.onSurfaceVariant
-                            .withValues(alpha: 0.3)),
-                    const SizedBox(height: 12),
-                    Text(
-                      'سيتم عرض النشاط الأخير هنا',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+            const SizedBox(height: 12),
+            StreamBuilder<List<Map<String, dynamic>>>(
+              stream: _service.getActivityLogStream(limit: 10),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 20),
+                    child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                  );
+                }
+                final items = snapshot.data ?? const [];
+                if (items.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Center(
+                      child: Text(
+                        'لا يوجد نشاط بعد',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ),
-                  ],
-                ),
-              ),
+                  );
+                }
+                return Column(
+                  children: items.map((e) => _ActivityTile(entry: e)).toList(),
+                );
+              },
             ),
           ],
         ),
       ),
     );
+  }
+}
+
+class _ActivityTile extends StatelessWidget {
+  const _ActivityTile({required this.entry});
+  final Map<String, dynamic> entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final action = (entry['action'] ?? '').toString();
+    final spec = _activitySpec(action);
+    final title = (entry['targetTitle'] ?? entry['targetCollection'] ?? '—').toString();
+    final collection = (entry['targetCollection'] ?? '').toString();
+    final when = _formatWhen(entry['createdAt']);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: spec.color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(spec.icon, color: spec.color, size: 16),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${spec.label} • $title',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  [if (collection.isNotEmpty) collection, if (when.isNotEmpty) when]
+                      .join(' • '),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static ({IconData icon, String label, Color color}) _activitySpec(
+      String action) {
+    switch (action) {
+      case 'approve':
+        return (icon: Icons.check_circle_rounded, label: 'موافقة', color: const Color(0xFF2E7D32));
+      case 'reject':
+        return (icon: Icons.cancel_rounded, label: 'رفض', color: const Color(0xFFE65100));
+      case 'delete':
+        return (icon: Icons.delete_rounded, label: 'حذف', color: const Color(0xFFC62828));
+      case 'publish':
+        return (icon: Icons.publish_rounded, label: 'نشر', color: const Color(0xFF1565C0));
+      case 'set_role':
+        return (icon: Icons.shield_rounded, label: 'تعيين دور', color: const Color(0xFF6A1B9A));
+      case 'remove_admin':
+        return (icon: Icons.remove_circle_rounded, label: 'إزالة صلاحية', color: const Color(0xFFEF6C00));
+      case 'enable_user':
+        return (icon: Icons.person_add_rounded, label: 'تفعيل حساب', color: const Color(0xFF00838F));
+      case 'disable_user':
+        return (icon: Icons.person_remove_rounded, label: 'تعطيل حساب', color: const Color(0xFF616161));
+      default:
+        return (icon: Icons.history_rounded, label: action.isEmpty ? 'نشاط' : action, color: const Color(0xFF6F4E37));
+    }
+  }
+
+  static String _formatWhen(dynamic value) {
+    final dt = value is Timestamp
+        ? value.toDate()
+        : (value is DateTime ? value : null);
+    if (dt == null) return '';
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 1) return 'الآن';
+    if (diff.inHours < 1) return 'منذ ${diff.inMinutes} دقيقة';
+    if (diff.inDays < 1) return 'منذ ${diff.inHours} ساعة';
+    if (diff.inDays < 30) return 'منذ ${diff.inDays} يوم';
+    return '${dt.day}/${dt.month}/${dt.year}';
   }
 }
 

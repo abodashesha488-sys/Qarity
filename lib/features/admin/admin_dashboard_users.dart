@@ -164,61 +164,13 @@ class _UsersPageState extends State<_UsersPage> {
 
         return Column(
           children: [
-            // ── عنوان الصفحة ──────────────────────────────────
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topRight,
-                  end: Alignment.bottomLeft,
-                  colors: [
-                    Colors.teal.withValues(alpha: 0.05),
-                    Colors.teal.withValues(alpha: 0.02),
-                  ],
-                ),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Colors.teal, Color(0xFF00897B)],
-                      ),
-                      borderRadius: BorderRadius.circular(14),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.teal.withValues(alpha: 0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(Icons.people_rounded,
-                        color: Colors.white, size: 24),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'إدارة المستخدمين',
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                        Text(
-                          '${all.length} مستخدم مسجل',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+            // ── عنوان الصفحة الموحّد ─────────────────────────────
+            _PageHeader(
+              icon: Icons.people_rounded,
+              title: 'إدارة المستخدمين',
+              subtitle: '${all.length} مستخدم مسجل',
+              color: Colors.teal,
+              count: all.length,
             ),
 
             // ── إحصائيات سريعة ──────────────────────────────────
@@ -1242,7 +1194,7 @@ class _UsersPageState extends State<_UsersPage> {
       case 'seller':
         return 'فتح متجر ورفع منتجات بعدد صور حسب نوعه';
       case 'moderator':
-        return 'مراجعة محتوى الأخبار/السوق/حوارات المندرة';
+        return 'دور غير مفعّل حالياً — يحتفظ بالتسمية فقط';
       case 'medical_admin':
         return 'إدارة المركز الطبي ومراجعة العيادات/الصيدليات/بنك الدم';
       case 'admin':

@@ -72,15 +72,13 @@ class _BroadcastPageState extends State<_BroadcastPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('إرسال إشعار إذاعي لجميع المستخدمين',
-              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900)),
-          const SizedBox(height: 8),
-          Text(
-            'سيصل هذا الإشعار لجميع مستخدمي التطبيق فوراً، حتى لو كان التطبيق مغلقاً. '
-            'استخدمه للإعلانات المهمة والتنبيهات العاجلة.',
-            style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+          const _PageHeader(
+            icon: Icons.campaign_rounded,
+            title: 'إرسال إشعار إذاعي لجميع المستخدمين',
+            subtitle: 'سيصل هذا الإشعار لجميع مستخدمي التطبيق فوراً، حتى لو كان التطبيق مغلقاً. استخدمه للإعلانات المهمة والتنبيهات العاجلة.',
+            color: Color(0xFF1565C0),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
           Card(
             elevation: 0,
             shape: RoundedRectangleBorder(

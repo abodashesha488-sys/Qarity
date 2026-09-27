@@ -90,36 +90,52 @@ class _PromosPageState extends State<_PromosPage> {
             return const Center(child: CircularProgressIndicator());
           }
           final promos = snap.data!;
-          if (promos.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.campaign_rounded,
-                      size: 56,
-                      color: QurityAppBar.headerColor.withValues(alpha: 0.35)),
-                  const SizedBox(height: 10),
-                  Text(
-                    'لا توجد إعلانات بعد\nأنشئ إعلاناً اختيارياً وخصّص شاشته ومدته',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant),
-                  ),
-                ],
+          return Column(
+            children: [
+              _PageHeader(
+                icon: Icons.campaign_rounded,
+                title: 'الإعلانات الدعائية',
+                subtitle: 'الإعلانات المنبثقة التي تظهر لكل المستخدمين في الشاشات المختارة',
+                color: QurityAppBar.headerColor,
+                count: promos.isNotEmpty ? promos.where((p) => p.isActive).length : null,
+                countLabel: 'نشط',
               ),
-            );
-          }
-          return ListView.separated(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 96),
-            itemCount: promos.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
-            itemBuilder: (context, i) => _PromoCard(
-              promo: promos[i],
-              onEdit: () => _openForm(promos[i]),
-              onDelete: () => _delete(promos[i]),
-              onToggle: (v) => _toggleActive(promos[i], v),
-            ),
+              if (promos.isEmpty)
+                Expanded(
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.campaign_rounded,
+                            size: 56,
+                            color: QurityAppBar.headerColor.withValues(alpha: 0.35)),
+                        const SizedBox(height: 10),
+                        Text(
+                          'لا توجد إعلانات بعد\nأنشئ إعلاناً اختيارياً وخصّص شاشته ومدته',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                Expanded(
+                  child: ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 96),
+                    itemCount: promos.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    itemBuilder: (context, i) => _PromoCard(
+                      promo: promos[i],
+                      onEdit: () => _openForm(promos[i]),
+                      onDelete: () => _delete(promos[i]),
+                      onToggle: (v) => _toggleActive(promos[i], v),
+                    ),
+                  ),
+                ),
+            ],
           );
         },
       ),
