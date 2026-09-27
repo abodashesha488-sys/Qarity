@@ -109,17 +109,6 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
     });
   }
 
-  Future<void> _removeProfileImage() async {
-    setState(() {
-      _profileBytes = null;
-    });
-    try {
-      if (_user?.photoUrl != null) {
-        await _imageUploadService.deleteImage(_user!.photoUrl!);
-      }
-    } catch (_) {}
-  }
-
   Future<void> _saveProfile() async {
     final name = _nameController.text.trim();
     final phone = _phoneController.text.trim();
@@ -165,6 +154,8 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       await NotificationService.subscribeToTopic('village_medical');
       await NotificationService.subscribeToTopic('village_alerts');
       await NotificationService.subscribeToTopic('village_breaking');
+      // قناة الإشعارات الإذاعية العامة (تبث من لوحة التحكم لكل الأهالي).
+      await NotificationService.subscribeToTopic('all_users');
 
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, AppRoutes.home);

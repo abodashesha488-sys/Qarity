@@ -157,6 +157,109 @@ export default async function handler(req, res) {
     }
   }
 
+  // ────────── وضع إخطار مستخدمٍ بمستخدم (إعجاب المنتدى) ──────────
+  // مسموح لأي مستخدم مسجّل دخول، لكن التحقق والكتابة خادميّان بالكامل:
+  //   1) القائمة البيضاء: مسار إعجاب المنتدى فقط (قابلة للتوسعة).
+  //   2) قراءة المنشور واستخراج صاحبه — لا يقبل العميل أي uid هدف.
+  //   3) رفض إن لم يكن المرسل داخل likedBy (يستحيل استهداف مستخدم عشوائي).
+  //   4) كبح 60 ثانية لكل ثنائي (مرسل، صاحب) لمنع like/unlike cycling.
+  //   5) كتابة الصندوق + FCM عبر admin SDK (يتجاوز قواعد الأمان بأمان).
+  if (body.action === 'user_notify') {
+    const collection = String(body.collection || '');
+    const itemId = String(body.itemId || '').slice(0, 40);
+    if (collection !== 'forum_posts' || !itemId) {
+      return res.status(400).json({ error: 'invalid_user_notify_target' });
+    }
+    try {
+      const postSnap = await admin
+        .firestore()
+        .collection(collection)
+        .doc(itemId)
+        .get();
+      if (!postSnap.exists) {
+        return res.status(404).json({ error: 'post_not_found' });
+      }
+      const postData = postSnap.data() || {};
+      const ownerUid = String(postData.userId || '');
+      const likedBy = Array.isArray(postData.likedBy) ? postData.likedBy : [];
+      // إعجاب ذاتي بهدوء (الخادم يتحقق منها أيضًا كحماية مزدوجة).
+      if (!ownerUid || ownerUid === decoded.uid) {
+        return res.status(200).json({ ok: true, skipped: 'self' });
+      }
+      // التحقق الحاسم: لا إشعار إلا لمن أحبّ المنشور فعلًا.
+      if (!likedBy.includes(decoded.uid)) {
+        return res.status(403).json({ error: 'not_liked' });
+      }
+      // الكبح: نافذة 60 ثانية لكل ثنائي (مرسل، صاحب) لكل منشور.
+      const rlRef = admin
+        .firestore()
+        .collection('push_rate')
+        .doc(`user_notify_${decoded.uid}_${ownerUid}_${itemId}`);
+      const now = Date.now();
+      const rlSnap = await rlRef.get();
+      if (rlSnap.exists && now - (rlSnap.data()?.at ?? 0) < 60 * 1000) {
+        return res.status(200).json({ ok: true, throttled: true });
+      }
+      await rlRef.set({ at: now, by: decoded.uid }, { merge: true });
+
+      // النصوص تُبنى خادميًا (لا يقبل العميل نصًا) — نفس منطق العميل السابق.
+      const titleTxt = String(postData.title || '').trim();
+      const contentTxt = String(postData.content || '').trim();
+      const source = titleTxt || contentTxt;
+      const excerpt = source.length > 60 ? `${source.substring(0, 60)}…` : source;
+      const title = '💗 إعجاب جديد';
+      const notifBody = excerpt
+        ? `أعجب أحدهم بمنشورك: ${excerpt}`
+        : 'أعجب أحدهم بمنشورك';
+      const route = `/forum/detail|forum_posts|${itemId}`;
+
+      // كتابة الصندوق عبر admin SDK (يتجاوز القواعد) بمعرّف حتمي:
+      // إعجاب واحد لكل ثنائي (منشور، مُعجب) — الإعادة تُعيد الكتابة فتُنعش
+      // الشارة بدل تكديس مستندات بلا حدود.
+      await admin
+        .firestore()
+        .collection('notifications')
+        .doc(`like_${itemId}_${decoded.uid}`)
+        .set({
+          userId: ownerUid,
+          title,
+          body: notifBody,
+          route,
+          kind: 'like',
+          read: false,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+      // FCM لجهاز صاحب المنشور إن وُجد توكن مسجّل.
+      const userSnap = await admin
+        .firestore()
+        .collection('users')
+        .doc(ownerUid)
+        .get();
+      const token = userSnap.exists ? userSnap.data()?.fcmToken : undefined;
+      if (token) {
+        await admin.messaging().send({
+          token,
+          notification: { title, body: notifBody },
+          data: {
+            route: '/forum/detail',
+            itemId,
+            collection: 'forum_posts',
+          },
+          android: {
+            priority: 'high',
+            notification: { channelId: 'qarity_channel', color: '#6F4E37' },
+          },
+        });
+      }
+      return res.status(200).json({ ok: true });
+    } catch (e) {
+      return res
+        .status(500)
+        .json({ error: 'user_notify_failed', message: e?.message });
+    }
+  }
+
   // 2) التحقق من الدور من Firestore (المصدر الوحيد للحقيقة)
   let role;
   try {
@@ -177,7 +280,7 @@ export default async function handler(req, res) {
   if ((!topic && !token) || !title) {
     return res.status(400).json({ error: 'topic_or_token_and_title_required' });
   }
-  if (topic && !/^village_[a-z_]+$/.test(String(topic))) {
+  if (topic && !/^(village_[a-z_]+|all_users)$/.test(String(topic))) {
     return res.status(400).json({ error: 'invalid_topic' });
   }
 

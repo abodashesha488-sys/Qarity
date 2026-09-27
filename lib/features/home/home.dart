@@ -51,6 +51,9 @@ class _HomeScreenState extends State<HomeScreen> {
       if (prefs.getBool('notif_pref_village_breaking') ?? true) {
         unawaited(NotificationService.subscribeToTopic('village_breaking'));
       }
+      // قناة الإشعارات الإذاعية العامة: تُعاد عند كل فتح لمن أكمل ملفه قبل
+      // إضافتها (الاشتراك الأولي يتم في complete_profile).
+      unawaited(NotificationService.subscribeToTopic('all_users'));
     });
   }
 

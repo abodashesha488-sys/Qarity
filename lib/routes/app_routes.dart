@@ -248,7 +248,10 @@ obituariesAdd: (_) => const AddObituaryScreen(),
       final docId = args['docId'] as String? ?? '';
       final item = args['item'] as Map<String, dynamic>? ?? <String, dynamic>{};
       return _buildSlideRoute(
-        (_) => AdminEditScreen(collection: collection, docId: docId, item: item),
+        (_) => AdminGuard(
+          child: AdminEditScreen(
+              collection: collection, docId: docId, item: item),
+        ),
         settings,
       );
     }
@@ -258,7 +261,10 @@ obituariesAdd: (_) => const AddObituaryScreen(),
       final docId = args['docId'] as String? ?? '';
       final item = args['item'] as Map<String, dynamic>? ?? <String, dynamic>{};
       return _buildSlideRoute(
-        (_) => AdminDetailScreen(collection: collection, docId: docId, item: item),
+        (_) => AdminGuard(
+          child: AdminDetailScreen(
+              collection: collection, docId: docId, item: item),
+        ),
         settings,
       );
     }
@@ -379,11 +385,15 @@ obituariesAdd: (_) => const AddObituaryScreen(),
   }
 }
 
-/// 🔐 Admin Authentication Wrapper
-/// 
-/// Protects admin routes with authentication and role verification.
-class AdminScreenWrapper extends StatelessWidget {
-  const AdminScreenWrapper({super.key});
+/// 🔐 بوابة صلاحية موحّدة لكل مسارات الإدارة.
+///
+/// تتحقق من تسجيل الدخول ثم من دور المستخدم (المدير العام عبر Firestore، أو
+/// بريد المالك الاختياري عبر dart-define). تُغلّف أي شاشة إدارية حتى لا يصل
+/// إليها مستخدم عادي بإدراج المسار مباشرةً — القواعد في Firestore هي خط
+/// الدفاع الأخير، لكن لا داعي لعرض واجهات الإدارة وأزرارها لغير المخوّلين.
+class AdminGuard extends StatelessWidget {
+  const AdminGuard({super.key, required this.child});
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
@@ -412,14 +422,13 @@ class AdminScreenWrapper extends StatelessWidget {
 
             // بريد المالك للاختصار عبر dart-define (اختياري). بدون ضبطه،
             // الوصول للأدمن يتطلب users/{uid}.role == 'admin' في Firestore.
-            final bootstrapEmail = AppConfig.bootstrapAdminEmail.trim().toLowerCase();
+            final bootstrapEmail =
+                AppConfig.bootstrapAdminEmail.trim().toLowerCase();
             final isAdminByEmail = bootstrapEmail.isNotEmpty &&
                 user.email != null &&
                 user.email!.toLowerCase().trim() == bootstrapEmail;
 
-            final isAdminByRole = adminSnapshot.data == true;
-
-            final isAdmin = isAdminByEmail || isAdminByRole;
+            final isAdmin = isAdminByEmail || adminSnapshot.data == true;
 
             if (!isAdmin) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -438,10 +447,21 @@ class AdminScreenWrapper extends StatelessWidget {
               );
             }
 
-            return const AdminDashboardScreen();
+            return child;
           },
         );
       },
     );
   }
+}
+
+/// 🔐 Admin Authentication Wrapper
+///
+/// Protects admin routes with authentication and role verification.
+class AdminScreenWrapper extends StatelessWidget {
+  const AdminScreenWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context) =>
+      const AdminGuard(child: AdminDashboardScreen());
 }

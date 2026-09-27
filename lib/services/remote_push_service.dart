@@ -111,8 +111,46 @@ class RemotePushService {
     } catch (_) {}
   }
 
-  /// إرسال إشعار إذاعي (Broadcast) لجميع المستخدمين — يرسل عبر Topic "all_users".
-  /// يمكن للأدمن استخدامه لإرسال إعلانات عاجلة لجميع المستخدمين حتى لو كان التطبيق مغلقاً.
+  /// إخطار صاحب محتوى قابل للإعجاب (حالياً: منشور المنتدى) بأن أحدهم أعجب
+  /// به. التوصيل بالكامل **خادمي** عبر عامل Vercel: قواعد Firestore ترفض
+  /// أن يكتب مستخدم إشعاراً موجّهاً لمستخدم آخر، فالعامل يستخدم admin SDK
+  /// الذي يتجاوزها بأمان، ويتحقق أن المُرسل فعلًا داخل `likedBy` قبل الإرسال.
+  /// best-effort: لا يعطّل الإعجاب أبدًا، ويتخطى بهدوء دون مستخدم مسجّل.
+  static Future<void> notifyLikeOwner({
+    required String collection,
+    required String itemId,
+  }) async {
+    if (endpoint.isEmpty || !kUserNotifyCollections.contains(collection)) {
+      return;
+    }
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+      final idToken = await user.getIdToken();
+      if (idToken == null || idToken.isEmpty) return;
+      await http
+          .post(
+            Uri.parse(endpoint),
+            headers: {
+              'content-type': 'application/json',
+              'authorization': 'Bearer $idToken',
+            },
+            body: jsonEncode({
+              'action': 'user_notify',
+              'collection': collection,
+              'itemId': itemId,
+            }),
+          )
+          .timeout(const Duration(seconds: 8));
+    } catch (_) {
+      // الإشعارات أفضل-جهد
+    }
+  }
+
+  /// إرسال إشعار إذاعي (Broadcast) لجميع المستخدمين — يرسل عبر Topic
+  /// "all_users" الذي يشترك فيه كل مستخدم عند إكمال ملفه وعند فتح الرئيسية.
+  /// يمكن للأدمن استخدامه لإرسال إعلانات عاجلة لجميع المستخدمين حتى لو كان
+  /// التطبيق مغلقاً.
   static Future<void> broadcastToAllUsers({
     required String title,
     required String body,
@@ -185,6 +223,12 @@ const Set<String> kAdminNotifyCollections = {
   'blood_donors',
   'medical_center_clinics',
   'village_contributions',
+};
+
+/// المجموعات التي يدعمها إجراء `user_notify` (إخطار صاحب المحتوى بالإعجاب).
+/// قائمة بيضاء مزدوجة (عميل + خادم) كطبقة دفاع إضافية — مثل kAdminNotifyCollections.
+const Set<String> kUserNotifyCollections = {
+  'forum_posts',
 };
 
 /// خريطة مجموعة Firestore → Topic FCM الخاص بها.

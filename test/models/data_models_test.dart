@@ -283,7 +283,7 @@ void main() {
         role: 'admin',
       );
       expect(u.isAdmin, isTrue);
-      expect(u.isModerator, isTrue);
+      expect(u.isAgriculturalAdmin, isTrue);
       final copy = u.copyWith(name: 'جديد');
       expect(copy.name, 'جديد');
       expect(copy.role, 'admin');
@@ -305,7 +305,7 @@ void main() {
       expect(labelFor('unknown'), 'unknown');
     });
 
-    test('medical_admin counts as moderator but not as admin', () {
+    test('medical_admin is not admin; agricultural_admin is its own scope', () {
       final u = UserModel(
         id: 'u',
         name: 'ن',
@@ -314,8 +314,10 @@ void main() {
         role: 'medical_admin',
       );
       expect(u.isAdmin, isFalse);
-      expect(u.isModerator, isTrue);
-      expect(u.canAccessAdminPanel, isTrue);
+      expect(u.isAgriculturalAdmin, isFalse);
+      final agr = u.copyWith(role: 'agricultural_admin');
+      expect(agr.isAgriculturalAdmin, isTrue);
+      expect(agr.isAdmin, isFalse);
     });
   });
 }
