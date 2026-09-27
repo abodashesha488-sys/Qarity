@@ -40,8 +40,9 @@ class _AgricultureContentPanelState extends State<AgricultureContentPanel> {
     try {
       final snapshot = await _service.userRole(uid);
       if (mounted) {
-        setState(() =>
-            _canEdit = snapshot == 'admin' || snapshot == 'agricultural_admin');
+        setState(() => _canEdit = snapshot == 'admin' ||
+            snapshot == 'assistant_admin' ||
+            snapshot == 'agricultural_admin');
       }
     } catch (_) {}
   }

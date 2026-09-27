@@ -9,25 +9,65 @@ import '../../core/widgets/shared_cards.dart';
 import '../../models/data_models.dart';
 import '../../services/news_service.dart';
 import '../../services/share_service.dart';
+import '../../services/user_service.dart';
 import '../../widgets/qurity_app_bar.dart';
 
 /// Full article reader. Opened with a [NewsItem] as route argument
 /// (see `AppRoutes.newsView`).
 class NewsViewScreen extends StatefulWidget {
-  const NewsViewScreen({super.key});
+  const NewsViewScreen({super.key, this.newsService});
+
+  /// اختياري لحقن Firestore في الاختبارات (الإنتاج يتركه فارغاً).
+  final NewsService? newsService;
 
   @override
   State<NewsViewScreen> createState() => _NewsViewScreenState();
 }
 
 class _NewsViewScreenState extends State<NewsViewScreen> {
-  final NewsService _newsService = NewsService();
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  late final NewsService _newsService = widget.newsService ?? NewsService();
   final TextEditingController _commentController = TextEditingController();
 
   NewsItem? _news;
   bool _isSendingComment = false;
   bool _viewCounted = false;
+  String _currentUserId = '';
+  String _currentUserName = '';
+  // الأدمن العام أو الأدمن المساعد فقط يستطيع حذف التعليقات.
+  bool _canModerate = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+  }
+
+  Future<void> _loadUser() async {
+    // FirebaseAuth قد لا يكون مهيّأً (اختبارات بدون Firebase) — نتجاهله بأمان.
+    User? fetched;
+    try {
+      fetched = FirebaseAuth.instance.currentUser;
+    } catch (_) {
+      return;
+    }
+    final user = fetched;
+    if (user == null) return;
+    try {
+      final model = await UserService().getUser(user.uid);
+      if (!mounted) return;
+      setState(() {
+        _currentUserId = user.uid;
+        _currentUserName = model?.name ?? user.displayName ?? 'مستخدم';
+        _canModerate = model?.isAdmin ?? false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _currentUserId = user.uid;
+        _currentUserName = user.displayName ?? 'مستخدم';
+      });
+    }
+  }
 
   @override
   void didChangeDependencies() {
@@ -58,13 +98,12 @@ class _NewsViewScreenState extends State<NewsViewScreen> {
   }
 
   Future<void> _toggleLike(NewsItem item) async {
-    final user = _auth.currentUser;
-    if (user == null) {
+    if (_currentUserId.isEmpty) {
       AppHelpers.showSnackBar(context, 'يجب تسجيل الدخول للإعجاب', isError: true);
       return;
     }
     try {
-      await _newsService.toggleNewsLike(item.id, user.uid);
+      await _newsService.toggleNewsLike(item.id, _currentUserId);
     } catch (e) {
       if (mounted) AppHelpers.showSnackBar(context, 'تعذر تحديث الإعجاب', isError: true);
     }
@@ -73,18 +112,52 @@ class _NewsViewScreenState extends State<NewsViewScreen> {
   Future<void> _addComment(NewsItem item) async {
     final text = _commentController.text.trim();
     if (text.isEmpty) return;
-    if (_auth.currentUser == null) {
+    if (_currentUserId.isEmpty) {
       AppHelpers.showSnackBar(context, 'يجب تسجيل الدخول لإضافة تعليق', isError: true);
       return;
     }
     setState(() => _isSendingComment = true);
     try {
-      await _newsService.addComment(item.id, _auth.currentUser?.displayName ?? 'زائر', text);
+      await _newsService.addComment(item.id, _currentUserName, text);
       _commentController.clear();
     } catch (e) {
       if (mounted) AppHelpers.showSnackBar(context, 'تعذر إضافة التعليق', isError: true);
     } finally {
       if (mounted) setState(() => _isSendingComment = false);
+    }
+  }
+
+  /// حذف تعليق — للأدمن/الأدمن المساعد فقط، مع تأكيد مسبق.
+  Future<void> _deleteComment(NewsItem item, String commentId, String text) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('حذف التعليق'),
+        content: Text(
+          text.isEmpty
+              ? 'هل أنت متأكد من حذف هذا التعليق؟'
+              : 'هل أنت متأكد من حذف التعليق: "$text"؟',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('حذف'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await _newsService.deleteComment(item.id, commentId);
+    } catch (e) {
+      if (mounted) {
+        AppHelpers.showSnackBar(context, 'تعذر حذف التعليق — تحقق من الصلاحيات', isError: true);
+      }
     }
   }
 
@@ -265,25 +338,13 @@ class _NewsViewScreenState extends State<NewsViewScreen> {
           ],
         ),
         const SizedBox(height: 20),
-        Row(
-          children: [
-            Container(
-              width: 4,
-              height: 20,
-              decoration: BoxDecoration(color: theme.colorScheme.primary, borderRadius: BorderRadius.circular(2)),
-            ),
-            const SizedBox(width: 10),
-            Text('التعليقات', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
-          ],
-        ),
-        const SizedBox(height: 12),
-        _buildComments(theme, item),
+        _buildCommentsSection(theme, item),
       ],
     );
   }
 
   Widget _buildLikeButton(ThemeData theme, NewsItem item) {
-    final userId = _auth.currentUser?.uid;
+    final userId = _currentUserId;
     return StreamBuilder<({int likes, bool isLiked})>(
       initialData: (likes: item.likes, isLiked: false),
       stream: item.id.isEmpty
@@ -326,78 +387,127 @@ class _NewsViewScreenState extends State<NewsViewScreen> {
     );
   }
 
-  Widget _buildComments(ThemeData theme, NewsItem item) {
+  Widget _buildCommentsSection(ThemeData theme, NewsItem item) {
     if (item.id.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 24),
-        child: EmptyContentState(icon: Icons.chat_bubble_outline_rounded, message: 'لا توجد تعليقات'),
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _commentsHeader(theme, 0),
+          const SizedBox(height: 12),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: EmptyContentState(icon: Icons.chat_bubble_outline_rounded, message: 'لا توجد تعليقات'),
+          ),
+        ],
       );
     }
-
     return StreamBuilder<QuerySnapshot>(
       stream: _newsService.getCommentsStream(item.id),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 24),
-            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-          );
-        }
-        if (snapshot.hasError) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24),
-            child: Center(
-              child: Text(
-                'تعذر تحميل التعليقات',
-                style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.error),
-              ),
-            ),
-          );
-        }
-        final comments = snapshot.data?.docs ?? const [];
-        if (comments.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 24),
-            child: EmptyContentState(icon: Icons.chat_bubble_outline_rounded, message: 'لا توجد تعليقات بعد'),
-          );
-        }
-        return ListView.separated(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: comments.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 10),
-          itemBuilder: (context, index) {
-            final data = comments[index].data() as Map<String, dynamic>? ?? <String, dynamic>{};
-            final photo = (data['userPhotoUrl'] as String? ?? '').trim();
-            return InfoListCard(
-              padding: const EdgeInsets.all(14),
-              leading: CircleAvatar(
-                radius: 18,
-                backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
-                backgroundImage:
-                    photo.isNotEmpty ? CachedNetworkImageProvider(photo) : null,
-                child: photo.isEmpty
-                    ? Icon(Icons.person_rounded, size: 16, color: theme.colorScheme.primary)
-                    : null,
-              ),
-              title: data['userName'] as String? ?? 'زائر',
-              subtitleBuilder: (context) => [
-                Text(
-                  data['userName'] as String? ?? 'زائر',
-                  style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+        // العدّاد يُؤخذ من عدد التعليقات الفعلية (مصدر الحقيقة) لا من حقل مخزّن.
+        final count = snapshot.data?.docs.length ?? 0;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _commentsHeader(theme, count),
+            const SizedBox(height: 12),
+            if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+              )
+            else if (snapshot.hasError)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Center(
+                  child: Text(
+                    'تعذر تحميل التعليقات',
+                    style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.error),
+                  ),
                 ),
-                const SizedBox(height: 4),
-                Text(data['text'] as String? ?? '', style: theme.textTheme.bodySmall),
-              ],
-            );
-          },
+              )
+            else if (count == 0)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: EmptyContentState(icon: Icons.chat_bubble_outline_rounded, message: 'لا توجد تعليقات بعد'),
+              )
+            else
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: count,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (context, index) {
+                  final doc = snapshot.data!.docs[index];
+                  final data = doc.data() as Map<String, dynamic>? ?? <String, dynamic>{};
+                  final photo = (data['userPhotoUrl'] as String? ?? '').trim();
+                  final commentText = data['text'] as String? ?? '';
+                  return InfoListCard(
+                    padding: const EdgeInsets.all(14),
+                    leading: CircleAvatar(
+                      radius: 18,
+                      backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
+                      backgroundImage:
+                          photo.isNotEmpty ? CachedNetworkImageProvider(photo) : null,
+                      child: photo.isEmpty
+                          ? Icon(Icons.person_rounded, size: 16, color: theme.colorScheme.primary)
+                          : null,
+                    ),
+                    title: data['userName'] as String? ?? 'زائر',
+                    subtitleBuilder: (context) => [
+                      Text(
+                        data['userName'] as String? ?? 'زائر',
+                        style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+                      ),
+                      const SizedBox(height: 4),
+                      // نص التعليق باللون الأزرق
+                      Text(
+                        commentText,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: const Color(0xFF1565C0),
+                          height: 1.5,
+                        ),
+                      ),
+                    ],
+                    trailing: _canModerate
+                        ? IconButton(
+                            tooltip: 'حذف التعليق',
+                            icon: Icon(Icons.delete_outline_rounded,
+                                size: 20, color: theme.colorScheme.error),
+                            onPressed: () =>
+                                _deleteComment(item, doc.id, commentText),
+                          )
+                        : null,
+                  );
+                },
+              ),
+          ],
         );
       },
     );
   }
 
+  Widget _commentsHeader(ThemeData theme, int count) {
+    return Row(
+      children: [
+        Container(
+          width: 4,
+          height: 20,
+          decoration: BoxDecoration(color: theme.colorScheme.primary, borderRadius: BorderRadius.circular(2)),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            'التعليقات ($count)',
+            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildCommentBar(ThemeData theme, NewsItem item) {
-    final isLoggedIn = _auth.currentUser != null;
+    final isLoggedIn = _currentUserId.isNotEmpty;
     return Container(
       padding: EdgeInsets.only(
         left: 12,

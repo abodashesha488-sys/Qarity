@@ -68,15 +68,21 @@ class UserModel implements BaseModel {
   @override
   DateTime? get createdAt => joinDate;
 
-  bool get isAdmin => role == 'admin';
+  /// أي مدير: المدير العام أو الأدمن المساعد (assistant_admin) — نفس
+  /// صلاحيات إدارة المحتوى، ويتطابق مع isAdmin() في firestore.rules.
+  bool get isAdmin => role == 'admin' || role == 'assistant_admin';
+
+  /// المدير العام فقط — صلاحياته الحصرية كحماية حسابه من الحذف/التنحية.
+  bool get isGeneralAdmin => role == 'admin';
 
   bool get isAgriculturalAdmin =>
-      role == 'agricultural_admin' || role == 'admin';
+      role == 'agricultural_admin' || role == 'admin' || role == 'assistant_admin';
 
   static const Map<String, String> _roleLabels = {
     'user': 'مستخدم',
     'seller': 'بائع',
     'moderator': 'مشرف',
+    'assistant_admin': 'أدمن مساعد',
     'medical_admin': 'مدير المركز الطبي',
     'agricultural_admin': 'مدير الخدمات الزراعية',
     'admin': 'مدير عام',

@@ -48,6 +48,7 @@ class RoleStyle {
   static Color? adminNameColor(String? role) {
     switch (role) {
       case 'admin':
+      case 'assistant_admin':
         return adminGold;
       case 'medical_admin':
         return medicalTeal;
@@ -63,6 +64,8 @@ class RoleStyle {
     switch (role) {
       case 'admin':
         return Icons.workspace_premium_rounded; // تاج ذهبي
+      case 'assistant_admin':
+        return Icons.shield_rounded; // درع ذهبي (أدمن مساعد)
       case 'medical_admin':
       case 'moderator':
         return Icons.star_rounded; // نجمة
@@ -74,6 +77,7 @@ class RoleStyle {
   static Color badgeColor(String? role) {
     switch (role) {
       case 'admin':
+      case 'assistant_admin':
         return gold;
       case 'medical_admin':
         return medicalTeal;

@@ -20,6 +20,11 @@ class _UsersPageState extends State<_UsersPage> {
   String _filter = 'all';
   String _sortBy = 'newest'; // newest, oldest, name, email
 
+  /// دور المستخدم الحالي من نفس سترة المستخدمين (يُحدّث في build).
+  /// يحدد ما إذا كان حساب المدير العام محمياً من إجراءاته: الأدمن المساعد
+  /// لا يستطيع حذف أو تنحية المدير العام (انظر _isProtectedGeneralAdmin).
+  String _actingRole = '';
+
   static const _roleOptions = <String, (String, Color, IconData)>{
     'user': ('مستخدم', Colors.teal, Icons.person_rounded),
     'seller': ('بائع', Colors.deepPurple, Icons.store_rounded),
@@ -33,6 +38,11 @@ class _UsersPageState extends State<_UsersPage> {
       'مدير الخدمات الزراعية',
       Color(0xFF558B2F),
       Icons.agriculture_rounded
+    ),
+    'assistant_admin': (
+      'أدمن مساعد',
+      Color(0xFF6A1B9A),
+      Icons.shield_rounded
     ),
     'admin': (
       'مدير عام',
@@ -48,6 +58,7 @@ class _UsersPageState extends State<_UsersPage> {
     ('moderator', 'مشرفون'),
     ('medical_admin', 'مدير طبي'),
     ('agricultural_admin', 'مدير زراعي'),
+    ('assistant_admin', 'أدمن مساعد'),
     ('admin', 'مدراء'),
     ('disabled', 'معطّلون'),
   ];
@@ -82,6 +93,16 @@ class _UsersPageState extends State<_UsersPage> {
         }
         final all = snapshot.data ?? [];
 
+        // دور المستخدم الحالي لمعرفة الحسابات المحمية من إجراءاته
+        // (الأدمن المساعد لا يمسّ حساب المدير العام).
+        _actingRole = '';
+        for (final u in all) {
+          if (u['id'] == widget.currentUid) {
+            _actingRole = (u['role'] ?? '').toString();
+            break;
+          }
+        }
+
         // ترتيب: الأحدث أولاً افتراضياً
         all.sort((a, b) {
           final da = a['createdAt'] as DateTime?;
@@ -115,8 +136,12 @@ class _UsersPageState extends State<_UsersPage> {
 
         final sellers = all.where((u) => (u['role'] ?? '') == 'seller').length;
         final managers = all
-            .where((u) => ['admin', 'medical_admin', 'moderator']
-                .contains((u['role'] ?? '')))
+            .where((u) => [
+                  'admin',
+                  'assistant_admin',
+                  'medical_admin',
+                  'moderator'
+                ].contains((u['role'] ?? '')))
             .length;
         final disabled = all.where((u) => u['isActive'] == false).length;
 
@@ -766,15 +791,20 @@ class _UsersPageState extends State<_UsersPage> {
                       ],
                     ),
                   ),
-                  // زر الإدارة + السهم
+                  // زر الإدارة + السهم (معطّل لحساب المدير العام إذا لم
+                  // يكن المستخدم الحالي مديراً عاماً)
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
                         icon: Icon(Icons.shield_rounded,
                             color: theme.colorScheme.primary, size: 20),
-                        tooltip: 'إدارة الحساب',
-                        onPressed: () => _manage(context, u),
+                        tooltip: _isProtectedGeneralAdmin(role)
+                            ? 'محمي — للمدير العام فقط'
+                            : 'إدارة الحساب',
+                        onPressed: _isProtectedGeneralAdmin(role)
+                            ? null
+                            : () => _manage(context, u),
                       ),
                       Icon(Icons.chevron_left_rounded,
                           color: theme.colorScheme.onSurfaceVariant),
@@ -848,6 +878,7 @@ class _UsersPageState extends State<_UsersPage> {
     final sellerType = (u['sellerType'] ?? '').toString();
     final disabled = u['isActive'] == false;
     final isSelf = u['id'] == widget.currentUid;
+    final protected = _isProtectedGeneralAdmin(role);
 
     showModalBottomSheet(
       context: context,
@@ -930,7 +961,7 @@ class _UsersPageState extends State<_UsersPage> {
                     Icons.g_mobiledata_rounded),
               const Divider(),
               // أزرار الإجراءات
-              if (!isSelf) ...[
+              if (!isSelf && !protected) ...[
                 Row(
                   children: [
                     Expanded(
@@ -965,6 +996,20 @@ class _UsersPageState extends State<_UsersPage> {
                   ],
                 ),
               ],
+              if (!isSelf && protected)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                        color: Colors.red.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(10)),
+                    child: const Text(
+                        'هذا حساب المدير العام — لا يمكنك إدارته أو حذفه.',
+                        style: TextStyle(
+                            fontSize: 12, fontWeight: FontWeight.w700)),
+                  ),
+                ),
             ],
           ),
         ),
@@ -1022,6 +1067,8 @@ class _UsersPageState extends State<_UsersPage> {
     final active = u['isActive'] != false;
     final isSelf = uid == widget.currentUid;
     final service = widget.adminService;
+    // حساب المدير العام محمي: الأدمن المساعد لا يغيّر دوره ولا يحذفه.
+    final protected = _isProtectedGeneralAdmin(role);
 
     await showModalBottomSheet<void>(
       context: context,
@@ -1073,6 +1120,20 @@ class _UsersPageState extends State<_UsersPage> {
                             fontSize: 12, fontWeight: FontWeight.w700)),
                   ),
                 ),
+              if (protected)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                        color: Colors.red.withValues(alpha: 0.10),
+                        borderRadius: BorderRadius.circular(10)),
+                    child: const Text(
+                        'هذا حساب المدير العام — لا يمكنك تغيير دوره أو حذفه.',
+                        style: TextStyle(
+                            fontSize: 12, fontWeight: FontWeight.w700)),
+                  ),
+                ),
               const Divider(height: 1),
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 14, 20, 4),
@@ -1084,7 +1145,7 @@ class _UsersPageState extends State<_UsersPage> {
               RadioGroup<String>(
                 groupValue: role,
                 onChanged: (v) async {
-                  if (v == null || isSelf) return;
+                  if (v == null || isSelf || protected) return;
                   await service.setUserRole(uid, v);
                   if (ctx.mounted) Navigator.pop(ctx);
                   _snack('تم تعيين الدور: ${_roleOptions[v]!.$1}');
@@ -1155,7 +1216,7 @@ class _UsersPageState extends State<_UsersPage> {
                         : 'معطّل — لن يستطيع الوصول',
                     style: const TextStyle(fontSize: 11)),
                 value: active && !isSelf,
-                onChanged: isSelf
+                onChanged: isSelf || protected
                     ? null
                     : (v) async {
                         await service.setUserActive(uid, v);
@@ -1165,7 +1226,7 @@ class _UsersPageState extends State<_UsersPage> {
                       },
               ),
               const Divider(),
-              if (!isSelf)
+              if (!isSelf && !protected)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
                   child: OutlinedButton.icon(
@@ -1187,14 +1248,22 @@ class _UsersPageState extends State<_UsersPage> {
     );
   }
 
-  static String _roleHint(String role) {
-    switch (role) {
+  /// حساب المدير العام محمي من المستخدم الحالي فقط إذا كان هذا المستخدم
+  /// أدمن مساعد (ليس مديراً عاماً) — لا يستطيع حذفه أو تنحية دوره. القواعد
+  /// في firestore.rules ترفض العملية من الخادم أيضاً كحماية مزدوجة.
+  bool _isProtectedGeneralAdmin(String targetRole) {
+    return targetRole == 'admin' && _actingRole == 'assistant_admin';
+  }
+
+  static String _roleHint(String role) {    switch (role) {
       case 'user':
         return 'تصفح وإضافة محتوى (يُنشر بعد الموافقة)';
       case 'seller':
         return 'فتح متجر ورفع منتجات بعدد صور حسب نوعه';
       case 'moderator':
         return 'دور غير مفعّل حالياً — يحتفظ بالتسمية فقط';
+      case 'assistant_admin':
+        return 'نفس صلاحيات المدير العام، لكن لا يستطيع حذف (أو تنحية) المدير العام';
       case 'medical_admin':
         return 'إدارة المركز الطبي ومراجعة العيادات/الصيدليات/بنك الدم';
       case 'admin':
@@ -1215,6 +1284,11 @@ class _UsersPageState extends State<_UsersPage> {
 
   Future<void> _confirmDelete(
       BuildContext context, String uid, String name) async {
+    // حماية مزدوجة: القواعد ترفض ذلك أيضاً، لكن نمنع المحاولة هنا برسالة واضحة.
+    if (_isProtectedGeneralAdmin('admin')) {
+      _snack('لا يمكنك حذف حساب المدير العام');
+      return;
+    }
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(

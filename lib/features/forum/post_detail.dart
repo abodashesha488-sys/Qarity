@@ -10,21 +10,24 @@ import '../../models/data_models.dart';
 import '../../services/forum_service.dart';
 import '../../services/share_service.dart';
 import '../../services/user_service.dart';
-import '../../widgets/common_appbar_actions.dart';
 import '../../widgets/qurity_app_bar.dart';
 
 /// Forum post reader. Opened with a [ForumPost] as route argument
 /// (see `AppRoutes.forumPostDetail`).
 class ForumPostDetailScreen extends StatefulWidget {
-  const ForumPostDetailScreen({super.key});
+  const ForumPostDetailScreen({super.key, this.forumService});
+
+  /// اختياري لحقن Firestore في الاختبارات (الإنتاج يتركه فارغاً).
+  final ForumService? forumService;
 
   @override
   State<ForumPostDetailScreen> createState() => _ForumPostDetailScreenState();
 }
 
 class _ForumPostDetailScreenState extends State<ForumPostDetailScreen> {
-  final ForumService _forumService = ForumService();
-  final UserService _userService = UserService();
+  late final ForumService _forumService = widget.forumService ?? ForumService();
+  // كسول: لا يُنشأ إلا عند الحاجة (الاختبارات بدون Firebase لا تلمسه).
+  late final UserService _userService = UserService();
   final TextEditingController _commentController = TextEditingController();
 
   ForumPost? _post;
@@ -32,6 +35,8 @@ class _ForumPostDetailScreenState extends State<ForumPostDetailScreen> {
   String _currentUserName = '';
   bool _isSendingComment = false;
   bool _viewCounted = false;
+  // الأدمن العام أو الأدمن المساعد فقط يستطيع حذف التعليقات.
+  bool _canModerate = false;
 
   @override
   void initState() {
@@ -57,7 +62,14 @@ class _ForumPostDetailScreenState extends State<ForumPostDetailScreen> {
   }
 
   Future<void> _loadUser() async {
-    final user = FirebaseAuth.instance.currentUser;
+    // FirebaseAuth قد لا يكون مهيّأً (اختبارات بدون Firebase) — نتجاهله بأمان.
+    User? fetched;
+    try {
+      fetched = FirebaseAuth.instance.currentUser;
+    } catch (_) {
+      return;
+    }
+    final user = fetched;
     if (user == null) return;
     try {
       final userModel = await _userService.getUser(user.uid);
@@ -65,6 +77,7 @@ class _ForumPostDetailScreenState extends State<ForumPostDetailScreen> {
       setState(() {
         _currentUserId = user.uid;
         _currentUserName = userModel?.name ?? user.displayName ?? 'مستخدم';
+        _canModerate = userModel?.isAdmin ?? false;
       });
     } catch (_) {
       if (!mounted) return;
@@ -111,6 +124,40 @@ class _ForumPostDetailScreenState extends State<ForumPostDetailScreen> {
     }
   }
 
+  /// حذف تعليق — للأدمن/الأدمن المساعد فقط، مع تأكيد مسبق.
+  Future<void> _deleteComment(ForumPost post, String commentId, String text) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('حذف التعليق'),
+        content: Text(
+          text.isEmpty
+              ? 'هل أنت متأكد من حذف هذا التعليق؟'
+              : 'هل أنت متأكد من حذف التعليق: "$text"؟',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('حذف'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await _forumService.deleteComment(post.id, commentId);
+    } catch (e) {
+      if (mounted) {
+        AppHelpers.showSnackBar(context, 'تعذر حذف التعليق — تحقق من الصلاحيات', isError: true);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -133,7 +180,7 @@ class _ForumPostDetailScreenState extends State<ForumPostDetailScreen> {
                 body: passedPost.content,
               ),
             ),
-          ...CommonAppBarActions.actions(context),
+          // جرس الإشعارات يُضاف تلقائياً من QurityAppBar — لا نكرره هنا.
         ],
       ),
       body: passedPost == null
@@ -378,8 +425,10 @@ class _ForumPostDetailScreenState extends State<ForumPostDetailScreen> {
           itemCount: comments.length,
           separatorBuilder: (_, __) => const SizedBox(height: 10),
           itemBuilder: (context, index) {
-            final data = comments[index].data() as Map<String, dynamic>? ?? <String, dynamic>{};
+            final doc = comments[index];
+            final data = doc.data() as Map<String, dynamic>? ?? <String, dynamic>{};
             final photo = (data['userPhotoUrl'] as String? ?? '').trim();
+            final commentText = data['text'] as String? ?? '';
             return InfoListCard(
               padding: const EdgeInsets.all(14),
               leading: CircleAvatar(
@@ -398,8 +447,24 @@ class _ForumPostDetailScreenState extends State<ForumPostDetailScreen> {
                   style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 4),
-                Text(data['text'] as String? ?? '', style: theme.textTheme.bodySmall),
+                // نص التعليق باللون الأزرق
+                Text(
+                  commentText,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: const Color(0xFF1565C0),
+                    height: 1.5,
+                  ),
+                ),
               ],
+              trailing: _canModerate
+                  ? IconButton(
+                      tooltip: 'حذف التعليق',
+                      icon: Icon(Icons.delete_outline_rounded,
+                          size: 20, color: theme.colorScheme.error),
+                      onPressed: () =>
+                          _deleteComment(post, doc.id, commentText),
+                    )
+                  : null,
             );
           },
         );

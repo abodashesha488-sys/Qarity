@@ -30,7 +30,8 @@ class _AddNewsScreenState extends State<AddNewsScreen> {
   static const List<String> _categories = ['عام', 'ثقافة', 'رياضة', 'مجتمع', 'تعليم', 'اقتصاد'];
 
   String _selectedCategory = 'عام';
-  String? _imageUrl;
+  final List<String> _imageUrls = [];
+  static const int _maxImages = 3;
   bool _isUploading = false;
   bool _isSaving = false;
   String? _authorId;
@@ -65,28 +66,46 @@ class _AddNewsScreenState extends State<AddNewsScreen> {
     }
   }
 
-  Future<void> _pickAndUploadImage() async {
+  Future<void> _pickAndUploadImages() async {
+    final remaining = _maxImages - _imageUrls.length;
+    if (remaining <= 0) {
+      AppHelpers.showSnackBar(context, 'الحد الأقصى $_maxImages صور', isError: true);
+      return;
+    }
     setState(() => _isUploading = true);
     try {
-      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-      if (image == null) {
+      final List<XFile> images =
+          await _picker.pickMultiImage(imageQuality: 85);
+      if (images.isEmpty) {
         if (mounted) setState(() => _isUploading = false);
         return;
       }
-      final bytes = await image.readAsBytes();
-      final url = await ImageUploadService().uploadImage(bytes);
+      // لا نتعدّى الحد الأقصى المسموح
+      final picked = images.take(remaining).toList();
+      final uploaded = <String>[];
+      for (final image in picked) {
+        final bytes = await image.readAsBytes();
+        uploaded.add(await ImageUploadService().uploadImage(bytes));
+      }
       if (!mounted) return;
-      setState(() => _imageUrl = url);
-      AppHelpers.showSnackBar(context, 'تم رفع الصورة بنجاح', isSuccess: true);
+      setState(() => _imageUrls.addAll(uploaded));
+      final skipped = images.length - picked.length;
+      AppHelpers.showSnackBar(
+        context,
+        skipped > 0
+            ? 'تم رفع ${picked.length} صورة (تجاوزت الحد الأقصى $_maxImages)'
+            : 'تم رفع ${picked.length} صورة بنجاح',
+        isSuccess: true,
+      );
     } catch (e) {
       if (!mounted) return;
-      AppHelpers.showSnackBar(context, 'خطأ في رفع الصورة: $e', isError: true);
+      AppHelpers.showSnackBar(context, 'خطأ في رفع الصور: $e', isError: true);
     } finally {
       if (mounted) setState(() => _isUploading = false);
     }
   }
 
-  void _removeImage() => setState(() => _imageUrl = null);
+  void _removeImage(int index) => setState(() => _imageUrls.removeAt(index));
 
   void _showFullScreenImage(BuildContext context, String imageUrl) {
     showDialog<void>(
@@ -139,6 +158,91 @@ class _AddNewsScreenState extends State<AddNewsScreen> {
     );
   }
 
+  Widget _imageTile(BuildContext context, String url, int index) {
+    return Stack(
+      children: [
+        GestureDetector(
+          onTap: () => _showFullScreenImage(context, url),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: CachedNetworkImage(
+              imageUrl: url,
+              width: 108,
+              height: 108,
+              fit: BoxFit.cover,
+              placeholder: (context, url) => Container(
+                width: 108,
+                height: 108,
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+              ),
+              errorWidget: (context, url, error) => Container(
+                width: 108,
+                height: 108,
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                child: const Icon(Icons.broken_image_rounded, color: Colors.grey),
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          top: 6,
+          right: 6,
+          child: Material(
+            color: Colors.black.withValues(alpha: 0.65),
+            shape: const CircleBorder(),
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: _isSaving ? null : () => _removeImage(index),
+              child: const Padding(
+                padding: EdgeInsets.all(5),
+                child: Icon(Icons.close_rounded, size: 16, color: Colors.white),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _addImageTile(ThemeData theme) {
+    return SizedBox(
+      width: 108,
+      height: 108,
+      child: OutlinedButton(
+        onPressed: _isUploading || _isSaving ? null : _pickAndUploadImages,
+        style: OutlinedButton.styleFrom(
+          padding: EdgeInsets.zero,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          side: BorderSide(
+              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6)),
+        ),
+        child: _isUploading
+            ? const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(strokeWidth: 2))
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.add_photo_alternate_rounded,
+                      color: theme.colorScheme.primary, size: 26),
+                  const SizedBox(height: 4),
+                  Text(
+                    'إضافة',
+                    style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: theme.colorScheme.primary),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     if (!await NetworkInfo().isConnected) {
@@ -152,8 +256,8 @@ class _AddNewsScreenState extends State<AddNewsScreen> {
         id: '',
         title: _titleController.text.trim(),
         subtitle: _subtitleController.text.trim(),
-        imageUrl: _imageUrl ?? '',
-        imageUrls: _imageUrl != null ? [_imageUrl!] : const [],
+        imageUrl: _imageUrls.isNotEmpty ? _imageUrls.first : '',
+        imageUrls: List<String>.of(_imageUrls),
         date: DateFormat('yyyy/MM/dd').format(DateTime.now()),
         category: _selectedCategory,
         authorId: _authorId,
@@ -229,83 +333,19 @@ class _AddNewsScreenState extends State<AddNewsScreen> {
                 ),
                 const SizedBox(height: 16),
                 _SectionCard(
-                  title: 'صورة الخبر (اختياري)',
+                  title: 'صور الخبر (حتى $_maxImages صور)',
                   icon: Icons.image_rounded,
                   children: [
-if (_imageUrl != null)
-                        Stack(
-                          children: [
-                            GestureDetector(
-                              onTap: () => _showFullScreenImage(context, _imageUrl!),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(14),
-                                child: CachedNetworkImage(
-                                  imageUrl: _imageUrl!,
-                                  height: 180,
-                                  width: double.infinity,
-                                  fit: BoxFit.cover,
-                                  placeholder: (context, url) => Container(
-                                    height: 180,
-                                    color: theme.colorScheme.surfaceContainerHighest,
-                                    child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                                  ),
-                                  errorWidget: (context, url, error) => Container(
-                                    height: 180,
-                                    color: theme.colorScheme.surfaceContainerHighest,
-                                    child: Icon(Icons.broken_image_rounded, color: theme.colorScheme.onSurfaceVariant),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            Positioned(
-                              top: 8,
-                              right: 8,
-                              child: Material(
-                                color: theme.colorScheme.surface.withValues(alpha: 0.9),
-                                shape: const CircleBorder(),
-                                child: InkWell(
-                                  customBorder: const CircleBorder(),
-                                  onTap: _isSaving ? null : _removeImage,
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(6),
-                                    child: Icon(Icons.close_rounded, size: 18, color: theme.colorScheme.error),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            Positioned(
-                              bottom: 8,
-                              right: 8,
-                              child: Material(
-                                color: Colors.black.withValues(alpha: 0.6),
-                                shape: const CircleBorder(),
-                                child: InkWell(
-                                  customBorder: const CircleBorder(),
-                                  onTap: () => _showFullScreenImage(context, _imageUrl!),
-                                  child: const Padding(
-                                    padding: EdgeInsets.all(6),
-                                    child: Icon(Icons.zoom_in_rounded, size: 18, color: Colors.white),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        )
-                    else
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: _isUploading || _isSaving ? null : _pickAndUploadImage,
-                          icon: _isUploading
-                              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                              : const Icon(Icons.add_photo_alternate_rounded),
-                          label: Text(_isUploading ? 'جاري الرفع...' : 'إضافة صورة'),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 20),
-                            side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6)),
-                          ),
-                        ),
-                      ),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: [
+                        for (int i = 0; i < _imageUrls.length; i++)
+                          _imageTile(context, _imageUrls[i], i),
+                        if (_imageUrls.length < _maxImages)
+                          _addImageTile(theme),
+                      ],
+                    ),
                   ],
                 ),
                 const SizedBox(height: 16),

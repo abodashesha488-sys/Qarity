@@ -13,7 +13,10 @@ import '../../widgets/qurity_app_bar.dart';
 import '../../widgets/qurity_logo.dart';
 
 class NewsScreen extends StatefulWidget {
-  const NewsScreen({super.key});
+  const NewsScreen({super.key, this.newsService});
+
+  /// اختياري لحقن Firestore في الاختبارات (الإنتاج يتركه فارغاً).
+  final NewsService? newsService;
 
   @override
   State<NewsScreen> createState() => _NewsScreenState();
@@ -21,7 +24,7 @@ class NewsScreen extends StatefulWidget {
 
 class _NewsScreenState extends State<NewsScreen>
     with AutomaticKeepAliveClientMixin {
-  final NewsService _newsService = NewsService();
+  late final NewsService _newsService = widget.newsService ?? NewsService();
   final TextEditingController _searchController = TextEditingController();
 
   String _selectedCategory = 'الكل';
@@ -161,7 +164,6 @@ class _NewsScreenState extends State<NewsScreen>
     final filtered = _filter(all);
     final showHero = _selectedCategory == 'الكل' && _searchQuery.isEmpty;
     final featured = showHero && all.isNotEmpty ? all.first : null;
-    final breaking = showHero && all.length > 1 ? all[1] : null;
     final trending = showHero ? _trending(all) : <NewsItem>[];
     final rest = showHero
         ? filtered.where((n) => n.id != featured?.id).toList()
@@ -171,21 +173,15 @@ class _NewsScreenState extends State<NewsScreen>
       physics: const BouncingScrollPhysics(),
       slivers: [
         _buildAppBar(theme),
-        if (breaking != null)
-          SliverToBoxAdapter(child: _BreakingBar(item: breaking)),
         if (featured != null)
           SliverToBoxAdapter(child: _FeaturedHero(item: featured)),
         SliverToBoxAdapter(child: _buildCategoryChips(theme)),
         if (trending.length > 1)
           SliverToBoxAdapter(child: _buildTrending(theme, trending)),
         SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-            child: Text(
-              _selectedCategory == 'الكل' ? 'أحدث الأخبار' : _selectedCategory,
-              style: theme.textTheme.titleMedium
-                  ?.copyWith(fontWeight: FontWeight.w900),
-            ),
+          child: _SectionHeader(
+            title: _selectedCategory == 'الكل' ? 'أحدث الأخبار' : _selectedCategory,
+            count: rest.length,
           ),
         ),
         if (rest.isEmpty)
@@ -207,7 +203,7 @@ class _NewsScreenState extends State<NewsScreen>
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
             sliver: SliverList.separated(
               itemCount: rest.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 14),
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
               itemBuilder: (context, i) =>
                   _NewsCard(item: rest[i], index: i),
             ),
@@ -273,12 +269,12 @@ child: Padding(
 
   Widget _buildCategoryChips(ThemeData theme) {
     return SizedBox(
-      height: 60,
+      height: 58,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         itemCount: _categories.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        separatorBuilder: (_, __) => const SizedBox(width: 9),
         itemBuilder: (context, i) {
           final cat = _categories[i];
           final selected = cat == _selectedCategory;
@@ -287,25 +283,33 @@ child: Padding(
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
                 color: selected
                     ? theme.colorScheme.primary
-                    : theme.colorScheme.surfaceContainerHighest
-                        .withValues(alpha: 0.6),
-                borderRadius: BorderRadius.circular(24),
+                    : theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(20),
                 border: Border.all(
                   color: selected
                       ? theme.colorScheme.primary
                       : theme.colorScheme.outlineVariant
-                          .withValues(alpha: 0.4),
+                          .withValues(alpha: 0.5),
                 ),
+                boxShadow: selected
+                    ? [
+                        BoxShadow(
+                          color: theme.colorScheme.primary.withValues(alpha: 0.25),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ]
+                    : null,
               ),
               child: Row(
                 children: [
                   Icon(
                     _categoryIcons[cat] ?? Icons.label_outline_rounded,
-                    size: 18,
+                    size: 16,
                     color: selected
                         ? Colors.white
                         : theme.colorScheme.onSurfaceVariant,
@@ -334,13 +338,27 @@ child: Padding(
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.fromLTRB(16, 8, 16, 12),
-          child: Text('🔥 الأكثر قراءة',
-              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+          child: Row(
+            children: [
+              const Text('🔥', style: TextStyle(fontSize: 16)),
+              const SizedBox(width: 6),
+              const Text('الأكثر قراءة',
+                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Container(
+                  height: 1.5,
+                  color: theme.colorScheme.outlineVariant
+                      .withValues(alpha: 0.5),
+                ),
+              ),
+            ],
+          ),
         ),
         SizedBox(
-          height: 210,
+          height: 200,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -351,41 +369,49 @@ child: Padding(
               return GestureDetector(
                 onTap: () => _open(n),
                 child: SizedBox(
-                  width: 150,
+                  width: 152,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Category badge at top
-                      if (n.category.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.primary
-                                  .withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(n.category,
-                                style: TextStyle(
-                                    color: theme.colorScheme.primary,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w800)),
-                          ),
-                        ),
                       Expanded(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(14),
-                          child: _thumb(n),
+                        child: Stack(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(14),
+                              child: SizedBox(
+                                width: double.infinity,
+                                child: _thumb(n),
+                              ),
+                            ),
+                            // ترتيب القراءة (رقم الزاوية)
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 7, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.55),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  '#${i + 1}',
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w900),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 8),
                       Text(n.title,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                              fontWeight: FontWeight.w700, fontSize: 12)),
+                              fontWeight: FontWeight.w700, fontSize: 12.5)),
                     ],
                   ),
                 ),
@@ -426,84 +452,6 @@ child: Padding(
   }
 }
 
-// ═══════════════════════ Breaking bar ═══════════════════════
-class _BreakingBar extends StatelessWidget {
-  const _BreakingBar({required this.item});
-  final NewsItem item;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return GestureDetector(
-      onTap: () => Navigator.pushNamed(context, AppRoutes.newsView,
-          arguments: item),
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: const Color(0xFFC62828).withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFC62828).withValues(alpha: 0.3)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFC62828),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: const Text('عاجل',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w900)),
-                ),
-                if (item.category.isNotEmpty) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(item.category,
-                        style: TextStyle(
-                            color: theme.colorScheme.primary,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800)),
-                  ),
-                ],
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(item.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: theme.colorScheme.onSurface,
-                    fontSize: 13)),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                const Spacer(),
-                Icon(Icons.chevron_left_rounded,
-                    size: 20, color: theme.colorScheme.onSurfaceVariant),
-              ],
-            ),
-          ],
-        ),
-      ),
-    ).animate().fadeIn();
-  }
-}
-
 // ═══════════════════════ Featured hero ═══════════════════════
 class _FeaturedHero extends StatelessWidget {
   const _FeaturedHero({required this.item});
@@ -516,10 +464,10 @@ class _FeaturedHero extends StatelessWidget {
       onTap: () => Navigator.pushNamed(context, AppRoutes.newsView,
           arguments: item),
       child: Container(
-        height: 240,
-        margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+        height: 250,
+        margin: const EdgeInsets.fromLTRB(16, 16, 16, 4),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(24),
           child: Stack(
             fit: StackFit.expand,
             children: [
@@ -529,9 +477,11 @@ class _FeaturedHero extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
+                    stops: const [0.0, 0.45, 1.0],
                     colors: [
-                      Colors.transparent,
-                      Colors.black.withValues(alpha: 0.8),
+                      Colors.black.withValues(alpha: 0.25),
+                      Colors.black.withValues(alpha: 0.15),
+                      Colors.black.withValues(alpha: 0.88),
                     ],
                   ),
                 ),
@@ -540,28 +490,31 @@ class _FeaturedHero extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Category badge at top
                       Row(
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.primary,
-                              borderRadius: BorderRadius.circular(8),
+                          if (item.category.isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primary,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(item.category,
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w800)),
                             ),
-                            child: Text(item.category,
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w800)),
-                          ),
                           const SizedBox(width: 8),
+                          const Icon(Icons.star_rounded,
+                              size: 13, color: Color(0xFFFFC107)),
+                          const SizedBox(width: 4),
                           const Text('الخبر الرئيسي',
                               style: TextStyle(
-                                  color: Colors.white70,
+                                  color: Colors.white,
                                   fontSize: 11,
-                                  fontWeight: FontWeight.w700)),
+                                  fontWeight: FontWeight.w800)),
                         ],
                       ),
                       const Spacer(),
@@ -571,16 +524,17 @@ class _FeaturedHero extends StatelessWidget {
                           style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w900,
-                              fontSize: 20,
+                              fontSize: 21,
                               height: 1.25)),
                       const SizedBox(height: 6),
-                      Text(item.subtitle,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.85),
-                              fontSize: 13,
-                              height: 1.4)),
+                      if (item.subtitle.isNotEmpty)
+                        Text(item.subtitle,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.85),
+                                fontSize: 13,
+                                height: 1.4)),
                       const SizedBox(height: 10),
                       _NewsMeta(item: item, light: true),
                     ],
@@ -626,7 +580,53 @@ class _HeroThumb extends StatelessWidget {
   }
 }
 
-// ═══════════════════════ News card (list) ═══════════════════════
+// ═══════════════════════ Section header ═══════════════════════
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title, required this.count});
+  final String title;
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+      child: Row(
+        children: [
+          Container(
+            width: 4,
+            height: 18,
+            decoration: BoxDecoration(
+                color: theme.colorScheme.primary,
+                borderRadius: BorderRadius.circular(2)),
+          ),
+          const SizedBox(width: 8),
+          Text(title,
+              style: theme.textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w900)),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              '$count',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                color: theme.colorScheme.primary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ═══════════════════════ News card (compact list row) ═══════════════════════
 class _NewsCard extends StatelessWidget {
   const _NewsCard({required this.item, required this.index});
   final NewsItem item;
@@ -647,74 +647,66 @@ class _NewsCard extends StatelessWidget {
       child: InkWell(
         onTap: () => Navigator.pushNamed(context, AppRoutes.newsView,
             arguments: item),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Category badge at the top (above image)
-            if (item.category.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
-                child: Align(
-                  alignment: AlignmentDirectional.topStart,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary
-                          .withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(item.category,
-                        style: TextStyle(
-                            color: theme.colorScheme.primary,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800)),
-                  ),
-                ),
-              ),
-            SizedBox(height: 160, child: _CardThumb(item: item)),
-            Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Spacer(),
-                      if (item.date.isNotEmpty)
-                        Text(item.date,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (item.category.isNotEmpty)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(item.category,
                             style: TextStyle(
-                                fontSize: 11,
-                                color: theme.colorScheme.onSurfaceVariant)),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Text(item.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w900,
-                          fontSize: 16,
-                          height: 1.3)),
-                  if (item.subtitle.isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    Text(item.subtitle,
+                                color: theme.colorScheme.primary,
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w800)),
+                      ),
+                    Text(item.title,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            fontSize: 13,
-                            height: 1.5,
-                            color: theme.colorScheme.onSurfaceVariant)),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15,
+                            height: 1.35)),
+                    if (item.subtitle.isNotEmpty) ...[
+                      const SizedBox(height: 5),
+                      Text(item.subtitle,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: 12.5,
+                              height: 1.45,
+                              color: theme.colorScheme.onSurfaceVariant)),
+                    ],
+                    const SizedBox(height: 10),
+                    _NewsMeta(item: item),
                   ],
-                  const SizedBox(height: 12),
-                  _NewsMeta(item: item),
-                ],
+                ),
               ),
-            ),
-          ],
+              const SizedBox(width: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: SizedBox(
+                  width: 104,
+                  height: 104,
+                  child: _CardThumb(item: item),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-    ).animate(delay: (index * 50).ms).fadeIn(duration: 350.ms).slideY(begin: 0.08);
+    ).animate(delay: (index * 45).ms).fadeIn(duration: 350.ms).slideY(begin: 0.06);
   }
 }
 
@@ -730,7 +722,7 @@ class _CardThumb extends StatelessWidget {
       return ColoredBox(
         color: theme.colorScheme.surfaceContainerHighest,
         child: Icon(Icons.newspaper_rounded,
-            size: 44, color: theme.colorScheme.onSurfaceVariant),
+            size: 36, color: theme.colorScheme.onSurfaceVariant),
       );
     }
     return CachedNetworkImage(
@@ -761,25 +753,21 @@ class _NewsMeta extends StatelessWidget {
     final readMin = (item.subtitle.split(RegExp(r'\s+')).length / 180).ceil().clamp(1, 20);
     return Row(
       children: [
-        Icon(Icons.visibility_rounded, size: 14, color: color),
+        Icon(Icons.visibility_rounded, size: 13, color: color),
         const SizedBox(width: 3),
-        Text('${item.views}',
-            style: TextStyle(fontSize: 11, color: color)),
-        const SizedBox(width: 12),
-        Icon(Icons.favorite_rounded, size: 14, color: color),
+        Text('${item.views}', style: TextStyle(fontSize: 10.5, color: color)),
+        const SizedBox(width: 10),
+        Icon(Icons.favorite_rounded, size: 13, color: color),
         const SizedBox(width: 3),
-        Text('${item.likes}',
-            style: TextStyle(fontSize: 11, color: color)),
-        const SizedBox(width: 12),
-        Icon(Icons.mode_comment_outlined, size: 14, color: color),
+        Text('${item.likes}', style: TextStyle(fontSize: 10.5, color: color)),
+        const SizedBox(width: 10),
+        Icon(Icons.mode_comment_outlined, size: 13, color: color),
         const SizedBox(width: 3),
-        Text('${item.comments}',
-            style: TextStyle(fontSize: 11, color: color)),
-        const SizedBox(width: 12),
-        Icon(Icons.schedule_rounded, size: 14, color: color),
+        Text('${item.comments}', style: TextStyle(fontSize: 10.5, color: color)),
+        const SizedBox(width: 10),
+        Icon(Icons.schedule_rounded, size: 13, color: color),
         const SizedBox(width: 3),
-        Text('$readMin د',
-            style: TextStyle(fontSize: 11, color: color)),
+        Text('$readMin د', style: TextStyle(fontSize: 10.5, color: color)),
       ],
     );
   }
@@ -877,7 +865,7 @@ class _NewsSkeleton extends StatelessWidget {
             baseColor: base,
             highlightColor: theme.colorScheme.surface,
             child: Container(
-              height: i == 0 ? 220 : 200,
+              height: i == 0 ? 220 : 130,
               decoration: BoxDecoration(
                 color: base,
                 borderRadius: BorderRadius.circular(18),

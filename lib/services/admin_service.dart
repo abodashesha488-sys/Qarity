@@ -25,20 +25,25 @@ class AdminService {
   Future<bool> isAdminUser(String uid) async {
     try {
       final doc = await _firestore.collection('users').doc(uid).get();
-      return doc.exists && doc.data()?['role'] == 'admin';
+      final role = doc.data()?['role'] as String?;
+      // المدير العام أو الأدمن المساعد — لوحة التحكم متاحة لكليهما
+      // (البوابة AdminGuard)، مع تقييد حذف المدير العام في القواعد والواجهة.
+      return role == 'admin' || role == 'assistant_admin';
     } catch (e) {
       debugPrint('isAdminUser error: $e');
       return false;
     }
   }
 
-  /// هل هذا المستخدم «مدير المركز الطبي» أو مدير عام؟
+  /// هل هذا المستخدم «مدير المركز الطبي» أو أي مدير (عام/مساعد)؟
   /// مدير المركز الطبي مسؤول عن محتوى المركز الخيري ومراجعة المدخلات الطبية.
   Future<bool> isMedicalAdmin(String uid) async {
     try {
       final doc = await _firestore.collection('users').doc(uid).get();
       final role = doc.data()?['role'] as String?;
-      return role == 'medical_admin' || role == 'admin';
+      return role == 'medical_admin' ||
+          role == 'admin' ||
+          role == 'assistant_admin';
     } catch (e) {
       debugPrint('isMedicalAdmin error: $e');
       return false;

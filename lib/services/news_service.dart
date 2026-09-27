@@ -112,6 +112,20 @@ class NewsService {
     return _firestore.collection('news').doc(newsId).collection('comments').orderBy('createdAt', descending: true).snapshots();
   }
 
+  /// يحذف تعليقاً (للأدمن/الأدمن المساعد أو صاحب التعليق) وينقص عدّاد
+  /// تعليقات الخبر ذرّياً داخل معاملة واحدة، مع منع أصبح السالب.
+  Future<void> deleteComment(String newsId, String commentId) async {
+    if (newsId.isEmpty || commentId.isEmpty) return;
+    final newsRef = _firestore.collection('news').doc(newsId);
+    final commentRef = newsRef.collection('comments').doc(commentId);
+    await _firestore.runTransaction((tx) async {
+      final newsSnap = await tx.get(newsRef);
+      final count = ((newsSnap.data()?['comments'] as num?)?.toInt() ?? 0);
+      tx.delete(commentRef);
+      tx.update(newsRef, {'comments': count > 0 ? count - 1 : 0});
+    });
+  }
+
   Future<NewsItem?> getNewsById(String newsId) async {
     final doc = await _firestore.collection('news').doc(newsId).get();
     if (doc.exists) return NewsItem.fromJson(doc.data() as Map<String, dynamic>, doc.id);

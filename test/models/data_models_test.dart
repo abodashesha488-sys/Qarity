@@ -300,9 +300,26 @@ void main() {
       expect(labelFor('user'), 'مستخدم');
       expect(labelFor('seller'), 'بائع');
       expect(labelFor('moderator'), 'مشرف');
+      expect(labelFor('assistant_admin'), 'أدمن مساعد');
       expect(labelFor('medical_admin'), 'مدير المركز الطبي');
       expect(labelFor('admin'), 'مدير عام');
       expect(labelFor('unknown'), 'unknown');
+    });
+
+    test('assistant_admin: لوحة إدارة كاملة لكنه ليس المدير العام', () {
+      final u = UserModel(
+        id: 'u',
+        name: 'ن',
+        email: 'e',
+        joinDate: DateTime(2024),
+        role: 'assistant_admin',
+      );
+      // له نفس صلاحيات إدارة المحتوى (isAdmin = المجموعة الإدارية)
+      expect(u.isAdmin, isTrue);
+      expect(u.isAgriculturalAdmin, isTrue);
+      // لكنه ليس المدير العام (الحماية الحصرية لحساب المدير العام)
+      expect(u.isGeneralAdmin, isFalse);
+      expect(u.roleLabel, 'أدمن مساعد');
     });
 
     test('medical_admin is not admin; agricultural_admin is its own scope', () {

@@ -155,6 +155,20 @@ class ForumService {
     return _firestore.collection('forum_posts').doc(postId).collection('comments').orderBy('createdAt', descending: true).snapshots();
   }
 
+  /// يحذف تعليقاً (للأدمن/الأدمن المساعد أو صاحب التعليق) وينقص عدّاد
+  /// تعليقات المنشور ذرّياً داخل معاملة واحدة، مع منع أصبح السالب.
+  Future<void> deleteComment(String postId, String commentId) async {
+    if (postId.isEmpty || commentId.isEmpty) return;
+    final postRef = _firestore.collection('forum_posts').doc(postId);
+    final commentRef = postRef.collection('comments').doc(commentId);
+    await _firestore.runTransaction((tx) async {
+      final postSnap = await tx.get(postRef);
+      final count = ((postSnap.data()?['comments'] as num?)?.toInt() ?? 0);
+      tx.delete(commentRef);
+      tx.update(postRef, {'comments': count > 0 ? count - 1 : 0});
+    });
+  }
+
   Future<List<ForumPost>> getLatestPosts({bool forceRefresh = false}) async {
     if (!forceRefresh) {
       final cached = await CacheService.getForumPosts();

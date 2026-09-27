@@ -10,22 +10,33 @@ service cloud.firestore {
     // الوصول للأدمن عبر الدور فقط (users/{uid}.role == 'admin').
     // لإضافة أول مدير: أنشئ مستخدمك ثم عيّن users/<uid>.role = 'admin' من
     // Firebase Console. لا نربط القواعد ببريد ثابت حتى لا يصبح نقطة فشل/تسريب.
-    function isAdmin() {
+    // المدير العام فقط (role == 'admin'). يُستخدم حيث تُحفظ صلاحياته الحصرية:
+    // حماية حساب المدير العام من الحذف أو التنحية بواسطة الأدمن المساعد.
+    function isGeneralAdmin() {
       return isSignedIn() &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // مدير المركز الطبي: دوره medical_admin (أو مدير عام). مسؤول عن محتوى المركز
+    // أي مدير: المدير العام أو «الأدمن المساعد» (assistant_admin).
+    // للأدمن المساعد نفس صلاحيات المدير العام في إدارة المحتوى كله،
+    // ما عدا حذف/تنحية المدير العام (انظر مجموعة users أدناه).
+    function isAdmin() {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
+          in ['admin', 'assistant_admin'];
+    }
+
+    // مدير المركز الطبي: دوره medical_admin (أو أي مدير). مسؤول عن محتوى المركز
     // ومراجعة المدخلات الطبية.
     function isMedicalAdmin() {
       return isSignedIn() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'medical_admin'];
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'assistant_admin', 'medical_admin'];
     }
 
     function isAgriculturalAdmin() {
       return isSignedIn() &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
-          in ['admin', 'agricultural_admin'];
+          in ['admin', 'assistant_admin', 'agricultural_admin'];
     }
 
     function isOwner(userId) {
@@ -46,19 +57,23 @@ service cloud.firestore {
       allow get: if isSignedIn();
       allow list: if isAdmin();
 
-      // الإنشاء للمالك نفسه فقط، بحساب عادي، ولا يُنشئ نفسه أدمن/مدير طبي/معطّلاً.
+      // الإنشاء للمالك نفسه فقط، بحساب عادي، ولا يُنشئ نفسه أدمن/أدمن مساعد/مدير طبي/معطّلاً.
       allow create: if isSignedIn() && request.auth.uid == userId
                     && request.resource.data.role != 'admin'
+                    && request.resource.data.role != 'assistant_admin'
                     && request.resource.data.role != 'medical_admin'
                     && request.resource.data.role != 'moderator'
                     && request.resource.data.role != 'seller'
                     && request.resource.data.role != 'agricultural_admin'
                     && request.resource.data.isActive == true;
 
-      // الأدمن (مدير عام) يغيّر أي شيء في أي حساب (الأدوار/النوع/التفعيل).
+      // المدير العام يغيّر أي شيء في أي حساب (الأدوار/النوع/التفعيل).
+      // الأدمن المساعد يدير بقية الحالات، لكنه لا يستطيع المساس بحساب
+      // المدير العام إطلاقاً (لا حذف ولا تنحية الدور) — حماية مالك التطبيق.
       // المالك يحدّث بياناته فقط دون المساس بحقول الصلاحيات:
       //   role / sellerType / isActive
-      allow update: if isAdmin()
+      allow update: if isGeneralAdmin()
+                    || (isAdmin() && resource.data.role != 'admin')
                     || (isOwner(userId)
                         && !request.resource.data.diff(resource.data)
                              .affectedKeys().hasAny(['role', 'sellerType', 'isActive'])
@@ -66,7 +81,10 @@ service cloud.firestore {
                             || request.resource.data.role == resource.data.role)
                         && (!('isActive' in request.resource.data)
                             || request.resource.data.isActive == resource.data.isActive));
-      allow delete: if isAdmin();
+      // المدير العام يحذف أي حساب. الأدمن المساعد يحذف كل الحسابات
+      // ما عدا حساب المدير العام.
+      allow delete: if isGeneralAdmin()
+                    || (isAdmin() && resource.data.role != 'admin');
     }
 
     // ───────────────────────── الأخبار ─────────────────────────
@@ -137,6 +155,7 @@ service cloud.firestore {
       match /comments/{commentId} {
         allow read: if true;
         allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
+        // الحذف للأدمن أو الأدمن المساعد (الإشراف) أو صاحب التعليق نفسه.
         allow update, delete: if isAdmin() || request.auth.uid == resource.data.userId;
       }
     }

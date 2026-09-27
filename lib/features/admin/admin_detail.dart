@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../routes/app_routes.dart';
 import '../../services/admin_service.dart';
-import '../../widgets/common_appbar_actions.dart';
 import '../../widgets/qurity_app_bar.dart';
 
 class AdminDetailScreen extends StatefulWidget {
@@ -85,7 +84,7 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
                   padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
                 ),
-          ...CommonAppBarActions.actions(context),
+          // جرس الإشعارات يُضاف تلقائياً من QurityAppBar — لا نكرره هنا.
         ],
       ),
       body: ListView(

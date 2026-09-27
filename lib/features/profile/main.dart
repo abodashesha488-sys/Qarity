@@ -395,7 +395,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildProfileHeader(ThemeData theme) {
-    final isAdminRole = _user?.role == 'admin' || _user?.role == 'medical_admin';
+    final isAdminRole = _user?.isAdmin == true || _user?.role == 'medical_admin';
     final isMedicalOnly = _user?.role == 'medical_admin';
     return Card(
       elevation: 0,
