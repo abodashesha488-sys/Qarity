@@ -199,8 +199,11 @@ function Get-GitHubToken {
         $proc.StandardInput.Close()
 
         $stdout = $proc.StandardOutput.ReadToEnd()
+        $stderr = $proc.StandardError.ReadToEnd()
         $proc.WaitForExit(15000) | Out-Null
         if (-not $proc.HasExited) { try { $proc.Kill() } catch {} }
+
+        Write-Host "  credential fill: exit=$($proc.ExitCode) stdout=$($stdout.Length) chars stderr=$($stderr.Length) chars" -ForegroundColor DarkGray
 
         foreach ($line in ($stdout -split "`r?`n")) {
             if ($line -match '^password=(.+)$') {
