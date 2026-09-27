@@ -431,7 +431,35 @@ if (-not $remoteHead) {
             Stop-Safely "يجب دمج التغييرات البعيدة قبل المتابعة."
         }
     } elseif ($relationshipStatus -eq "diverged") {
-        if ($ForceRemote) {
+        if ($AllowPullWorkflow) {
+            # الحالة الطبيعية بعد كل نشر: الـ workflow يضيف التزامات زيادة الإصدار
+            # (build_number.txt / pubspec.yaml / update.json) والمحلي فيه عمل جديد.
+            # نعيد بناء التزامات المحلية فوق التزامات الـ workflow (rebase).
+            Write-Host "المحلي وGitHub متباعدان (التزامات workflow + عمل محلي)." -ForegroundColor Yellow
+            Write-Host "إعادة بناء التزامات المحلية فوق التزامات الـ workflow (rebase)..." -ForegroundColor Yellow
+
+            # نسخة احتياطية تحسبًا لأي تعارض غير متوقع
+            $preRebaseHead = Get-LocalHead
+            Write-Host "نسخة احتياطية قبل rebase: $preRebaseHead (refs/original/... أو reflog)" -ForegroundColor DarkGray
+
+            git rebase "origin/$currentBranch"
+            if ($LASTEXITCODE -ne 0) {
+                Write-Host "نشأ تعارض أثناء rebase — إلغاؤه وترك كل شيء كما هو." -ForegroundColor Red
+                git rebase --abort 2>$null
+                Stop-Safely "تعذر rebase (تعارض). راجع التغييرات البعيدة يدويًا: git log origin/$currentBranch --oneline"
+            }
+            $postRebaseHead = Get-LocalHead
+            Write-Host "تم دمج التزامات الـ workflow أسفل العمل المحلي." -ForegroundColor Green
+            Write-Host "  قبل: $preRebaseHead" -ForegroundColor DarkGray
+            Write-Host "  بعد: $postRebaseHead" -ForegroundColor DarkGray
+
+            Write-Host "دفع النتيجة إلى GitHub..." -ForegroundColor Yellow
+            git push origin $currentBranch
+            if ($LASTEXITCODE -ne 0) { Write-Host "فشل push بعد rebase." -ForegroundColor Red; exit 1 }
+            Write-Host "تمت المزامنة بنجاح." -ForegroundColor Green
+            $currentLocalHead = Get-LocalHead
+            $actionTaken = "rebase_workflow_then_push"
+        } elseif ($ForceRemote) {
             Write-Host "تم اكتشاف Diverged مع -ForceRemote — قد يُفقد commits موجودة فقط على GitHub." -ForegroundColor Red
             $confirmation = Read-Host "اكتب YES للتأكيد"
             if ($confirmation -cne "YES") { Stop-Safely "تم إلغاء ForceRemote. لم يتم تغيير GitHub." }
@@ -441,7 +469,12 @@ if (-not $remoteHead) {
             Write-Host "تم force push باستخدام --force-with-lease." -ForegroundColor Green
             $actionTaken = "force_push"
         } else {
-            Stop-Safely "الفرع المحلي وGitHub متباعدان. لم يتم تغيير أي منهما."
+            Write-Host ""
+            Write-Host "المحلي وGitHub متباعدان (طبيعي بعد نشر سابق: التزامات workflow + عمل محلي)." -ForegroundColor Yellow
+            Write-Host "الخيارات:" -ForegroundColor Yellow
+            Write-Host "  1) أعد التشغيل مع -AllowPullWorkflow  لدمجها بأمان (موصى به)" -ForegroundColor Green
+            Write-Host "  2) أو -ForceRemote لاستبدال تاريخ GitHub (يحذف التزامات الـ workflow)" -ForegroundColor DarkGray
+            Stop-Safely "يجب دمج التغييرات البعيدة قبل المتابعة."
         }
     } else {
         Stop-Safely "تعذر تحديد حالة العلاقة بين المحلي وGitHub."
