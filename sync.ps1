@@ -177,16 +177,39 @@ function Stop-Quality {
 # ───────────────────────── GitHub API ─────────────────────────
 
 function Get-GitHubToken {
-    # نأخذ التوكن من مخزن بيانات اعتماد Git (git credential store)
+    # نأخذ التوكن من مخزن بيانات اعتماد Git (git credential store).
+    # نستخدم Process مباشرةً بدل الأنبوب لأن Git Credential Manager
+    # يكتب رسائل تشخيصية إلى stderr، ومع ErrorActionPreference=Stop
+    # يُعتبر ذلك استثناءً فيتبلع catch التوكن الصحيح. هنا نلتقط stdout فقط.
     try {
-        $output = "protocol=https`nhost=github.com`n`n" | git credential fill 2>$null
-        if ($LASTEXITCODE -ne 0) { return $null }
-        foreach ($line in $output) {
+        $psi = New-Object System.Diagnostics.ProcessStartInfo
+        $psi.FileName = "git"
+        $psi.Arguments = "credential fill"
+        $psi.UseShellExecute = $false
+        $psi.RedirectStandardInput = $true
+        $psi.RedirectStandardOutput = $true
+        $psi.RedirectStandardError = $true
+        $psi.CreateNoWindow = $true
+        $psi.WorkingDirectory = $repoPath
+
+        $proc = [System.Diagnostics.Process]::Start($psi)
+        $proc.StandardInput.WriteLine("protocol=https")
+        $proc.StandardInput.WriteLine("host=github.com")
+        $proc.StandardInput.WriteLine("")
+        $proc.StandardInput.Close()
+
+        $stdout = $proc.StandardOutput.ReadToEnd()
+        $proc.WaitForExit(15000) | Out-Null
+        if (-not $proc.HasExited) { try { $proc.Kill() } catch {} }
+
+        foreach ($line in ($stdout -split "`r?`n")) {
             if ($line -match '^password=(.+)$') {
                 return $Matches[1]
             }
         }
-    } catch {}
+    } catch {
+        Write-Host "استثناء أثناء جلب التوكن: $($_.Exception.Message)" -ForegroundColor DarkGray
+    }
     return $null
 }
 
