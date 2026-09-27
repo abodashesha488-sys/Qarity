@@ -178,43 +178,44 @@ function Stop-Quality {
 
 function Get-GitHubToken {
     # نأخذ التوكن من مخزن بيانات اعتماد Git (git credential store).
-    # نستخدم Process مباشرةً بدل الأنبوب لأن Git Credential Manager
-    # يكتب رسائل تشخيصية إلى stderr، ومع ErrorActionPreference=Stop
-    # يُعتبر ذلك استثناءً فيتبلع catch التوكن الصحيح. هنا نلتقط stdout فقط.
+    # نستخدم Start-Process مع ملف مؤقت كـ stdin: تمرير الإدخال عبر الأنبوب
+    # أو ProcessStartInfo.RedirectStandardInput يفشل في العمليات غير
+    # التفاعلية (git يرفض: missing protocol field) بسبب إغلاق stdin للحظة.
+    $inFile  = $null
+    $outFile = $null
+    $errFile = $null
     try {
-        $psi = New-Object System.Diagnostics.ProcessStartInfo
-        $psi.FileName = "git"
-        $psi.Arguments = "credential fill"
-        $psi.UseShellExecute = $false
-        $psi.RedirectStandardInput = $true
-        $psi.RedirectStandardOutput = $true
-        $psi.RedirectStandardError = $true
-        $psi.CreateNoWindow = $true
-        $psi.WorkingDirectory = $repoPath
+        $inFile  = [System.IO.Path]::GetTempFileName()
+        $outFile = [System.IO.Path]::GetTempFileName()
+        $errFile = [System.IO.Path]::GetTempFileName()
+        [System.IO.File]::WriteAllText(
+            $inFile,
+            "protocol=https`r`nhost=github.com`r`n`r`n",
+            [System.Text.Encoding]::ASCII)
 
-        $proc = [System.Diagnostics.Process]::Start($psi)
-        $proc.StandardInput.WriteLine("protocol=https")
-        $proc.StandardInput.WriteLine("host=github.com")
-        $proc.StandardInput.WriteLine("")
-        $proc.StandardInput.Close()
+        $p = Start-Process -FilePath "git" `
+            -ArgumentList "credential","fill" `
+            -NoNewWindow -Wait -PassThru `
+            -RedirectStandardInput  $inFile `
+            -RedirectStandardOutput $outFile `
+            -RedirectStandardError  $errFile
 
-        $stdout = $proc.StandardOutput.ReadToEnd()
-        $stderr = $proc.StandardError.ReadToEnd()
-        $proc.WaitForExit(15000) | Out-Null
-        if (-not $proc.HasExited) { try { $proc.Kill() } catch {} }
-
-        Write-Host "  credential fill: exit=$($proc.ExitCode) stdout=$($stdout.Length) chars stderr=$($stderr.Length) chars" -ForegroundColor DarkGray
-        if ($proc.ExitCode -ne 0 -and $stderr.Length -gt 0) {
-            Write-Host "  credential fill stderr: $stderr" -ForegroundColor DarkGray
+        if ($p.ExitCode -ne 0) {
+            Write-Host "  credential fill exit $($p.ExitCode): $([System.IO.File]::ReadAllText($errFile))" -ForegroundColor DarkGray
+            return $null
         }
 
-        foreach ($line in ($stdout -split "`r?`n")) {
+        foreach ($line in ([System.IO.File]::ReadAllText($outFile) -split "`r?`n")) {
             if ($line -match '^password=(.+)$') {
                 return $Matches[1]
             }
         }
     } catch {
         Write-Host "استثناء أثناء جلب التوكن: $($_.Exception.Message)" -ForegroundColor DarkGray
+    } finally {
+        foreach ($f in @($inFile, $outFile, $errFile)) {
+            if ($f -and (Test-Path $f)) { Remove-Item $f -ErrorAction SilentlyContinue }
+        }
     }
     return $null
 }
