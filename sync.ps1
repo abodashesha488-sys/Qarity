@@ -541,8 +541,9 @@ Write-Host ""
 Write-Host "البحث عن تشغيل الـ workflow..." -ForegroundColor Yellow
 
 $workflowRun = $null
-$discoveryDeadline = (Get-Date).ToUniversalTime().AddSeconds(90)
-while ((Get-Date).ToUniversalTime -lt $discoveryDeadline) {
+$nowTicks = [datetime]::UtcNow.Ticks
+$discoveryDeadline = $nowTicks + ([timespan]::FromSeconds(90)).Ticks
+while ([datetime]::UtcNow.Ticks -lt $discoveryDeadline) {
     Start-Sleep -Seconds 5
     try {
         $runs = Invoke-GitHubApi -Method "GET" -Endpoint "/actions/runs?per_page=20&event=workflow_dispatch" -Token $ghToken -Owner $repoSlug.Owner -Repo $repoSlug.Repo
@@ -551,7 +552,7 @@ while ((Get-Date).ToUniversalTime -lt $discoveryDeadline) {
     $candidate = $runs.workflow_runs | Where-Object {
         $_.name -eq $WORKFLOW_NAME -and
         $_.head_sha -eq $pushedSha -and
-        ([datetime]$_.created_at) -ge $dispatchTime.AddMinutes(-2)
+        (([datetime]$_.created_at).ToUniversalTime().Ticks -ge ($dispatchTime.Ticks - ([timespan]::FromMinutes(2)).Ticks))
     } | Select-Object -First 1
     if ($candidate) { $workflowRun = $candidate; break }
 }
@@ -573,11 +574,12 @@ Write-Host "الرابط: $runUrl" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "مراقبة التشغيل (انتهاء المهلة: $MAX_WAIT_MINUTES دقيقة)..." -ForegroundColor Yellow
 
-$deadline = (Get-Date).ToUniversalTime().AddMinutes($MAX_WAIT_MINUTES)
+$deadlineTicks = [datetime]::UtcNow.Ticks + ([timespan]::FromMinutes($MAX_WAIT_MINUTES)).Ticks
 $lastStatus = ""
 $waited = 0
+$runCompleted = $false
 
-while ((Get-Date).ToUniversalTime -lt $deadline) {
+while ([datetime]::UtcNow.Ticks -lt $deadlineTicks) {
     Start-Sleep -Seconds $POLL_INTERVAL_SECONDS
     $waited += $POLL_INTERVAL_SECONDS
 
@@ -601,6 +603,7 @@ while ((Get-Date).ToUniversalTime -lt $deadline) {
         $conclusion = $status.conclusion
         if ($conclusion -eq "success") {
             Write-Host "اكتمل الـ workflow بنجاح." -ForegroundColor Green
+            $runCompleted = $true
             break
         } else {
             Write-Host ""
@@ -613,7 +616,7 @@ while ((Get-Date).ToUniversalTime -lt $deadline) {
     }
 }
 
-if ((Get-Date).ToUniversalTime -ge $deadline) {
+if (-not $runCompleted -and [datetime]::UtcNow.Ticks -ge $deadlineTicks) {
     Write-Host ""
     Write-Host "انتهت المهلة ($MAX_WAIT_MINUTES دقيقة) بينما لا يزال التشغيل جاريًا." -ForegroundColor Yellow
     Write-Host "العملية قد تكون مستمرة على GitHub. الرابط:" -ForegroundColor Yellow
