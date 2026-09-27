@@ -49,6 +49,7 @@ app.*.map.json
 
 # AI agent working directories (do not commit)
 .kilo/
+.kilocode/
 nul
 analyze.cmd
 devtools_options.yaml
