@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../models/service_provider_model.dart';
 import '../../services/service_provider_service.dart';
 import '../../services/share_service.dart';
@@ -415,8 +416,10 @@ class _ServiceProviderDetailScreenState
                 if (c.text.isNotEmpty) ...[
                   const SizedBox(height: 3),
                   Text(c.text,
-                      style: theme.textTheme.bodySmall
-                          ?.copyWith(height: 1.5)),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppColors.textPrimary,
+                        height: 1.5,
+                      )),
                 ],
               ],
             ),

@@ -289,6 +289,28 @@ void main() {
       expect(copy.role, 'admin');
     });
 
+    test('النوع: فارغ افتراضيًا، محفوظ في toJson/fromJson، وقابل للتعديل', () {
+      final u = UserModel(
+        id: 'u1',
+        name: 'مستخدم',
+        email: 'a@b.com',
+        joinDate: DateTime(2020),
+      );
+      expect(u.gender, '');
+
+      final male = u.copyWith(gender: 'ذكر');
+      expect(male.gender, 'ذكر');
+      final json = male.toJson();
+      expect(json['gender'], 'ذكر');
+
+      final back = UserModel.fromJson({...json, 'gender': 'أنثى'}, 'u1');
+      expect(back.gender, 'أنثى');
+      // مستخدم قديم بلا الحقل ⇒ قيمة فارغة (لا استثناء)
+      final legacy = UserModel.fromJson(
+          {'name': 'ن', 'email': 'e', 'phone': '01'}, 'u2');
+      expect(legacy.gender, '');
+    });
+
     test('roleLabel covers all defined roles', () {
       String labelFor(String r) => UserModel(
             id: 'u',

@@ -12,6 +12,7 @@ import '../../services/image_upload_service.dart';
 import '../../services/market_service.dart';
 import '../../services/theme_service.dart';
 import '../../services/user_service.dart';
+import '../../widgets/gender_selector.dart';
 import '../../widgets/qurity_app_bar.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -138,7 +139,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
   }
 
-  Future<void> _saveProfile() async {
+  Future<void> _saveProfile({String? gender}) async {
     if (_nameController.text.isEmpty || _user == null) return;
 
     setState(() => _isSaving = true);
@@ -153,6 +154,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final updatedUser = _user!.copyWith(
         name: _nameController.text.trim(),
         photoUrl: newPhotoUrl,
+        gender: gender ?? _user!.gender,
         phone: _phoneController.text.isEmpty ? null : _phoneController.text,
       );
 
@@ -540,6 +542,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _openEditSheet() async {
     final theme = Theme.of(context);
+    var gender = _user?.gender ?? '';
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -626,6 +629,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   prefixIcon: Icon(Icons.phone_rounded),
                 ),
               ),
+              const SizedBox(height: 12),
+              GenderSelector(
+                value: gender.isEmpty ? null : gender,
+                onChanged: (v) => setSheet(() => gender = v),
+              ),
               const SizedBox(height: 16),
               SizedBox(
                 height: 50,
@@ -633,7 +641,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   onPressed: _isSaving
                       ? null
                       : () async {
-                          await _saveProfile();
+                          await _saveProfile(gender: gender);
                           if (ctx.mounted) Navigator.pop(ctx);
                         },
                   icon: _isSaving

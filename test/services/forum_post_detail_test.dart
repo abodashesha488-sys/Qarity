@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:qurity/core/constants/app_colors.dart';
 import 'package:qurity/features/forum/post_detail.dart';
 import 'package:qurity/models/data_models.dart';
 import 'package:qurity/services/forum_service.dart';
@@ -9,9 +10,9 @@ import 'package:qurity/widgets/common_appbar_actions.dart';
 
 /// اختبارات شاشة تفاصيل منشور المندرة:
 ///  • جرس إشعار واحد فقط (كان مكرراً)
-///  • نص التعليق باللون الأزرق
+///  • نص التعليق باللون الأسود
 void main() {
-  testWidgets('جرس واحد فقط في الهيدر + التعليق أزرق', (tester) async {
+  testWidgets('جرس واحد فقط في الهيدر + التعليق أسود', (tester) async {
     final fake = FakeFirebaseFirestore();
     final postId = 'post-1';
     await fake.collection('forum_posts').doc(postId).set({
@@ -31,7 +32,7 @@ void main() {
       'userId': 'u1',
       'userName': 'أحمد',
       'userPhotoUrl': '',
-      'text': 'تعليق باللون الأزرق',
+      'text': 'تعليق باللون الأسود',
       'createdAt': Timestamp.now(),
     });
     final svc = ForumService(fake);
@@ -64,10 +65,10 @@ void main() {
     // جرس واحد فقط (QurityAppBar يضيفه تلقائياً — لا تكرار)
     expect(find.byType(NotificationBellButton), findsOneWidget);
 
-    // نص التعليق حاضر وبلونه الأزرق
-    final commentText = find.text('تعليق باللون الأزرق');
+    // نص التعليق حاضر وبلونه الأسود
+    final commentText = find.text('تعليق باللون الأسود');
     expect(commentText, findsOneWidget);
     final textWidget = tester.widget<Text>(commentText);
-    expect(textWidget.style?.color, const Color(0xFF1565C0));
+    expect(textWidget.style?.color, AppColors.textPrimary);
   });
 }

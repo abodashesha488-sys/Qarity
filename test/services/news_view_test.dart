@@ -2,15 +2,16 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:qurity/core/constants/app_colors.dart';
 import 'package:qurity/features/news/view.dart';
 import 'package:qurity/models/data_models.dart';
 import 'package:qurity/services/news_service.dart';
 
 /// اختبارات شاشة تفاصيل الخبر:
-///  • التعليق يُعرض باللون الأزرق
+///  • التعليق يُعرض باللون الأسود
 ///  • زر حذف التعليق لا يظهر لمستخدم عادي (للأدمن/الأدمن المساعد فقط)
 void main() {
-  testWidgets('التعليق أزرق وزر الحذف مخفي لمستخدم عادي', (tester) async {
+  testWidgets('التعليق أسود وزر الحذف مخفي لمستخدم عادي', (tester) async {
     final fake = FakeFirebaseFirestore();
     const newsId = 'news-1';
     await fake.collection('news').doc(newsId).set({
@@ -30,7 +31,7 @@ void main() {
       'userId': 'u1',
       'userName': 'أحمد',
       'userPhotoUrl': '',
-      'text': 'تعليق أزرق اللون',
+      'text': 'تعليق أسود اللون',
       'createdAt': Timestamp.now(),
     });
     final svc = NewsService(fake);
@@ -61,11 +62,11 @@ void main() {
 
     expect(tester.takeException(), isNull);
 
-    // نص التعليق حاضر وبلونه الأزرق
-    final commentText = find.text('تعليق أزرق اللون');
+    // نص التعليق حاضر وبلونه الأسود
+    final commentText = find.text('تعليق أسود اللون');
     expect(commentText, findsOneWidget);
     final textWidget = tester.widget<Text>(commentText);
-    expect(textWidget.style?.color, const Color(0xFF1565C0));
+    expect(textWidget.style?.color, AppColors.textPrimary);
 
     // عدّاد التعليقات مأخوذ من عدد التعليقات الفعلية
     expect(find.textContaining('التعليقات (1)'), findsOneWidget);

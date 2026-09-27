@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/utils/role_style.dart';
 import '../../core/widgets/shared_cards.dart';
@@ -447,11 +448,11 @@ class _ForumPostDetailScreenState extends State<ForumPostDetailScreen> {
                   style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 4),
-                // نص التعليق باللون الأزرق
+                // نص التعليق باللون الأسود
                 Text(
                   commentText,
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: const Color(0xFF1565C0),
+                    color: AppColors.textPrimary,
                     height: 1.5,
                   ),
                 ),

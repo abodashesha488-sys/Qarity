@@ -708,6 +708,7 @@ class Review implements BaseModel {
   final String id;
   final String userId;
   final String userName;
+  final String? userPhotoUrl;
   final String sellerId;
   final int rating;
   final String comment;
@@ -718,6 +719,7 @@ class Review implements BaseModel {
     required this.id,
     required this.userId,
     required this.userName,
+    this.userPhotoUrl,
     required this.sellerId,
     required this.rating,
     required this.comment,
@@ -729,6 +731,7 @@ class Review implements BaseModel {
       id: docId,
       userId: json['userId'] as String? ?? '',
       userName: json['userName'] as String? ?? 'مستخدم',
+      userPhotoUrl: json['userPhotoUrl'] as String?,
       sellerId: json['sellerId'] as String? ?? '',
       rating: (json['rating'] as num?)?.toInt() ?? 5,
       comment: json['comment'] as String? ?? '',
@@ -741,6 +744,7 @@ class Review implements BaseModel {
     return {
       'userId': userId,
       'userName': userName,
+      if (userPhotoUrl != null && userPhotoUrl!.isNotEmpty) 'userPhotoUrl': userPhotoUrl,
       'sellerId': sellerId,
       'rating': rating,
       'comment': comment,

@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/utils/role_style.dart';
 import '../../core/widgets/shared_cards.dart';
@@ -737,12 +738,16 @@ class _CommentsSheetState extends State<CommentsSheet> {
                   separatorBuilder: (_, __) => const SizedBox(height: 10),
                   itemBuilder: (context, index) {
                     final data = comments[index].data() as Map<String, dynamic>? ?? <String, dynamic>{};
+                    final photo = (data['userPhotoUrl'] as String? ?? '').trim();
                     return InfoListCard(
                       padding: const EdgeInsets.all(14),
                       leading: CircleAvatar(
                         radius: 18,
                         backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
-                        child: Icon(Icons.person_rounded, size: 16, color: theme.colorScheme.primary),
+                        backgroundImage: photo.isNotEmpty ? CachedNetworkImageProvider(photo) : null,
+                        child: photo.isEmpty
+                            ? Icon(Icons.person_rounded, size: 16, color: theme.colorScheme.primary)
+                            : null,
                       ),
                       title: data['userName'] as String? ?? 'مستخدم',
                       subtitleBuilder: (context) => [
@@ -751,7 +756,13 @@ class _CommentsSheetState extends State<CommentsSheet> {
                           style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
                         ),
                         const SizedBox(height: 4),
-                        Text(data['text'] as String? ?? '', style: theme.textTheme.bodySmall),
+                        Text(
+                          data['text'] as String? ?? '',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: AppColors.textPrimary,
+                            height: 1.5,
+                          ),
+                        ),
                       ],
                     );
                   },

@@ -20,12 +20,14 @@ class EngagementService {
     required String obituaryId,
     required String userId,
     required String userName,
+    String? photoUrl,
     required String message,
   }) async {
     await _firestore.doc('condolences/${obituaryId}_$userId').set({
       'obituaryId': obituaryId,
       'userId': userId,
       'userName': userName,
+      if (photoUrl != null && photoUrl.isNotEmpty) 'userPhotoUrl': photoUrl,
       'message': message,
       'createdAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
@@ -132,6 +134,7 @@ class Condolence {
   final String obituaryId;
   final String userId;
   final String userName;
+  final String? photoUrl;
   final String message;
   final DateTime? createdAt;
 
@@ -140,6 +143,7 @@ class Condolence {
     required this.obituaryId,
     required this.userId,
     required this.userName,
+    this.photoUrl,
     required this.message,
     this.createdAt,
   });
@@ -150,6 +154,7 @@ class Condolence {
       obituaryId: json['obituaryId'] as String? ?? '',
       userId: json['userId'] as String? ?? '',
       userName: json['userName'] as String? ?? 'مستخدم',
+      photoUrl: json['userPhotoUrl'] as String?,
       message: json['message'] as String? ?? '',
       createdAt: json['createdAt'] != null ? _parseTimestamp(json['createdAt']) : null,
     );

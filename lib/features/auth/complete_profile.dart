@@ -10,6 +10,7 @@ import '../../routes/app_routes.dart';
 import '../../services/image_upload_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/user_service.dart';
+import '../../widgets/gender_selector.dart';
 import '../../widgets/qurity_app_bar.dart';
 
 class CompleteProfileScreen extends StatefulWidget {
@@ -29,6 +30,8 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
   final _phoneController = TextEditingController();
 
   Uint8List? _profileBytes;
+  String? _gender;
+  String? _genderError;
   bool _isSaving = false;
   bool _isLoading = true;
   String? _errorMessage;
@@ -70,6 +73,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
           _user = user;
           _nameController.text = user.name;
           _phoneController.text = user.phone ?? '';
+          _gender = user.gender.isEmpty ? null : user.gender;
         });
       } else {
         final fallback = await _createFallbackUser();
@@ -118,6 +122,10 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       );
       return;
     }
+    if (_gender == null) {
+      setState(() => _genderError = 'يجب اختيار النوع (ذكر أو أنثى) للمتابعة');
+      return;
+    }
     if (_isSaving) return;
 
     setState(() => _isSaving = true);
@@ -135,6 +143,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
         photoUrl: newPhotoUrl,
         joinDate: _user?.joinDate ?? now,
         phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
+        gender: _gender!,
       );
 
       await _userService.updateUser(updatedUser);
@@ -224,30 +233,66 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
         child: Column(
           children: [
             Center(
-              child: Stack(
-                alignment: Alignment.bottomLeft,
+              child: Column(
                 children: [
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: theme.colorScheme.surface, width: 4),
-                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 12, offset: const Offset(0, 6))],
-                    ),
-                    child: CircleAvatar(
-                      radius: 52,
-                      backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
-                      backgroundImage: imageProvider,
-                      child: imageProvider == null
-                          ? Icon(Icons.person_rounded, size: 52, color: theme.colorScheme.onPrimaryContainer)
-                          : null,
+                  GestureDetector(
+                    key: const Key('profile-photo-picker'),
+                    onTap: _pickProfileImage,
+                    behavior: HitTestBehavior.opaque,
+                    child: Stack(
+                      alignment: Alignment.bottomLeft,
+                      children: [
+                        DecoratedBox(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: theme.colorScheme.surface, width: 4),
+                            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 12, offset: const Offset(0, 6))],
+                          ),
+                          child: CircleAvatar(
+                            radius: 52,
+                            backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
+                            backgroundImage: imageProvider,
+                            child: imageProvider == null
+                                ? Icon(Icons.person_rounded, size: 52, color: theme.colorScheme.onPrimaryContainer)
+                                : null,
+                          ),
+                        ),
+                        DecoratedBox(
+                          decoration: BoxDecoration(color: theme.colorScheme.primary, shape: BoxShape.circle, border: Border.all(color: theme.colorScheme.surface, width: 2)),
+                          child: Padding(
+                            padding: const EdgeInsets.all(6),
+                            child: Icon(Icons.camera_alt_rounded, size: 16, color: theme.colorScheme.onPrimary),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  GestureDetector(
-                    onTap: _pickProfileImage,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(color: theme.colorScheme.primary, shape: BoxShape.circle, border: Border.all(color: theme.colorScheme.surface, width: 2)),
-                      child: Icon(Icons.camera_alt_rounded, size: 18, color: theme.colorScheme.onPrimary),
+                  const SizedBox(height: 10),
+                  TextButton.icon(
+                    key: const Key('change-photo-button'),
+                    onPressed: _pickProfileImage,
+                    icon: const Icon(Icons.edit_rounded, size: 18),
+                    label: Text(
+                      _profileBytes != null ? 'تم اختيار صورة جديدة' : 'تغيير الصورة الشخصية',
+                      style: const TextStyle(fontWeight: FontWeight.w800),
                     ),
+                    style: TextButton.styleFrom(
+                      backgroundColor: _profileBytes != null
+                          ? theme.colorScheme.primary.withValues(alpha: 0.12)
+                          : Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.5))),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _profileBytes != null
+                        ? 'سيتم رفع الصورة عند الضغط على «حفظ»'
+                        : 'الصورة اختيارية — اضغط عليها أو على الزر لاختيار صورة',
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                    textAlign: TextAlign.center,
                   ),
                 ],
               ),
@@ -297,6 +342,15 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                           prefixIcon: Icon(Icons.phone_rounded, color: theme.colorScheme.primary),
                         ),
                         validator: (value) => value == null || value.trim().isEmpty ? 'رقم الهاتف مطلوب' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      GenderSelector(
+                        value: _gender,
+                        errorText: _genderError,
+                        onChanged: (v) => setState(() {
+                          _gender = v;
+                          _genderError = null;
+                        }),
                       ),
                       const SizedBox(height: 24),
                       SizedBox(

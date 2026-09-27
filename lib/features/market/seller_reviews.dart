@@ -1,6 +1,8 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../services/review_service.dart';
 import '../../widgets/qurity_app_bar.dart';
 
@@ -82,6 +84,7 @@ class _SellerReviewsScreenState extends State<SellerReviewsScreen> {
 
   Widget _buildReviewCard(ThemeData theme, Map<String, dynamic> r) {
     final rating = (r['rating'] as int?) ?? 0;
+    final photo = (r['userPhotoUrl'] as String? ?? '').trim();
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -101,7 +104,10 @@ class _SellerReviewsScreenState extends State<SellerReviewsScreen> {
                     CircleAvatar(
                       radius: 16,
                       backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
-                      child: Icon(Icons.person, size: 16, color: theme.colorScheme.primary),
+                      backgroundImage: photo.isNotEmpty ? CachedNetworkImageProvider(photo) : null,
+                      child: photo.isEmpty
+                          ? Icon(Icons.person, size: 16, color: theme.colorScheme.primary)
+                          : null,
                     ),
                     const SizedBox(width: 10),
                     Text(
@@ -121,7 +127,13 @@ class _SellerReviewsScreenState extends State<SellerReviewsScreen> {
             ),
             if ((r['comment'] as String? ?? '').isNotEmpty) ...[
               const SizedBox(height: 10),
-              Text(r['comment'] as String, style: theme.textTheme.bodyMedium),
+              Text(
+                r['comment'] as String,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: AppColors.textPrimary,
+                  height: 1.5,
+                ),
+              ),
             ],
             _buildDateRow(theme, r['createdAt']),
           ],

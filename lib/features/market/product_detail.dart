@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../core/utils/role_style.dart';
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
@@ -766,7 +767,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               size: 16))),
                   const SizedBox(height: 8),
                   Text(review.comment,
-                      style: theme.textTheme.bodyMedium?.copyWith(height: 1.5)),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: AppColors.textPrimary,
+                        height: 1.5,
+                      )),
                   if (review.images.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     SizedBox(

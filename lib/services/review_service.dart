@@ -6,34 +6,46 @@ class ReviewService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  Future<String> _getUserName(String userId) async {
-    // الاسم من ملف المستخدم (users/{uid}.name) أولاً — كما عدّله المستخدم.
-    final doc = await _firestore.collection('users').doc(userId).get();
-    if (doc.exists) {
-      final data = doc.data() as Map<String, dynamic>;
-      final pname = (data['name'] as String? ?? '').trim();
-      if (pname.isNotEmpty) return pname;
+  Future<({String name, String? photo})> _getAuthor(String userId) async {
+    // الاسم والصورة من ملف المستخدم (users/{uid}) أولاً — كما عدّله المستخدم.
+    String name = 'مستخدم';
+    String? photo;
+    try {
+      final doc = await _firestore.collection('users').doc(userId).get();
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>;
+        final pname = (data['name'] as String? ?? '').trim();
+        if (pname.isNotEmpty) name = pname;
+        final pphoto = (data['photoUrl'] as String? ?? '').trim();
+        if (pphoto.isNotEmpty) photo = pphoto;
+      }
+    } catch (_) {}
+    if (photo == null) {
+      final user = _auth.currentUser;
+      if (user != null && user.uid == userId && (user.photoURL ?? '').isNotEmpty) {
+        photo = user.photoURL;
+      }
     }
-    final user = _auth.currentUser;
-    if (user != null && user.uid == userId) {
-      final g = (user.displayName ?? '').trim();
-      if (g.isNotEmpty) return g;
+    if (name == 'مستخدم') {
+      final user = _auth.currentUser;
+      if (user != null && user.uid == userId) {
+        final g = (user.displayName ?? '').trim();
+        if (g.isNotEmpty) name = g;
+      }
     }
-    final data = doc.data() ?? const <String, dynamic>{};
-    return (data['email'] as String?)?.trim().isNotEmpty == true
-        ? data['email'] as String
-        : 'مستخدم';
+    return (name: name, photo: photo);
   }
 
   Future<void> addReview({required String sellerId, required int rating, required String comment, required String userId}) async {
-    final userName = await _getUserName(userId);
+    final author = await _getAuthor(userId);
     final review = Review(
       id: '',
       rating: rating,
       comment: comment,
       sellerId: sellerId,
       userId: userId,
-      userName: userName,
+      userName: author.name,
+      userPhotoUrl: author.photo,
       createdAt: DateTime.now(),
     );
     await _firestore.collection('reviews').add(review.toJson());

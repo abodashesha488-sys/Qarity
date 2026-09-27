@@ -9,6 +9,7 @@ class UserModel implements BaseModel {
   final String name;
   final String email;
   final String? phone;
+  final String gender; // '' | 'ذكر' | 'أنثى'
   final String role;
   final String? photoUrl;
   final SellerType? sellerType;
@@ -21,6 +22,7 @@ class UserModel implements BaseModel {
     required this.name,
     required this.email,
     this.phone,
+    this.gender = '',
     this.role = 'user',
     this.photoUrl,
     this.sellerType,
@@ -35,6 +37,7 @@ class UserModel implements BaseModel {
       name: json['name'] as String? ?? '',
       email: json['email'] as String? ?? '',
       phone: json['phone'] as String?,
+      gender: (json['gender'] as String? ?? '').trim(),
       role: json['role'] as String? ?? 'user',
       photoUrl: json['photoUrl'] as String?,
       sellerType: json['sellerType'] != null
@@ -56,6 +59,7 @@ class UserModel implements BaseModel {
       'name': name,
       'email': email,
       'phone': phone,
+      'gender': gender,
       'role': role,
       'photoUrl': photoUrl,
       'sellerType': sellerType?.name,
@@ -95,6 +99,7 @@ class UserModel implements BaseModel {
     String? name,
     String? email,
     String? phone,
+    String? gender,
     String? role,
     String? photoUrl,
     SellerType? sellerType,
@@ -106,6 +111,7 @@ class UserModel implements BaseModel {
       name: name ?? this.name,
       email: email ?? this.email,
       phone: phone ?? this.phone,
+      gender: gender ?? this.gender,
       role: role ?? this.role,
       photoUrl: photoUrl ?? this.photoUrl,
       sellerType: sellerType ?? this.sellerType,

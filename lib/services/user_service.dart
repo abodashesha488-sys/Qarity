@@ -42,12 +42,14 @@ class UserService {
     return (name: name, photo: photo);
   }
 
-  /// هل أكمل المستخدم بياناته الأساسية (اسم + هاتف)؟
+  /// هل أكمل المستخدم بياناته الأساسية (اسم + هاتف + النوع)؟
   /// يُستخدم في شاشة الإقلاع وبعد تسجيل الدخول لتوجيه المستخدم لإكمال الملف.
+  /// النوع إلزامي: بدونه لا يُسمح بدخول التطبيق.
   static bool isProfileComplete(UserModel? u) =>
       u != null &&
       u.name.trim().isNotEmpty &&
-      (u.phone?.trim().isNotEmpty ?? false);
+      (u.phone?.trim().isNotEmpty ?? false) &&
+      u.gender.trim().isNotEmpty;
 
   Future<UserModel?> getUser(String uid) async {
     final cached = await CacheService.getUser(uid);
@@ -209,7 +211,7 @@ class UserService {
       });
     }
     if (photoUrl != null) {
-      for (final col in ['forum_posts', 'product_reviews']) {
+      for (final col in ['forum_posts', 'product_reviews', 'condolences', 'reviews']) {
         jobs.add(fanOut(col, 'userId', {'userPhotoUrl': photoUrl}));
       }
     }
