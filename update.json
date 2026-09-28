@@ -1,7 +1,7 @@
 {
-  "versionCode": 10,
-  "versionName": "1.0.10",
+  "versionCode": 11,
+  "versionName": "1.1.1",
   "apkUrl": "https://github.com/abodashesha488-sys/Qarity/releases/latest/download/Qarity.apk",
   "forceUpdate": false,
-  "releaseNotes": "..."
+  "releaseNotes": "قسم جديد «نظارات القرية» مع عروض مميزة، وإصلاحات في لوحة التحكم: قائمة موحّدة لكل المعلّقات، ترتيب المستخدمين، تواريخ وتصديرات صحيحة."
 }
