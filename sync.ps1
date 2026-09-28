@@ -252,8 +252,11 @@ function Invoke-GitHubApi {
         Headers = $headers
     }
     if ($null -ne $Body) {
-        $params["Body"] = ($Body | ConvertTo-Json -Depth 10)
-        $params["ContentType"] = "application/json"
+        # PowerShell 5.1 تُرمّز جسم الطلب النصي بترميز النظام، فتنكسر العربية إلى
+        # بايتات غير صالحة للـUTF-8 ويرفض GitHub بـ400. نُرسل بايتات UTF-8 صراحةً.
+        $json = $Body | ConvertTo-Json -Depth 10
+        $params["Body"] = (New-Object System.Text.UTF8Encoding($false)).GetBytes($json)
+        $params["ContentType"] = "application/json; charset=utf-8"
     }
     return Invoke-RestMethod @params
 }
