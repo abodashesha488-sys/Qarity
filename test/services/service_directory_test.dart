@@ -48,8 +48,7 @@ void main() {
       expect(techs.single.name, 'فني معتمد');
     });
 
-    test('fromJson defaults unapproved and displaySpecialty joins stage',
-        () {
+    test('السجل التعليمي القديم يُترجم إلى المراحل والأنواع الجديدة', () {
       final p = ServiceProvider.fromJson(
         {
           'category': 'educational',
@@ -62,7 +61,112 @@ void main() {
       expect(p.isApproved, isFalse);
       expect(p.isFeatured, isFalse);
       expect(p.ratingCount, 0);
-      expect(p.displaySpecialty, 'الرياضيات — الصف الأول الثانوي');
+      expect(p.stages, [kEduStageSecondary]);
+      expect(p.eduTypes, [kEduTypePublic]);
+      expect(p.subjects, ['الرياضيات']);
+      expect(p.providerKindLabel, kEduKindTeacher);
+      expect(p.offersPrivateTutoring, isFalse);
+      expect(p.displaySpecialty, 'الرياضيات');
+    });
+
+    test('الثانوية الأزهرية القديمة ⇒ ثانوي + أزهري', () {
+      final p = ServiceProvider.fromJson({
+        'category': 'educational',
+        'name': 'أ. سيد',
+        'specialty': 'الفقه',
+        'stage': 'الثانوية الأزهرية',
+      }, 'x');
+      expect(p.stages, [kEduStageSecondary]);
+      expect(p.eduTypes, [kEduTypeAzhar]);
+    });
+
+    test('مرحلة قديمة بلا مقابل تبقى ظاهرة تحت «مراحل أخرى»', () {
+      final p = ServiceProvider.fromJson({
+        'category': 'educational',
+        'name': 'أ. فؤاد',
+        'specialty': 'القراءة والخط العربي',
+        'stage': 'محو الأمية وتعليم الكبار',
+      }, 'x');
+      expect(p.stages, isEmpty);
+      expect(p.stageChips, ['محو الأمية وتعليم الكبار']);
+    });
+
+    test('السجل الجديد يكتب القوائم ومرآتيها للنسخ القديمة', () {
+      const p = ServiceProvider(
+        id: '',
+        category: ServiceCategory.educational,
+        name: 'أ. منى',
+        phone: '0100',
+        eduTypes: [kEduTypePublic, kEduTypePrivate],
+        stages: [kEduStagePrep, kEduStageSecondary],
+        subjects: ['الرياضيات', 'الفيزياء'],
+        offersPrivateTutoring: true,
+      );
+      final json = p.toJson();
+      expect(json['providerKind'], kEduKindTeacher);
+      expect(json['eduTypes'], [kEduTypePublic, kEduTypePrivate]);
+      expect(json['stages'], [kEduStagePrep, kEduStageSecondary]);
+      expect(json['subjects'], ['الرياضيات', 'الفيزياء']);
+      expect(json['offersPrivateTutoring'], true);
+      // المرآتان: النص القديم الذي تقرأه النسخ المثبّتة على الأجهزة.
+      expect(json['specialty'], 'الرياضيات، الفيزياء');
+      expect(json['stage'], 'إعدادي، ثانوي');
+    });
+
+    test('سجل غير تعليمي لا يحمل حقول التعليم', () {
+      const p = ServiceProvider(
+          id: '',
+          category: ServiceCategory.technicians,
+          specialty: 'نجارة',
+          name: 'ورشة');
+      final json = p.toJson();
+      expect(json.containsKey('stages'), isFalse);
+      expect(json.containsKey('subjects'), isFalse);
+      expect(json.containsKey('providerKind'), isFalse);
+      expect(p.displaySpecialty, 'نجارة');
+    });
+
+    test('المدرسة لا تحمل «تدريس خاص» حتى لو كُتبت في المستند', () {
+      final p = ServiceProvider.fromJson({
+        'category': 'educational',
+        'name': 'مدرسة النور',
+        'providerKind': kEduKindSchool,
+        'offersPrivateTutoring': true,
+        'eduTypes': [kEduTypePrivate],
+        'stages': [kEduStagePrimary],
+        'subjects': ['الرياضيات'],
+      }, 'x');
+      expect(p.isSchool, isTrue);
+      expect(p.offersPrivateTutoring, isFalse);
+    });
+
+    test('قائمة المواد المصرية كاملة وبلا تكرار و«غير ذلك» آخرها', () {
+      expect(kEgyptSubjects.length, greaterThan(40));
+      expect(kEgyptSubjects.toSet().length, kEgyptSubjects.length,
+          reason: 'بلا تكرار');
+      expect(kEgyptSubjects.last, 'غير ذلك');
+      expect(
+          kEgyptSubjects,
+          containsAll([
+            'اللغة العربية',
+            'الفيزياء',
+            'الرياضيات البحتة (جبر وهندسة فراغية)',
+            'الاقتصاد والإحصاء',
+            'النحو والصرف',
+            'التفسير وعلوم القرآن',
+          ]));
+      // كل قسم غير فارغ، وكل قيمة فيه موجودة في القائمة المسطّحة.
+      for (final entry in kEgyptSubjectSections.entries) {
+        expect(entry.value, isNotEmpty, reason: entry.key);
+        expect(kEgyptSubjects, containsAll(entry.value));
+      }
+    });
+
+    test('المراحل خمسة والأنواع ثلاثة والصفة خياران', () {
+      expect(kEduStages,
+          ['تمهيدي', 'ابتدائي', 'إعدادي', 'ثانوي', 'جامعي']);
+      expect(kEduTypes, ['تعليم عام', 'أزهري', 'خاص']);
+      expect(kEduKinds, ['مدرس', 'مدرسة']);
     });
 
     test('featured provider gets gold accent', () {
@@ -70,6 +174,14 @@ void main() {
           id: 'x', category: 'technicians', name: 'نجار', isFeatured: true);
       expect(p.accentColor.toARGB32(), 0xFFB8860B);
       expect(p.toJson()['isFeatured'], true);
+    });
+
+    test('حِرف الفنيون تشمل كاميرات مراقبة ودش وأعمال منزلية', () {
+      final crafts = kSubcategoriesFor(ServiceCategory.technicians);
+      expect(crafts, containsAll(['كاميرات مراقبة ودش', 'أعمال منزلية']));
+      // «غير ذلك» يبقى الخيار الأخير في القائمة المنسدلة ونموذج الإضافة.
+      expect(crafts.last, 'غير ذلك');
+      expect(crafts.toSet().length, crafts.length, reason: 'بلا تكرار');
     });
 
     test('getApprovedByCategory lists featured first', () async {

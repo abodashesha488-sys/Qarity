@@ -10,12 +10,14 @@ class AdminEditScreen extends StatefulWidget {
   final String collection;
   final String docId;
   final Map<String, dynamic> item;
+  final AdminService? service;
 
   const AdminEditScreen(
       {super.key,
       required this.collection,
       required this.docId,
-      required this.item});
+      required this.item,
+      this.service});
 
   @override
   State<AdminEditScreen> createState() => _AdminEditScreenState();
@@ -28,11 +30,13 @@ class _FieldSpec {
   final bool numeric;
   final bool multiline;
   final bool boolean;
+  final bool list;
   const _FieldSpec(this.key, this.label,
       {this.required = false,
       this.numeric = false,
       this.multiline = false,
-      this.boolean = false});
+      this.boolean = false,
+      this.list = false});
 }
 
 class _AdminEditScreenState extends State<AdminEditScreen> {
@@ -69,6 +73,11 @@ class _AdminEditScreenState extends State<AdminEditScreen> {
       final v = widget.item[f.key];
       if (f.boolean) {
         _bools[f.key] = v is bool ? v : false;
+      } else if (f.list) {
+        _controllers[f.key] = TextEditingController(
+            text: v is List
+                ? v.map((e) => e.toString()).join('، ')
+                : (v?.toString() ?? ''));
       } else {
         _controllers[f.key] =
             TextEditingController(text: v?.toString() ?? '');
@@ -220,15 +229,35 @@ class _AdminEditScreenState extends State<AdminEditScreen> {
           _FieldSpec('isAvailable', 'متبرع متاح', boolean: true),
         ];
       case 'service_providers':
-        return const [
-          _FieldSpec('name', 'الاسم / اسم الورشة', required: true),
-          _FieldSpec('category', 'الفئة (technicians/agricultural/educational)'),
-          _FieldSpec('specialty', 'الحرفة / الخدمة / المادة'),
-          _FieldSpec('stage', 'المرحلة الدراسية (للخدمات التعليمية)'),
-          _FieldSpec('phone', 'الهاتف'),
-          _FieldSpec('address', 'العنوان'),
-          _FieldSpec('description', 'نبذة', multiline: true),
-          _FieldSpec('isFeatured', 'بيان مميز (يظهر ذهبيًا وفي المقدمة)', boolean: true),
+        // حقول السجل التعليمي (اختيار متعدد) تظهر لسجل التعليمية فقط.
+        final isEdu = widget.item['category'] == 'educational';
+        return [
+          _FieldSpec('name',
+              isEdu ? 'اسم المدرّس / اسم المدرسة' : 'الاسم / اسم الورشة',
+              required: true),
+          const _FieldSpec(
+              'category', 'الفئة (technicians/agricultural/educational)'),
+          if (isEdu) ...[
+            const _FieldSpec('providerKind', 'الصفة (مدرس / مدرسة)'),
+            const _FieldSpec('eduTypes', 'أنواع التعليم (تعليم عام، أزهري، خاص)',
+                list: true),
+            const _FieldSpec(
+                'stages', 'المراحل (تمهيدي، ابتدائي، إعدادي، ثانوي، جامعي)',
+                list: true),
+            const _FieldSpec('subjects', 'المواد الدراسية', list: true),
+            const _FieldSpec('universityNote', 'التخصص الجامعي',
+                multiline: true),
+            const _FieldSpec('offersPrivateTutoring',
+                'تدريس خاص (دروس خصوصية)',
+                boolean: true),
+          ] else
+            const _FieldSpec('specialty', 'الحرفة / الخدمة'),
+          const _FieldSpec('phone', 'الهاتف'),
+          const _FieldSpec('address', 'العنوان'),
+          const _FieldSpec('description', 'نبذة', multiline: true),
+          const _FieldSpec('isFeatured',
+              'بيان مميز (يظهر ذهبيًا وفي المقدمة)',
+              boolean: true),
         ];
       case 'lost_items':
         return const [
@@ -328,6 +357,14 @@ class _AdminEditScreenState extends State<AdminEditScreen> {
           continue;
         }
         final text = _controllers[f.key]!.text.trim();
+        if (f.list) {
+          data[f.key] = text
+              .split(RegExp(r'[،,]'))
+              .map((s) => s.trim())
+              .where((s) => s.isNotEmpty)
+              .toList();
+          continue;
+        }
         if (text.isEmpty && !f.required) continue;
         if (f.numeric) {
           final n = num.tryParse(text);
@@ -336,7 +373,20 @@ class _AdminEditScreenState extends State<AdminEditScreen> {
           data[f.key] = text;
         }
       }
-      await AdminService().updateItem(widget.collection, widget.docId, data);
+      // مرآتا `specialty`/`stage` تُبقيان النسخ القديمة المثبّتة قادرة على
+      // عرض السجل التعليمي بعد تعديل قوائمه.
+      if (widget.collection == 'service_providers') {
+        final subjects = data['subjects'];
+        final stages = data['stages'];
+        if (subjects is List && subjects.isNotEmpty) {
+          data['specialty'] = subjects.join('، ');
+        }
+        if (stages is List && stages.isNotEmpty) {
+          data['stage'] = stages.join('، ');
+        }
+      }
+      await (widget.service ?? AdminService())
+          .updateItem(widget.collection, widget.docId, data);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text('تم الحفظ بنجاح'), backgroundColor: Color(0xFF6F4E37)));
@@ -416,10 +466,11 @@ class _AdminEditScreenState extends State<AdminEditScreen> {
       padding: const EdgeInsets.only(bottom: 16),
       child: TextFormField(
         controller: _controllers[f.key],
-        maxLines: f.multiline ? 4 : 1,
+        maxLines: (f.multiline || f.list) ? 4 : 1,
         keyboardType: f.numeric ? TextInputType.number : TextInputType.text,
         decoration: InputDecoration(
           labelText: f.label + (f.required ? ' *' : ''),
+          helperText: f.list ? 'افصل بين القيم بفاصلة' : null,
           alignLabelWithHint: true,
           border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12)),
@@ -452,6 +503,7 @@ class _AdminEditScreenState extends State<AdminEditScreen> {
       case 'message':
       case 'description':
       case 'details':
+      case 'universityNote':
         return Icons.notes_rounded;
       case 'price':
       case 'offerPrice':
@@ -470,6 +522,14 @@ class _AdminEditScreenState extends State<AdminEditScreen> {
         return Icons.location_on_rounded;
       case 'mosque':
         return Icons.mosque_rounded;
+      case 'providerKind':
+        return Icons.badge_rounded;
+      case 'stages':
+        return Icons.school_rounded;
+      case 'subjects':
+        return Icons.menu_book_rounded;
+      case 'eduTypes':
+        return Icons.category_rounded;
       case 'date':
       case 'dateOfDeath':
       case 'funeralDate':

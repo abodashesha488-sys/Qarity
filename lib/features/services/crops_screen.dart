@@ -1,26 +1,30 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../models/agriculture_content_model.dart';
+import '../../services/agriculture_content_service.dart';
 import '../../widgets/agriculture_content_panel.dart';
 import '../../widgets/qurity_app_bar.dart';
 
-/// شاشة المحاصيل — شبكة من المحاصيل المصرية تفتح تفاصيل علمية
+/// شاشة المحاصيل — شبكة من المحاصيل المصرية تفتح تفاصيل علمية موثقة.
 class CropsScreen extends StatelessWidget {
-  const CropsScreen({super.key});
+  const CropsScreen({super.key, this.contentService});
+
+  /// حقن اختياري للاختبارات — الافتراضي يخدم الإنتاج.
+  final AgricultureContentService? contentService;
 
   static const List<CropRecord> _crops = [
     CropRecord(
       name: 'القمح',
       scientificName: 'Triticum aestivum',
       nameEn: 'Wheat',
-      imageUrl:
-          'https://images.unsplash.com/photo-1574323347407-f5e1ad6d066b?w=400',
+      image: 'assets/images/crops/wheat.jpg',
       season: 'شتوي (نوفمبر - أبريل)',
       region: 'شمال ووسط الدلتا',
       description:
           'القمح هو المحصول الاستراتيجي الأول في مصر. يُزرع في الأراضي الطينية الثقيلة الجيدة الصرف. يحتاج لري منتظم وتسميد أزوتي على دفعات.',
+      growthPeriod: '150 - 165 يومًا',
+      seedRate: '60 - 70 كجم بذار/فدان',
       soilType: 'طينية ثقيلة - جيدة الصرف',
       irrigation: 'غمر: كل 10-15 يوم / حديث: كل 5-7 أيام',
       fertilization:
@@ -32,17 +36,19 @@ class CropsScreen extends StatelessWidget {
       harvestMethod: 'حصاد آلي أو يدوي عند نضج الحبوب (رطوبة 12-14%)',
       economicImportance:
           'المحصول الاستراتيجي الأول — الاكتفاء الذاتي هدف قومي',
+      source: 'معهد بحوث المحاصيل الحقلية - قسم بحوث القمح، مركز البحوث الزراعية',
     ),
     CropRecord(
       name: 'الأرز',
       scientificName: 'Oryza sativa',
       nameEn: 'Rice',
-      imageUrl:
-          'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400',
+      image: 'assets/images/crops/rice.jpg',
       season: 'صيفي (مايو - أكتوبر)',
       region: 'شمال الدلتا (كفر الشيخ، البحيرة، الدقهلية)',
       description:
           'الأرز محصول صيفي رئيسي يُزرع في الأراضي الطينية الثقيلة التي تحتفظ بالماء. مصر من أكبر منتجي الأرز في أفريقيا.',
+      growthPeriod: '110 - 130 يومًا',
+      seedRate: '25 - 30 كجم/فدان (مشتل) - 40 - 50 كجم (بذار مباشر)',
       soilType: 'طينية ثقيلة - تحتفظ بالماء',
       irrigation: 'غمر مستمر - مستوى ماء 5-10 سم طوال الموسم',
       fertilization:
@@ -54,40 +60,45 @@ class CropsScreen extends StatelessWidget {
       plantingMethod: 'شتل في مشاتل ثم نقل (25-30 يوم) / بذار مباشر',
       harvestMethod: 'حصاد آلي عند نضج الحبوب (رطوبة 20-22%)',
       economicImportance: 'ثاني محصول استراتيجي — تصدير وفائض للاستهلاك المحلي',
+      source: 'معهد بحوث المحاصيل الحقلية - قسم بحوث الأرز، مركز البحوث الزراعية',
     ),
     CropRecord(
       name: 'الذرة الشامية',
       scientificName: 'Zea mays',
       nameEn: 'Maize/Corn',
-      imageUrl:
-          'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=400',
+      image: 'assets/images/crops/maize.jpg',
       season: 'صيفي (أبريل - أغسطس) / نيلي (يوليو - نوفمبر)',
       region: 'شمال ووسط الدلتا',
       description:
           'الذرة الشامية محصول علف وحبوب استراتيجي. يُزرع علفاً أخضر وحبوباً. الهجن الحديثة تعطي إنتاجية عالية.',
+      growthPeriod: '100 - 120 يومًا',
+      seedRate: '20 - 25 كجم بذار/فدان',
       soilType: 'طينية صفراء - جيدة التهوية والصرف',
       irrigation: 'حديث: كل 3-5 أيام / غمر: كل 7-10 أيام',
       fertilization:
           'أزوت: 120-150 كجم/فدان (3 دفعات)\nفوسفات: 40-50 كجم P2O5/فدان\nبوتاس: 48 كجم K2O/فدان',
       pests:
           'حفار الساق، دودة الحشد الخريفية، ذبابة الساق، لفحة التبقع، ذبابة الورق',
-      varieties: 'هجين 10، هجين 168، هجين 310، توبة 1، توبة 2',
+      varieties: 'هجين 10، هجين 168، هجين 310، شندويل 1، شندويل 2',
       yieldTarget: '2.5-3.5 طن/فدان (حبوب) / 40-50 طن/فدان (علف أخضر)',
       plantingMethod:
           'بذار مباشر على خطوط (70-75 سم بين السطور، 25 سم بين الجور)',
       harvestMethod: 'حصاد آلي للحبوب / جزارة للعلف الأخضر',
       economicImportance: 'محصول علف استراتيجي — صناعة الزيوت والنشا',
+      source:
+          'معهد بحوث المحاصيل الحقلية - قسم بحوث الذرة الشامية، مركز البحوث الزراعية',
     ),
     CropRecord(
       name: 'القطن',
       scientificName: 'Gossypium barbadense',
       nameEn: 'Cotton',
-      imageUrl:
-          'https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400',
+      image: 'assets/images/crops/cotton.jpg',
       season: 'صيفي (مارس - أكتوبر)',
       region: 'وسط الدلتا (الغربية، المنوفية، القليوبية)',
       description:
           'القطن المصري طويل التيلة مشهور عالمياً بجودته العالية. يُزرع في الأراضي الطينية الصفراء العميقة.',
+      growthPeriod: '170 - 190 يومًا',
+      seedRate: '12 - 15 كجم بذار/فدان',
       soilType: 'طينية صفراء - عميقة - جيدة الصرف',
       irrigation: 'حديث: كل 5-7 أيام / مهم: عدم العطش في التزهير والعقد',
       fertilization:
@@ -101,17 +112,19 @@ class CropsScreen extends StatelessWidget {
       harvestMethod: 'قطف يدوي أو آلي للتفاحات الناضجة (3-4 حشات)',
       economicImportance:
           'محصول تصديري عالي القيمة — قطن طويل التيلة شهرة عالمية',
+      source: 'معهد بحوث المحاصيل الحقلية - قسم بحوث القطن، مركز البحوث الزراعية',
     ),
     CropRecord(
       name: 'فول بلدي',
       scientificName: 'Vicia faba',
       nameEn: 'Fava Bean',
-      imageUrl:
-          'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=400',
+      image: 'assets/images/crops/faba.jpg',
       season: 'شتوي (نوفمبر - أبريل)',
       region: 'شمال ووسط الدلتا',
       description:
           'الفول البلدي محصول بقولي شتوي مهم للبروتين النباتي. يثبت النيتروجين الجوي ويحسن خصوبة التربة.',
+      growthPeriod: '120 - 140 يومًا',
+      seedRate: '60 - 80 كجم بذار/فدان',
       soilType: 'طينية - جيدة الصرف',
       irrigation: 'غمر كل 15-20 يوم / حديث كل 7-10 أيام',
       fertilization:
@@ -123,17 +136,20 @@ class CropsScreen extends StatelessWidget {
           'بذار مباشر على خطوط (50-60 سم بين السطور، 15-20 سم بين الجور)',
       harvestMethod: 'حصاد يدوي أو آلي عند جفاف القرون',
       economicImportance: 'مصدر بروتين نباتي رخيص — تحسين تربة (ثابت نيتروجين)',
+      source:
+          'معهد بحوث المحاصيل الحقلية - قسم بحوث البقوليات، مركز البحوث الزراعية',
     ),
     CropRecord(
       name: 'بنجر السكر',
       scientificName: 'Beta vulgaris',
       nameEn: 'Sugar Beet',
-      imageUrl:
-          'https://images.unsplash.com/photo-1598554747436-c9293d6a588f?w=400',
+      image: 'assets/images/crops/beet.jpg',
       season: 'شتوي (أكتوبر - مايو)',
       region: 'شمال ووسط الدلتا',
       description:
           'بنجر السكر محصول سكري شتوي بديل لقصب السكر. يُزرع في الأراضي الطينية العميقة الخالية من الحجارة.',
+      growthPeriod: '150 - 170 يومًا',
+      seedRate: '4 - 5 كجم/فدان (حبوب مغلفة)',
       soilType: 'طينية عميقة - جيدة الصرف - خالية من الحجارة',
       irrigation: 'حديث: كل 5-7 أيام / انتظام الري حاسم لنسبة السكر',
       fertilization:
@@ -145,17 +161,19 @@ class CropsScreen extends StatelessWidget {
           'بذار مباشر (حبوب مغلفة) على خطوط (50 سم بين السطور، 20 سم بين الجور)',
       harvestMethod: 'قلع آلي للجذور + قطع الورق + نقل للمصنع',
       economicImportance: 'مصدر سكر محلي — بديل استيرادي — مخلفات علفية قيّمة',
+      source: 'معهد بحوث المحاصيل السكرية - قسم بحوث بنجر السكر، مركز البحوث الزراعية',
     ),
     CropRecord(
       name: 'عباد الشمس',
       scientificName: 'Helianthus annuus',
       nameEn: 'Sunflower',
-      imageUrl:
-          'https://images.unsplash.com/photo-1597848212624-3a1e3a2f8c4e?w=400',
+      image: 'assets/images/crops/sunflower.jpg',
       season: 'صيفي (مارس - يوليو) / نيلي (أغسطس - ديسمبر)',
       region: 'شمال ووسط الدلتا والأراضي الجديدة',
       description:
           'عباد الشمس محصول زيتي صيفي/نيلي. يتحمل الملوحة والجفاف نسبياً. دورة قصيرة (100-110 يوم).',
+      growthPeriod: '100 - 110 يومًا',
+      seedRate: '4 - 5 كجم بذار/فدان',
       soilType: 'طينية صفراء - رملية طينية - جيدة الصرف',
       irrigation: 'حديث: كل 5-7 أيام / يتحمل جفاف نسبي',
       fertilization:
@@ -168,17 +186,20 @@ class CropsScreen extends StatelessWidget {
           'بذار مباشر على خطوط (70 سم بين السطور، 25-30 سم بين الجور)',
       harvestMethod: 'حصاد آلي عند جفاف الرؤوس (رطوبة بذور 9-10%)',
       economicImportance: 'مصدر زيت نباتي — كسب علف عالي البروتين (40-44%)',
+      source:
+          'معهد بحوث المحاصيل الحقلية - قسم بحوث المحاصيل الزيتية، مركز البحوث الزراعية',
     ),
     CropRecord(
       name: 'فول الصويا',
       scientificName: 'Glycine max',
       nameEn: 'Soybean',
-      imageUrl:
-          'https://images.unsplash.com/photo-1510681459799-fa215a24f3a7?w=400',
+      image: 'assets/images/crops/soybean.jpg',
       season: 'صيفي (مايو - سبتمبر) / نيلي (يوليو - نوفمبر)',
       region: 'شمال ووسط الدلتا والأراضي الجديدة',
       description:
           'فول الصويا محصول بقولي زيتي بروتيني عالمي الأهمية. يثبت النيتروجين ويستخدم في صناعة الزيوت والأعلاف.',
+      growthPeriod: '110 - 120 يومًا',
+      seedRate: '20 - 25 كجم بذار/فدان',
       soilType: 'طينية صفراء - رملية طينية - جيدة الصرف - PH 6-6.8',
       irrigation: 'حديث: كل 5-7 أيام / حساس للعطش في التزهير والعقد',
       fertilization:
@@ -191,17 +212,20 @@ class CropsScreen extends StatelessWidget {
       harvestMethod: 'حصاد آلي عند جفاف القرون (رطوبة بذور 13%)',
       economicImportance:
           'بروتين نباتي عالي الجودة — زيت — كسب علف — تثبيت نيتروجين',
+      source:
+          'معهد بحوث المحاصيل الحقلية - قسم بحوث المحاصيل الزيتية، مركز البحوث الزراعية',
     ),
     CropRecord(
       name: 'السمسم',
       scientificName: 'Sesamum indicum',
       nameEn: 'Sesame',
-      imageUrl:
-          'https://images.unsplash.com/photo-1508739773434-1b8e9b1b8b1e?w=400',
+      image: 'assets/images/crops/sesame.jpg',
       season: 'صيفي (أبريل - أغسطس) / نيلي (يوليو - أكتوبر)',
       region: 'شمال ووسط الدلتا والأراضي الجديدة',
       description:
           'السمسم محصول زيتي صيفي/نيلي يتحمل الجفاف والملوحة. دورة قصيرة (90-110 يوم). بذوره غنية بالزيت (50-55%).',
+      growthPeriod: '90 - 110 يومًا',
+      seedRate: '2 - 3 كجم بذار/فدان',
       soilType: 'رملية طينية - طينية خفيفة - جيدة الصرف',
       irrigation: 'حديث: كل 7-10 أيام / يتحمل جفاف عالي',
       fertilization:
@@ -213,17 +237,20 @@ class CropsScreen extends StatelessWidget {
           'بذار مباشر (بذر ناعم) على خطوط (60 سم بين السطور، 10-15 سم بين الجور)',
       harvestMethod: 'قطع يدوي/آلي عند جفاف الكبسولات (قبل تفتحها)',
       economicImportance: 'زيت سمسم فاخر — طحينة — حلويات — تصدير عالي القيمة',
+      source:
+          'معهد بحوث المحاصيل الحقلية - قسم بحوث المحاصيل الزيتية، مركز البحوث الزراعية',
     ),
     CropRecord(
       name: 'البرسيم الحجازي',
       scientificName: 'Medicago sativa',
       nameEn: 'Alfalfa',
-      imageUrl:
-          'https://images.unsplash.com/photo-1505008088507-214a5a6d55f5?w=400',
+      image: 'assets/images/crops/alfalfa.jpg',
       season: 'حولية (زراعة أكتوبر - حصاد متعدد سنوات)',
       region: 'جميع أنحاء الدلتا والأراضي الجديدة',
       description:
           'البرسيم الحجازي ملك الأعلاف الخضراء. محصول بقولي حولي يثبت النيتروجين. يعطي 8-10 حشات/سنة. عمر الإنتاجية 3-5 سنوات.',
+      growthPeriod: 'حولي متعدد الحشات (3 - 5 سنوات إنتاج)',
+      seedRate: '15 - 20 كجم بذار/فدان',
       soilType: 'طينية عميقة - جيدة الصرف - PH 6.5-7.5',
       irrigation: 'غمر: كل 10-15 يوم / حديث: كل 5-7 أيام',
       fertilization:
@@ -235,17 +262,19 @@ class CropsScreen extends StatelessWidget {
       harvestMethod: 'حش آلي/يدوي كل 25-35 يوم (8-10 حشات/سنة)',
       economicImportance:
           'ملك الأعلاف — بروتين عالي (20-25%) — يحسن التربة — تدوير محاصيل مثالي',
+      source: 'معهد بحوث المحاصيل الحقلية - قسم بحوث الأعلاف، مركز البحوث الزراعية',
     ),
     CropRecord(
       name: 'الطماطم',
       scientificName: 'Solanum lycopersicum',
       nameEn: 'Tomato',
-      imageUrl:
-          'https://images.unsplash.com/photo-1546470427-e26264be0b0d?w=700',
+      image: 'assets/images/crops/tomato.jpg',
       season: 'صيفي ونيلي حسب المنطقة',
       region: 'الدلتا والأراضي الجديدة',
       description:
           'محصول خضري مهم في الدلتا، يحتاج صرفًا جيدًا وانتظامًا في الري ومراقبة مبكرة للذبابة البيضاء واللفحة.',
+      growthPeriod: '90 - 120 يومًا',
+      seedRate: '100 - 150 جم تقاوي/فدان (شتلات)',
       soilType: 'طينية صفراء أو رملية طينية جيدة الصرف',
       irrigation: 'تنقيط كل 1-3 أيام حسب الحرارة ومرحلة النمو',
       fertilization:
@@ -256,17 +285,19 @@ class CropsScreen extends StatelessWidget {
       plantingMethod: 'شتلات سليمة مع تعقيم الأدوات ومراعاة دورة المحصول',
       harvestMethod: 'جمع الثمار عند اكتمال اللون والحجم على دفعات',
       economicImportance: 'غذاء أساسي وصناعة صلصة وتجفيف وتصنيع غذائي',
+      source: 'معهد بحوث البساتين - قسم بحوث الخضر، مركز البحوث الزراعية',
     ),
     CropRecord(
       name: 'البطاطس',
       scientificName: 'Solanum tuberosum',
       nameEn: 'Potato',
-      imageUrl:
-          'https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=700',
+      image: 'assets/images/crops/potato.jpg',
       season: 'عروة صيفية وشتوية ونيلية',
       region: 'البحيرة والدقهلية والغربية والنوبارية',
       description:
           'محصول درني واسع الانتشار في مصر، حساس للصرف والملوحة ودرجات الحرارة المرتفعة أثناء تكوين الدرنات.',
+      growthPeriod: '90 - 110 يومًا',
+      seedRate: '600 - 800 كجم تقاوي/فدان',
       soilType: 'رملية طينية خفيفة جيدة التهوية والصرف',
       irrigation: 'تنقيط منتظم مع تجنب التعطيش ثم الري الغزير المفاجئ',
       fertilization:
@@ -277,17 +308,19 @@ class CropsScreen extends StatelessWidget {
       plantingMethod: 'تقاوي معتمدة مقسمة أو كاملة في خطوط جيدة التجهيز',
       harvestMethod: 'إيقاف الري قبل التقليع وتجفيف الدرنات في الظل',
       economicImportance: 'غذاء وتصنيع وتصدير ومصدر دخل رئيسي للمزارع',
+      source: 'معهد بحوث البساتين - قسم بحوث الخضر، مركز البحوث الزراعية',
     ),
     CropRecord(
       name: 'البرتقال',
       scientificName: 'Citrus sinensis',
       nameEn: 'Orange',
-      imageUrl:
-          'https://images.unsplash.com/photo-1547514701-42782101795e?w=700',
+      image: 'assets/images/crops/orange.jpg',
       season: 'شجرة دائمة الخضرة، إثمار شتوي',
       region: 'البحيرة والنوبارية والإسماعيلية ومناطق الدلتا',
       description:
           'من أهم أشجار الفاكهة المصرية، يحتاج شمسًا جيدة وصرفًا ممتازًا وبرنامج ري وتسميد ثابتًا.',
+      growthPeriod: 'دائم الخضرة — إثمار بعد 3 - 4 سنوات من الزراعة',
+      seedRate: 'شتلات مطعومة على أصول مناسبة (تحدد بحسب المنطقة)',
       soilType: 'رملية طينية جيدة الصرف وغير مرتفعة الملوحة',
       irrigation: 'تنقيط حسب عمر الشجرة والحرارة مع تقليل الري وقت البرودة',
       fertilization:
@@ -298,17 +331,19 @@ class CropsScreen extends StatelessWidget {
       plantingMethod: 'شتلات مطعومة سليمة على أصول مناسبة للمنطقة',
       harvestMethod: 'جمع الثمار مكتملة الحجم واللون مع تجنب الجروح',
       economicImportance: 'استهلاك محلي وعصائر وتصدير ومصدر دخل طويل الأجل',
+      source: 'معهد بحوث البساتين - قسم بحوث الفاكهة (الحمضيات)، مركز البحوث الزراعية',
     ),
     CropRecord(
       name: 'العنب',
       scientificName: 'Vitis vinifera',
       nameEn: 'Grape',
-      imageUrl:
-          'https://images.unsplash.com/photo-1537640538966-79f369143f8f?w=700',
+      image: 'assets/images/crops/grape.jpg',
       season: 'إثمار صيفي',
       region: 'الدلتا والأراضي الجديدة والمناطق الدافئة',
       description:
           'شجرة/كرمة فاكهة اقتصادية تحتاج تقليمًا وتربية دقيقة وتهوية جيدة لتقليل الأمراض الفطرية.',
+      growthPeriod: 'كرمة معمرة — إثمار بعد 2 - 3 سنوات من الزراعة',
+      seedRate: 'عقل أو شتلات معتمدة (تحدد بحسب الصنف والتربية)',
       soilType: 'رملية طينية جيدة الصرف قليلة الملوحة',
       irrigation: 'تنقيط منتظم مع ضبط الري أثناء التزهير ونضج الثمار',
       fertilization:
@@ -319,6 +354,7 @@ class CropsScreen extends StatelessWidget {
       plantingMethod: 'شتلات أو عقل معتمدة على تعريشة جيدة التهوية',
       harvestMethod: 'جمع العناقيد جافة وفي الصباح مع تداول لطيف',
       economicImportance: 'فاكهة طازجة وتصنيع وتصدير عالي القيمة',
+      source: 'معهد بحوث البساتين - قسم بحوث الفاكهة (العنب)، مركز البحوث الزراعية',
     ),
   ];
 
@@ -328,12 +364,13 @@ class CropsScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: const QurityAppBar(
-        title: 'محاصيل مصر',
+        title: 'المحاصيل الزراعية',
         color: color,
       ),
       body: Column(
         children: [
-          const AgricultureContentPanel(section: AgricultureSections.crops),
+          AgricultureContentPanel(
+              section: AgricultureSections.crops, service: contentService),
           Expanded(
             child: GridView.builder(
               padding: const EdgeInsets.all(16),
@@ -387,24 +424,17 @@ class _CropCard extends StatelessWidget {
           children: [
             AspectRatio(
               aspectRatio: 16 / 10,
-              child: CachedNetworkImage(
-                imageUrl: crop.imageUrl,
-                fit: BoxFit.contain,
-                color: theme.colorScheme.surfaceContainerHighest
-                    .withValues(alpha: 0.12),
-                colorBlendMode: BlendMode.dstOver,
-                placeholder: (c, u) => ColoredBox(
-                  color: theme.colorScheme.surfaceContainerHighest
-                      .withValues(alpha: 0.6),
-                  child: const Center(
-                      child: CircularProgressIndicator(strokeWidth: 2)),
-                ),
-                errorWidget: (c, u, e) => ColoredBox(
+              child: Image.asset(
+                crop.image,
+                fit: BoxFit.cover,
+                cacheWidth: 420,
+                semanticLabel: crop.name,
+                errorBuilder: (_, __, ___) => ColoredBox(
                   color: theme.colorScheme.surfaceContainerHighest
                       .withValues(alpha: 0.6),
                   child: Image.asset(
                     'assets/images/plant.jpg',
-                    fit: BoxFit.contain,
+                    fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) => Icon(crop.icon,
                         size: 48, color: theme.colorScheme.onSurfaceVariant),
                   ),
@@ -418,23 +448,27 @@ class _CropCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: color.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          crop.season,
-                          style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                              color: color),
+                      Flexible(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: color.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            crop.season,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: color),
+                          ),
                         ),
                       ),
-                      const Spacer(),
-                      if (crop.yieldTarget.isNotEmpty)
+                      if (crop.yieldTarget.isNotEmpty) ...[
+                        const SizedBox(width: 6),
                         Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 6, vertical: 2),
@@ -458,6 +492,7 @@ class _CropCard extends StatelessWidget {
                             ],
                           ),
                         ),
+                      ],
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -535,24 +570,17 @@ class CropDetailScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
               child: AspectRatio(
                 aspectRatio: 16 / 10,
-                child: CachedNetworkImage(
-                  imageUrl: crop.imageUrl,
-                  fit: BoxFit.contain,
-                  color: theme.colorScheme.surfaceContainerHighest
-                      .withValues(alpha: 0.12),
-                  colorBlendMode: BlendMode.dstOver,
-                  placeholder: (c, u) => ColoredBox(
-                    color: theme.colorScheme.surfaceContainerHighest
-                        .withValues(alpha: 0.6),
-                    child: const Center(
-                        child: CircularProgressIndicator(strokeWidth: 2)),
-                  ),
-                  errorWidget: (c, u, e) => ColoredBox(
+                child: Image.asset(
+                  crop.image,
+                  fit: BoxFit.cover,
+                  cacheWidth: 840,
+                  semanticLabel: crop.name,
+                  errorBuilder: (_, __, ___) => ColoredBox(
                     color: theme.colorScheme.surfaceContainerHighest
                         .withValues(alpha: 0.6),
                     child: Image.asset(
                       'assets/images/plant.jpg',
-                      fit: BoxFit.contain,
+                      fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => Icon(crop.icon,
                           size: 64, color: theme.colorScheme.onSurfaceVariant),
                     ),
@@ -605,29 +633,8 @@ class CropDetailScreen extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            // شريط المواصفات السريعة
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _InfoChip(
-                    icon: Icons.calendar_today_rounded,
-                    label: crop.season,
-                    color: color),
-                _InfoChip(
-                    icon: Icons.location_on_rounded,
-                    label: crop.region,
-                    color: color),
-                _InfoChip(
-                    icon: Icons.terrain_rounded,
-                    label: crop.soilType,
-                    color: color),
-                _InfoChip(
-                    icon: Icons.trending_up_rounded,
-                    label: crop.yieldTarget.split(' ').first,
-                    color: Colors.amber),
-              ],
-            ),
+            // شبكة البيانات السريعة الموثقة
+            _StatGrid(crop: crop, color: color),
 
             const SizedBox(height: 24),
 
@@ -719,24 +726,28 @@ class CropDetailScreen extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // مراجع علمية
-            const _DetailSection(
-              title: 'مراجع علمية مصرية موثقة',
+            // المصدر والمراجع
+            _DetailSection(
+              title: 'المصدر العلمي والمراجع',
               icon: Icons.menu_book_rounded,
-              color: Color(0xFF6A1B9A),
+              color: color,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _RefItem(
-                      'دليل الممارسات الزراعية الجيدة - مركز البحوث الزراعية - معهد بحوث المحاصيل الحقلية'),
-                  _RefItem(
-                      'التوصيات الفنية للمحاصيل الحقلية - وزارة الزراعة واستصلاح الأراضي'),
-                  _RefItem(
-                      'أطلس المحاصيل المصرية - معهد بحوث المحاصيل - قسم بحوث القمح/الأرز/الذرة/القطن/البقوليات'),
-                  _RefItem(
+                  Text(crop.source,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                          height: 1.5, fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 10),
+                  const _RefItem(
+                      'دليل الممارسات الزراعية الجيدة - مركز البحوث الزراعية'),
+                  const _RefItem(
+                      'التوصيات الفنية للمحاصيل - وزارة الزراعة واستصلاح الأراضي'),
+                  const _RefItem(
                       'برنامج التسميد المتوازن - معهد بحوث الأراضي والمياه والبيئة'),
-                  _RefItem(
+                  const _RefItem(
                       'دليل المكافحة المتكاملة للآفات - معهد بحوث وقاية النباتات'),
+                  const _RefItem(
+                      'الصور: ويكيميديا كومنز بتراخيص حرة — انظر tools/crops_image_manifest.md'),
                 ],
               ),
             ),
@@ -744,6 +755,123 @@ class CropDetailScreen extends StatelessWidget {
             const SizedBox(height: 32),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// شبكة البيانات السريعة: موسم / منطقة / مدة النمو / معدل البذار / التربة / الإنتاجية
+class _StatGrid extends StatelessWidget {
+  final CropRecord crop;
+  final Color color;
+
+  const _StatGrid({required this.crop, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    final items = <_StatItem>[
+      _StatItem(
+          icon: Icons.calendar_today_rounded,
+          label: 'الموسم',
+          value: crop.season),
+      _StatItem(
+          icon: Icons.location_on_rounded, label: 'المنطقة', value: crop.region),
+      _StatItem(
+          icon: Icons.timer_outlined,
+          label: 'مدة النمو',
+          value: crop.growthPeriod),
+      _StatItem(
+          icon: Icons.grain_rounded,
+          label: 'معدل البذار/التقاوي',
+          value: crop.seedRate),
+      _StatItem(
+          icon: Icons.terrain_rounded, label: 'نوع التربة', value: crop.soilType),
+      _StatItem(
+          icon: Icons.trending_up_rounded,
+          label: 'الإنتاجية المستهدفة',
+          value: crop.yieldTarget,
+          accent: true),
+    ];
+
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 10,
+      crossAxisSpacing: 10,
+      childAspectRatio: 2.05,
+      children: items
+          .map((s) => _StatCard(item: s, color: s.accent ? Colors.amber : color))
+          .toList(),
+    );
+  }
+}
+
+class _StatItem {
+  final IconData icon;
+  final String label;
+  final String value;
+  final bool accent;
+
+  const _StatItem(
+      {required this.icon,
+      required this.label,
+      required this.value,
+      this.accent = false});
+}
+
+class _StatCard extends StatelessWidget {
+  final _StatItem item;
+  final Color color;
+
+  const _StatCard({required this.item, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(item.icon, size: 15, color: color),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(item.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w800,
+                        color: color)),
+                const SizedBox(height: 2),
+                Text(
+                  item.value,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                      fontSize: 11, fontWeight: FontWeight.w700, height: 1.25),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -781,46 +909,17 @@ class _DetailSection extends StatelessWidget {
               children: [
                 Icon(icon, color: color, size: 20),
                 const SizedBox(width: 10),
-                Text(title,
-                    style: theme.textTheme.titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w900, color: color)),
+                Expanded(
+                  child: Text(title,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w900, color: color)),
+                ),
               ],
             ),
             const SizedBox(height: 12),
             child,
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _InfoChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-
-  const _InfoChip(
-      {required this.icon, required this.label, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: color),
-          const SizedBox(width: 6),
-          Text(label,
-              style: TextStyle(
-                  fontSize: 11, fontWeight: FontWeight.w700, color: color)),
-        ],
       ),
     );
   }
@@ -855,10 +954,12 @@ class CropRecord {
   final String name;
   final String scientificName;
   final String nameEn;
-  final String imageUrl;
+  final String image;
   final String season;
   final String region;
   final String description;
+  final String growthPeriod;
+  final String seedRate;
   final String soilType;
   final String irrigation;
   final String fertilization;
@@ -868,16 +969,19 @@ class CropRecord {
   final String plantingMethod;
   final String harvestMethod;
   final String economicImportance;
+  final String source;
   final IconData icon;
 
   const CropRecord({
     required this.name,
     required this.scientificName,
     required this.nameEn,
-    required this.imageUrl,
+    required this.image,
     required this.season,
     required this.region,
     required this.description,
+    required this.growthPeriod,
+    required this.seedRate,
     required this.soilType,
     required this.irrigation,
     required this.fertilization,
@@ -887,5 +991,6 @@ class CropRecord {
     required this.plantingMethod,
     required this.harvestMethod,
     required this.economicImportance,
+    required this.source,
   }) : icon = Icons.grass_rounded;
 }

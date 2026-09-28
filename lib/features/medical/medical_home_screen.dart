@@ -5,7 +5,6 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../core/utils/helpers.dart';
 import '../../models/medical_models.dart';
 import '../../services/admin_service.dart';
 import '../../services/image_upload_service.dart';
@@ -1604,7 +1603,8 @@ class _OpticalTabState extends State<_OpticalTab> {
     final days = await showModalBottomSheet<int>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => OpticalRenewSheet(shopName: shop.name),
+      builder: (_) =>
+          OpticalRenewSheet(shopName: shop.name, featured: shop.isFeaturedAd),
     );
     if (days == null || !mounted) return;
     try {
@@ -1678,9 +1678,9 @@ class _OpticalTabState extends State<_OpticalTab> {
                                     child: _OpticalCard(
                                       shop: s,
                                       accent: widget.color,
-                                      onRenew: s.isFeaturedAd
-                                          ? () => _renew(s)
-                                          : null,
+                                      // الإعلان يُختار من صفحة المحل بعد الإنشاء،
+                                      // فكل محل صاحبه يملك زر تفعيل العرض المميز.
+                                      onRenew: () => _renew(s),
                                     ),
                                   )),
                               const SizedBox(height: 4),
@@ -1817,8 +1817,11 @@ class _OpticalCard extends StatelessWidget {
                     child: TextButton.icon(
                       onPressed: onRenew,
                       icon: const Icon(Icons.star_rounded, size: 18),
-                      label: const Text('تجديد العرض المميز',
-                          style: TextStyle(fontWeight: FontWeight.w800)),
+                      label: Text(
+                          shop.isFeaturedAd
+                              ? 'تجديد العرض المميز'
+                              : 'تحويل الإعلان إلى عرض مميز',
+                          style: const TextStyle(fontWeight: FontWeight.w800)),
                     ),
                   ),
                 ),
@@ -1868,10 +1871,6 @@ class _OpticalFormState extends State<_OpticalForm> {
   final _descC = TextEditingController();
   final Set<String> _categories = <String>{};
   final List<String> _images = [];
-  String _adType = kOpticalAdNormal;
-  int _days = kOpticalFeaturedDayOptions[1];
-
-  bool get _featured => _adType == kOpticalAdFeatured;
 
   @override
   Widget build(BuildContext context) {
@@ -1891,10 +1890,6 @@ class _OpticalFormState extends State<_OpticalForm> {
             address: _addressC.text.trim(),
             workingHours: _hoursC.text.trim(),
             imageUrls: List.from(_images),
-            adType: _adType,
-            featuredUntil: _featured
-                ? DateTime.now().add(Duration(days: _days))
-                : null,
             submittedBy: widget.userId,
             submittedByName: widget.userName,
           ),
@@ -1936,109 +1931,14 @@ class _OpticalFormState extends State<_OpticalForm> {
           _field(_addressC, 'العنوان', Icons.location_on_rounded),
           _field(_hoursC, 'مواعيد العمل', Icons.access_time_rounded),
           const SizedBox(height: 6),
-          const Text('نوع الإعلان في الدليل',
-              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: _AdTypeChoice(
-                  title: 'إعلان عادي',
-                  subtitle: 'يبقى ظاهرًا بلا مدة',
-                  selected: !_featured,
-                  onTap: () => setState(() => _adType = kOpticalAdNormal),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _AdTypeChoice(
-                  title: 'عرض مميز',
-                  subtitle: 'ذهبي وفي المقدمة لمدة',
-                  selected: _featured,
-                  onTap: () => setState(() => _adType = kOpticalAdFeatured),
-                ),
-              ),
-            ],
-          ),
-          if (_featured) ...[
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: kOpticalFeaturedDayOptions.map((d) {
-                final selected = d == _days;
-                return ChoiceChip(
-                  label: Text('$d يوم'),
-                  selected: selected,
-                  onSelected: (_) => setState(() => _days = d),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 6),
-            Text(
-                'ينتهي العرض تلقائيًا '
-                '${AppHelpers.formatDate(DateTime.now().add(Duration(days: _days)))} '
-                'ويختفي المحل من الدليل حتى يجدّده صاحبه.',
-                style: const TextStyle(fontSize: 11.5, height: 1.5)),
-          ],
+          const Text('نوع الإعلان (عادي / عرض مميز) يُختار من صفحة المحل بعد '
+              'إضافته، من زر «تحويل الإعلان إلى عرض مميز».',
+              style: TextStyle(fontSize: 11.5, height: 1.5)),
           const SizedBox(height: 12),
           _field(_descC, 'نبذة وأهم الماركات والخدمات',
               Icons.description_rounded,
               maxLines: 3),
         ],
-      ),
-    );
-  }
-}
-
-class _AdTypeChoice extends StatelessWidget {
-  const _AdTypeChoice(
-      {required this.title,
-      required this.subtitle,
-      required this.selected,
-      required this.onTap});
-  final String title;
-  final String subtitle;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    const gold = Color(0xFFB8860B);
-    final theme = Theme.of(context);
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        decoration: BoxDecoration(
-          color: selected
-              ? gold.withValues(alpha: 0.1)
-              : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-              color: selected ? gold : theme.colorScheme.outlineVariant),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(selected ? Icons.check_circle : Icons.radio_button_unchecked,
-                    size: 17,
-                    color: selected ? gold : theme.colorScheme.onSurfaceVariant),
-                const SizedBox(width: 6),
-                Text(title,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w900, fontSize: 13)),
-              ],
-            ),
-            const SizedBox(height: 3),
-            Text(subtitle,
-                style: TextStyle(
-                    fontSize: 11, color: theme.colorScheme.onSurfaceVariant)),
-          ],
-        ),
       ),
     );
   }

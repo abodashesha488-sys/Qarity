@@ -185,7 +185,10 @@ class _ReviewPageState extends State<_ReviewPage> with _ReviewBulkMixin {
                     it['phone'],
                     it['specialty'],
                     it['stage'],
+                    it['providerKind'],
+                    it['universityNote'],
                     it['category'],
+                    if (it['offersPrivateTutoring'] == true) 'تدريس خاص',
                     source,
                   ].whereType<String>().join(' ').toLowerCase();
                   return text.contains(q);
@@ -706,6 +709,10 @@ class _ReviewCard extends StatelessWidget {
   bool get _isFeatured =>
       collection == 'service_providers' && item['isFeatured'] == true;
 
+  bool get _offersPrivateTutoring =>
+      collection == 'service_providers' &&
+      item['offersPrivateTutoring'] == true;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -847,6 +854,33 @@ class _ReviewCard extends StatelessWidget {
                                               fontSize: 9,
                                               fontWeight: FontWeight.w900,
                                               color: Colors.white)),
+                                    ],
+                                  ),
+                                ),
+                              if (_offersPrivateTutoring)
+                                Container(
+                                  margin: const EdgeInsets.only(right: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF00695C)
+                                        .withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                        color: const Color(0xFF00695C)
+                                            .withValues(alpha: 0.45)),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.cast_for_education_rounded,
+                                          size: 10, color: Color(0xFF00695C)),
+                                      SizedBox(width: 3),
+                                      Text('تدريس خاص',
+                                          style: TextStyle(
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.w900,
+                                              color: Color(0xFF00695C))),
                                     ],
                                   ),
                                 ),

@@ -12,10 +12,14 @@ class AgricultureContentPanel extends StatefulWidget {
     super.key,
     required this.section,
     this.title = 'محتوى محدث من الإدارة',
+    this.service,
   });
 
   final String section;
   final String title;
+
+  /// حقن اختياري للاختبارات (_fake Cloud Firestore_) — الافتراضي يخدم الإنتاج.
+  final AgricultureContentService? service;
 
   @override
   State<AgricultureContentPanel> createState() =>
@@ -23,7 +27,8 @@ class AgricultureContentPanel extends StatefulWidget {
 }
 
 class _AgricultureContentPanelState extends State<AgricultureContentPanel> {
-  final _service = AgricultureContentService();
+  late final AgricultureContentService _service =
+      widget.service ?? AgricultureContentService();
   late final Stream<List<AgricultureContent>> _stream =
       _service.watchSection(widget.section);
   bool _canEdit = false;
@@ -35,9 +40,9 @@ class _AgricultureContentPanelState extends State<AgricultureContentPanel> {
   }
 
   Future<void> _loadPermission() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
     try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) return;
       final snapshot = await _service.userRole(uid);
       if (mounted) {
         setState(() => _canEdit = snapshot == 'admin' ||

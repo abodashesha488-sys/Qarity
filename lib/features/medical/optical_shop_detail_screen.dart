@@ -10,6 +10,7 @@ import '../../routes/app_routes.dart';
 import '../../services/market_service.dart';
 import '../../services/medical_service.dart';
 import '../../services/share_service.dart';
+import '../market/add_product.dart';
 import 'clinic_detail_screen.dart';
 
 /// ألوان قسم النظارات — مصدر واحد تستعمله البوابة والتبويب وشاشة التفاصيل.
@@ -51,7 +52,8 @@ class _OpticalShopDetailScreenState extends State<OpticalShopDetailScreen> {
     final days = await showModalBottomSheet<int>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => OpticalRenewSheet(shopName: shop.name),
+      builder: (_) =>
+          OpticalRenewSheet(shopName: shop.name, featured: shop.isFeaturedAd),
     );
     if (days == null || !mounted) return;
     setState(() => _renewing = true);
@@ -335,8 +337,13 @@ class _OpticalShopDetailScreenState extends State<OpticalShopDetailScreen> {
       floatingActionButton: isOwner
           ? FloatingActionButton.extended(
               heroTag: 'optical_add_product',
-              onPressed: () =>
-                  Navigator.pushNamed(context, AppRoutes.marketAdd),
+              onPressed: () => Navigator.pushNamed(
+                context,
+                AppRoutes.marketAdd,
+                arguments: <String, dynamic>{
+                  kCategoryOptionsArgKey: kOpticalCategories,
+                },
+              ),
               icon: const Icon(Icons.add_rounded),
               label: const Text('أضف منتجاً لمحلي'),
             )
@@ -375,8 +382,12 @@ class _NoticeBanner extends StatelessWidget {
 }
 
 class OpticalRenewSheet extends StatefulWidget {
-  const OpticalRenewSheet({super.key, required this.shopName});
+  const OpticalRenewSheet(
+      {super.key, required this.shopName, this.featured = true});
   final String shopName;
+
+  /// محل مميز بالفعل ⇒ «تجديد»؛ وغير المميز ⇒ «تفعيل».
+  final bool featured;
 
   @override
   State<OpticalRenewSheet> createState() => _OpticalRenewSheetState();
@@ -394,8 +405,8 @@ class _OpticalRenewSheetState extends State<OpticalRenewSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('تجديد العرض المميز',
-              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+          Text(widget.featured ? 'تجديد العرض المميز' : 'تفعيل العرض المميز',
+              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
           const SizedBox(height: 6),
           Text(
               '«${widget.shopName}» يظهر بإطار ذهبي في مقدمة الدليل طوال المدة، '
@@ -424,8 +435,9 @@ class _OpticalRenewSheetState extends State<OpticalRenewSheet> {
                 backgroundColor: const Color(0xFFB8860B),
                 padding: const EdgeInsets.symmetric(vertical: 14)),
             onPressed: () => Navigator.pop(context, _days),
-            child: const Text('تفعيل التجديد',
-                style: TextStyle(fontWeight: FontWeight.w800)),
+            child: Text(
+                widget.featured ? 'تجديد الآن' : 'تفعيل العرض المميز',
+                style: const TextStyle(fontWeight: FontWeight.w800)),
           ),
         ],
       ),

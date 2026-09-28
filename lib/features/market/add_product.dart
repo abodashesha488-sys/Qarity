@@ -11,26 +11,35 @@ import '../../services/user_service.dart';
 import '../../widgets/qurity_app_bar.dart';
 
 class AddMarketProductScreen extends StatefulWidget {
-  const AddMarketProductScreen({super.key});
+  const AddMarketProductScreen({super.key, this.userService, this.marketService});
+
+  /// حقن اختياري — النمط المعتمد في المشروع (اختبارات بلا Firebase حقيقي).
+  final UserService? userService;
+  final MarketService? marketService;
 
   @override
   State<AddMarketProductScreen> createState() => _AddMarketProductScreenState();
 }
+
+/// مسار «إضافة منتج» من صفحة محل نظارات: الفئات المعروضة هي تخصصات المحل نفسها.
+const String kCategoryOptionsArgKey = 'categoryOptions';
 
 class _AddMarketProductScreenState extends State<AddMarketProductScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _priceController = TextEditingController();
-  final UserService _userService = UserService();
-  final MarketService _marketService = MarketService();
+  late final UserService _userService = widget.userService ?? UserService();
+  late final MarketService _marketService = widget.marketService ?? MarketService();
   final ImagePicker _picker = ImagePicker();
 
   SellerType _sellerType = SellerType.regular;
-  // نفس قوائم التصنيف في تبويب «السوق» — مصدر واحد مشترك.
-  final List<String> _categories =
+  // نفس قوائم التصنيف في تبويب «السوق» — مصدر واحد مشترك، إلا إذا مرّر
+  // مصدرٌ قائمة خاصة به (محل نظارات يمرّر تخصصاته).
+  List<String> _categories =
       kProductCategories.where((c) => c != 'عام').toList();
   String _selectedCategory = 'مواد غذائية';
+  bool _presetApplied = false;
   final List<String> _uploadedImageUrls = [];
   String _sellerName = 'عام';
   String _sellerPhone = '';
@@ -44,18 +53,39 @@ class _AddMarketProductScreenState extends State<AddMarketProductScreen> {
     _loadCurrentUser();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_presetApplied) return;
+    _presetApplied = true;
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is! Map) return;
+    final options = (args[kCategoryOptionsArgKey] as List?)
+            ?.whereType<String>()
+            .toList() ??
+        const [];
+    if (options.isEmpty) return;
+    _categories = options;
+    _selectedCategory = options.first;
+  }
+
   int get _maxImagesAllowed => _sellerType.maxImages;
 
   Future<void> _loadCurrentUser() async {
-    final user = await _userService.getCurrentUser();
-    if (user != null && mounted) {
-      setState(() {
-        _sellerName = user.name;
-        _sellerPhone = user.phone ?? '';
-        _sellerId = user.id;
-        _sellerType = user.sellerType ?? SellerType.regular;
-      });
+    UserModel? loaded;
+    try {
+      loaded = await _userService.getCurrentUser();
+    } catch (_) {
+      // لا مصادقة في اختبارات Widgets — النموذج يعمل ببيانات فارغة.
     }
+    if (!mounted || loaded == null) return;
+    final user = loaded;
+    setState(() {
+      _sellerName = user.name;
+      _sellerPhone = user.phone ?? '';
+      _sellerId = user.id;
+      _sellerType = user.sellerType ?? SellerType.regular;
+    });
   }
 
   Future<void> _pickAndUploadImage() async {

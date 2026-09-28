@@ -135,10 +135,29 @@ class _ServiceProviderDetailScreenState
                 imageUrl: imageUrl,
                 icon: ServiceCategory.icon(provider.category),
                 onShare: () => ShareService.shareText(
-                    title: '🛠️ ${provider.name}',
+                    title: provider.isEducational
+                        ? '🎓 ${provider.name}'
+                        : '🛠️ ${provider.name}',
                     body: [
+                      if (provider.isEducational &&
+                          provider.providerKindLabel.isNotEmpty)
+                        'الصفة: ${provider.providerKindLabel}',
                       if (provider.displaySpecialty.isNotEmpty)
-                        'التخصص: ${provider.displaySpecialty}',
+                        provider.isEducational
+                            ? 'المواد: ${provider.displaySpecialty}'
+                            : 'التخصص: ${provider.displaySpecialty}',
+                      if (provider.isEducational &&
+                          provider.stagesLine.isNotEmpty)
+                        'المراحل: ${provider.stagesLine}',
+                      if (provider.isEducational &&
+                          provider.eduTypesLine.isNotEmpty)
+                        'نوع التعليم: ${provider.eduTypesLine}',
+                      if (provider.isEducational &&
+                          provider.universityNote.trim().isNotEmpty)
+                        'التخصص الجامعي: ${provider.universityNote.trim()}',
+                      if (provider.isEducational &&
+                          provider.offersPrivateTutoring)
+                        '✔ يقدّم دروساً خصوصية',
                       if (provider.description.isNotEmpty)
                         provider.description,
                       if (provider.address.isNotEmpty)
@@ -153,13 +172,60 @@ class _ServiceProviderDetailScreenState
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       _titleRow(theme, provider, accent),
+                      if (provider.isEducational &&
+                          provider.offersPrivateTutoring) ...[
+                        const SizedBox(height: 12),
+                        _privateTutoringBanner(theme),
+                      ],
                       const SizedBox(height: 16),
                       MedSection(
-                        title: 'بيانات الخدمة',
+                        title: provider.isEducational
+                            ? 'بيانات التدريس'
+                            : 'بيانات الخدمة',
                         accent: accent,
                         child: Column(
                           children: [
-                            if (provider.displaySpecialty.isNotEmpty)
+                            if (provider.isEducational) ...[
+                              MedInfoRow(
+                                  icon: Icons.badge_rounded,
+                                  label: 'الصفة',
+                                  value: provider.providerKindLabel,
+                                  accent: accent),
+                              if (provider.eduTypesLine.isNotEmpty)
+                                MedInfoRow(
+                                    icon: Icons.category_rounded,
+                                    label: 'نوع التعليم',
+                                    value: provider.eduTypesLine,
+                                    accent: accent),
+                              if (provider.stagesLine.isNotEmpty)
+                                MedInfoRow(
+                                    icon: Icons.school_rounded,
+                                    label: 'المراحل',
+                                    value: provider.stagesLine,
+                                    accent: accent),
+                              if (provider.subjectsLine.isNotEmpty ||
+                                  provider.specialty.trim().isNotEmpty)
+                                MedInfoRow(
+                                    icon: Icons.menu_book_rounded,
+                                    label: 'المواد',
+                                    value: provider.subjectsLine.isNotEmpty
+                                        ? provider.subjectsLine
+                                        : provider.specialty.trim(),
+                                    accent: accent),
+                              if (provider.universityNote.trim().isNotEmpty)
+                                MedInfoRow(
+                                    icon: Icons.edit_note_rounded,
+                                    label: 'التخصص الجامعي',
+                                    value: provider.universityNote.trim(),
+                                    accent: accent),
+                              MedInfoRow(
+                                  icon: Icons.cast_for_education_rounded,
+                                  label: 'تدريس خاص',
+                                  value: provider.offersPrivateTutoring
+                                      ? 'يقدّم دروساً خصوصية'
+                                      : 'غير متاح',
+                                  accent: accent),
+                            ] else if (provider.displaySpecialty.isNotEmpty)
                               MedInfoRow(
                                   icon: Icons.category_rounded,
                                   label: 'المجال',
@@ -236,6 +302,34 @@ class _ServiceProviderDetailScreenState
               style: theme.textTheme.headlineSmall
                   ?.copyWith(fontWeight: FontWeight.w900)),
         ),
+        if (provider.isEducational)
+          Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+            margin: const EdgeInsets.only(left: 6),
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: accent.withValues(alpha: 0.4)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                    provider.isSchool
+                        ? Icons.account_balance_rounded
+                        : Icons.person_rounded,
+                    size: 13,
+                    color: accent),
+                const SizedBox(width: 3),
+                Text(provider.providerKindLabel,
+                    style: TextStyle(
+                        color: accent,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 11.5)),
+              ],
+            ),
+          ),
         if (provider.isFeatured)
           Container(
             padding:
@@ -262,6 +356,31 @@ class _ServiceProviderDetailScreenState
     );
   }
 
+  /// شريط «يقدّم دروساً خصوصية» أعلى بيانات المدرّس.
+  Widget _privateTutoringBanner(ThemeData theme) {
+    const teal = Color(0xFF00695C);
+    return Container(
+      key: const Key('edu-private-banner'),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: teal.withValues(alpha: 0.09),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: teal.withValues(alpha: 0.4)),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.cast_for_education_rounded, size: 19, color: teal),
+          SizedBox(width: 9),
+          Expanded(
+            child: Text('يقدّم دروساً خصوصية',
+                style: TextStyle(
+                    fontWeight: FontWeight.w800, fontSize: 13, color: teal)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _ratingSummary(
       ThemeData theme, ServiceProvider provider, Color accent) {
     final avg = provider.ratingCount == 0
@@ -270,14 +389,16 @@ class _ServiceProviderDetailScreenState
     return MedSection(
       title: 'التقييم',
       accent: accent,
-      child: Row(
+      child: Wrap(
+        spacing: 10,
+        runSpacing: 4,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           Text(avg.toStringAsFixed(1),
               style: TextStyle(
                   fontSize: 30,
                   fontWeight: FontWeight.w900,
                   color: accent)),
-          const SizedBox(width: 10),
           RatingBarIndicator(
             rating: avg,
             itemSize: 22,
@@ -285,7 +406,6 @@ class _ServiceProviderDetailScreenState
             itemBuilder: (_, __) =>
                 const Icon(Icons.star_rounded, color: Colors.amber),
           ),
-          const SizedBox(width: 8),
           Text('(${provider.ratingCount} تقييم)',
               style: theme.textTheme.bodySmall
                   ?.copyWith(color: Colors.grey)),
