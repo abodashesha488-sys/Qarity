@@ -1,5 +1,7 @@
 name: Qarity Firestore Rules Deploy
 
+# ينشر firestore.rules عند تغييرها أو عند تغيير الخدمات/النماذج التي قد تستلزم
+# تعديل القواعد. البوابة: تحليل الكود + القواعد صالحة قبل النشر.
 on:
   push:
     branches: [main]
@@ -11,33 +13,92 @@ on:
     branches: [main]
     paths:
       - 'firestore.rules'
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
   deploy:
-    runs-on: windows-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
 
     steps:
       - name: 📂 Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: 🔧 Setup Flutter (for Firebase SDK)
+      - name: 🔧 Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.19.0"
-          channel: "stable"
+          channel: 'stable'
+          cache: true
 
       - name: 📦 Get dependencies
         run: flutter pub get
 
       - name: ✅ Verify flutter analyze
-        run: flutter analyze
+        run: flutter analyze --no-fatal-infos
+
+      # المصادقة عبر Service Account (نفس نمط release-apk.yml الناجح).
+      # w9jdt/actions/firebase-deploy محذوف من GitHub، لذا نستخدم firebase-admin مباشرة.
+      - name: 🔐 Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          project_id: abudshisha
 
       - name: 📤 Deploy Firestore Rules
-        uses: w9jdt/actions/firebase-deploy@v2
-        with:
-          project: abudshisha
-          credentials: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          only: firestore:rules
+        run: |
+          set -e
+          cd /tmp
+          cat > package.json << 'PKGEOF'
+          {
+            "name": "firestore-rules-deployer",
+            "private": true,
+            "dependencies": {
+              "firebase-admin": "^13.0.0"
+            }
+          }
+          PKGEOF
+
+          echo "Installing firebase-admin..."
+          npm install --omit=dev 2>&1 | tail -5
+
+          cat > /tmp/deploy_rules.js << 'EOF'
+          const { initializeApp, cert } = require('firebase-admin/app');
+          const { getSecurityRules } = require('firebase-admin/security-rules');
+          const fs = require('fs');
+
+          const RULES_FILE = process.env.RULES_FILE;
+          const source = fs.readFileSync(RULES_FILE, 'utf8');
+
+          async function main() {
+            initializeApp({
+              credential: cert(require('/tmp/service-account.json')),
+              projectId: 'abudshisha'
+            });
+
+            const securityRules = getSecurityRules();
+            const ruleset = await securityRules.releaseFirestoreRulesetFromSource(source);
+            console.log('✅ Firestore ruleset released:', ruleset.name);
+          }
+
+          main().catch(err => {
+            console.error('❌ Failed to deploy Firestore rules:', err);
+            process.exit(1);
+          });
+          EOF
+
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > /tmp/service-account.json
+          chmod 600 /tmp/service-account.json
+
+          echo "Deploying firestore.rules from: $GITHUB_WORKSPACE/firestore.rules"
+          RULES_FILE="$GITHUB_WORKSPACE/firestore.rules" node /tmp/deploy_rules.js
+
+      - name: 🧹 Cleanup credentials
+        if: always()
+        run: rm -f /tmp/service-account.json
 
       - name: 📋 Success notification
         run: echo "🔥 Firestore rules deployed successfully"

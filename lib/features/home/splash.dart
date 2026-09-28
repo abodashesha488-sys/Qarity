@@ -68,7 +68,8 @@ class _SplashScreenState extends State<SplashScreen>
 
     UserModel? model;
     try {
-      model = await UserService().getUser(currentUser.uid);
+      // قرار أمني (تعطيل الحساب): من الخادم، لا من النسخة المحفوظة على الجهاز.
+      model = await UserService().getAuthority(currentUser.uid);
     } catch (_) {
       model = null;
     }

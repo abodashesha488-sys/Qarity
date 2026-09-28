@@ -80,8 +80,31 @@
    (اختبار الحماية في `children_lessons_test.dart` يرفض تسجيل مجلد ناقص أو بقاء مكتمل غير مسجّل).
 3. شغّل `flutter test` — الشاشات تلتقط الصور تلقائيًا عبر `kidLessonImage`.
 
-## حالة التقدم (2026-09-26)
+## حالة التقدم (2026-09-28)
 - ✅ **num/01..10** — مولّدة ومضغوطة (360×360 q82، ~15KB للصورة) ومسجّلة في pubspec.
 - ✅ **wudu/01..08** — مولّدة ومضغوطة ومسجّلة في pubspec.
-- ⏳ **salah/01..03** — مولّدة ومحفوظة في `vibe_images/` (خارج الشجرة)، تنتظر 05..08 لأن الحصة استُنفدت من جديد (403/112 بعد ~30 صورة) — المجلد غير مسجّل عمدًا حتى يكتمل.
-- ❌ **salah/04..08، prophets/01..08، manners/01..10** — 23 صورة بانتظار «أكمل الصور».
+- ⏳ **salah/01..02** — مولّدة ومحفوظة في `vibe_images/` خارج الشجرة (`kids_salah_01_*.png`,
+  `kids_salah_02_*.png`)، المجلد غير مسجّل عمدًا حتى يكتمل 8/8.
+- ❌ **المتبقّي 24 صورة**: salah/03..08 (6) + prophets/01..08 (8) + manners/01..10 (10).
+  (كانت مكتوبة سابقًا «23» اعتمادًا على أن salah/03 وُلّدت — لم تُولَّد؛ الملفان الوحيدان في `vibe_images/` هما 01 و02.)
+- ⛔ **الحاجز**: خدمة توليد الصور ترجع `403 {"code":"112", pricingUrl}` = حصة التوليد مستنفدة
+  على مستوى الحساب (تأكّدت بمحاولتين على مجلدين مختلفين يوم 2026-09-28). لا بديل محلي:
+  لا تُولَّد الصور بالكود، والشاشات تعرض الإيموجي/التفاح المرسوم عبر `errorBuilder` حتى تصل الصور.
+
+### أمر المعالجة (يُشغَّل بعد كل دفعة توليد من `vibe_images/`)
+```
+python - <<'PY'
+from PIL import Image; from pathlib import Path
+src = Path("C:/Users/elera/Documents/Qoder/2026-09-26/89d3d9fa/vibe_images")
+repo = Path("C:/Users/elera/Desktop/Qarity/assets/images/kids")
+for folder in ("salah", "prophets", "manners"):
+    out = repo / folder; out.mkdir(parents=True, exist_ok=True)
+    for p in sorted(src.glob(f"kids_{folder}_*.png")):
+        n = p.name.split("_")[2] + ".jpg"
+        im = Image.open(p).convert("RGB").resize((360, 360), Image.LANCZOS)
+        im.save(out / n, quality=82, optimize=True)
+        print(folder, n, (out / n).stat().st_size // 1024, "KB")
+PY
+```
+ثم سجّل المجلدات المكتملة فقط في `pubspec.yaml` (السطر بعد `assets/images/kids/wudu/`)
+وشغّل `flutter test` (اختبار الحماية في `children_lessons_test.dart` يرفض تسجيل مجلد ناقص).

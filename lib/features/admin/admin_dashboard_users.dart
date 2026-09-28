@@ -989,7 +989,8 @@ class _UsersPageState extends State<_UsersPage> {
                         onPressed: () async {
                           Navigator.pop(ctx);
                           await _confirmDelete(context, u['id'] as String,
-                              u['name']?.toString() ?? '');
+                              u['name']?.toString() ?? '',
+                              role: (u['role'] ?? 'user').toString());
                         },
                       ),
                     ),
@@ -1235,7 +1236,7 @@ class _UsersPageState extends State<_UsersPage> {
                         side: const BorderSide(color: Colors.red)),
                     onPressed: () async {
                       Navigator.pop(ctx);
-                      await _confirmDelete(context, uid, name);
+                      await _confirmDelete(context, uid, name, role: role);
                     },
                     icon: const Icon(Icons.delete_outline_rounded),
                     label: const Text('حذف المستخدم نهائياً'),
@@ -1283,9 +1284,12 @@ class _UsersPageState extends State<_UsersPage> {
   }
 
   Future<void> _confirmDelete(
-      BuildContext context, String uid, String name) async {
+      BuildContext context, String uid, String name,
+      {required String role}) async {
     // حماية مزدوجة: القواعد ترفض ذلك أيضاً، لكن نمنع المحاولة هنا برسالة واضحة.
-    if (_isProtectedGeneralAdmin('admin')) {
+    // الفحص بدور الهدف الحقيقي: تمرير دور ثابت كان يمنع الأدمن المساعد من حذف
+    // أي حساب برسالة مضلّلة عن المدير العام.
+    if (_isProtectedGeneralAdmin(role)) {
       _snack('لا يمكنك حذف حساب المدير العام');
       return;
     }

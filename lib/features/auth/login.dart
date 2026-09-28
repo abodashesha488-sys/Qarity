@@ -107,13 +107,25 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
 
       // مستخدم جديد/غير مكتمل البيانات → شاشة إكمال الملف، غير ذلك → الرئيسية.
+      // القراءة من الخادم: قرار الدخول (تعطيل الحساب) لا يُبنى على نسخة محفوظة
+      // على الجهاز، وإلا عاد المعطَّل للدخول من هذه الشاشة مباشرة.
       UserModel? profile;
       try {
-        profile = await UserService().getUser(currentUser.uid);
+        profile = await UserService().getAuthority(currentUser.uid);
       } catch (_) {
         profile = null;
       }
       if (!mounted) return;
+      if (profile != null && !profile.isActive) {
+        await UserService().signOut();
+        if (!mounted) return;
+        AppHelpers.showSnackBar(
+          context,
+          'تم تعطيل حسابك — يرجى التواصل مع إدارة القرية',
+          isError: true,
+        );
+        return;
+      }
       if (profile != null && !UserService.isProfileComplete(profile)) {
         Navigator.pushReplacementNamed(context, AppRoutes.completeProfile,
             arguments: currentUser.uid);

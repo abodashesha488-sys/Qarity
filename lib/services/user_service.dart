@@ -8,8 +8,14 @@ import '../../models/data_models.dart';
 import 'cache_service.dart';
 
 class UserService {
-  final firebase_auth.FirebaseAuth _auth = firebase_auth.FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  /// حقن اختياري للنمط المعتمد في المشروع (اختبارات بلا Firebase حقيقي).
+  UserService([FirebaseFirestore? firestore])
+      : _firestore = firestore ?? FirebaseFirestore.instance;
+
+  // كسول عمدًا: بناء الخدمة في اختبار بلا Firebase لا يجب أن يفشل لمجرد
+  // أن القرار الحالي لا يحتاج المصادقة.
+  firebase_auth.FirebaseAuth get _auth => firebase_auth.FirebaseAuth.instance;
+  final FirebaseFirestore _firestore;
   Stream<firebase_auth.User?> authStateChanges() => _auth.authStateChanges();
   firebase_auth.User? get currentUser => _auth.currentUser;
   String? get currentUserId => _auth.currentUser?.uid;
@@ -68,6 +74,33 @@ class UserService {
       // لا نُعلّق الواجهة بسبب شبكة/صلاحيات — نرجع null ويتعامل كل شاشة معه.
       debugPrint('getUser($uid) failed: $e');
       return null;
+    }
+  }
+
+  /// قراءة **لقرار أمني** (تفعيل الحساب/الدور) من الخادم مباشرة، لا من النسخة
+  /// المحفوظة محليًا التي بلا مدة انتهاء — وإلا ظلّ جهاز المستخدم المعطَّل
+  /// يقرأ نفسه «مفعّلاً» إلى الأبد ولا تصله رسالة التعطيل.
+  /// عند تعذّر الشبكة نرجع لنفس getUser (الكاش) حتى لا ينكسر العمل بلا اتصال؛
+  /// منع الكتابة الفعلية يظل مفروضًا في قواعد Firestore لا هنا.
+  Future<UserModel?> getAuthority(String uid) async {
+    try {
+      final doc = await _firestore
+          .collection('users')
+          .doc(uid)
+          .get(const GetOptions(source: Source.server))
+          .timeout(const Duration(seconds: 8));
+      if (!doc.exists) {
+        // الملف محذوف فعليًا: لا تُعتمد نسخة قديمة من الكاش عليه.
+        await CacheService.invalidateUser(uid);
+        return null;
+      }
+      final user =
+          UserModel.fromJson(doc.data() as Map<String, dynamic>, doc.id);
+      await CacheService.saveUser(uid, user.toJson());
+      return user;
+    } catch (e) {
+      debugPrint('getAuthority($uid) fell back to cache: $e');
+      return getUser(uid);
     }
   }
 

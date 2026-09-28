@@ -7,45 +7,55 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function me() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    // الحساب المفعّل فقط يكتب. التعطيل من لوحة الإدارة يجب أن يمنع الإضافة
+    // والتعديل حتى لو بقيت جلسة قديمة عند المستخدم أو استعمل عميلًا مباشرًا،
+    // لأن بقية Gates كلها جانب العميل. الوثيقة غير الموجودة (حساب لم يُنشأ
+    // ملفه بعد) تُحسب مفعّلة حتى لا تنكسر خطوة الإنشاء الأولى، وغياب الحقل
+    // (حسابات قديمة) مفعّل أيضًا.
+    function accountActive() {
+      return isSignedIn()
+        && (!('isActive' in me().data) || me().data.isActive != false);
+    }
+
     // الوصول للأدمن عبر الدور فقط (users/{uid}.role == 'admin').
     // لإضافة أول مدير: أنشئ مستخدمك ثم عيّن users/<uid>.role = 'admin' من
     // Firebase Console. لا نربط القواعد ببريد ثابت حتى لا يصبح نقطة فشل/تسريب.
     // المدير العام فقط (role == 'admin'). يُستخدم حيث تُحفظ صلاحياته الحصرية:
     // حماية حساب المدير العام من الحذف أو التنحية بواسطة الأدمن المساعد.
     function isGeneralAdmin() {
-      return isSignedIn() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return accountActive() && me().data.role == 'admin';
     }
 
     // أي مدير: المدير العام أو «الأدمن المساعد» (assistant_admin).
     // للأدمن المساعد نفس صلاحيات المدير العام في إدارة المحتوى كله،
     // ما عدا حذف/تنحية المدير العام (انظر مجموعة users أدناه).
     function isAdmin() {
-      return isSignedIn() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
-          in ['admin', 'assistant_admin'];
+      return accountActive() && me().data.role in ['admin', 'assistant_admin'];
     }
 
     // مدير المركز الطبي: دوره medical_admin (أو أي مدير). مسؤول عن محتوى المركز
     // ومراجعة المدخلات الطبية.
     function isMedicalAdmin() {
-      return isSignedIn() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'assistant_admin', 'medical_admin'];
+      return accountActive() &&
+        me().data.role in ['admin', 'assistant_admin', 'medical_admin'];
     }
 
     function isAgriculturalAdmin() {
-      return isSignedIn() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
-          in ['admin', 'assistant_admin', 'agricultural_admin'];
+      return accountActive() &&
+        me().data.role in ['admin', 'assistant_admin', 'agricultural_admin'];
     }
 
     function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+      return accountActive() && request.auth.uid == userId;
     }
 
     // يسمح للمستخدم بتحديث حقول التفاعل فقط (عدّادات) دون المساس بالمحتوى أو حالة الموافقة
     function interactionOnly() {
-      return isSignedIn()
+      return accountActive()
         && request.resource.data.diff(resource.data).affectedKeys()
            .hasOnly(['likes', 'likedBy', 'comments', 'views', 'rating', 'reviewCount']);
     }
@@ -91,27 +101,27 @@ service cloud.firestore {
     match /news/{docId} {
       allow list, get: if true;
       // كل خبر جديد يجب أن يبدأ غير موافق عليه
-      allow create: if isSignedIn() && request.resource.data.isApproved == false;
+      allow create: if accountActive() && request.resource.data.isApproved == false;
       // المالك يستطيع مزامنة اسمه المعروض فقط (cascade تغيير الملف الشخصي)
       allow update: if isAdmin() || interactionOnly()
-        || (isSignedIn() && resource.data.authorId == request.auth.uid
+        || (accountActive() && resource.data.authorId == request.auth.uid
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['authorName']));
       allow delete: if isAdmin();
 
       match /comments/{commentId} {
         allow read: if true;
-        allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
-        allow update, delete: if isAdmin() || request.auth.uid == resource.data.userId;
+        allow create: if accountActive() && request.auth.uid == request.resource.data.userId;
+        allow update, delete: if isAdmin() || (accountActive() && request.auth.uid == resource.data.userId);
       }
     }
 
     // ───────────────────────── منتجات السوق ─────────────────────────
     match /market_products/{docId} {
       allow list, get: if true;
-      allow create: if isSignedIn() && request.resource.data.isApproved == false;
+      allow create: if accountActive() && request.resource.data.isApproved == false;
       // البائع: تفاعل + مزامنة اسمه المعروض
       allow update: if isAdmin() || interactionOnly()
-        || (isSignedIn() && resource.data.sellerId == request.auth.uid
+        || (accountActive() && resource.data.sellerId == request.auth.uid
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['sellerName','sellerType']));
       allow delete: if isAdmin();
 
@@ -122,15 +132,15 @@ service cloud.firestore {
       }
       match /comments/{commentId} {
         allow read: if true;
-        allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
-        allow update, delete: if isAdmin() || request.auth.uid == resource.data.userId;
+        allow create: if accountActive() && request.auth.uid == request.resource.data.userId;
+        allow update, delete: if isAdmin() || (accountActive() && request.auth.uid == resource.data.userId);
       }
     }
 
     // ───────────────────────── العزاء ─────────────────────────
     match /obituaries/{docId} {
       allow list, get: if true;
-      allow create: if isSignedIn() && request.resource.data.isApproved == false;
+      allow create: if accountActive() && request.resource.data.isApproved == false;
       allow update: if isAdmin() || interactionOnly();
       allow delete: if isAdmin();
     }
@@ -138,7 +148,7 @@ service cloud.firestore {
     // ───────────────────────── المناسبات ─────────────────────────
     match /occasions/{docId} {
       allow list, get: if true;
-      allow create: if isSignedIn() && request.resource.data.isApproved == false;
+      allow create: if accountActive() && request.resource.data.isApproved == false;
       allow update: if isAdmin() || interactionOnly();
       allow delete: if isAdmin();
     }
@@ -146,17 +156,17 @@ service cloud.firestore {
     // ───────────────────────── المنتدى ─────────────────────────
     match /forum_posts/{docId} {
       allow list, get: if true;
-      allow create: if isSignedIn() && request.resource.data.isApproved == false;
+      allow create: if accountActive() && request.resource.data.isApproved == false;
       allow update: if isAdmin() || interactionOnly()
-        || (isSignedIn() && resource.data.userId == request.auth.uid
+        || (accountActive() && resource.data.userId == request.auth.uid
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['userName','userPhotoUrl']));
       allow delete: if isAdmin();
 
       match /comments/{commentId} {
         allow read: if true;
-        allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
+        allow create: if accountActive() && request.auth.uid == request.resource.data.userId;
         // الحذف للأدمن أو الأدمن المساعد (الإشراف) أو صاحب التعليق نفسه.
-        allow update, delete: if isAdmin() || request.auth.uid == resource.data.userId;
+        allow update, delete: if isAdmin() || (accountActive() && request.auth.uid == resource.data.userId);
       }
     }
 
@@ -164,7 +174,7 @@ service cloud.firestore {
     match /service_requests/{docId} {
       allow get: if isAdmin() || resource.data.userId == request.auth.uid;
       allow list: if isAdmin();
-      allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
+      allow create: if accountActive() && request.auth.uid == request.resource.data.userId;
       allow update, delete: if isAdmin();
     }
 
@@ -174,7 +184,7 @@ service cloud.firestore {
                  || resource.data.buyerId == request.auth.uid
                  || resource.data.sellerId == request.auth.uid;
       allow list: if isAdmin();
-      allow create: if isSignedIn() && request.auth.uid == request.resource.data.buyerId;
+      allow create: if accountActive() && request.auth.uid == request.resource.data.buyerId;
       // المشتري أو البائع أو الأدمن يستطيع تحديث حالة الطلب
       allow update: if isAdmin()
                     || resource.data.buyerId == request.auth.uid
@@ -216,34 +226,34 @@ service cloud.firestore {
     // ───────────────────────── التعازي (مجموعة مستقلة) ─────────────────────────
     match /condolences/{docId} {
       allow list, get: if isSignedIn();
-      allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
-      allow update, delete: if isAdmin() || request.auth.uid == resource.data.userId;
+      allow create: if accountActive() && request.auth.uid == request.resource.data.userId;
+      allow update, delete: if isAdmin() || (accountActive() && request.auth.uid == resource.data.userId);
     }
 
     // ───────────────────────── حضور المناسبات ─────────────────────────
     match /occasion_attendees/{docId} {
       allow list, get: if isSignedIn();
       // الإنشاء يتحقق من request.resource، والحذف يتحقق من resource (الوثيقة القائمة)
-      allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
-      allow delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if accountActive() && request.auth.uid == request.resource.data.userId;
+      allow delete: if accountActive() && (resource.data.userId == request.auth.uid || isAdmin());
       // مزامنة اسم الحاضر عند تغيير اسمه
       allow update: if isAdmin()
-        || (isSignedIn() && resource.data.userId == request.auth.uid
+        || (accountActive() && resource.data.userId == request.auth.uid
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['userName']));
     }
 
     // ───────────────────────── مراجعات المنتجات ─────────────────────────
     match /product_reviews/{docId} {
       allow list, get: if true;
-      allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
-      allow update, delete: if isAdmin() || request.auth.uid == resource.data.userId;
+      allow create: if accountActive() && request.auth.uid == request.resource.data.userId;
+      allow update, delete: if isAdmin() || (accountActive() && request.auth.uid == resource.data.userId);
     }
 
     // ───────────────────────── مراجعات البائعين (reviews) ─────────────────────────
     match /reviews/{docId} {
       allow list, get: if true;
-      allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
-      allow update, delete: if isAdmin() || request.auth.uid == resource.data.userId;
+      allow create: if accountActive() && request.auth.uid == request.resource.data.userId;
+      allow update, delete: if isAdmin() || (accountActive() && request.auth.uid == resource.data.userId);
     }
 
     // ───────────────────────── ملفات البائعين ─────────────────────────
@@ -259,16 +269,16 @@ service cloud.firestore {
       // الأدمن يرى الكل، والمقدِّم يرى طلبه فقط
       allow get: if isAdmin() || resource.data.userId == request.auth.uid;
       allow list: if isAdmin();
-      allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
+      allow create: if accountActive() && request.auth.uid == request.resource.data.userId;
       allow update, delete: if isAdmin();
     }
 
     // ───────────────────────── تنبيهات المخزون ─────────────────────────
     match /stock_alerts/{docId} {
       allow list, get: if isSignedIn() && request.auth.uid == resource.data.userId;
-      allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
+      allow create: if accountActive() && request.auth.uid == request.resource.data.userId;
       // الأدمن يحذفها ضمن تنظيف منتج محذوف
-      allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.userId);
+      allow delete: if isAdmin() || (accountActive() && request.auth.uid == resource.data.userId);
     }
 
     // ───────────────────────── الإشعارات ─────────────────────────
@@ -278,23 +288,23 @@ service cloud.firestore {
       allow list: if isSignedIn() && request.auth.uid == resource.data.userId;
       // الأدمن يوصّل إشعارات للآخرين؛ المستخدم يسجّل إشعارات نفسه فقط.
       allow create: if isAdmin()
-                    || (isSignedIn()
+                    || (accountActive()
                         && request.auth.uid == request.resource.data.userId);
-      allow update: if isSignedIn() && request.auth.uid == resource.data.userId;
+      allow update: if accountActive() && request.auth.uid == resource.data.userId;
       allow delete: if isAdmin()
-                    || (isSignedIn() && request.auth.uid == resource.data.userId);
+                    || (accountActive() && request.auth.uid == resource.data.userId);
     }
 
     // ───────────────────────── دليل الهاتف ─────────────────────────
     match /phone_directory/{docId} {
       allow list, get: if true;
       // لا يُنشئ المستخدم جهة اتصال معتمدة ذاتياً — تبدأ غير موافق عليه باسمه
-      allow create: if isAdmin() || (isSignedIn()
+      allow create: if isAdmin() || (accountActive()
           && request.resource.data.isApproved == false
           && request.auth.uid == request.resource.data.submittedBy);
       // مقدّم البيان يعدّل إدخاله غير المعتمد فقط دون المساس بالموافقة
       allow update: if isAdmin()
-          || (isSignedIn() && resource.data.submittedBy == request.auth.uid
+          || (accountActive() && resource.data.submittedBy == request.auth.uid
               && resource.data.isApproved == false
               && !request.resource.data.diff(resource.data)
                    .affectedKeys().hasAny(['isApproved']));
@@ -305,17 +315,17 @@ service cloud.firestore {
     match /service_providers/{docId} {
       allow list, get: if true;
       // كل إدخال جديد يبدأ غير موافق عليه، ومن مقدم الطلب نفسه
-      allow create: if isSignedIn()
+      allow create: if accountActive()
                     && request.auth.uid == request.resource.data.submittedBy
                     && request.resource.data.isApproved == false;
       // الأدمن: مراجعة كاملة (موافقة/تمييز). المالك: تعديل مدخلاته غير المعتمدة فقط دون المساس بحالة الموافقة.
       // أي مستخدم مسجّل: تحديث إحصاءات التقييم فقط (rating/ratingCount) عند التعليق.
       allow update: if isAdmin()
-                    || (isSignedIn() && resource.data.submittedBy == request.auth.uid
+                    || (accountActive() && resource.data.submittedBy == request.auth.uid
                         && resource.data.isApproved == false
                         && !request.resource.data.diff(resource.data)
                              .affectedKeys().hasAny(['isApproved']))
-                    || (isSignedIn()
+                    || (accountActive()
                         && request.resource.data.diff(resource.data)
                              .affectedKeys().hasOnly(['rating', 'ratingCount']));
       allow delete: if isAdmin();
@@ -323,8 +333,8 @@ service cloud.firestore {
       // تقييمات وتعليقات المستخدمين على البيانات
       match /comments/{commentId} {
         allow read: if true;
-        allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
-        allow update, delete: if isAdmin() || request.auth.uid == resource.data.userId;
+        allow create: if accountActive() && request.auth.uid == request.resource.data.userId;
+        allow update, delete: if isAdmin() || (accountActive() && request.auth.uid == resource.data.userId);
       }
     }
 
@@ -332,16 +342,16 @@ service cloud.firestore {
     match /lost_items/{docId} {
       allow list, get: if true;
       // كل إعلان يبدأ غير معتمد، ومن صاحبه نفسه
-      allow create: if isSignedIn()
+      allow create: if accountActive()
                     && request.auth.uid == request.resource.data.userId
                     && request.resource.data.isApproved == false;
       // الأدمن: مراجعة كاملة. المالك: يبدّل حالة «تم التسليم» فقط بعد الاعتماد،
       // أو يعدّل إعلانَه غير المعتمد دون المساس بالموافقة.
       allow update: if isAdmin()
-                    || (isSignedIn() && resource.data.userId == request.auth.uid
+                    || (accountActive() && resource.data.userId == request.auth.uid
                         && request.resource.data.diff(resource.data)
                              .affectedKeys().hasOnly(['isResolved']))
-                    || (isSignedIn() && resource.data.userId == request.auth.uid
+                    || (accountActive() && resource.data.userId == request.auth.uid
                         && resource.data.isApproved == false
                         && !request.resource.data.diff(resource.data)
                              .affectedKeys().hasAny(['isApproved']));
@@ -352,7 +362,7 @@ service cloud.firestore {
     match /shops/{docId} {
       allow list, get: if true;
       allow create: if isAdmin()
-          || (isSignedIn()
+          || (accountActive()
               && request.auth.uid == request.resource.data.ownerUid
               && request.resource.data.isApproved == false);
       // المالك يحدّث بيانات محله دون المساس بحالة الموافقة
@@ -366,7 +376,7 @@ service cloud.firestore {
     // سلع مطلوبة
     match /buy_requests/{docId} {
       allow list, get: if true;
-      allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
+      allow create: if accountActive() && request.auth.uid == request.resource.data.userId;
       allow update: if isAdmin() || resource.data.userId == request.auth.uid;
       allow delete: if isAdmin() || resource.data.userId == request.auth.uid;
     }
@@ -374,7 +384,7 @@ service cloud.firestore {
     // تبرعات
     match /donations/{docId} {
       allow list, get: if true;
-      allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
+      allow create: if accountActive() && request.auth.uid == request.resource.data.userId;
       allow update: if isAdmin() || resource.data.userId == request.auth.uid;
       allow delete: if isAdmin() || resource.data.userId == request.auth.uid;
     }
@@ -395,9 +405,9 @@ service cloud.firestore {
     // عيادات القرية: مدخلات مستخدمين (تبدأ غير موافق عليها) + موافقة الأدمن/مدير المركز.
     match /village_clinics/{docId} {
       allow list, get: if true;
-      allow create: if isSignedIn() && request.resource.data.isApproved == false;
+      allow create: if accountActive() && request.resource.data.isApproved == false;
       allow update, delete: if isMedicalAdmin()
-                            || (isSignedIn() && resource.data.submittedBy == request.auth.uid
+                            || (accountActive() && resource.data.submittedBy == request.auth.uid
                                 && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isApproved']) == false
                                 && resource.data.isApproved == false);
       // المتابعة: المستخدم يستطيع تعديل مدخلاته غير المعتمدة فقط
@@ -406,18 +416,18 @@ service cloud.firestore {
     // صيدليات القرية: نفس نهج العيادات.
     match /pharmacies/{docId} {
       allow list, get: if true;
-      allow create: if isSignedIn() && request.resource.data.isApproved == false;
+      allow create: if accountActive() && request.resource.data.isApproved == false;
       allow update, delete: if isMedicalAdmin()
-                            || (isSignedIn() && resource.data.submittedBy == request.auth.uid
+                            || (accountActive() && resource.data.submittedBy == request.auth.uid
                                 && resource.data.isApproved == false);
     }
 
     // معامل التحاليل: مدخلات مستخدمين (تبدأ غير موافق عليها) + موافقة الأدمن/مدير المركز.
     match /medical_labs/{docId} {
       allow list, get: if true;
-      allow create: if isSignedIn() && request.resource.data.isApproved == false;
+      allow create: if accountActive() && request.resource.data.isApproved == false;
       allow update, delete: if isMedicalAdmin()
-                            || (isSignedIn() && resource.data.submittedBy == request.auth.uid
+                            || (accountActive() && resource.data.submittedBy == request.auth.uid
                                 && resource.data.isApproved == false);
     }
 
@@ -425,29 +435,29 @@ service cloud.firestore {
     match /blood_donors/{docId} {
       allow get: if true;
       allow list: if isSignedIn();
-      allow create: if isSignedIn()
+      allow create: if accountActive()
                     && request.auth.uid == request.resource.data.userId
                     && request.resource.data.isApproved == false;
       // غير المعتمد: تعديله كامل. المعتمد: صاحبُه يحدّث بياناته الشخصية فقط (بما فيها الاسم).
       allow update: if isMedicalAdmin()
-                    || (isSignedIn() && resource.data.userId == request.auth.uid
+                    || (accountActive() && resource.data.userId == request.auth.uid
                         && request.resource.data.isApproved == false)
-                    || (isSignedIn() && resource.data.userId == request.auth.uid
+                    || (accountActive() && resource.data.userId == request.auth.uid
                         && request.resource.data.diff(resource.data).affectedKeys()
                              .hasOnly(['name','phone','age','gender','address','isAvailable','lastDonation','bloodType']));
       allow delete: if isMedicalAdmin()
-                    || (isSignedIn() && resource.data.userId == request.auth.uid);
+                    || (accountActive() && resource.data.userId == request.auth.uid);
     }
 
     // طلبات التبرع بالدم: المالك ينشئ/يغلق/يحدّث بيانات طلبه، والموافقة والنشر للأدمن/مدير المركز.
     match /blood_requests/{docId} {
       allow list, get: if true;
-      allow create: if isSignedIn()
+      allow create: if accountActive()
                     && request.auth.uid == request.resource.data.userId
                     && request.resource.data.isApproved == false;
       // المالك: الإغلاق (status) أو مزامنة اسم مقدم الطلب؛ ولا يلمس isApproved.
       allow update: if isMedicalAdmin()
-                    || (isSignedIn() && resource.data.userId == request.auth.uid
+                    || (accountActive() && resource.data.userId == request.auth.uid
                         && request.resource.data.diff(resource.data).affectedKeys()
                              .hasOnly(['status','requesterName','phone']));
       allow delete: if isMedicalAdmin();
@@ -540,7 +550,7 @@ service cloud.firestore {
       // الشرط يُقيَّم لكل مستند قد يرجعه الاستعلام، فيُرفض أي list لا يقيّد
       // نفسه بالمعتمد فقط — وهو ما يفعله استعلام التطبيق العام أصلاً.
       allow list: if isAdmin() || resource.data.approvalStatus == 'approved';
-      allow create: if isSignedIn()
+      allow create: if accountActive()
         && request.resource.data.userId == request.auth.uid
         && request.resource.data.approvalStatus == 'pending'
         && request.resource.data.pinOnHome == false
@@ -570,7 +580,7 @@ service cloud.firestore {
         && request.resource.data.reviewedAt == null
         && request.resource.data.reviewedBy == null;
       allow update: if isAdmin()
-        || (isSignedIn()
+        || (accountActive()
             && resource.data.userId == request.auth.uid
             && resource.data.approvalStatus == 'pending'
             && request.resource.data.diff(resource.data).affectedKeys()
@@ -598,7 +608,7 @@ service cloud.firestore {
             && request.resource.data.audioUrl is string
             && request.resource.data.audioUrl.size() <= 2000);
       allow delete: if isAdmin()
-        || (isSignedIn() && resource.data.userId == request.auth.uid
+        || (accountActive() && resource.data.userId == request.auth.uid
             && resource.data.approvalStatus == 'pending');
     }
 
