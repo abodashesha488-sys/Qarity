@@ -53,4 +53,45 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.textContaining('الرياضيات'), findsWidgets);
   });
+
+  testWidgets('تفاصيل تعليمية مضغوطة + عبارة «امكانية تدريس خاص ✓»',
+      (tester) async {
+    const provider = ServiceProvider(
+      id: 'e1',
+      category: 'educational',
+      name: 'أ. منى',
+      phone: '0100',
+      address: 'شارع المسجد',
+      description: 'خبرة طويلة في التدريس',
+      eduTypes: ['تعليم عام', 'أزهري'],
+      stages: ['ثانوي', 'جامعي'],
+      subjects: ['الفيزياء', 'محفظ قرآن كريم'],
+      universityNote: 'كلية العلوم',
+      offersPrivateTutoring: true,
+      rating: 4.7,
+      ratingCount: 12,
+    );
+    await tester.pumpWidget(MaterialApp(
+      home: ServiceProviderDetailScreen(
+        provider: provider,
+        service: ServiceProviderService(FakeFirebaseFirestore()),
+      ),
+    ));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(tester.takeException(), isNull);
+
+    expect(find.text('امكانية تدريس خاص ✓'), findsOneWidget);
+    expect(find.textContaining('دروساً خصوصية'), findsNothing);
+    // كتلة واحدة مضغوطة بدل صفوف MedInfoRow الطويلة.
+    expect(find.text('بيانات التدريس'), findsOneWidget);
+    expect(find.text('النوع'), findsNothing);
+    expect(find.text('المراحل'), findsNothing);
+    expect(find.textContaining('المراحل:'), findsOneWidget);
+    expect(find.textContaining('المواد:'), findsOneWidget);
+    // زر الاتصال أخضر مثل البطاقة.
+    final call = tester
+        .widget<FilledButton>(find.byKey(const Key('detail-call')));
+    expect(call.style!.backgroundColor!.resolve(const {}), kCallButtonColor);
+  });
 }

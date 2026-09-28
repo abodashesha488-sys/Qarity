@@ -84,8 +84,11 @@ void main() {
       }
       expect(find.byKey(const Key('edu-subject-search')), findsOneWidget);
       expect(find.byKey(const Key('edu-private-toggle')), findsOneWidget);
-      // قائمة المواد الكاملة (كل الأقسام) معروضة، وآخرها «غير ذلك».
-      expect(find.byKey(const ValueKey('edu-subject-غير ذلك')), findsOneWidget);
+      // «غير ذلك» لم تعد خيارًا: المادة بلا قائمة تُكتب يدويًا في الحقل المخصص.
+      expect(find.byKey(const ValueKey('edu-subject-غير ذلك')), findsNothing);
+      expect(find.byKey(const ValueKey('edu-subject-محفظ قرآن كريم')),
+          findsOneWidget);
+      expect(find.byKey(const Key('edu-subject-custom')), findsOneWidget);
       expect(find.byKey(const ValueKey('edu-subject-النحو والصرف')),
           findsOneWidget);
       // حقل التخصص الجامعي مخفي حتى تُختار مرحلة «جامعي».
@@ -108,7 +111,60 @@ void main() {
 
       await tapKey(tester, const ValueKey('edu-stage-ابتدائي'));
       await send(tester);
-      expect(find.text('اختر مادة واحدة على الأقل'), findsOneWidget);
+      expect(find.textContaining('اختر مادة واحدة على الأقل'), findsOneWidget);
+    });
+
+    testWidgets('التخصص المكتوب يدويًا يدخل قائمة المواد مرتّبًا بعد القوائم',
+        (tester) async {
+      bigScreen(tester);
+      ServiceProvider? captured;
+      await tester.pumpWidget(MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: FilledButton(
+                onPressed: () async {
+                  captured = await showModalBottomSheet<ServiceProvider>(
+                    context: context,
+                    isScrollControlled: true,
+                    builder: (_) => const ProviderFormSheet(
+                      category: ServiceCategory.educational,
+                      userId: 'u1',
+                      userName: 'أحمد',
+                    ),
+                  );
+                },
+                child: const Text('افتح النموذج'),
+              ),
+            ),
+          ),
+        ),
+      ));
+      await tester.tap(find.text('افتح النموذج'));
+      await tester.pumpAndSettle();
+
+      await fillBasics(tester);
+      await tapKey(tester, const ValueKey('edu-type-تعليم عام'));
+      await tapKey(tester, const ValueKey('edu-stage-ثانوي'));
+      // بلا أي اختيار من القوائم — فقط النص الحر.
+      await tester.enterText(
+          find.byKey(const Key('edu-subject-custom')), 'ميكروبيولوجي، جبر خطي');
+      await send(tester);
+
+      expect(captured, isNotNull);
+      expect(captured!.subjects, ['ميكروبيولوجي', 'جبر خطي']);
+      expect(captured!.toJson()['specialty'], 'ميكروبيولوجي، جبر خطي');
+    });
+
+    testWidgets('تنبيه المراجعة الأخير أحمر', (tester) async {
+      bigScreen(tester);
+      await openEduForm(tester);
+      const red = Color(0xFFB71C1C);
+      final text = tester.widget<Text>(find.text(
+          'ستتم مراجعة الإضافة من الإدارة قبل نشرها في الدليل'));
+      expect(text.style!.color, red);
+      expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.info_outline_rounded), findsNothing);
     });
 
     testWidgets('اختيار متعدد للمرحلة والنوع والمادة + تدريس خاص',
@@ -354,7 +410,8 @@ void main() {
       expect(find.byKey(const Key('filter-kind-مدرسة')), findsOneWidget);
       expect(find.byKey(const Key('filter-stage')), findsOneWidget);
       expect(find.byKey(const Key('filter-edu-type')), findsOneWidget);
-      expect(find.byKey(const Key('filter-private-switch')), findsOneWidget);
+      expect(find.byKey(const Key('filter-private-only')), findsOneWidget);
+      expect(find.byKey(const Key('filter-subject')), findsOneWidget);
     });
 
     testWidgets('تصفية الصفة: مدرسة فقط ثم الكل', (tester) async {
@@ -377,11 +434,56 @@ void main() {
       bigScreen(tester);
       await pumpScreen(tester, await seed());
 
-      await tester.tap(find.byKey(const Key('filter-private-switch')));
+      await tester.tap(find.byKey(const Key('filter-private-only')));
       await tester.pumpAndSettle();
       expect(find.text('أ. منى'), findsOneWidget);
       expect(find.text('مدرسة النور'), findsNothing);
       expect(find.text('أ. سالم'), findsNothing);
+    });
+
+    testWidgets('مرشّح «المواد التعليمية» يطابق القوائم والمرآة القديمة',
+        (tester) async {
+      bigScreen(tester);
+      await pumpScreen(tester, await seed());
+
+      await tester.tap(find.byKey(const Key('filter-subject')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('الرياضيات').last);
+      await tester.pumpAndSettle();
+
+      // مدرسة النور: subjects=['الرياضيات'] · أ. سالم: specialty مرآة قديمة.
+      expect(find.text('مدرسة النور'), findsOneWidget);
+      expect(find.text('أ. سالم'), findsOneWidget);
+      expect(find.text('أ. منى'), findsNothing);
+    });
+
+    testWidgets('بطاقة تعليمية: صورة بثلث العرض واتصال أخضر ومشاركة أزرق',
+        (tester) async {
+      tester.view.physicalSize = const Size(1170, 2532);
+      tester.view.devicePixelRatio = 3.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final fake = await seed();
+      await pumpScreen(tester, fake);
+
+      final ids = (await fake.collection('service_providers').get())
+          .docs
+          .map((d) => d.id)
+          .toList();
+      Color? bg(FilledButton b) => b.style?.backgroundColor?.resolve(const {});
+      final buttons =
+          tester.widgetList<FilledButton>(find.byType(FilledButton)).toList();
+      expect(
+          buttons.where((b) => bg(b) == kCallButtonColor).length, ids.length,
+          reason: 'زر اتصال أخضر لكل بطاقة');
+      expect(
+          buttons.where((b) => bg(b) == kShareButtonColor).length, ids.length,
+          reason: 'زر مشاركة أزرق لكل بطاقة');
+
+      final image = find.byKey(ValueKey('card-image-${ids.first}'));
+      final card = find.ancestor(of: image, matching: find.byType(InkWell));
+      final ratio = tester.getSize(image).width / tester.getSize(card).width;
+      expect(ratio, inInclusiveRange(0.27, 0.37));
     });
 
     testWidgets('تصفية المرحلة تطابق السجل متعدد المراحل', (tester) async {

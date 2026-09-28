@@ -140,11 +140,12 @@ void main() {
       expect(p.offersPrivateTutoring, isFalse);
     });
 
-    test('قائمة المواد المصرية كاملة وبلا تكرار و«غير ذلك» آخرها', () {
+    test('قائمة المواد المصرية كاملة وبلا تكرار وبلا «غير ذلك»', () {
       expect(kEgyptSubjects.length, greaterThan(40));
       expect(kEgyptSubjects.toSet().length, kEgyptSubjects.length,
           reason: 'بلا تكرار');
-      expect(kEgyptSubjects.last, 'غير ذلك');
+      // المادة التي لا قائمة لها تُكتب يدويًا في الحقل المخصص، لا «غير ذلك».
+      expect(kEgyptSubjects, isNot(contains('غير ذلك')));
       expect(
           kEgyptSubjects,
           containsAll([
@@ -154,6 +155,7 @@ void main() {
             'الاقتصاد والإحصاء',
             'النحو والصرف',
             'التفسير وعلوم القرآن',
+            'محفظ قرآن كريم',
           ]));
       // كل قسم غير فارغ، وكل قيمة فيه موجودة في القائمة المسطّحة.
       for (final entry in kEgyptSubjectSections.entries) {

@@ -11,6 +11,7 @@ import '../../services/image_upload_service.dart';
 import '../../services/service_provider_service.dart';
 import '../../services/share_service.dart';
 import '../../services/user_service.dart';
+import '../../widgets/edu_kind_mark.dart';
 import '../../widgets/qurity_app_bar.dart';
 
 /// دليل الخدمات — شبكة أزرار لفئات قابلة للتوسّع مستقبلاً.
@@ -136,6 +137,7 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
   String _kindFilter = '';
   String _stageFilter = '';
   String _eduTypeFilter = '';
+  String _subjectFilter = '';
   bool _privateOnly = false;
 
   bool get _isEdu => widget.category == ServiceCategory.educational;
@@ -151,6 +153,7 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
         if (_kindFilter.isNotEmpty) _kindFilter,
         if (_stageFilter.isNotEmpty) _stageFilter,
         if (_eduTypeFilter.isNotEmpty) _eduTypeFilter,
+        if (_subjectFilter.isNotEmpty) _subjectFilter,
         if (_privateOnly) 'تدريس خاص',
       ].join(' · ');
 
@@ -180,6 +183,11 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
         if (!hit) return false;
       }
       if (_eduTypeFilter.isNotEmpty && !p.eduTypes.contains(_eduTypeFilter)) {
+        return false;
+      }
+      if (_subjectFilter.isNotEmpty &&
+          !p.subjects.contains(_subjectFilter) &&
+          !p.specialty.contains(_subjectFilter)) {
         return false;
       }
       if (_privateOnly && !p.offersPrivateTutoring) return false;
@@ -269,7 +277,7 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
     );
   }
 
-  /// مرشّحات الخدمات التعليمية: الصفة + المرحلة + نوع التعليم + التدريس الخاص.
+  /// مرشّحات الخدمات التعليمية: الصفة + تدريس خاص + المرحلة + نوع التعليم + المواد.
   List<Widget> _eduFilters(ThemeData theme) {
     return [
       Wrap(
@@ -284,17 +292,7 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
                   style: const TextStyle(fontSize: 12)),
               selected: _kindFilter == k,
               showCheckmark: false,
-              avatar: k.isEmpty
-                  ? null
-                  : Icon(
-                      k == kEduKindSchool
-                          ? Icons.account_balance_rounded
-                          : Icons.person_rounded,
-                      size: 15,
-                      color: _kindFilter == k
-                          ? _color
-                          : theme.colorScheme.onSurfaceVariant,
-                    ),
+              avatar: k.isEmpty ? null : EduKindMark(kind: k),
               selectedColor: _color.withValues(alpha: 0.16),
               side: BorderSide(
                   color: _kindFilter == k
@@ -308,38 +306,29 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
                       : theme.colorScheme.onSurfaceVariant),
               onSelected: (_) => setState(() => _kindFilter = k),
             ),
-          Container(
+          ChoiceChip(
             key: const Key('filter-private-only'),
-            padding: const EdgeInsets.only(right: 4),
-            decoration: BoxDecoration(
-              color: _privateOnly
-                  ? const Color(0xFF00695C).withValues(alpha: 0.1)
-                  : null,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                  color: _privateOnly
-                      ? const Color(0xFF00695C)
-                      : theme.colorScheme.outlineVariant),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('تدريس خاص',
-                    style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w800,
-                        color: _privateOnly
-                            ? const Color(0xFF00695C)
-                            : theme.colorScheme.onSurfaceVariant)),
-                Switch(
-                  key: const Key('filter-private-switch'),
-                  value: _privateOnly,
-                  activeThumbColor: const Color(0xFF00695C),
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  onChanged: (v) => setState(() => _privateOnly = v),
-                ),
-              ],
-            ),
+            label: const Text('تدريس خاص', style: TextStyle(fontSize: 12)),
+            selected: _privateOnly,
+            showCheckmark: false,
+            avatar: Icon(Icons.cast_for_education_rounded,
+                size: 15,
+                color: _privateOnly
+                    ? kEduPrivateTagColor
+                    : theme.colorScheme.onSurfaceVariant),
+            selectedColor: kEduPrivateTagColor.withValues(alpha: 0.16),
+            side: BorderSide(
+                color: _privateOnly
+                    ? kEduPrivateTagColor
+                    : theme.colorScheme.outlineVariant),
+            labelStyle: TextStyle(
+                fontSize: 12,
+                fontWeight:
+                    _privateOnly ? FontWeight.w800 : FontWeight.w600,
+                color: _privateOnly
+                    ? kEduPrivateTagColor
+                    : theme.colorScheme.onSurfaceVariant),
+            onSelected: (v) => setState(() => _privateOnly = v),
           ),
         ],
       ),
@@ -370,6 +359,16 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
             ),
           ),
         ],
+      ),
+      const SizedBox(height: 8),
+      _filterDropdown(
+        key: const Key('filter-subject'),
+        label: 'المواد التعليمية',
+        icon: Icons.menu_book_rounded,
+        value: _subjectFilter,
+        allLabel: 'كل المواد',
+        options: kEgyptSubjects,
+        onChanged: (v) => setState(() => _subjectFilter = v),
       ),
     ];
   }
@@ -611,15 +610,20 @@ class _ProviderCard extends StatelessWidget {
   final ServiceProvider provider;
   final Color accent;
 
+  /// ضلع صورة البطاقة: نحو ثلث عرض البطاقة على شاشة الهاتف.
+  static const double _kImageSide = 104;
+
+  Color get _color => provider.isFeatured ? const Color(0xFFB8860B) : accent;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = provider.isFeatured ? const Color(0xFFB8860B) : accent;
+    final color = _color;
     return Card(
       elevation: 0,
-      margin: const EdgeInsets.only(top: 6),
+      margin: const EdgeInsets.only(top: 8),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         side: BorderSide(
             color: color.withValues(alpha: provider.isFeatured ? 0.6 : 0.22)),
       ),
@@ -627,24 +631,29 @@ class _ProviderCard extends StatelessWidget {
           ? const Color(0xFFB8860B).withValues(alpha: 0.06)
           : null,
       child: InkWell(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         onTap: () => Navigator.pushNamed(
             context, AppRoutes.serviceProviderDetail,
             arguments: provider),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          padding: const EdgeInsets.all(8),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               ClipRRect(
+                key: ValueKey('card-image-${provider.id}'),
                 borderRadius: BorderRadius.circular(12),
                 child: SizedBox(
-                  width: 46,
-                  height: 46,
+                  width: _kImageSide,
+                  height: _kImageSide,
                   child: provider.photoUrl != null &&
                           provider.photoUrl!.isNotEmpty
                       ? CachedNetworkImage(
                           imageUrl: provider.photoUrl!,
                           fit: BoxFit.cover,
+                          width: _kImageSide,
+                          height: _kImageSide,
+                          memCacheWidth: (_kImageSide * 3).round(),
                           errorWidget: (_, __, ___) => _avatar(theme, color),
                         )
                       : _avatar(theme, color),
@@ -655,60 +664,13 @@ class _ProviderCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(provider.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w900, fontSize: 13.5)),
-                        ),
-                        if (provider.isEducational) ...[
-                          const SizedBox(width: 5),
-                          _tag(
-                              provider.isSchool
-                                  ? kEduKindSchool
-                                  : kEduKindTeacher,
-                              color,
-                              icon: provider.isSchool
-                                  ? Icons.account_balance_rounded
-                                  : Icons.person_rounded),
-                        ],
-                        if (provider.isFeatured) ...[
-                          const SizedBox(width: 5),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 5, vertical: 1),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(colors: [
-                                Color(0xFFF1C40F),
-                                Color(0xFFB8860B)
-                              ]),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.star_rounded,
-                                    size: 10, color: Colors.white),
-                                Text('مميز',
-                                    style: TextStyle(
-                                        fontSize: 8,
-                                        fontWeight: FontWeight.w900,
-                                        color: Colors.white)),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
+                    _headline(),
                     if (provider.ratingCount > 0) ...[
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 3),
                       Row(
                         children: [
                           const Icon(Icons.star_rounded,
-                              size: 13, color: Colors.amber),
+                              size: 14, color: Colors.amber),
                           const SizedBox(width: 2),
                           Text(
                               '${provider.rating.toStringAsFixed(1)} (${provider.ratingCount})',
@@ -720,85 +682,24 @@ class _ProviderCard extends StatelessWidget {
                       ),
                     ],
                     if (provider.isEducational && _eduTags.isNotEmpty) ...[
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 5),
                       Wrap(spacing: 4, runSpacing: 4, children: _eduTags),
                     ],
-                    if (provider.displaySpecialty.isNotEmpty)
-                      Text(provider.displaySpecialty,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: color)),
-                    if (provider.isEducational &&
-                        provider.universityNote.trim().isNotEmpty)
-                      Text('جامعي: ${provider.universityNote.trim()}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w600,
-                              color: theme.colorScheme.onSurfaceVariant)),
-                    if (provider.description.isNotEmpty)
+                    if (provider.description.isNotEmpty) ...[
+                      const SizedBox(height: 4),
                       Text(provider.description,
-                          maxLines: 1,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.bodySmall?.copyWith(
                               fontSize: 11,
+                              height: 1.35,
                               color: theme.colorScheme.onSurfaceVariant)),
+                    ],
+                    const SizedBox(height: 8),
+                    _actions(),
                   ],
                 ),
               ),
-              const SizedBox(width: 6),
-              if (provider.hasContact)
-                IconButton.filledTonal(
-                  tooltip: 'اتصال',
-                  onPressed: () async {
-                    final uri = Uri(scheme: 'tel', path: provider.phone);
-                    if (await canLaunchUrl(uri)) await launchUrl(uri);
-                  },
-                  icon: const Icon(Icons.call_rounded, size: 17),
-                  style: IconButton.styleFrom(
-                      backgroundColor: color.withValues(alpha: 0.14),
-                      foregroundColor: color),
-                ),
-              IconButton(
-                tooltip: 'مشاركة',
-                onPressed: () => ShareService.shareText(
-                    title: provider.isEducational
-                        ? '🎓 ${provider.name}'
-                        : '🛠️ ${provider.name}',
-                    body: [
-                      if (provider.isEducational &&
-                          provider.providerKindLabel.isNotEmpty)
-                        'الصفة: ${provider.providerKindLabel}',
-                      if (provider.displaySpecialty.isNotEmpty)
-                        provider.isEducational
-                            ? 'المواد: ${provider.displaySpecialty}'
-                            : 'التخصص: ${provider.displaySpecialty}',
-                      if (provider.isEducational &&
-                          provider.stagesLine.isNotEmpty)
-                        'المراحل: ${provider.stagesLine}',
-                      if (provider.isEducational &&
-                          provider.eduTypesLine.isNotEmpty)
-                        'نوع التعليم: ${provider.eduTypesLine}',
-                      if (provider.isEducational &&
-                          provider.universityNote.trim().isNotEmpty)
-                        'التخصص الجامعي: ${provider.universityNote.trim()}',
-                      if (provider.isEducational &&
-                          provider.offersPrivateTutoring)
-                        '✔ يقدّم دروساً خصوصية',
-                      if (provider.description.isNotEmpty) provider.description,
-                      if (provider.address.isNotEmpty)
-                        'العنوان: ${provider.address}',
-                      if (provider.phone.isNotEmpty) 'هاتف: ${provider.phone}',
-                    ].join('\n')),
-                icon: const Icon(Icons.share_rounded,
-                    size: 16, color: Colors.grey),
-              ),
-              Icon(Icons.chevron_left_rounded,
-                  size: 18, color: theme.colorScheme.onSurfaceVariant),
             ],
           ),
         ),
@@ -806,24 +707,134 @@ class _ProviderCard extends StatelessWidget {
     );
   }
 
-  static const _kPrivateTagColor = Color(0xFF00695C);
+  /// الاسم + شارة الصفة + شارة «مميز».
+  Widget _headline() {
+    final color = _color;
+    final kind = provider.isSchool ? kEduKindSchool : kEduKindTeacher;
+    return Row(
+      children: [
+        Flexible(
+          child: Text(provider.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                  fontWeight: FontWeight.w900, fontSize: 14)),
+        ),
+        if (provider.isEducational) ...[
+          const SizedBox(width: 5),
+          _tag(kind, color, mark: kind),
+        ],
+        if (provider.isFeatured) ...[
+          const SizedBox(width: 5),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                  colors: [Color(0xFFF1C40F), Color(0xFFB8860B)]),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.star_rounded, size: 10, color: Colors.white),
+                Text('مميز',
+                    style: TextStyle(
+                        fontSize: 8,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white)),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
 
-  /// رقائق البطاقة التعليمية: المراحل + أنواع التعليم + «تدريس خاص».
+  /// زرا الاتصال (أخضر) ومشاركة (أزرق).
+  Widget _actions() {
+    return Row(
+      children: [
+        if (provider.hasContact) ...[
+          Expanded(
+            child: FilledButton.icon(
+              key: ValueKey('card-call-${provider.id}'),
+              onPressed: () async {
+                final uri = Uri(scheme: 'tel', path: provider.phone);
+                if (await canLaunchUrl(uri)) await launchUrl(uri);
+              },
+              style: FilledButton.styleFrom(
+                  backgroundColor: kCallButtonColor,
+                  padding: const EdgeInsets.symmetric(vertical: 7)),
+              icon: const Icon(Icons.call_rounded, size: 15),
+              label: const Text('اتصال',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
+            ),
+          ),
+          const SizedBox(width: 6),
+        ],
+        Expanded(
+          child: FilledButton.icon(
+            key: ValueKey('card-share-${provider.id}'),
+            onPressed: _share,
+            style: FilledButton.styleFrom(
+                backgroundColor: kShareButtonColor,
+                padding: const EdgeInsets.symmetric(vertical: 7)),
+            icon: const Icon(Icons.share_rounded, size: 15),
+            label: const Text('مشاركة',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _share() {
+    ShareService.shareText(
+        title: provider.isEducational
+            ? '\u{1F393} ${provider.name}'
+            : '\u{1F6E0}\u{FE0F} ${provider.name}',
+        body: [
+          if (provider.isEducational && provider.providerKindLabel.isNotEmpty)
+            'الصفة: ${provider.providerKindLabel}',
+          if (provider.displaySpecialty.isNotEmpty)
+            provider.isEducational
+                ? 'المواد: ${provider.displaySpecialty}'
+                : 'التخصص: ${provider.displaySpecialty}',
+          if (provider.isEducational && provider.stagesLine.isNotEmpty)
+            'المراحل: ${provider.stagesLine}',
+          if (provider.isEducational && provider.eduTypesLine.isNotEmpty)
+            'نوع التعليم: ${provider.eduTypesLine}',
+          if (provider.isEducational &&
+              provider.universityNote.trim().isNotEmpty)
+            'التخصص الجامعي: ${provider.universityNote.trim()}',
+          if (provider.isEducational && provider.offersPrivateTutoring)
+            'امكانية تدريس خاص \u2713',
+          if (provider.description.isNotEmpty) provider.description,
+          if (provider.address.isNotEmpty) 'العنوان: ${provider.address}',
+          if (provider.phone.isNotEmpty) 'هاتف: ${provider.phone}',
+        ].join('\n'));
+  }
+
+  /// محتوى العمود التعليمي: سطر المواد + رقائق المراحل/الأنواع/التدريس الخاص.
   List<Widget> get _eduTags {
-    final color = provider.isFeatured ? const Color(0xFFB8860B) : accent;
+    final color = _color;
     return [
+      if (provider.displaySpecialty.isNotEmpty)
+        Text(provider.displaySpecialty,
+            style: TextStyle(
+                fontSize: 11, fontWeight: FontWeight.w700, color: color)),
       for (final s in provider.stageChips)
         _tag(s, color, icon: Icons.school_rounded),
       for (final t in provider.eduTypes)
         _tag(t, const Color(0xFF6A1B9A), icon: Icons.category_rounded),
       if (provider.offersPrivateTutoring)
-        _tag('تدريس خاص', _kPrivateTagColor,
+        _tag('تدريس خاص', kEduPrivateTagColor,
             icon: Icons.cast_for_education_rounded, filled: true),
     ];
   }
 
   Widget _tag(String text, Color color,
-      {IconData? icon, bool filled = false}) {
+      {IconData? icon, String? mark, bool filled = false}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
@@ -834,10 +845,11 @@ class _ProviderCard extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (icon != null)
-            Icon(icon,
-                size: 9, color: filled ? Colors.white : color),
-          if (icon != null) const SizedBox(width: 3),
+          if (mark != null)
+            EduKindMark(kind: mark, size: 12)
+          else if (icon != null)
+            Icon(icon, size: 9, color: filled ? Colors.white : color),
+          if (mark != null || icon != null) const SizedBox(width: 3),
           Text(text,
               style: TextStyle(
                   fontSize: 9,
@@ -853,9 +865,9 @@ class _ProviderCard extends StatelessWidget {
         color: accent.withValues(alpha: 0.1),
         alignment: Alignment.center,
         child: Text(
-          provider.name.isNotEmpty ? provider.name.substring(0, 1) : '؟',
+          provider.name.isNotEmpty ? provider.name.substring(0, 1) : '\u061F',
           style: TextStyle(
-              color: accent, fontWeight: FontWeight.w900, fontSize: 18),
+              color: accent, fontWeight: FontWeight.w900, fontSize: 34),
         ),
       );
 }
@@ -919,6 +931,7 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
   final _descC = TextEditingController();
   final _universityC = TextEditingController();
   final _subjectSearchC = TextEditingController();
+  final _customSubjectC = TextEditingController();
   final ImagePicker _picker = ImagePicker();
   late String _specialty = kSubcategoriesFor(widget.category).first;
 
@@ -936,6 +949,13 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
 
   bool get _isEdu => widget.category == ServiceCategory.educational;
 
+  /// تخصصات كتبها صاحب السجل بنفسه (تُقبل عدة قيم مفصولة بفواصل).
+  List<String> get _customSubjects => _customSubjectC.text
+      .split(RegExp(r'[،,]'))
+      .map((e) => e.trim())
+      .where((e) => e.isNotEmpty)
+      .toList(growable: false);
+
   Color get _accent => ServiceCategory.color(widget.category);
 
   @override
@@ -946,6 +966,7 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
     _descC.dispose();
     _universityC.dispose();
     _subjectSearchC.dispose();
+    _customSubjectC.dispose();
     super.dispose();
   }
 
@@ -999,12 +1020,16 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
         _warn('اختر مرحلة تعليمية واحدة على الأقل');
         return;
       }
-      if (_subjects.isEmpty) {
-        _warn('اختر مادة واحدة على الأقل');
+      if (_subjects.isEmpty && _customSubjects.isEmpty) {
+        _warn('اختر مادة واحدة على الأقل أو اكتب تخصصك في الخانة المخصصة');
         return;
       }
     }
     final wantsUniversity = _stages.contains(kEduStageUniversity);
+    final subjects = <String>[
+      ...kEgyptSubjects.where(_subjects.contains),
+      ..._customSubjects.where((c) => !_subjects.contains(c)),
+    ];
     setState(() => _saving = true);
     Navigator.pop(
       context,
@@ -1022,8 +1047,7 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
         providerKind: _kind,
         eduTypes: _isEdu ? kEduTypes.where(_eduTypes.contains).toList() : const [],
         stages: _isEdu ? kEduStages.where(_stages.contains).toList() : const [],
-        subjects:
-            _isEdu ? kEgyptSubjects.where(_subjects.contains).toList() : const [],
+        subjects: _isEdu ? subjects : const [],
         universityNote: wantsUniversity ? _universityC.text.trim() : '',
         offersPrivateTutoring: _isEdu && _kind == kEduKindTeacher && _privateTutoring,
       ),
@@ -1182,19 +1206,23 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color:
-                    theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                color: const Color(0xFFB71C1C).withValues(alpha: 0.07),
                 borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                    color: const Color(0xFFB71C1C).withValues(alpha: 0.35)),
               ),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.info_outline_rounded,
-                      size: 18, color: theme.colorScheme.primary),
+                  const Icon(Icons.warning_amber_rounded,
+                      size: 18, color: Color(0xFFB71C1C)),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'ستتم مراجعة الإضافة من الإدارة قبل نشرها في الدليل',
-                      style: theme.textTheme.bodySmall,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                          color: const Color(0xFFB71C1C),
+                          fontWeight: FontWeight.w700),
                     ),
                   ),
                 ],
@@ -1390,6 +1418,17 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
             ),
             _chipCloud(theme, entry.value, _subjects, 'edu-subject'),
           ],
+        const SizedBox(height: 10),
+        _field(
+            theme,
+            _customSubjectC,
+            'تخصص آخر — اكتبه بنفسك',
+            Icons.edit_note_rounded,
+            key: const Key('edu-subject-custom')),
+        const SizedBox(height: 2),
+        Text('إن لم تجد مادتك في القوائم اكتبها هنا (وافصل بين عدة تخصصات بفاصلة).',
+            style: theme.textTheme.labelSmall
+                ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
       ],
     );
   }
@@ -1431,14 +1470,7 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
                       ),
                       child: Column(
                         children: [
-                          Icon(
-                              k == kEduKindSchool
-                                  ? Icons.account_balance_rounded
-                                  : Icons.person_rounded,
-                              size: 20,
-                              color: _kind == k
-                                  ? _accent
-                                  : theme.colorScheme.onSurfaceVariant),
+                          EduKindMark(kind: k, size: 20),
                           const SizedBox(height: 3),
                           Text(k,
                               style: TextStyle(

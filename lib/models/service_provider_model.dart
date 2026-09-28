@@ -112,7 +112,15 @@ const List<String> kEduStages = [
 /// تسمية مجموعة السجلات القديمة التي لا مرحلة لها ضمن الخمس (محو الأمية مثلاً).
 const String kEduStageOther = 'مراحل أخرى';
 
+/// لون شارة/مرشّح «تدريس خاص» — مصدر واحد للبطاقة والمرشّحات والتفاصيل.
+const Color kEduPrivateTagColor = Color(0xFF00695C);
+
+/// لونّا زِرّي التواصل في بطاقة مقدّم الخدمة وتفاصيله.
+const Color kCallButtonColor = Color(0xFF2E7D32);
+const Color kShareButtonColor = Color(0xFF1565C0);
+
 /// كل مواد نظام جمهورية مصر العربية، مقسّمة لأقسام لتسهيل الاختيار.
+/// لا «غير ذلك» هنا: المادة التي لا قائمة لها تُكتب يدويًا في حقل مخصص.
 const Map<String, List<String>> kEgyptSubjectSections = {
   'مواد مشتركة': [
     'اللغة العربية',
@@ -143,6 +151,7 @@ const Map<String, List<String>> kEgyptSubjectSections = {
     'القراءة والخط العربي',
     'الإملاء والتعبير',
     'القرآن الكريم',
+    'محفظ قرآن كريم',
   ],
   'رياضيات': [
     'الجبر',
@@ -184,9 +193,6 @@ const Map<String, List<String>> kEgyptSubjectSections = {
     'لغات أجنبية مكثفة',
     'محو الأمية وتعليم الكبار',
     'اختبارات قدرات واستعدادات',
-  ],
-  'أخرى': [
-    'غير ذلك',
   ],
 };
 

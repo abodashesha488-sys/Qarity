@@ -9,6 +9,7 @@ import '../../models/service_provider_model.dart';
 import '../../services/service_provider_service.dart';
 import '../../services/share_service.dart';
 import '../../services/user_service.dart';
+import '../../widgets/edu_kind_mark.dart';
 import '../medical/clinic_detail_screen.dart';
 
 /// شاشة تفاصيل بيان في دليل الخدمات — عرض منسق + تقييم 5 نجوم + تعليقات.
@@ -33,6 +34,8 @@ class _ServiceProviderDetailScreenState
   bool _bootstrapped = false;
   double _myRating = 0;
   bool _submitting = false;
+  bool _descExpanded = false;
+  bool _allComments = false;
 
   static const _fallbackProvider =
       ServiceProvider(id: '', category: 'technicians', name: 'خدمة');
@@ -157,7 +160,7 @@ class _ServiceProviderDetailScreenState
                         'التخصص الجامعي: ${provider.universityNote.trim()}',
                       if (provider.isEducational &&
                           provider.offersPrivateTutoring)
-                        '✔ يقدّم دروساً خصوصية',
+                        'امكانية تدريس خاص ✓',
                       if (provider.description.isNotEmpty)
                         provider.description,
                       if (provider.address.isNotEmpty)
@@ -167,121 +170,25 @@ class _ServiceProviderDetailScreenState
               ),
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 18, 16, 32),
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _titleRow(theme, provider, accent),
-                      if (provider.isEducational &&
-                          provider.offersPrivateTutoring) ...[
-                        const SizedBox(height: 12),
-                        _privateTutoringBanner(theme),
+                      _identityCard(theme, provider, accent),
+                      if (provider.isEducational) ...[
+                        const SizedBox(height: 10),
+                        _teachingCard(theme, provider, accent),
                       ],
-                      const SizedBox(height: 16),
-                      MedSection(
-                        title: provider.isEducational
-                            ? 'بيانات التدريس'
-                            : 'بيانات الخدمة',
-                        accent: accent,
-                        child: Column(
-                          children: [
-                            if (provider.isEducational) ...[
-                              MedInfoRow(
-                                  icon: Icons.badge_rounded,
-                                  label: 'الصفة',
-                                  value: provider.providerKindLabel,
-                                  accent: accent),
-                              if (provider.eduTypesLine.isNotEmpty)
-                                MedInfoRow(
-                                    icon: Icons.category_rounded,
-                                    label: 'نوع التعليم',
-                                    value: provider.eduTypesLine,
-                                    accent: accent),
-                              if (provider.stagesLine.isNotEmpty)
-                                MedInfoRow(
-                                    icon: Icons.school_rounded,
-                                    label: 'المراحل',
-                                    value: provider.stagesLine,
-                                    accent: accent),
-                              if (provider.subjectsLine.isNotEmpty ||
-                                  provider.specialty.trim().isNotEmpty)
-                                MedInfoRow(
-                                    icon: Icons.menu_book_rounded,
-                                    label: 'المواد',
-                                    value: provider.subjectsLine.isNotEmpty
-                                        ? provider.subjectsLine
-                                        : provider.specialty.trim(),
-                                    accent: accent),
-                              if (provider.universityNote.trim().isNotEmpty)
-                                MedInfoRow(
-                                    icon: Icons.edit_note_rounded,
-                                    label: 'التخصص الجامعي',
-                                    value: provider.universityNote.trim(),
-                                    accent: accent),
-                              MedInfoRow(
-                                  icon: Icons.cast_for_education_rounded,
-                                  label: 'تدريس خاص',
-                                  value: provider.offersPrivateTutoring
-                                      ? 'يقدّم دروساً خصوصية'
-                                      : 'غير متاح',
-                                  accent: accent),
-                            ] else if (provider.displaySpecialty.isNotEmpty)
-                              MedInfoRow(
-                                  icon: Icons.category_rounded,
-                                  label: 'المجال',
-                                  value: provider.displaySpecialty,
-                                  accent: accent),
-                            if (provider.phone.isNotEmpty)
-                              MedInfoRow(
-                                  icon: Icons.phone_rounded,
-                                  label: 'الهاتف',
-                                  value: provider.phone,
-                                  accent: accent),
-                            if (provider.address.isNotEmpty)
-                              MedInfoRow(
-                                  icon: Icons.location_on_rounded,
-                                  label: 'العنوان',
-                                  value: provider.address,
-                                  accent: accent),
-                            if (provider.submittedByName != null &&
-                                provider.submittedByName!.isNotEmpty)
-                              MedInfoRow(
-                                  icon: Icons.person_rounded,
-                                  label: 'أضافها',
-                                  value: provider.submittedByName!,
-                                  accent: accent),
-                          ],
-                        ),
-                      ),
                       if (provider.description.isNotEmpty) ...[
-                        const SizedBox(height: 16),
-                        MedSection(
-                          title: 'عن الخدمة',
-                          accent: accent,
-                          child: Text(provider.description,
-                              style: theme.textTheme.bodyMedium
-                                  ?.copyWith(height: 1.6)),
-                        ),
+                        const SizedBox(height: 10),
+                        _aboutCard(theme, provider, accent),
                       ],
-                      const SizedBox(height: 16),
-                      _ratingSummary(theme, provider, accent),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 10),
+                      _contactCard(theme, provider, accent),
+                      const SizedBox(height: 10),
                       _myRatingCard(theme, accent),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 10),
                       _commentsSection(theme, accent),
-                      const SizedBox(height: 22),
-                      if (provider.phone.isNotEmpty)
-                        FilledButton.icon(
-                          style: FilledButton.styleFrom(
-                              backgroundColor: accent,
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 16)),
-                          onPressed: () => _call(provider.phone),
-                          icon: const Icon(Icons.call_rounded),
-                          label: const Text('اتصال الآن',
-                              style:
-                                  TextStyle(fontWeight: FontWeight.w800)),
-                        ),
                     ],
                   ),
                 ),
@@ -293,122 +200,326 @@ class _ServiceProviderDetailScreenState
     );
   }
 
-  Widget _titleRow(
-      ThemeData theme, ServiceProvider provider, Color accent) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(provider.name,
-              style: theme.textTheme.headlineSmall
-                  ?.copyWith(fontWeight: FontWeight.w900)),
-        ),
-        if (provider.isEducational)
-          Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-            margin: const EdgeInsets.only(left: 6),
-            decoration: BoxDecoration(
-              color: accent.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: accent.withValues(alpha: 0.4)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                    provider.isSchool
-                        ? Icons.account_balance_rounded
-                        : Icons.person_rounded,
-                    size: 13,
-                    color: accent),
-                const SizedBox(width: 3),
-                Text(provider.providerKindLabel,
-                    style: TextStyle(
-                        color: accent,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 11.5)),
-              ],
-            ),
-          ),
-        if (provider.isFeatured)
-          Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(colors:
-                  [Color(0xFFF1C40F), Color(0xFFB8860B)]),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.star_rounded, color: Colors.white, size: 14),
-                SizedBox(width: 3),
-                Text('مميز',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 12)),
-              ],
-            ),
-          ),
-      ],
-    );
-  }
+  BoxDecoration _cardDeco(ThemeData theme, Color accent) => BoxDecoration(
+        color:
+            theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(16),
+        border:
+            Border.all(color: accent.withValues(alpha: 0.22)),
+      );
 
-  /// شريط «يقدّم دروساً خصوصية» أعلى بيانات المدرّس.
-  Widget _privateTutoringBanner(ThemeData theme) {
-    const teal = Color(0xFF00695C);
+  /// بطاقة مدمجة: الصورة والاسم والصفة والتقييم وشارات الوسوم في كتلة واحدة.
+  Widget _identityCard(
+      ThemeData theme, ServiceProvider provider, Color accent) {
+    final avg = provider.ratingCount == 0 ? 0.0 : provider.rating;
     return Container(
-      key: const Key('edu-private-banner'),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: teal.withValues(alpha: 0.09),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: teal.withValues(alpha: 0.4)),
-      ),
-      child: const Row(
+      padding: const EdgeInsets.all(12),
+      decoration: _cardDeco(theme, accent),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.cast_for_education_rounded, size: 19, color: teal),
-          SizedBox(width: 9),
+          _photo(theme, provider, accent),
+          const SizedBox(width: 10),
           Expanded(
-            child: Text('يقدّم دروساً خصوصية',
-                style: TextStyle(
-                    fontWeight: FontWeight.w800, fontSize: 13, color: teal)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(provider.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w900, height: 1.25)),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 5,
+                  runSpacing: 5,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    if (provider.isEducational)
+                      _kindChip(provider, accent),
+                    if (provider.isFeatured) _featuredChip(),
+                    if (provider.isEducational &&
+                        provider.offersPrivateTutoring)
+                      _pill('امكانية تدريس خاص ✓', kEduPrivateTagColor,
+                          key: const Key('edu-private-banner'), filled: true),
+                    _ratingPill(avg, provider.ratingCount, accent),
+                  ],
+                ),
+                if (!provider.isEducational &&
+                    provider.displaySpecialty.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(provider.displaySpecialty,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall
+                          ?.copyWith(fontWeight: FontWeight.w700)),
+                ],
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _ratingSummary(
+  static const double _kPhotoSide = 68;
+
+  Widget _photo(
       ThemeData theme, ServiceProvider provider, Color accent) {
-    final avg = provider.ratingCount == 0
-        ? 0.0
-        : provider.rating;
-    return MedSection(
-      title: 'التقييم',
-      accent: accent,
+    final url = provider.photoUrl ?? '';
+    Widget inner;
+    if (url.isEmpty) {
+      inner = provider.isEducational
+          ? EduKindMark(kind: provider.providerKind, size: _kPhotoSide)
+          : ColoredBox(
+              color: accent.withValues(alpha: 0.12),
+              child: Center(
+                  child: Icon(ServiceCategory.icon(provider.category),
+                      size: 30, color: accent)),
+            );
+    } else {
+      inner = CachedNetworkImage(
+        imageUrl: url,
+        memCacheWidth: (_kPhotoSide * 3).ceil(),
+        fit: BoxFit.cover,
+        placeholder: (_, __) =>
+            ColoredBox(color: accent.withValues(alpha: 0.12)),
+        errorWidget: (_, __, ___) => Icon(Icons.person_rounded,
+            size: 30, color: accent),
+      );
+    }
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: SizedBox(
+          width: _kPhotoSide, height: _kPhotoSide, child: inner),
+    );
+  }
+
+  Widget _kindChip(ServiceProvider provider, Color accent) {
+    return _pill(provider.providerKindLabel, accent,
+        mark: provider.providerKind);
+  }
+
+  Widget _featuredChip() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+            colors: [Color(0xFFF1C40F), Color(0xFFB8860B)]),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.star_rounded, color: Colors.white, size: 12),
+          SizedBox(width: 3),
+          Text('مميز',
+              style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 11)),
+        ],
+      ),
+    );
+  }
+
+  Widget _ratingPill(double avg, int count, Color accent) {
+    return _pill(
+        count == 0 ? 'بلا تقييم' : '${avg.toStringAsFixed(1)} ★ ($count)',
+        accent,
+        icon: Icons.star_rounded);
+  }
+
+  Widget _pill(String text, Color color,
+      {Key? key, IconData? icon, String? mark, bool filled = false}) {
+    return Container(
+      key: key,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+      decoration: BoxDecoration(
+        color: filled
+            ? color
+            : color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(
+            color: color.withValues(alpha: filled ? 1 : 0.35)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (mark != null) ...[
+            EduKindMark(kind: mark, size: 12),
+            const SizedBox(width: 4),
+          ] else if (icon != null) ...[
+            Icon(icon, size: 12, color: filled ? Colors.white : color),
+            const SizedBox(width: 4),
+          ],
+          Flexible(
+            child: Text(text,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    color: filled ? Colors.white : color,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 11.5)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// سطر واحد: تسمية صغيرة ثم وسوم القيم تلتفّ أسطرًا عند الضيق.
+  Widget _factLine(
+      ThemeData theme, String label, List<String> values, Color color) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 7),
       child: Wrap(
-        spacing: 10,
-        runSpacing: 4,
+        spacing: 5,
+        runSpacing: 5,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          Text(avg.toStringAsFixed(1),
+          Text('$label:',
               style: TextStyle(
-                  fontSize: 30,
+                  fontSize: 11.5,
                   fontWeight: FontWeight.w900,
-                  color: accent)),
-          RatingBarIndicator(
-            rating: avg,
-            itemSize: 22,
-            unratedColor: Colors.grey.withValues(alpha: 0.3),
-            itemBuilder: (_, __) =>
-                const Icon(Icons.star_rounded, color: Colors.amber),
+                  color: theme.colorScheme.onSurfaceVariant)),
+          for (final v in values) _pill(v, color),
+        ],
+      ),
+    );
+  }
+
+  /// بيانات التدريس في كتلة واحدة مضغوطة بدل صفوف طويلة.
+  Widget _teachingCard(
+      ThemeData theme, ServiceProvider provider, Color accent) {
+    final subjects = provider.subjects.isNotEmpty
+        ? provider.subjects
+        : (provider.specialty.trim().isEmpty
+            ? const <String>[]
+            : provider.specialty
+                .split(RegExp(r'[،,]'))
+                .map((e) => e.trim())
+                .where((e) => e.isNotEmpty)
+                .toList());
+    final university = provider.universityNote.trim();
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 5),
+      decoration: _cardDeco(theme, accent),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('بيانات التدريس',
+              style: theme.textTheme.titleSmall
+                  ?.copyWith(fontWeight: FontWeight.w900, color: accent)),
+          const SizedBox(height: 8),
+          if (provider.eduTypesLine.isNotEmpty)
+            _factLine(theme, 'النوع', provider.eduTypes, accent),
+          if (provider.stageChips.isNotEmpty)
+            _factLine(theme, 'المراحل', provider.stageChips, accent),
+          if (subjects.isNotEmpty)
+            _factLine(theme, 'المواد', subjects, accent),
+          if (university.isNotEmpty)
+            _factLine(theme, 'جامعي', [university], accent),
+        ],
+      ),
+    );
+  }
+
+  /// نبذة قابلة للطي حتى لا تغطي الشاشة على حساب بقية البيانات.
+  Widget _aboutCard(
+      ThemeData theme, ServiceProvider provider, Color accent) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: _cardDeco(theme, accent),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('عن الخدمة',
+              style: theme.textTheme.titleSmall
+                  ?.copyWith(fontWeight: FontWeight.w900, color: accent)),
+          const SizedBox(height: 6),
+          Text(provider.description,
+              maxLines: _descExpanded ? null : 3,
+              overflow: _descExpanded
+                  ? null
+                  : TextOverflow.ellipsis,
+              style:
+                  theme.textTheme.bodySmall?.copyWith(height: 1.55)),
+          if (provider.description.length > 120)
+            TextButton(
+              style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(0, 30),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+              onPressed: () =>
+                  setState(() => _descExpanded = !_descExpanded),
+              child: Text(_descExpanded ? 'أقل' : 'المزيد',
+                  style: const TextStyle(
+                      fontSize: 12, fontWeight: FontWeight.w800)),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// بيانات التواصل: أسطر مدمجة + زر اتصال أخضر صغير.
+  Widget _contactCard(
+      ThemeData theme, ServiceProvider provider, Color accent) {
+    final by = provider.submittedByName ?? '';
+    final hasLines = provider.phone.isNotEmpty ||
+        provider.address.isNotEmpty ||
+        by.isNotEmpty;
+    if (!hasLines) return const SizedBox.shrink();
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+      decoration: _cardDeco(theme, accent),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (provider.address.isNotEmpty)
+            _inlineLine(theme, Icons.location_on_rounded,
+                provider.address, accent),
+          if (by.isNotEmpty)
+            _inlineLine(
+                theme, Icons.person_rounded, 'أضافها: $by', accent),
+          if (provider.phone.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 44,
+              child: FilledButton.icon(
+                key: const Key('detail-call'),
+                style: FilledButton.styleFrom(
+                    backgroundColor: kCallButtonColor,
+                    padding: const EdgeInsets.symmetric(horizontal: 18)),
+                onPressed: () => _call(provider.phone),
+                icon: const Icon(Icons.call_rounded, size: 18),
+                label: Text('اتصال الآن — ${provider.phone}',
+                    style: const TextStyle(fontWeight: FontWeight.w800)),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _inlineLine(
+      ThemeData theme, IconData icon, String value, Color accent) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          Icon(icon, size: 15, color: accent),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Text(value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(fontWeight: FontWeight.w700)),
           ),
-          Text('(${provider.ratingCount} تقييم)',
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: Colors.grey)),
         ],
       ),
     );
@@ -421,42 +532,49 @@ class _ServiceProviderDetailScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Center(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
             child: RatingBar.builder(
               initialRating: _myRating,
               minRating: 1,
-              itemSize: 34,
+              itemSize: 28,
               unratedColor: Colors.grey.withValues(alpha: 0.3),
               itemBuilder: (_, __) =>
                   const Icon(Icons.star_rounded, color: Colors.amber),
               onRatingUpdate: (v) => setState(() => _myRating = v),
             ),
           ),
-          const SizedBox(height: 12),
           TextField(
             controller: _textC,
-            maxLines: 3,
+            maxLines: 2,
             maxLength: 240,
+            style: theme.textTheme.bodySmall,
             decoration: const InputDecoration(
               hintText: 'أضف تعليقك (اختياري)...',
-              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              counterText: '',
+              isDense: true,
+              contentPadding:
+                  EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             ),
           ),
-          const SizedBox(height: 6),
-          FilledButton.icon(
-            style: FilledButton.styleFrom(
-                backgroundColor: accent,
-                padding: const EdgeInsets.symmetric(vertical: 13)),
-            onPressed: _submitting ? null : _submitComment,
-            icon: _submitting
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Colors.white))
-                : const Icon(Icons.rate_review_rounded, size: 18),
-            label: const Text('إرسال التقييم',
-                style: TextStyle(fontWeight: FontWeight.w800)),
+          const SizedBox(height: 4),
+          SizedBox(
+            height: 42,
+            child: FilledButton.icon(
+              style: FilledButton.styleFrom(
+                  backgroundColor: accent,
+                  padding: const EdgeInsets.symmetric(horizontal: 18)),
+              onPressed: _submitting ? null : _submitComment,
+              icon: _submitting
+                  ? const SizedBox(
+                      width: 15,
+                      height: 15,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.rate_review_rounded, size: 17),
+              label: const Text('إرسال التقييم',
+                  style: TextStyle(fontWeight: FontWeight.w800)),
+            ),
           ),
         ],
       ),
@@ -470,6 +588,8 @@ class _ServiceProviderDetailScreenState
           : _service.getCommentsStream(_initial.id),
       builder: (context, snap) {
         final comments = snap.data ?? [];
+        final visible =
+            _allComments || comments.length <= 2 ? comments : comments.take(2).toList();
         return MedSection(
           title: 'تعليقات المستخدمين (${comments.length})',
           accent: accent,
@@ -482,9 +602,25 @@ class _ServiceProviderDetailScreenState
                       style: theme.textTheme.bodySmall
                           ?.copyWith(color: Colors.grey))
                   : Column(
-                      children: comments
-                          .map((c) => _commentTile(theme, c, accent))
-                          .toList(),
+                      children: [
+                        ...visible
+                            .map((c) => _commentTile(theme, c, accent)),
+                        if (visible.length < comments.length)
+                          TextButton(
+                            style: TextButton.styleFrom(
+                                padding: EdgeInsets.zero,
+                                minimumSize: const Size(0, 30),
+                                tapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap),
+                            onPressed: () =>
+                                setState(() => _allComments = true),
+                            child: Text(
+                                'عرض كل التعليقات (${comments.length})',
+                                style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800)),
+                          ),
+                      ],
                     ),
         );
       },

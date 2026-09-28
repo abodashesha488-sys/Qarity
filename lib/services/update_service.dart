@@ -74,20 +74,44 @@ class UpdateService {
     }
   }
 
-  /// قرار الفحص دالّة محضة: مقارنتها برقم البناء المثبّت، والفشل حالة قائمة
-  /// بذاتها لا تُخلط مع «لا يوجد تحديث».
+  /// قرار الفحص دالّة محضة. مصدراه:
+  /// 1) **رقم البناء (versionCode)** — هو الفيصل لأندرويد: لا يمكن تثبيت تحديث
+  ///    برقم أقل من المثبّت (downgrade)، فهذا هو الإشارة الأساسية.
+  /// 2) **اسم الإصدار (versionName)** — احتياطي لماضٍ غير رتيب: وُجد بناء قديم
+  ///    يحمل versionCode مرتفعًا جدًا (1.0.8+10008) مع إصدار قديم فعلاً. لو
+  ///    اعتمدنا على رقم البناء وحده لظلّ هذا الجهاز «أحدث» للأبد ولا يصل له
+  ///    التحديث أبدًا. اسم الإصدار يكشف بصدق أنه أقدم.
   static UpdateCheck decideUpdate({
     UpdateInfo? latest,
     required int currentBuild,
     required bool fetchFailed,
+    String currentVersionName = '',
   }) {
     if (fetchFailed || latest == null) {
       return const UpdateCheck(UpdateCheckStatus.checkFailed);
     }
-    if (latest.versionCode <= currentBuild) {
-      return const UpdateCheck(UpdateCheckStatus.upToDate);
+    if (latest.versionCode > currentBuild) {
+      return UpdateCheck(UpdateCheckStatus.updateAvailable, latest);
     }
-    return UpdateCheck(UpdateCheckStatus.updateAvailable, latest);
+    if (currentVersionName.isNotEmpty && latest.versionName.isNotEmpty) {
+      if (compareVersions(latest.versionName, currentVersionName) > 0) {
+        return UpdateCheck(UpdateCheckStatus.updateAvailable, latest);
+      }
+    }
+    return const UpdateCheck(UpdateCheckStatus.upToDate);
+  }
+
+  /// مقارنة إصدارين نصّيين (semver بسيط): موجب إذا كان a أحدث من b.
+  static int compareVersions(String a, String b) {
+    final pa = a.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+    final pb = b.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+    final n = pa.length > pb.length ? pa.length : pb.length;
+    for (var i = 0; i < n; i++) {
+      final va = i < pa.length ? pa[i] : 0;
+      final vb = i < pb.length ? pb[i] : 0;
+      if (va != vb) return va > vb ? 1 : -1;
+    }
+    return 0;
   }
 
   /// الفحص اليدوي (الإعدادات / الدرج) — يعيد حالة صريحة.
@@ -96,9 +120,11 @@ class UpdateService {
       return const UpdateCheck(UpdateCheckStatus.notSupported);
     }
     final fetched = await _fetch();
-    final int currentBuild;
+    String currentVersionName = '';
+    int currentBuild = 0;
     try {
       final pkg = await PackageInfo.fromPlatform();
+      currentVersionName = pkg.version;
       currentBuild = int.tryParse(pkg.buildNumber) ?? 0;
     } catch (_) {
       return const UpdateCheck(UpdateCheckStatus.checkFailed);
@@ -107,6 +133,7 @@ class UpdateService {
       latest: fetched.info,
       currentBuild: currentBuild,
       fetchFailed: fetched.failed,
+      currentVersionName: currentVersionName,
     );
   }
 
