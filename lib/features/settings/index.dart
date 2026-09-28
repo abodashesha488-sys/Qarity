@@ -207,7 +207,7 @@ class _UpdateTileState extends State<_UpdateTile> {
     try {
       final p = await PackageInfo.fromPlatform();
       if (mounted) {
-        setState(() => _version = 'الإصدار ${p.version} (${p.buildNumber})');
+        setState(() => _version = 'الإصدار ${p.version}');
       }
     } catch (_) {}
   }
@@ -216,14 +216,25 @@ class _UpdateTileState extends State<_UpdateTile> {
     if (_checking) return;
     setState(() => _checking = true);
     try {
-      final info = await UpdateService().getUpdateInfo();
+      final check = await UpdateService().checkForUpdate();
       if (!mounted) return;
-      if (info != null) {
-        await UpdateService.showUpdateDialog(context, info);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('أنت على أحدث إصدار')),
-        );
+      switch (check.status) {
+        case UpdateCheckStatus.updateAvailable:
+          await UpdateService.showUpdateDialog(context, check.info!);
+        case UpdateCheckStatus.checkFailed:
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('تعذّر فحص التحديثات — تحقق من الاتصال وأعد المحاولة'),
+            ),
+          );
+        case UpdateCheckStatus.notSupported:
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('التحديث هنا تلقائي عند فتح التطبيق')),
+          );
+        case UpdateCheckStatus.upToDate:
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('أنت على أحدث إصدار')),
+          );
       }
     } finally {
       if (mounted) setState(() => _checking = false);

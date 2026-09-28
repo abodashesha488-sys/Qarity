@@ -12,7 +12,7 @@ on:
         required: true
         type: string
       min_build:
-        description: 'Minimum build number to force update (optional, defaults to current build)'
+        description: 'Minimum versionCode that forces an update (same 2000+N space) — leave empty to equal this release'
         required: false
         type: string
       maintenance:
@@ -139,6 +139,8 @@ jobs:
       # ─── Determine version (sequential build counter) ───
       - name: Determine version & build number
         id: version
+        env:
+          MANUAL_VERSION: ${{ github.event.inputs.version }}
         run: |
           # Read or initialize sequential build counter
           BUILD_FILE="build_number.txt"
@@ -151,14 +153,18 @@ jobs:
           # Increment build number (sequential counter)
           NEW_BUILD=$((CURRENT_BUILD + 1))
           
-          # Calculate version name from build number (1.0.1, 1.0.2, 1.0.3...)
-          # 1=1.0.1, 2=1.0.2, ..., 9=1.0.9, 10=1.1.0, etc.
-          MAJOR=1
-          MINOR=$(( (NEW_BUILD - 1) / 10 ))
-          PATCH=$(( (NEW_BUILD - 1) % 10 + 1 ))
-          NEW_NAME="${MAJOR}.${MINOR}.${PATCH}"
-          
-          NEW_VERSION="${NEW_NAME}+${NEW_BUILD}"
+          # Android versionCode يجب أن يبقى أعلى من أي رقم مثبّت على الأجهزة،
+          # وإلا لم يطلب التطبيق التحديث ورفضت أندرويد التثبيت (downgrade).
+          # الأجهزة المنتشرة حملت أرقامًا حتى 2010، فنُزيح الكود إلى 2000 + العدّاد،
+          # ونُبقي اسم الإصدار المعروض مستقلًا وقراءةً للناس.
+          NEW_CODE=$((2000 + NEW_BUILD))
+          if [ -n "$MANUAL_VERSION" ]; then
+            NEW_NAME="$MANUAL_VERSION"
+          else
+            NEW_NAME="1.1.${NEW_BUILD}"
+          fi
+
+          NEW_VERSION="${NEW_NAME}+${NEW_CODE}"
           
           # Save new build number for next run
           echo "$NEW_BUILD" > "$BUILD_FILE"
@@ -174,6 +180,7 @@ jobs:
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "new_name=$NEW_NAME" >> $GITHUB_OUTPUT
           echo "new_build=$NEW_BUILD" >> $GITHUB_OUTPUT
+          echo "new_code=$NEW_CODE" >> $GITHUB_OUTPUT
 
       # ─── Update pubspec.yaml with new version ───
       - name: Update pubspec.yaml version
@@ -291,6 +298,7 @@ jobs:
             ${{ github.event.inputs.message }}
 
             **Build:** ${{ steps.version.outputs.new_build }}
+            **versionCode:** ${{ steps.version.outputs.new_code }}
             **Version:** ${{ steps.version.outputs.new_name }}
             **Date:** ${{ steps.release_date.outputs.date }}
           files: ${{ steps.apk.outputs.apk_path }}
@@ -306,7 +314,7 @@ jobs:
           
           cat > update.json << EOF
           {
-            "versionCode": ${{ steps.version.outputs.new_build }},
+            "versionCode": ${{ steps.version.outputs.new_code }},
             "versionName": "${{ steps.version.outputs.new_name }}",
             "apkUrl": "https://github.com/${{ github.repository }}/releases/latest/download/Qarity.apk",
             "forceUpdate": false,
@@ -319,7 +327,7 @@ jobs:
           git add update.json
           # Only commit if there are changes
           if ! git diff --cached --quiet; then
-            git commit -m "chore: update version to ${{ steps.version.outputs.new_name }}+${{ steps.version.outputs.new_build }}"
+            git commit -m "chore: update version to ${{ steps.version.outputs.new_name }}+${{ steps.version.outputs.new_code }}"
             # Pull latest changes before push to avoid non-fast-forward rejection
             git pull --rebase origin main
             git push origin main
@@ -371,8 +379,8 @@ jobs:
 
             const data = {
               androidVersion: '${{ steps.version.outputs.new_name }}',
-              androidBuild: ${{ steps.version.outputs.new_build }},
-              minBuild: ${{ github.event.inputs.min_build || steps.version.outputs.new_build }},
+              androidBuild: ${{ steps.version.outputs.new_code }},
+              minBuild: ${{ github.event.inputs.min_build || steps.version.outputs.new_code }},
               androidUrl: 'https://github.com/${{ github.repository }}/releases/latest/download/Qarity.apk',
               message: `${{ github.event.inputs.message }}`,
               maintenance: ${{ github.event.inputs.maintenance }},
@@ -402,8 +410,9 @@ jobs:
           echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| **Version** | ${{ steps.version.outputs.new_name }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Build** | ${{ steps.version.outputs.new_build }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Min Build** | ${{ github.event.inputs.min_build || steps.version.outputs.new_build }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **versionCode** | ${{ steps.version.outputs.new_code }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Build counter** | ${{ steps.version.outputs.new_build }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Min versionCode (forced)** | ${{ github.event.inputs.min_build || steps.version.outputs.new_code }} |" >> $GITHUB_STEP_SUMMARY
           echo "| **APK URL** | https://github.com/${{ github.repository }}/releases/latest/download/Qarity.apk |" >> $GITHUB_STEP_SUMMARY
           echo "| **APK Signed** | ${{ steps.sign.outputs.signed_apk_path != '' && '✅ Yes' || '❌ No (unsigned)' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| **Maintenance** | ${{ github.event.inputs.maintenance }} |" >> $GITHUB_STEP_SUMMARY

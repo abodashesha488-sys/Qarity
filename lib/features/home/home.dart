@@ -249,13 +249,18 @@ class HomeDrawer extends StatelessWidget {
 
   /// 🔁 فحص يدوي لتحديث التطبيق من الدرج — نفس سلوك بطاقة الإعدادات.
   Future<void> _checkForUpdate() async {
-    final info = await UpdateService().getUpdateInfo();
+    final check = await UpdateService().checkForUpdate();
     final ctx = navigatorKey.currentContext;
     if (ctx == null || !ctx.mounted) return;
-    if (info != null) {
-      await UpdateService.showUpdateDialog(ctx, info);
-    } else {
-      AppHelpers.showToast('أنت على أحدث إصدار');
+    switch (check.status) {
+      case UpdateCheckStatus.updateAvailable:
+        await UpdateService.showUpdateDialog(ctx, check.info!);
+      case UpdateCheckStatus.checkFailed:
+        AppHelpers.showToast('تعذّر فحص التحديثات — تحقق من الاتصال وأعد المحاولة');
+      case UpdateCheckStatus.notSupported:
+        AppHelpers.showToast('التحديث هنا تلقائي عند فتح التطبيق');
+      case UpdateCheckStatus.upToDate:
+        AppHelpers.showToast('أنت على أحدث إصدار');
     }
   }
 

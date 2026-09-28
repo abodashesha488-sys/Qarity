@@ -10,6 +10,17 @@ import 'package:path_provider/path_provider.dart';
 
 enum DialogResult { updateNow, later }
 
+/// نتيجة فحص التحديث — «لم أستطع الفحص» حالة مستقلة عن «لا يوجد تحديث»،
+/// حتى لا يخبر الزر المستخدم بأنه حديث وهو في الحقيقة لم يصل للمصدر.
+enum UpdateCheckStatus { upToDate, updateAvailable, checkFailed, notSupported }
+
+class UpdateCheck {
+  final UpdateCheckStatus status;
+  final UpdateInfo? info;
+
+  const UpdateCheck(this.status, [this.info]);
+}
+
 class UpdateInfo {
   final int versionCode;
   final String versionName;
@@ -45,47 +56,68 @@ class UpdateService {
   bool get _isAndroid =>
       !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
-  Future<UpdateInfo?> fetchUpdateInfo() async {
-    if (!_isAndroid) return null;
+  Future<({UpdateInfo? info, bool failed})> _fetch() async {
+    if (!_isAndroid) return (info: null, failed: true);
     try {
       final response = await http
           .get(Uri.parse(_updateUrl))
           .timeout(_headerTimeout);
-      if (response.statusCode != 200) return null;
+      if (response.statusCode != 200) return (info: null, failed: true);
       final json = jsonDecode(response.body) as Map<String, dynamic>;
       final info = UpdateInfo.fromJson(json);
-      if (info.versionCode <= 0 || info.apkUrl.isEmpty) return null;
-      return info;
+      if (info.versionCode <= 0 || info.apkUrl.isEmpty) {
+        return (info: null, failed: true);
+      }
+      return (info: info, failed: false);
     } catch (_) {
-      return null;
+      return (info: null, failed: true);
     }
   }
 
-  Future<bool> isUpdateAvailable() async {
-    if (!_isAndroid) return false;
+  /// قرار الفحص دالّة محضة: مقارنتها برقم البناء المثبّت، والفشل حالة قائمة
+  /// بذاتها لا تُخلط مع «لا يوجد تحديث».
+  static UpdateCheck decideUpdate({
+    UpdateInfo? latest,
+    required int currentBuild,
+    required bool fetchFailed,
+  }) {
+    if (fetchFailed || latest == null) {
+      return const UpdateCheck(UpdateCheckStatus.checkFailed);
+    }
+    if (latest.versionCode <= currentBuild) {
+      return const UpdateCheck(UpdateCheckStatus.upToDate);
+    }
+    return UpdateCheck(UpdateCheckStatus.updateAvailable, latest);
+  }
+
+  /// الفحص اليدوي (الإعدادات / الدرج) — يعيد حالة صريحة.
+  Future<UpdateCheck> checkForUpdate() async {
+    if (!_isAndroid) {
+      return const UpdateCheck(UpdateCheckStatus.notSupported);
+    }
+    final fetched = await _fetch();
+    final int currentBuild;
     try {
       final pkg = await PackageInfo.fromPlatform();
-      final currentBuild = int.tryParse(pkg.buildNumber) ?? 0;
-      final info = await fetchUpdateInfo();
-      if (info == null) return false;
-      return info.versionCode > currentBuild;
+      currentBuild = int.tryParse(pkg.buildNumber) ?? 0;
     } catch (_) {
-      return false;
+      return const UpdateCheck(UpdateCheckStatus.checkFailed);
     }
+    return decideUpdate(
+      latest: fetched.info,
+      currentBuild: currentBuild,
+      fetchFailed: fetched.failed,
+    );
   }
+
+  Future<UpdateInfo?> fetchUpdateInfo() async => (await _fetch()).info;
+
+  Future<bool> isUpdateAvailable() async =>
+      (await checkForUpdate()).status == UpdateCheckStatus.updateAvailable;
 
   Future<UpdateInfo?> getUpdateInfo() async {
-    if (!_isAndroid) return null;
-    try {
-      final pkg = await PackageInfo.fromPlatform();
-      final currentBuild = int.tryParse(pkg.buildNumber) ?? 0;
-      final info = await fetchUpdateInfo();
-      if (info == null) return null;
-      if (info.versionCode <= currentBuild) return null;
-      return info;
-    } catch (_) {
-      return null;
-    }
+    final check = await checkForUpdate();
+    return check.status == UpdateCheckStatus.updateAvailable ? check.info : null;
   }
 
   Future<UpdateInstallResult> downloadAndInstall(

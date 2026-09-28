@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:qurity/services/update_service.dart';
@@ -53,31 +54,89 @@ void main() {
     });
   });
 
-  group('UpdateInfo version comparison', () {
-    test('versionCode 2 with current build 2 → no update', () {
-      const updateInfo = UpdateInfo(
-        versionCode: 2,
-        versionName: '1.0.2',
+  UpdateInfo info(int code, {String name = '1.1.12', bool force = false}) =>
+      UpdateInfo(
+        versionCode: code,
+        versionName: name,
         apkUrl: 'https://example.com/app.apk',
-        forceUpdate: false,
+        forceUpdate: force,
         releaseNotes: '',
       );
-      // Simulating: currentBuild = 2, updateInfo.versionCode = 2
-      // getUpdateInfo would return null because versionCode <= currentBuild
-      expect(updateInfo.versionCode <= 2, isTrue);
+
+  group('decideUpdate', () {
+    test('أعلى من المثبّت → تحديث متاح مع تمرير البيانات', () {
+      final latest = info(2012);
+      final check =
+          UpdateService.decideUpdate(latest: latest, currentBuild: 2010, fetchFailed: false);
+      expect(check.status, UpdateCheckStatus.updateAvailable);
+      expect(check.info, same(latest));
     });
 
-    test('versionCode 3 with current build 2 → update available', () {
-      const updateInfo = UpdateInfo(
-        versionCode: 3,
-        versionName: '1.0.3',
-        apkUrl: 'https://example.com/app.apk',
-        forceUpdate: false,
-        releaseNotes: '',
-      );
-      // Simulating: currentBuild = 2, updateInfo.versionCode = 3
-      // getUpdateInfo would return info because versionCode > currentBuild
-      expect(updateInfo.versionCode > 2, isTrue);
+    test('مساوٍ للمثبّت → أحدث', () {
+      final check = UpdateService.decideUpdate(
+          latest: info(2010), currentBuild: 2010, fetchFailed: false);
+      expect(check.status, UpdateCheckStatus.upToDate);
+      expect(check.info, isNull);
+    });
+
+    test('رقم منشور أقل من المثبّت → أحدث لا خطأ (الحالة التي أوقفت الطلب)', () {
+      // الأجهزة المنتشرة حملت versionCode 2010، بينما كان update.json ينشر 11
+      // فبقي الفحص يقول «أنت على أحدث إصدار». المسار الآن: الترقيم 2000 + العدّاد.
+      final check = UpdateService.decideUpdate(
+          latest: info(11), currentBuild: 2010, fetchFailed: false);
+      expect(check.status, UpdateCheckStatus.upToDate);
+    });
+
+    test('فشل الوصول للمصدر → checkFailed ولا يُخلط مع «أحدث»', () {
+      final check =
+          UpdateService.decideUpdate(currentBuild: 2010, fetchFailed: true);
+      expect(check.status, UpdateCheckStatus.checkFailed);
+      expect(check.status, isNot(UpdateCheckStatus.upToDate));
+      expect(check.info, isNull);
+    });
+
+    test('استجابة بلا بيانات صالحة → checkFailed', () {
+      final check =
+          UpdateService.decideUpdate(currentBuild: 2010, fetchFailed: false);
+      expect(check.status, UpdateCheckStatus.checkFailed);
+    });
+
+    test('تحديث إلزامي يبقى إلزاميًا بعد القرار', () {
+      final latest = info(2013, force: true);
+      final check = UpdateService.decideUpdate(
+          latest: latest, currentBuild: 2010, fetchFailed: false);
+      expect(check.info!.forceUpdate, isTrue);
+    });
+  });
+
+  group('checkForUpdate', () {
+    test('غير أندرويد → notSupported (لا «أحدث» ولا «فشل»)', () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      try {
+        final check = await UpdateService().checkForUpdate();
+        expect(check.status, UpdateCheckStatus.notSupported);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+
+    test('أندرويد بلا وصول للمصدر → checkFailed لا «أنت على أحدث إصدار»', () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      try {
+        final check = await UpdateService().checkForUpdate();
+        expect(check.status, isNot(UpdateCheckStatus.upToDate));
+        expect(check.status, isNot(UpdateCheckStatus.notSupported));
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+
+    test('getUpdateInfo لا يعيد بيانات إلا عند توفر تحديث فعلي', () async {
+      final found = await UpdateService().getUpdateInfo();
+      if (found != null) {
+        expect(found.versionCode > 0, isTrue);
+        expect(found.apkUrl, isNotEmpty);
+      }
     });
   });
 
