@@ -147,7 +147,7 @@ function Write-FileStatus {
         "D " { Write-Host "deleted:  $file" -ForegroundColor Red; break }
         "R " { Write-Host "renamed:  $file" -ForegroundColor Yellow; break }
         "C " { Write-Host "copied:   $file" -ForegroundColor Cyan; break }
-        "??" { Write-Host "untracked: $file" -ForegroundColor DarkGray; break }
+        "\?\?" { Write-Host "untracked: $file" -ForegroundColor DarkGray; break }
         default { Write-Host $StatusLine -ForegroundColor Gray }
     }
 }

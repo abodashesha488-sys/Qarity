@@ -5,16 +5,22 @@ import 'dart:typed_data';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:excel/excel.dart'
-    show Excel, CellIndex, CellStyle, HorizontalAlign, TextCellValue;
-import 'package:file_picker/file_picker.dart';
+    show
+        Excel,
+        CellIndex,
+        CellStyle,
+        ExcelColor,
+        HorizontalAlign,
+        TextCellValue;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/constants/promo_placements.dart';
+import '../../core/utils/file_export.dart';
+import '../../core/utils/firebase_ts.dart';
 import '../../models/data_models.dart';
 import '../../models/promo_model.dart';
 import '../../models/village_alert.dart';
@@ -60,6 +66,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   String? _selectedCat;
 
   static const List<_Cat> _cats = [
+    _Cat(kAllPending, 'كل المعلّقات', Icons.layers_rounded, Color(0xFF6F4E37)),
     _Cat('news', 'الأخبار', Icons.newspaper_rounded, Colors.blue),
     _Cat('market_products', 'المنتجات', Icons.store_rounded, Colors.deepPurple),
     _Cat('shops', 'المحلات', Icons.storefront_rounded, Colors.amber),
@@ -81,6 +88,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         Color(0xFF6F4E37)),
     _Cat('medical_labs', 'معامل التحاليل', Icons.science_rounded,
         Color(0xFF6A1B9A)),
+    _Cat('optical_shops', 'نظارات طبية', Icons.remove_red_eye_rounded,
+        Color(0xFF3949AB)),
     _Cat('blood_requests', 'طلبات التبرع بالدم', Icons.bloodtype_rounded,
         Colors.red),
     _Cat(

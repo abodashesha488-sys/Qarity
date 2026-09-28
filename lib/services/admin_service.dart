@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter/foundation.dart';
 
+import '../core/utils/firebase_ts.dart';
 import '../core/utils/notification_deeplink.dart';
 import 'cache_service.dart';
 import 'content_cleanup_service.dart';
@@ -15,10 +16,17 @@ import 'remote_push_service.dart';
 class AdminService {
   static final AdminService _instance = AdminService._internal();
   factory AdminService() => _instance;
-  AdminService._internal();
+  AdminService._internal() : _firestore = FirebaseFirestore.instance;
 
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final firebase_auth.FirebaseAuth _auth = firebase_auth.FirebaseAuth.instance;
+  /// نسخة بحقن Firestore — لاختبارات تدفّقات المراجعة دون تهيئة Firebase.
+  AdminService.withFirestore(FirebaseFirestore firestore)
+      : _firestore = firestore;
+
+  final FirebaseFirestore _firestore;
+
+  firebase_auth.FirebaseAuth? _authCache;
+  firebase_auth.FirebaseAuth get _auth =>
+      _authCache ??= firebase_auth.FirebaseAuth.instance;
 
   Stream<firebase_auth.User?> get authStateChanges => _auth.authStateChanges();
 
@@ -140,6 +148,7 @@ class AdminService {
       'village_clinics',
       'pharmacies',
       'medical_labs',
+      'optical_shops',
       'blood_requests',
       'blood_donors',
       'service_requests',
@@ -420,6 +429,55 @@ class AdminService {
     return _pendingStream(collection);
   }
 
+  /// قائمة موحّدة بكل العناصر المعلّقة عبر مجموعات المراجعة: تدمج تدفّقات
+  /// كل مجموعة، وتضيف `_collection` لكل عنصر حتى يعرف التبويب المصدري
+  /// اسمه ويوجَّه الإجراء (موافقة/رفض/حذف/تفاصيل) لمجموعته الصحيحة.
+  /// مجموعة فاشلة تُترك فارغة بدل أن تُسقط القائمة كلها.
+  Stream<List<Map<String, dynamic>>> allPendingStream(
+      List<String> collections) {
+    final controller = StreamController<List<Map<String, dynamic>>>();
+    final buckets = <String, List<Map<String, dynamic>>>{};
+    final subscriptions = <StreamSubscription<dynamic>>[];
+
+    void emit() {
+      final merged = <Map<String, dynamic>>[];
+      for (final list in buckets.values) {
+        merged.addAll(list);
+      }
+      merged.sort((a, b) {
+        final da = tsToDateTime(a['createdAt']);
+        final db = tsToDateTime(b['createdAt']);
+        if (da == null && db == null) return 0;
+        if (da == null) return 1;
+        if (db == null) return -1;
+        return db.compareTo(da);
+      });
+      if (!controller.isClosed) controller.add(merged);
+    }
+
+    for (final collection in collections) {
+      subscriptions.add(itemsStream(collection, pendingOnly: true).listen(
+        (docs) {
+          buckets[collection] =
+              docs.map((d) => {...d, '_collection': collection}).toList();
+          emit();
+        },
+        onError: (Object error, StackTrace stackTrace) {
+          buckets[collection] = const [];
+          emit();
+        },
+      ));
+    }
+
+    controller.onCancel = () async {
+      for (final sub in subscriptions) {
+        await sub.cancel();
+      }
+      await controller.close();
+    };
+    return controller.stream;
+  }
+
   Stream<List<Map<String, dynamic>>> _pendingStream(String collection) {
     return _firestore
         .collection(collection)
@@ -477,6 +535,7 @@ class AdminService {
     'village_clinics': 'submittedBy',
     'pharmacies': 'submittedBy',
     'medical_labs': 'submittedBy',
+    'optical_shops': 'submittedBy',
     'service_providers': 'submittedBy',
     'lost_items': 'userId',
     'blood_requests': 'userId',
@@ -549,6 +608,7 @@ class AdminService {
       case 'village_clinics':
       case 'pharmacies':
       case 'medical_labs':
+      case 'optical_shops':
       case 'medical_center_clinics':
       case 'blood_requests':
       case 'blood_donors':
@@ -576,6 +636,8 @@ class AdminService {
         return 'العيادة';
       case 'medical_labs':
         return 'المعمل';
+      case 'optical_shops':
+        return 'محل النظارات';
       case 'medical_center_clinics':
         return 'عيادة المركز الخيري';
       case 'service_providers':
@@ -646,6 +708,7 @@ class AdminService {
           '/medical'
         ),
       'medical_labs' => ('🧪 معمل تحاليل جديد', preview, '/medical'),
+      'optical_shops' => ('👓 محل نظارات جديد', preview, '/medical'),
       'village_clinics' ||
       'pharmacies' ||
       'blood_requests' ||
@@ -772,6 +835,7 @@ class AdminService {
       _pendingCountOnce('medical_center_clinics'),
       _pendingCountOnce('medical_labs'),
       _pendingCountOnce('lost_items'),
+      _pendingCountOnce('optical_shops'),
     ]);
     return {
       'news': results[0],
@@ -790,6 +854,7 @@ class AdminService {
       'medical_center_clinics': results[13],
       'medical_labs': results[14],
       'lost_items': results[15],
+      'optical_shops': results[16],
     };
   }
 

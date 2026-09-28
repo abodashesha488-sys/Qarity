@@ -34,16 +34,28 @@ class _ReviewPageState extends State<_ReviewPage> with _ReviewBulkMixin {
   String _sortBy = 'newest'; // newest, oldest, title
 
   // تثبيت الـStream لكل (مجموعة، وضع) — إعادة إنشائه مع كل ضغطة كتابة
+  // كان يفكّ الاشتراك ويعيد تنزيل المجموعة كلها في كل حرف.
   Stream<List<Map<String, dynamic>>>? _itemsStream;
   String? _itemsStreamKey;
+
+  /// المجموعات الحقيقية (بلا القائمة الموحّدة الوهمية).
+  List<String> get _realCollections => widget.cats
+      .map((c) => c.collection)
+      .where((c) => c != kAllPending)
+      .toList(growable: false);
+
+  /// اسم القسم المصدري لكل مجموعة — يُعرض على بطاقة القائمة الموحّدة.
+  Map<String, _Cat> get _catsByCollection =>
+      {for (final c in widget.cats) if (c.collection != kAllPending) c.collection: c};
 
   Stream<List<Map<String, dynamic>>> _streamFor(
       String collection, bool pendingOnly) {
     final key = '${collection}_$pendingOnly';
     if (_itemsStreamKey != key || _itemsStream == null) {
       _itemsStreamKey = key;
-      _itemsStream =
-          AdminService().itemsStream(collection, pendingOnly: pendingOnly);
+      _itemsStream = collection == kAllPending
+          ? AdminService().allPendingStream(_realCollections)
+          : AdminService().itemsStream(collection, pendingOnly: pendingOnly);
     }
     return _itemsStream!;
   }
@@ -61,15 +73,22 @@ class _ReviewPageState extends State<_ReviewPage> with _ReviewBulkMixin {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final allPendingView = _cat.isAllPending;
+    final totalPending = widget.pendingCounts.values
+        .fold<int>(0, (acc, value) => acc + value);
     return Column(
       children: [
         // ── عنوان الصفحة الموحّد ─────────────────────────────────
         _PageHeader(
           icon: _cat.icon,
-          title: 'مراجعة ${_cat.label}',
-          subtitle: _pendingOnly ? 'عرض العناصر المعلقة فقط' : 'عرض جميع العناصر',
+          title: allPendingView ? 'كل الإجراءات المعلقة' : 'مراجعة ${_cat.label}',
+          subtitle: allPendingView
+              ? 'قائمة واحدة من كل الأقسام مع ذكر مصدر كل إجراء'
+              : (_pendingOnly ? 'عرض العناصر المعلقة فقط' : 'عرض جميع العناصر'),
           color: _cat.color,
-          count: _pendingOnly ? (widget.pendingCounts[_cat.collection] ?? 0) : null,
+          count: allPendingView
+              ? totalPending
+              : (_pendingOnly ? (widget.pendingCounts[_cat.collection] ?? 0) : null),
           countLabel: 'معلّق',
         ),
 
@@ -98,13 +117,15 @@ class _ReviewPageState extends State<_ReviewPage> with _ReviewBulkMixin {
             itemBuilder: (context, i) {
               final c = widget.cats[i];
               final sel = c.collection == widget.selected;
-              final pending = widget.pendingCounts[c.collection] ?? 0;
-              final total = _getTotalCount(c.collection);
+              final pending = c.isAllPending
+                  ? widget.pendingCounts.values
+                      .fold<int>(0, (acc, value) => acc + value)
+                  : (widget.pendingCounts[c.collection] ?? 0);
               return _CategoryChip(
                 cat: c,
                 selected: sel,
                 pending: pending,
-                total: total,
+                total: pending,
                 onTap: () => widget.onSelect(c.collection),
               );
             },
@@ -129,7 +150,8 @@ class _ReviewPageState extends State<_ReviewPage> with _ReviewBulkMixin {
         // ── قائمة العناصر ───────────────────────────────────────
         Expanded(
           child: StreamBuilder<List<Map<String, dynamic>>>(
-            stream: _streamFor(_cat.collection, _pendingOnly),
+            stream: _streamFor(
+                _cat.collection, allPendingView ? true : _pendingOnly),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return Center(
@@ -144,10 +166,14 @@ class _ReviewPageState extends State<_ReviewPage> with _ReviewBulkMixin {
                   ),
                 );
               }
-              var items = snapshot.data ?? [];
+              if (snapshot.hasError) {
+                return _ErrorReview(color: _cat.color);
+              }
+              var items = List<Map<String, dynamic>>.from(snapshot.data ?? []);
               final q = _search.text.trim().toLowerCase();
               if (q.isNotEmpty) {
                 items = items.where((it) {
+                  final source = _catsByCollection[it['_collection']]?.label ?? '';
                   final text = [
                     it['title'],
                     it['name'],
@@ -160,31 +186,35 @@ class _ReviewPageState extends State<_ReviewPage> with _ReviewBulkMixin {
                     it['specialty'],
                     it['stage'],
                     it['category'],
+                    source,
                   ].whereType<String>().join(' ').toLowerCase();
                   return text.contains(q);
                 }).toList();
               }
-              // ترتيب
+              // ترتيب — `createdAt` يصل من Firestore كـ Timestamp، والتحويل
+              // بـ as DateTime? كان يرمي TypeError فيسقط البناء ولا تظهر بيانات.
+              int cmpCreatedAt(Map<String, dynamic> a, Map<String, dynamic> b,
+                  {required bool newestFirst}) {
+                final da = tsToDateTime(a['createdAt']);
+                final db = tsToDateTime(b['createdAt']);
+                if (da == null && db == null) return 0;
+                if (da == null) return 1;
+                if (db == null) return -1;
+                return newestFirst ? db.compareTo(da) : da.compareTo(db);
+              }
+
               items.sort((a, b) {
                 switch (_sortBy) {
                   case 'oldest':
-                    final da = a['createdAt'] as DateTime?;
-                    final db = b['createdAt'] as DateTime?;
-                    if (da == null && db == null) return 0;
-                    if (da == null) return 1;
-                    if (db == null) return -1;
-                    return da.compareTo(db);
+                    return cmpCreatedAt(a, b, newestFirst: false);
                   case 'title':
-                    return (a['title'] ?? a['name'] ?? '')
+                    final t = (a['title'] ?? a['name'] ?? '')
                         .toString()
                         .compareTo((b['title'] ?? b['name'] ?? '').toString());
+                    if (t != 0) return t;
+                    return cmpCreatedAt(a, b, newestFirst: true);
                   default:
-                    final da = a['createdAt'] as DateTime?;
-                    final db = b['createdAt'] as DateTime?;
-                    if (da == null && db == null) return 0;
-                    if (da == null) return 1;
-                    if (db == null) return -1;
-                    return db.compareTo(da);
+                    return cmpCreatedAt(a, b, newestFirst: true);
                 }
               });
 
@@ -200,30 +230,31 @@ class _ReviewPageState extends State<_ReviewPage> with _ReviewBulkMixin {
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
                 itemCount: items.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 12),
-                itemBuilder: (context, i) => _ReviewCard(
-                  cat: _cat,
-                  item: items[i],
-                  index: i,
-                  onAction: widget.onAction,
-                  busyActions: widget.busyActions,
-                  onChanged: widget.onItemChanged,
-                  isSelected: selectedIds.contains(items[i]['id']),
-                  onSelectionChanged: isSelectionMode
-                      ? (v) => toggleSelection(items[i]['id'])
-                      : null,
-                  selectionMode: isSelectionMode,
-                ),
+                itemBuilder: (context, i) {
+                  final item = items[i];
+                  final source =
+                      _catsByCollection[item['_collection'] as String?];
+                  return _ReviewCard(
+                    cat: _cat,
+                    source: source,
+                    item: item,
+                    index: i,
+                    onAction: widget.onAction,
+                    busyActions: widget.busyActions,
+                    onChanged: widget.onItemChanged,
+                    isSelected: selectedIds.contains(selectionKey(item)),
+                    onSelectionChanged: isSelectionMode
+                        ? (v) => toggleSelection(item)
+                        : null,
+                    selectionMode: isSelectionMode,
+                  );
+                },
               );
             },
           ),
         ),
       ],
     );
-  }
-
-  int _getTotalCount(String collection) {
-    // نستخدم الإحصائيات العامة إذا توفرت، أو نقدر من البيانات
-    return widget.pendingCounts[collection] ?? 0;
   }
 
   Widget _buildMainToolbar(ThemeData theme) {
@@ -249,29 +280,31 @@ class _ReviewPageState extends State<_ReviewPage> with _ReviewBulkMixin {
           ),
         ),
         const SizedBox(width: 12),
-        // فلتر معلق/الكل
-        Tooltip(
-          message: 'تصفية الحالة',
-          child: SegmentedButton<bool>(
-            segments: const [
-              ButtonSegment(
-                  value: true,
-                  label: Text('معلق'),
-                  icon: Icon(Icons.hourglass_top_rounded, size: 16)),
-              ButtonSegment(
-                  value: false,
-                  label: Text('الكل'),
-                  icon: Icon(Icons.list_alt_rounded, size: 16)),
-            ],
-            selected: {_pendingOnly},
-            onSelectionChanged: (s) => setState(() => _pendingOnly = s.first),
-            showSelectedIcon: false,
-            style: ButtonStyle(
-              visualDensity: VisualDensity.compact,
-              minimumSize: WidgetStateProperty.all(const Size(80, 36)),
+        // فلتر معلق/الكل — لا معنى له في القائمة الموحّدة (معلّقات فقط بطبيعتها)
+        if (!_cat.isAllPending) ...[
+          Tooltip(
+            message: 'تصفية الحالة',
+            child: SegmentedButton<bool>(
+              segments: const [
+                ButtonSegment(
+                    value: true,
+                    label: Text('معلق'),
+                    icon: Icon(Icons.hourglass_top_rounded, size: 16)),
+                ButtonSegment(
+                    value: false,
+                    label: Text('الكل'),
+                    icon: Icon(Icons.list_alt_rounded, size: 16)),
+              ],
+              selected: {_pendingOnly},
+              onSelectionChanged: (s) => setState(() => _pendingOnly = s.first),
+              showSelectedIcon: false,
+              style: ButtonStyle(
+                visualDensity: VisualDensity.compact,
+                minimumSize: WidgetStateProperty.all(const Size(80, 36)),
+              ),
             ),
           ),
-        ),
+        ],
         const SizedBox(width: 8),
         // ترتيب
         Tooltip(
@@ -513,6 +546,41 @@ class _EmptyReview extends StatelessWidget {
   }
 }
 
+/// حالة خطأ المراجعة — كانت تعيد Container فارغ فتبدو القائمة مكسورة بلا سبب.
+class _ErrorReview extends StatelessWidget {
+  const _ErrorReview({required this.color});
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.cloud_off_rounded, size: 56, color: color),
+            const SizedBox(height: 16),
+            Text(
+              'تعذّر تحميل العناصر',
+              style: theme.textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'تحقق من الاتصال بالإنترنت ثم أعد المحاولة',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _ReviewCard extends StatelessWidget {
   const _ReviewCard({
     required this.cat,
@@ -521,11 +589,16 @@ class _ReviewCard extends StatelessWidget {
     required this.onAction,
     required this.busyActions,
     required this.onChanged,
+    this.source,
     this.isSelected = false,
     this.onSelectionChanged,
     this.selectionMode = false,
   });
   final _Cat cat;
+
+  /// فئة القسم المصدري — تظهر فقط في القائمة الموحّدة (بلا قيمة في التبويبات
+  /// الفردية حيث يكون `cat` هو المصدر نفسه).
+  final _Cat? source;
   final Map<String, dynamic> item;
   final int index;
   final Future<void> Function(String, String, String) onAction;
@@ -534,6 +607,37 @@ class _ReviewCard extends StatelessWidget {
   final bool isSelected;
   final ValueChanged<bool>? onSelectionChanged;
   final bool selectionMode;
+
+  /// المجموعة الفعلية للعنصر: `_collection` المدموجة في القائمة الموحّدة،
+  /// وإلا مجموعة التبويب الحالي. كل إجراء (موافقة/رفض/حذف/تفاصيل/تعديل)
+  /// يجب أن يوجَّه إليها لا إلى `_Cat` الوهمي.
+  String get collection => (item['_collection'] as String?) ?? cat.collection;
+  String get sourceLabel => source?.label ?? cat.label;
+  Color get sourceColor => source?.color ?? cat.color;
+  IconData get sourceIcon => source?.icon ?? cat.icon;
+
+  /// وصف طبيعة الإجراء ومصدره (سوق/أخبار/طبي…) — يُعرض في القائمة الموحّدة
+  /// حتى يعرف المدير ما الذي يوافق عليه دون فتح التفاصيل.
+  String get _kindLabel => switch (collection) {
+        'news' => 'خبر بانتظار النشر',
+        'market_products' => 'منتج من السوق',
+        'shops' => 'محل في السوق',
+        'obituaries' => 'نعوة بانتظار النشر',
+        'occasions' => 'مناسبة بانتظار النشر',
+        'forum_posts' => 'منشور في المندرة',
+        'seller_requests' => 'طلب تحوّل إلى بائع',
+        'phone_directory' => 'رقم في دليل الهاتف',
+        'service_providers' => 'سجل في دليل الخدمات',
+        'lost_items' => 'إعلان مفقودات',
+        'medical_center_clinics' => 'عيادة المركز الطبي الخيري',
+        'village_clinics' => 'عيادة من الخدمات الطبية',
+        'pharmacies' => 'صيدلية من الخدمات الطبية',
+        'medical_labs' => 'معمل تحاليل',
+        'optical_shops' => 'محل نظارات',
+        'blood_requests' => 'طلب تبرع بالدم',
+        'blood_donors' => 'متبرع بالدم',
+        _ => 'إجراء بانتظار المراجعة',
+      };
 
   String get _title {
     final t = item['title'] ??
@@ -569,28 +673,16 @@ class _ReviewCard extends StatelessWidget {
         'مجهول';
   }
 
-  DateTime? get _createdAt {
-    final dt = item['createdAt'];
-    if (dt is DateTime) return dt;
-    if (dt is Timestamp) return dt.toDate();
-    if (dt is String) return DateTime.tryParse(dt);
-    // التعامل مع Timestamp كـ dynamic
-    if (dt != null && dt.runtimeType.toString().contains('Timestamp')) {
-      try {
-        return (dt as dynamic).toDate() as DateTime?;
-      } catch (_) {}
-    }
-    return null;
-  }
+  DateTime? get _createdAt => tsToDateTime(item['createdAt']);
 
   bool get _isApproved {
-    if (cat.collection == 'seller_requests') {
+    if (collection == 'seller_requests') {
       return item['status'] == 'approved';
     }
-    if (cat.collection == 'seller_profiles') {
+    if (collection == 'seller_profiles') {
       return true;
     }
-    if (cat.collection == 'product_reviews') {
+    if (collection == 'product_reviews') {
       return item['status'] == 'approved';
     }
     return item['isApproved'] == true;
@@ -612,7 +704,7 @@ class _ReviewCard extends StatelessWidget {
   }
 
   bool get _isFeatured =>
-      cat.collection == 'service_providers' && item['isFeatured'] == true;
+      collection == 'service_providers' && item['isFeatured'] == true;
 
   @override
   Widget build(BuildContext context) {
@@ -620,7 +712,7 @@ class _ReviewCard extends StatelessWidget {
     final id = item['id'] as String;
     final statusColor = _isApproved ? const Color(0xFF6F4E37) : Colors.orange;
     final isBusy =
-        busyActions.any((k) => k.startsWith('${cat.collection}_$id'));
+        busyActions.any((k) => k.endsWith('${collection}_$id'));
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
@@ -649,7 +741,7 @@ class _ReviewCard extends StatelessWidget {
               : () async {
                   await Navigator.pushNamed(context, AppRoutes.adminDetail,
                       arguments: {
-                        'collection': cat.collection,
+                        'collection': collection,
                         'docId': id,
                         'item': item
                       });
@@ -682,6 +774,49 @@ class _ReviewCard extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // القائمة الموحّدة: من أي قسم جاء هذا الإجراء؟
+                          if (source != null) ...[
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 7, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: sourceColor.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(7),
+                                    border: Border.all(
+                                        color:
+                                            sourceColor.withValues(alpha: 0.3)),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(sourceIcon,
+                                          size: 11, color: sourceColor),
+                                      const SizedBox(width: 4),
+                                      Text('القسم: $sourceLabel',
+                                          style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w900,
+                                              color: sourceColor)),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(_kindLabel,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w700,
+                                          color: theme
+                                              .colorScheme.onSurfaceVariant)),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                          ],
                           Row(
                             children: [
                               Expanded(
@@ -807,18 +942,18 @@ class _ReviewCard extends StatelessWidget {
               'موافقة',
               Icons.check_rounded,
               const Color(0xFF6F4E37),
-              () => onAction(cat.collection, id, 'approve'),
+              () => onAction(collection, id, 'approve'),
               isBusy),
         ),
         const SizedBox(width: 6),
         Expanded(
           child: _btn(context, 'رفض', Icons.close_rounded, Colors.orange,
-              () => onAction(cat.collection, id, 'reject'), isBusy),
+              () => onAction(collection, id, 'reject'), isBusy),
         ),
         const SizedBox(width: 6),
         _icon(context, Icons.edit_rounded, Colors.blueGrey, () async {
           await Navigator.pushNamed(context, AppRoutes.adminEdit, arguments: {
-            'collection': cat.collection,
+            'collection': collection,
             'docId': id,
             'item': item
           });
@@ -826,7 +961,7 @@ class _ReviewCard extends StatelessWidget {
         }),
         const SizedBox(width: 6),
         _icon(context, Icons.delete_rounded, Colors.red,
-            () => onAction(cat.collection, id, 'delete'),
+            () => onAction(collection, id, 'delete'),
             busy: isBusy),
       ],
     );

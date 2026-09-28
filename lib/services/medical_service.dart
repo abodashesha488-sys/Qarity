@@ -335,6 +335,86 @@ class MedicalLabService {
   }
 }
 
+/// خدمة نظارات القرية — محلات نظارات طبية يضيفها أصحابها وتحتاج موافقة الإدارة.
+/// العرض المميز نافذة زمنية: خارجها يختفي المحل من الدليل حتى يجدّده صاحبه.
+class OpticalShopService {
+  final FirebaseFirestore _firestore;
+  OpticalShopService([FirebaseFirestore? firestore])
+      : _firestore = firestore ?? FirebaseFirestore.instance;
+  CollectionReference<Map<String, dynamic>> get _col =>
+      _firestore.collection('optical_shops');
+
+  Future<String> create(OpticalShop shop) async {
+    String? uid;
+    try {
+      uid = FirebaseAuth.instance.currentUser?.uid;
+    } catch (_) {
+      // FirebaseAuth not initialized (e.g., in tests)
+    }
+    final ref = await _col.add(shop.toJson());
+    unawaited(RemotePushService.notifyAdmins('optical_shops'));
+    await NotificationService.showLocalNotification(
+      title: '👓 محل نظارات جديد',
+      body: 'تم إرسال "${shop.name}" للمراجعة',
+      payload: '/medical',
+    );
+    if (uid != null) {
+      unawaited(NotificationInboxService.instance.push(
+        userId: uid,
+        title: '👓 تم إرسال طلبك',
+        body: 'تم إرسال "${shop.name}" للمراجعة وسيظهر بعد موافقة الإدارة',
+        route: '/medical',
+        kind: 'info',
+      ));
+    }
+    return ref.id;
+  }
+
+  /// الدليل العام: المحلات المعتمدة التي لا تزال داخل نافذة عرضها.
+  Stream<List<OpticalShop>> getApprovedStream({DateTime? now}) {
+    final moment = now ?? DateTime.now();
+    return _col.where('isApproved', isEqualTo: true).snapshots().map((s) {
+      final list = s.docs
+          .map((d) => OpticalShop.fromJson(d.data(), d.id))
+          .where((shop) => shop.visibleAt(moment))
+          .toList();
+      list.sort((a, b) {
+        final weight = a.sortWeightAt(moment).compareTo(b.sortWeightAt(moment));
+        if (weight != 0) return weight;
+        return (b.createdAt ?? DateTime(1970))
+            .compareTo(a.createdAt ?? DateTime(1970));
+      });
+      return list;
+    });
+  }
+
+  /// كل محلات المستخدم (بما فيها غير المعتمدة والمنتهي عرضها) — ليجدّدها بنفسه.
+  Future<List<OpticalShop>> getMine(String userId) async {
+    final snap = await _col.where('submittedBy', isEqualTo: userId).get();
+    final list = snap.docs.map((d) => OpticalShop.fromJson(d.data(), d.id)).toList();
+    list.sort((a, b) => (b.createdAt ?? DateTime(1970))
+        .compareTo(a.createdAt ?? DateTime(1970)));
+    return list;
+  }
+
+  Future<OpticalShop?> getById(String id) async {
+    if (id.isEmpty) return null;
+    final doc = await _col.doc(id).get();
+    return doc.exists ? OpticalShop.fromJson(doc.data() as Map<String, dynamic>, doc.id) : null;
+  }
+
+  /// تمديد (أو بدء) نافذة العرض المميز من صاحب المحل نفسه. القواعد تسمح له
+  /// بهذين الحقلين فقط، فلا يلمس موافقة الإدارة.
+  Future<void> setFeaturedWindow(String id, int days) async {
+    if (id.isEmpty || days <= 0) return;
+    final until = DateTime.now().add(Duration(days: days));
+    await _col.doc(id).update({
+      'adType': kOpticalAdFeatured,
+      'featuredUntil': Timestamp.fromDate(until),
+    });
+  }
+}
+
 /// خدمة بنك الدم — متبرعون وطلبات تبرع (تحتاج موافقة الأدمن للظهور العام).
 class BloodBankService {
   final FirebaseFirestore _firestore;

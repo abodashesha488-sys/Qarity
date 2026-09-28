@@ -1,5 +1,9 @@
 part of 'admin_dashboard.dart';
 
+/// مجموعة وهمية: قائمة موحّدة بكل العناصر المعلّقة عبر كل مجموعات المراجعة،
+/// كل عنصر فيها يحمل `_collection` الأصلية ليُوجَّه الإجراء إليها.
+const String kAllPending = 'pending_all';
+
 /// فئة مراجعة في لوحة الأدمن — تمثل مجموعة Firestore قابلة للموافقة/الرفض.
 /// معرّف خاص بمكتبة لوحة الأدمن عبر `part`.
 class _Cat {
@@ -8,6 +12,8 @@ class _Cat {
   final IconData icon;
   final Color color;
   const _Cat(this.collection, this.label, this.icon, this.color);
+
+  bool get isAllPending => collection == kAllPending;
 }
 
 /// ترويسة موحّدة لكل تبويبات لوحة التحكم — أيقونة دائرية متدرّجة + عنوان

@@ -5,6 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/utils/helpers.dart';
 import '../../models/medical_models.dart';
 import '../../services/admin_service.dart';
 import '../../services/image_upload_service.dart';
@@ -13,6 +14,7 @@ import '../../services/share_service.dart';
 import '../../services/user_service.dart';
 import '../../widgets/qurity_app_bar.dart';
 import 'medical_admin_screen.dart';
+import 'optical_shop_detail_screen.dart';
 
 /// بوابة الخدمات الطبية — شبكة صور بلا إطارات أو عناوين (مثل الشبكة
 /// الرئيسية وبوابة خدمات المزارع)، كل صورة تفتح شاشة قسمها.
@@ -25,6 +27,7 @@ class MedicalHomeScreen extends StatelessWidget {
     ('عيادات القرية', 'assets/images/doctor2.jpg'),
     ('صيدليات القرية', 'assets/images/doctor3.jpg'),
     ('معامل التحاليل', 'assets/images/doctor4.jpg'),
+    ('نظارات طبية', 'assets/images/nadara.jpg'),
   ];
 
   static const List<Color> colors = [
@@ -33,6 +36,7 @@ class MedicalHomeScreen extends StatelessWidget {
     Color(0xFF00897B),
     Color(0xFF6F4E37),
     Color(0xFF6A1B9A),
+    kOpticalAccent,
   ];
 
   @override
@@ -119,9 +123,11 @@ class _MedicalSectionScreenState extends State<MedicalSectionScreen> {
   final VillageClinicService _clinicService = VillageClinicService();
   final PharmacyService _pharmacyService = PharmacyService();
   final MedicalLabService _labService = MedicalLabService();
+  final OpticalShopService _opticalService = OpticalShopService();
   final AdminService _adminService = AdminService();
   bool _isMedicalAdmin = false;
   String _profileName = '';
+  int _opticalRefresh = 0;
 
   Color get _color => MedicalHomeScreen.colors[widget.index];
   String get _title => switch (widget.index) {
@@ -129,6 +135,7 @@ class _MedicalSectionScreenState extends State<MedicalSectionScreen> {
         1 => 'بنك دم القرية',
         2 => 'عيادات القرية',
         3 => 'صيدليات القرية',
+        5 => 'نظارات طبية',
         _ => 'معامل التحاليل',
       };
 
@@ -184,6 +191,15 @@ class _MedicalSectionScreenState extends State<MedicalSectionScreen> {
         return _ClinicsTab(snackbar: _snack);
       case 3:
         return _PharmaciesTab(snackbar: _snack);
+      case 4:
+        return _LabsTab(snackbar: _snack);
+      case 5:
+        return _OpticalTab(
+          snackbar: _snack,
+          service: _opticalService,
+          color: _color,
+          refresh: _opticalRefresh,
+        );
       default:
         return _LabsTab(snackbar: _snack);
     }
@@ -229,6 +245,16 @@ class _MedicalSectionScreenState extends State<MedicalSectionScreen> {
           onPressed: _addLab,
           icon: const Icon(Icons.science_rounded),
           label: const Text('أضف معملاً',
+              style: TextStyle(fontWeight: FontWeight.w800)),
+          backgroundColor: _color,
+          foregroundColor: Colors.white,
+        );
+      case 5:
+        return FloatingActionButton.extended(
+          heroTag: 'medical_section_fab_5',
+          onPressed: _addOpticalShop,
+          icon: const Icon(Icons.remove_red_eye_rounded),
+          label: const Text('أضف محل نظارات',
               style: TextStyle(fontWeight: FontWeight.w800)),
           backgroundColor: _color,
           foregroundColor: Colors.white,
@@ -293,6 +319,27 @@ class _MedicalSectionScreenState extends State<MedicalSectionScreen> {
     try {
       await _labService.create(res);
       _snack('تم إرسال بيانات المعمل، وسيظهر بعد موافقة الإدارة');
+    } catch (e) {
+      _snack('خطأ: $e');
+    }
+  }
+
+  Future<void> _addOpticalShop() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      _snack('سجّل الدخول أولاً');
+      return;
+    }
+    final res = await showModalBottomSheet<OpticalShop>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _OpticalForm(userName: _userName(), userId: uid),
+    );
+    if (res == null || !mounted) return;
+    try {
+      await _opticalService.create(res);
+      setState(() => _opticalRefresh++);
+      _snack('تم إرسال بيانات المحل، وسيظهر في الدليل بعد موافقة الإدارة');
     } catch (e) {
       _snack('خطأ: $e');
     }
@@ -1485,6 +1532,513 @@ class _LabFormState extends State<_LabForm> {
           _field(_descC, 'نبذة وأهم التحاليل المتاحة', Icons.description_rounded,
               maxLines: 3),
         ],
+      ),
+    );
+  }
+}
+
+// ═══════════════════════ نظارات طبية ═══════════════════════
+
+/// تبويب محلات النظارات: الدليل العام (المعتمد داخل مدة عرضه) + قسم
+/// «محلاتي غير الظاهرة» حتى يجدّد صاحبها عرضها المميز المنتهي.
+class _OpticalTab extends StatefulWidget {
+  const _OpticalTab({
+    required this.snackbar,
+    required this.color,
+    this.service,
+    this.refresh = 0,
+  });
+
+  final void Function(String) snackbar;
+  final Color color;
+  final OpticalShopService? service;
+  final int refresh;
+
+  @override
+  State<_OpticalTab> createState() => _OpticalTabState();
+}
+
+class _OpticalTabState extends State<_OpticalTab> {
+  final TextEditingController _search = TextEditingController();
+  late final OpticalShopService _service =
+      widget.service ?? OpticalShopService();
+  late final Stream<List<OpticalShop>> _stream = _service.getApprovedStream();
+  String? _uid;
+  List<OpticalShop> _mine = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    try {
+      _uid = FirebaseAuth.instance.currentUser?.uid;
+    } catch (_) {
+      _uid = null;
+    }
+    _loadMine();
+  }
+
+  @override
+  void didUpdateWidget(covariant _OpticalTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.refresh != widget.refresh) _loadMine();
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadMine() async {
+    final uid = _uid;
+    if (uid == null) return;
+    try {
+      final list = await _service.getMine(uid);
+      if (mounted) setState(() => _mine = list);
+    } catch (_) {
+      // قائمة إضافية لا تستحق إيقاظ المستخدم بخطأ.
+    }
+  }
+
+  Future<void> _renew(OpticalShop shop) async {
+    final days = await showModalBottomSheet<int>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => OpticalRenewSheet(shopName: shop.name),
+    );
+    if (days == null || !mounted) return;
+    try {
+      await _service.setFeaturedWindow(shop.id, days);
+      widget.snackbar('تم تفعيل العرض المميز لمدة $days يومًا');
+      await _loadMine();
+    } catch (e) {
+      widget.snackbar('تعذّر التجديد — تحقق من الصلاحيات: $e');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<OpticalShop>>(
+      stream: _stream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final dirIds = (snapshot.data ?? []).map((s) => s.id).toSet();
+        final hidden =
+            _mine.where((s) => !dirIds.contains(s.id)).toList(growable: false);
+        var items = snapshot.data ?? [];
+        final q = _search.text.trim().toLowerCase();
+        if (q.isNotEmpty) {
+          items = items
+              .where((s) =>
+                  s.name.toLowerCase().contains(q) ||
+                  s.ownerName.toLowerCase().contains(q) ||
+                  s.address.toLowerCase().contains(q) ||
+                  s.categories.any((c) => c.toLowerCase().contains(q)))
+              .toList();
+        }
+        return Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: TextField(
+                controller: _search,
+                onChanged: (_) => setState(() {}),
+                decoration: const InputDecoration(
+                  hintText: 'ابحث عن محل نظارات أو عدسات...',
+                  isDense: true,
+                  prefixIcon: Icon(Icons.search_rounded, size: 20),
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
+              ),
+            ),
+            Expanded(
+              child: (items.isEmpty && hidden.isEmpty)
+                  ? const _MedEmpty(
+                      icon: Icons.remove_red_eye_rounded,
+                      message: 'لا توجد محلات نظارات معتمدة بعد')
+                  : ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 110),
+                      itemCount: items.length + (hidden.isEmpty ? 0 : 1),
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      itemBuilder: (context, i) {
+                        if (hidden.isNotEmpty && i == 0) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text('محلاتي غير الظاهرة في الدليل (${hidden.length})',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 14)),
+                              const SizedBox(height: 8),
+                              ...hidden.map((s) => Padding(
+                                    padding: const EdgeInsets.only(bottom: 10),
+                                    child: _OpticalCard(
+                                      shop: s,
+                                      accent: widget.color,
+                                      onRenew: s.isFeaturedAd
+                                          ? () => _renew(s)
+                                          : null,
+                                    ),
+                                  )),
+                              const SizedBox(height: 4),
+                            ],
+                          );
+                        }
+                        final index = hidden.isNotEmpty ? i - 1 : i;
+                        return _OpticalCard(
+                            shop: items[index], accent: widget.color);
+                      },
+                    ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _OpticalCard extends StatelessWidget {
+  const _OpticalCard(
+      {required this.shop, required this.accent, this.onRenew});
+  final OpticalShop shop;
+  final Color accent;
+  final VoidCallback? onRenew;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final now = DateTime.now();
+    const gold = Color(0xFFB8860B);
+    final live = shop.adLiveAt(now);
+    final visible = shop.visibleAt(now);
+    return Card(
+      elevation: 0,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(
+            color: live
+                ? gold
+                : theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+            width: live ? 1.6 : 1),
+      ),
+      child: InkWell(
+        onTap: () => Navigator.pushNamed(context, '/medical/optical-detail',
+            arguments: shop),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 62,
+                    height: 62,
+                    decoration: BoxDecoration(
+                        color: accent.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(14)),
+                    clipBehavior: Clip.antiAlias,
+                    child: shop.imageUrl.isNotEmpty
+                        ? CachedNetworkImage(
+                            imageUrl: shop.imageUrl,
+                            fit: BoxFit.cover,
+                            errorWidget: (_, __, ___) => Icon(
+                                Icons.remove_red_eye_rounded, color: accent),
+                          )
+                        : Icon(Icons.remove_red_eye_rounded, color: accent),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(shop.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 15)),
+                            ),
+                            if (live)
+                              const _Tag('مميز', gold),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          children: [
+                            for (final c in shop.categories.take(2))
+                              _Tag(c, accent),
+                            if (shop.ownerName.isNotEmpty)
+                              _Tag(shop.ownerName,
+                                  theme.colorScheme.onSurfaceVariant),
+                          ],
+                        ),
+                        if (shop.workingHours.isNotEmpty ||
+                            shop.address.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 5),
+                            child: Text(
+                              [
+                                if (shop.workingHours.isNotEmpty)
+                                  shop.workingHours,
+                                if (shop.address.isNotEmpty) shop.address,
+                              ].join(' • '),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  fontSize: 11.5, color: Colors.grey),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.chevron_left_rounded,
+                      color: theme.colorScheme.onSurfaceVariant),
+                ],
+              ),
+              if (!shop.isApproved)
+                _opticalStatusRow(
+                    context, 'بانتظار موافقة الإدارة — يظهر في الدليل بعدها'),
+              if (shop.isApproved && !visible)
+                _opticalStatusRow(context, 'انتهت مدة العرض المميز'),
+              if (onRenew != null)
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: TextButton.icon(
+                      onPressed: onRenew,
+                      icon: const Icon(Icons.star_rounded, size: 18),
+                      label: const Text('تجديد العرض المميز',
+                          style: TextStyle(fontWeight: FontWeight.w800)),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    ).animate().fadeIn(duration: 200.ms);
+  }
+
+  Widget _opticalStatusRow(BuildContext context, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        children: [
+          Icon(Icons.info_outline_rounded,
+              size: 15, color: Theme.of(context).colorScheme.onSurfaceVariant),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(text,
+                style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OpticalForm extends StatefulWidget {
+  const _OpticalForm({required this.userName, required this.userId});
+  final String userName;
+  final String userId;
+
+  @override
+  State<_OpticalForm> createState() => _OpticalFormState();
+}
+
+class _OpticalFormState extends State<_OpticalForm> {
+  final _nameC = TextEditingController();
+  final _ownerC = TextEditingController();
+  final _phoneC = TextEditingController();
+  final _addressC = TextEditingController();
+  final _hoursC = TextEditingController();
+  final _descC = TextEditingController();
+  final Set<String> _categories = <String>{};
+  final List<String> _images = [];
+  String _adType = kOpticalAdNormal;
+  int _days = kOpticalFeaturedDayOptions[1];
+
+  bool get _featured => _adType == kOpticalAdFeatured;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SheetScaffold(
+      title: 'إضافة محل نظارات',
+      onSubmitted: () {
+        if (_nameC.text.trim().isEmpty) return;
+        Navigator.pop(
+          context,
+          OpticalShop(
+            id: '',
+            name: _nameC.text.trim(),
+            description: _descC.text.trim(),
+            categories: _categories.toList(),
+            ownerName: _ownerC.text.trim(),
+            phone: _phoneC.text.trim(),
+            address: _addressC.text.trim(),
+            workingHours: _hoursC.text.trim(),
+            imageUrls: List.from(_images),
+            adType: _adType,
+            featuredUntil: _featured
+                ? DateTime.now().add(Duration(days: _days))
+                : null,
+            submittedBy: widget.userId,
+            submittedByName: widget.userName,
+          ),
+        );
+      },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          MedicalImageField(
+              maxImages: 3,
+              onChanged: (l) {
+                _images
+                  ..clear()
+                  ..addAll(l);
+              }),
+          const SizedBox(height: 12),
+          _field(_nameC, 'اسم المحل', Icons.storefront_rounded),
+          const Text('التخصصات',
+              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: kOpticalCategories.map((c) {
+              final selected = _categories.contains(c);
+              return FilterChip(
+                label: Text(c),
+                selected: selected,
+                onSelected: (v) => setState(
+                    () => v ? _categories.add(c) : _categories.remove(c)),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 12),
+          _field(_ownerC, 'صاحب المحل / المسؤول', Icons.person_rounded),
+          _field(_phoneC, 'هاتف التواصل', Icons.phone_rounded,
+              type: TextInputType.phone),
+          _field(_addressC, 'العنوان', Icons.location_on_rounded),
+          _field(_hoursC, 'مواعيد العمل', Icons.access_time_rounded),
+          const SizedBox(height: 6),
+          const Text('نوع الإعلان في الدليل',
+              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _AdTypeChoice(
+                  title: 'إعلان عادي',
+                  subtitle: 'يبقى ظاهرًا بلا مدة',
+                  selected: !_featured,
+                  onTap: () => setState(() => _adType = kOpticalAdNormal),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _AdTypeChoice(
+                  title: 'عرض مميز',
+                  subtitle: 'ذهبي وفي المقدمة لمدة',
+                  selected: _featured,
+                  onTap: () => setState(() => _adType = kOpticalAdFeatured),
+                ),
+              ),
+            ],
+          ),
+          if (_featured) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: kOpticalFeaturedDayOptions.map((d) {
+                final selected = d == _days;
+                return ChoiceChip(
+                  label: Text('$d يوم'),
+                  selected: selected,
+                  onSelected: (_) => setState(() => _days = d),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 6),
+            Text(
+                'ينتهي العرض تلقائيًا '
+                '${AppHelpers.formatDate(DateTime.now().add(Duration(days: _days)))} '
+                'ويختفي المحل من الدليل حتى يجدّده صاحبه.',
+                style: const TextStyle(fontSize: 11.5, height: 1.5)),
+          ],
+          const SizedBox(height: 12),
+          _field(_descC, 'نبذة وأهم الماركات والخدمات',
+              Icons.description_rounded,
+              maxLines: 3),
+        ],
+      ),
+    );
+  }
+}
+
+class _AdTypeChoice extends StatelessWidget {
+  const _AdTypeChoice(
+      {required this.title,
+      required this.subtitle,
+      required this.selected,
+      required this.onTap});
+  final String title;
+  final String subtitle;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    const gold = Color(0xFFB8860B);
+    final theme = Theme.of(context);
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          color: selected
+              ? gold.withValues(alpha: 0.1)
+              : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+              color: selected ? gold : theme.colorScheme.outlineVariant),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(selected ? Icons.check_circle : Icons.radio_button_unchecked,
+                    size: 17,
+                    color: selected ? gold : theme.colorScheme.onSurfaceVariant),
+                const SizedBox(width: 6),
+                Text(title,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w900, fontSize: 13)),
+              ],
+            ),
+            const SizedBox(height: 3),
+            Text(subtitle,
+                style: TextStyle(
+                    fontSize: 11, color: theme.colorScheme.onSurfaceVariant)),
+          ],
+        ),
       ),
     );
   }

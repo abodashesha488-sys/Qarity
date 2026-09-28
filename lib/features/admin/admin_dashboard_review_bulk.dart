@@ -11,6 +11,15 @@ part of 'admin_dashboard.dart';
 // AdminDashboardScreen الذي يتحقق من الدور (بوابة AdminGuard على المسار
 // + قواعد Firestore خلف كل كتابة)، ولا يملك هذا الجزء صلاحية كتابة مباشرة.
 
+/// المفتاح المركّب للتحديد: `مجموعة::معرّف` — في القائمة الموحّدة قد يتكرر
+/// نفس المعرّف في مجموعات مختلفة، فلا بد لكل عنصر أن يحمل مجموعته معه.
+String selectionKey(Map<String, dynamic> item) {
+  final collection = (item['_collection'] as String?)?.isNotEmpty == true
+      ? item['_collection'] as String
+      : '';
+  return '$collection::${item['id']}';
+}
+
 /// امتداد يضيف حالة التحديد المتعدد إلى شاشة المراجعة.
 ///
 /// يُستخدم كـ mixin على `_ReviewPageState` حتى تبقى حالة الاختيار محلية
@@ -19,13 +28,14 @@ mixin _ReviewBulkMixin on State<_ReviewPage> {
   final Set<String> selectedIds = {};
   bool isSelectionMode = false;
 
-  void toggleSelection(String id) {
+  void toggleSelection(Map<String, dynamic> item) {
+    final key = selectionKey(item);
     setState(() {
-      if (selectedIds.contains(id)) {
-        selectedIds.remove(id);
+      if (selectedIds.contains(key)) {
+        selectedIds.remove(key);
         if (selectedIds.isEmpty) isSelectionMode = false;
       } else {
-        selectedIds.add(id);
+        selectedIds.add(key);
         isSelectionMode = true;
       }
     });
@@ -52,9 +62,16 @@ mixin _ReviewBulkMixin on State<_ReviewPage> {
         : null;
     if (action == 'reject' && (notes == null || notes.isEmpty)) return;
 
-    for (final id in selectedIds) {
+    for (final key in selectedIds) {
+      final separator = key.indexOf('::');
+      final collection = separator < 0
+          ? widget.selected
+          : (key.substring(0, separator).isEmpty
+              ? widget.selected
+              : key.substring(0, separator));
+      final id = separator < 0 ? key : key.substring(separator + 2);
       try {
-        await widget.onAction(widget.selected, id, action);
+        await widget.onAction(collection, id, action);
       } catch (_) {
         // نكمل بقية العناصر حتى لو فشل أحدها (قواعد ترفضه مثلاً)
       }

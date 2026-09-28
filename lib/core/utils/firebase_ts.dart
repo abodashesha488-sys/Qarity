@@ -12,3 +12,11 @@ DateTime? tsToDateTime(dynamic value) {
 
 /// النسخة غير القابلة لـ null — ترجع الوقت الحالي عند الفقد/التعذر.
 DateTime tsOrNow(dynamic value) => tsToDateTime(value) ?? DateTime.now();
+
+/// تاريخ التسجيل الفعلي: users يخزّن `joinDate` (لا `createdAt`).
+DateTime? signupAt(Map<String, dynamic> doc) =>
+    tsToDateTime(doc['joinDate']) ?? tsToDateTime(doc['createdAt']);
+
+/// آخر تسجيل دخول فعلي: الحقل باسم `lastLogin` (لا `lastSignIn`).
+DateTime? lastLoginAt(Map<String, dynamic> doc) =>
+    tsToDateTime(doc['lastLogin']) ?? tsToDateTime(doc['lastSignIn']);

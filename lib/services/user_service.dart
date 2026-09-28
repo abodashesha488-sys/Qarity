@@ -235,6 +235,7 @@ class UserService {
       'village_clinics': ('submittedBy', 'submittedByName'),
       'pharmacies': ('submittedBy', 'submittedByName'),
       'medical_labs': ('submittedBy', 'submittedByName'),
+      'optical_shops': ('submittedBy', 'submittedByName'),
       'service_providers': ('submittedBy', 'submittedByName'),
     };
     final jobs = <Future<void>>[];

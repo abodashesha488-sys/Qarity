@@ -84,6 +84,10 @@ class _NotificationOpenScreenState extends State<NotificationOpenScreen> {
               model = MedicalLab.fromJson(data, id);
               route = AppRoutes.medicalLabDetail;
               break;
+            case 'optical_shops':
+              model = OpticalShop.fromJson(data, id);
+              route = AppRoutes.medicalOpticalDetail;
+              break;
             case 'lost_items':
               model = LostItem.fromJson(data, id);
               route = AppRoutes.lostItemDetail;

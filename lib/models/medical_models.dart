@@ -374,7 +374,123 @@ class MedicalLab {
   String get imageUrl => imageUrls.isNotEmpty ? imageUrls.first : '';
 }
 
+// ═══════════════════════ بصريات القرية (مدخل مستخدمين + موافقة) ═══════════════════════
+/// تصنيفات محلات النظارات.
+const List<String> kOpticalCategories = [
+  'نظارات طبية',
+  'نظارات شمسية',
+  'عدسات لاصقة',
+  'عدسات طبية',
+  'نظارات أطفال',
+  'نظارات قراءة',
+  'إكسسوارات ومستلزمات',
+  'غير ذلك',
+];
+
+/// نوع الإعلان في الدليل: عادي (بلا مدة) أو مميز (بإطار ذهبي ومدة تنتهي).
+const String kOpticalAdNormal = 'normal';
+const String kOpticalAdFeatured = 'featured';
+
+/// مدد العرض المميز بالأيام (مصدر واحد تستعمله الشاشة والخدمة والاختبارات).
+const List<int> kOpticalFeaturedDayOptions = [3, 7, 15, 30];
+
+class OpticalShop {
+  final String id;
+  final String name;
+  final String description;
+  final List<String> categories;
+  final String ownerName;
+  final String phone;
+  final String address;
+  final String workingHours;
+  final List<String> imageUrls;
+  final String adType;
+  final DateTime? featuredUntil;
+  final bool isApproved;
+  final String? submittedBy;
+  final String? submittedByName;
+  final DateTime? createdAt;
+
+  const OpticalShop({
+    required this.id,
+    required this.name,
+    this.description = '',
+    this.categories = const [],
+    this.ownerName = '',
+    this.phone = '',
+    this.address = '',
+    this.workingHours = '',
+    this.imageUrls = const [],
+    this.adType = kOpticalAdNormal,
+    this.featuredUntil,
+    this.isApproved = false,
+    this.submittedBy,
+    this.submittedByName,
+    this.createdAt,
+  });
+
+  factory OpticalShop.fromJson(Map<String, dynamic> json, String docId) {
+    final type = (json['adType'] as String? ?? kOpticalAdNormal).trim();
+    return OpticalShop(
+      id: docId,
+      name: json['name'] as String? ?? '',
+      description: json['description'] as String? ?? '',
+      categories: (json['categories'] as List<dynamic>?)?.cast<String>() ??
+          const [],
+      ownerName: json['ownerName'] as String? ?? '',
+      phone: json['phone'] as String? ?? '',
+      address: json['address'] as String? ?? '',
+      workingHours: json['workingHours'] as String? ?? '',
+      imageUrls:
+          (json['imageUrls'] as List<dynamic>?)?.cast<String>() ?? const [],
+      adType: type == kOpticalAdFeatured ? kOpticalAdFeatured : kOpticalAdNormal,
+      featuredUntil: tsToDateTime(json['featuredUntil']),
+      isApproved: json['isApproved'] as bool? ?? false,
+      submittedBy: json['submittedBy'] as String?,
+      submittedByName: json['submittedByName'] as String?,
+      createdAt: tsToDateTime(json['createdAt']),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'name': name,
+        'description': description,
+        'categories': categories,
+        'ownerName': ownerName,
+        'phone': phone,
+        'address': address,
+        'workingHours': workingHours,
+        'imageUrls': imageUrls,
+        'adType': adType,
+        'featuredUntil': featuredUntil != null
+            ? Timestamp.fromDate(featuredUntil!)
+            : null,
+        'isApproved': isApproved,
+        'submittedBy': submittedBy,
+        'submittedByName': submittedByName,
+        'createdAt': createdAt != null
+            ? Timestamp.fromDate(createdAt!)
+            : FieldValue.serverTimestamp(),
+      };
+
+  String get imageUrl => imageUrls.isNotEmpty ? imageUrls.first : '';
+
+  bool get isFeaturedAd => adType == kOpticalAdFeatured;
+
+  /// هل العرض المميز لا يزال داخل مدته؟
+  bool adLiveAt(DateTime now) =>
+      isFeaturedAd && featuredUntil != null && now.isBefore(featuredUntil!);
+
+  /// انتهاء مدة العرض المميز تُخفي المحل من الدليل حتى يجدّده صاحبه، أما
+  /// الإعلان العادي فبلا مدة ويبقى ظاهرًا.
+  bool visibleAt(DateTime now) => !isFeaturedAd || adLiveAt(now);
+
+  /// الترتيب: المميز الحيّ أولًا ثم الأحدث.
+  int sortWeightAt(DateTime now) => adLiveAt(now) ? 0 : 1;
+}
+
 // ═══════════════════════ متبرع بالدم ═══════════════════════
+
 class BloodDonor {
   final String id;
   final String userId;

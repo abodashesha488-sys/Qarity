@@ -431,6 +431,21 @@ service cloud.firestore {
                                 && resource.data.isApproved == false);
     }
 
+    // بصريات القرية: مدخلات مستخدمين (تبدأ غير موافق عليها) + موافقة الأدمن/مدير المركز.
+    // المالك: يعدّل محله غير المعتمد بالكامل، وبعد الاعتماد يجدّد نافذة عرضه
+    // المميز فقط (adType/featuredUntil) دون أي مساس بحالة الموافقة أو البيانات.
+    match /optical_shops/{docId} {
+      allow list, get: if true;
+      allow create: if accountActive() && request.resource.data.isApproved == false;
+      allow update: if isMedicalAdmin()
+                    || (accountActive() && resource.data.submittedBy == request.auth.uid
+                        && resource.data.isApproved == false)
+                    || (accountActive() && resource.data.submittedBy == request.auth.uid
+                        && request.resource.data.diff(resource.data).affectedKeys()
+                             .hasOnly(['adType', 'featuredUntil']));
+      allow delete: if isMedicalAdmin();
+    }
+
     // متبرعو الدم: إضافة من المالك، ظهور عام بعد الموافقة، تعديل المالك لبياناته.
     match /blood_donors/{docId} {
       allow get: if true;

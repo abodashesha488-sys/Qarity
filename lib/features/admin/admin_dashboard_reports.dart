@@ -109,7 +109,9 @@ class _ReportsPageState extends State<_ReportsPage> {
           crossAxisCount: 2,
           mainAxisSpacing: 12,
           crossAxisSpacing: 12,
-          childAspectRatio: 1.3,
+          // extent ثابت بدل نسبة عرض/ارتفاع: البطاقة تأخذ طولها الفعلي فلا
+          // يخرج نص التفصيل خارج إطارها.
+          mainAxisExtent: 152,
           children: [
             _SummaryCard(
               title: 'إجمالي المستخدمين',
@@ -136,8 +138,8 @@ class _ReportsPageState extends State<_ReportsPage> {
             _SummaryCard(
               title: 'الخدمات الطبية',
               value:
-                  '${(stats['village_clinics'] ?? 0) + (stats['pharmacies'] ?? 0) + (stats['medical_labs'] ?? 0) + (stats['medical_center_clinics'] ?? 0)}',
-              subtitle: 'عيادات + صيدليات + معامل + مركز طبي',
+                  '${(stats['village_clinics'] ?? 0) + (stats['pharmacies'] ?? 0) + (stats['medical_labs'] ?? 0) + (stats['optical_shops'] ?? 0) + (stats['medical_center_clinics'] ?? 0)}',
+              subtitle: 'عيادات + صيدليات + معامل + نظارات + مركز طبي',
               icon: Icons.local_hospital_rounded,
               color: const Color(0xFF00897B),
             ),
@@ -148,11 +150,11 @@ class _ReportsPageState extends State<_ReportsPage> {
   }
 
   String _buildPendingBreakdown(Map<String, int> pending) {
-    final items = <String>[];
-    pending.forEach((key, value) {
-      if (value > 0) items.add('$key: $value');
-    });
-    return items.isEmpty ? 'لا يوجد' : items.take(3).join(' • ');
+    final items = pending.entries.where((e) => e.value > 0).toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    if (items.isEmpty) return 'لا يوجد معلّقات';
+    // الأسماء العربية فقط — مفتاح المجموعة (market_products) غير مفهوم للمشرف.
+    return items.take(3).map((e) => '${_statLabel(e.key)} ${e.value}').join(' • ');
   }
 
   Widget _buildContentStatsSection(ThemeData theme) {
@@ -183,7 +185,7 @@ class _ReportsPageState extends State<_ReportsPage> {
         crossAxisCount: 3,
         mainAxisSpacing: 10,
         crossAxisSpacing: 10,
-        childAspectRatio: 1.1,
+        mainAxisExtent: 96,
         children: items.map((e) => _StatCard(item: e)).toList(),
       ),
     );
@@ -219,7 +221,7 @@ class _ReportsPageState extends State<_ReportsPage> {
             crossAxisCount: 3,
             mainAxisSpacing: 10,
             crossAxisSpacing: 10,
-            childAspectRatio: 1.1,
+            mainAxisExtent: 96,
             children: items.map((e) => _StatCard(item: e)).toList(),
           ),
           if (topProducts.isNotEmpty) ...[
@@ -240,6 +242,8 @@ class _ReportsPageState extends State<_ReportsPage> {
           Icons.local_pharmacy_rounded, const Color(0xFF6F4E37)),
       _StatItem('معامل التحاليل', '${stats['medical_labs'] ?? 0}',
           Icons.science_rounded, const Color(0xFF6A1B9A)),
+      _StatItem('نظارات طبية', '${stats['optical_shops'] ?? 0}',
+          Icons.remove_red_eye_rounded, const Color(0xFF3949AB)),
       _StatItem('عيادات المركز', '${stats['medical_center_clinics'] ?? 0}',
           Icons.local_hospital_rounded, const Color(0xFF00695C)),
       _StatItem('طلبات الدم', '${stats['blood_requests'] ?? 0}',
@@ -259,7 +263,7 @@ class _ReportsPageState extends State<_ReportsPage> {
         crossAxisCount: 3,
         mainAxisSpacing: 10,
         crossAxisSpacing: 10,
-        childAspectRatio: 1.1,
+        mainAxisExtent: 96,
         children: items.map((e) => _StatCard(item: e)).toList(),
       ),
     );
@@ -279,7 +283,7 @@ class _ReportsPageState extends State<_ReportsPage> {
         children: [
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Text('أكثر المنتجات مشاهدة',
+            child: Text('أحدث المنتجات الموافَق عليها',
                 style: theme.textTheme.titleSmall
                     ?.copyWith(fontWeight: FontWeight.w800)),
           ),
@@ -294,7 +298,9 @@ class _ReportsPageState extends State<_ReportsPage> {
                 title: Text(p['name']?.toString() ?? 'بدون اسم',
                     maxLines: 1, overflow: TextOverflow.ellipsis),
                 subtitle: Text(
-                    'السعر: ${p['price'] ?? 0} ج.م • البائع: ${p['sellerName'] ?? ''}'),
+                    'السعر: ${p['price'] ?? 0} ج.م • ${p['sellerName'] ?? p['uploadedByName'] ?? 'بائع غير معروف'}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
                 trailing: Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -302,7 +308,7 @@ class _ReportsPageState extends State<_ReportsPage> {
                     color: theme.colorScheme.primary.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Text('${p['views'] ?? 0} مشاهدة',
+                  child: Text('${p['likes'] ?? 0} إعجاب',
                       style: const TextStyle(
                           fontSize: 11, fontWeight: FontWeight.w800)),
                 ),
@@ -356,7 +362,7 @@ class _ReportsPageState extends State<_ReportsPage> {
                       Text('تصدير التقارير',
                           style: theme.textTheme.titleSmall
                               ?.copyWith(fontWeight: FontWeight.w900)),
-                      Text('احفظ البيانات بصيغ متعددة',
+                      Text('ملف فيه كل إحصائيات المحتوى والمعلّقات وأحدث المنتجات',
                           style: theme.textTheme.bodySmall
                               ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
                     ],
@@ -398,36 +404,44 @@ class _ReportsPageState extends State<_ReportsPage> {
     );
   }
 
+  String get _stamp {
+    final now = DateTime.now();
+    String two(int v) => v.toString().padLeft(2, '0');
+    return '${now.year}${two(now.month)}${two(now.day)}_${two(now.hour)}${two(now.minute)}';
+  }
+
+  Map<String, dynamic> get _reportPayload => {
+        'تاريخ التصدير': DateTime.now().toIso8601String(),
+        'الإحصائيات': {
+          for (final e in (_reportData['stats'] as Map? ?? {}).cast<String, dynamic>().entries)
+            _statLabel(e.key.toString()): e.value
+        },
+        'بانتظار المراجعة': {
+          for (final e in (_reportData['pendingCounts'] as Map? ?? {}).cast<String, dynamic>().entries)
+            _statLabel(e.key.toString()): e.value
+        },
+        'المستخدمون النشطون': _reportData['activeUsers'] ?? 0,
+        'أحدث المنتجات': _reportData['topProducts'] ?? [],
+        'المناسبات': _reportData['recentOccasions'] ?? [],
+        'طلبات الخدمة': _reportData['serviceRequests'] ?? [],
+      };
+
   Future<void> _exportToJson() async {
     if (_reportData.isEmpty) {
       _snack('لا توجد بيانات للتصدير');
       return;
     }
     try {
-      final payload = {
-        'exportedAt': DateTime.now().toIso8601String(),
-        'statistics': _reportData['stats'] ?? {},
-        'pendingCounts': _reportData['pendingCounts'] ?? {},
-        'activeUsers': _reportData['activeUsers'] ?? 0,
-        'topProducts': _reportData['topProducts'] ?? [],
-        'occasionsStats': _reportData['recentOccasions'] ?? [],
-        'serviceRequests': _reportData['serviceRequests'] ?? [],
-      };
-      final jsonStr = const JsonEncoder.withIndent('  ').convert(payload);
-      final output = await FilePicker.saveFile(
-        dialogTitle: 'حفظ ملف JSON',
-        fileName: 'report_export_${DateTime.now().millisecondsSinceEpoch}.json',
-        type: FileType.custom,
-        allowedExtensions: ['json'],
+      final jsonStr = const JsonEncoder.withIndent('  ')
+          .convert(_reportPayload);
+      await exportFile(
+        fileName: 'qarity_report_$_stamp.json',
+        mimeType: 'application/json',
         bytes: utf8.encode(jsonStr),
       );
-      if (output != null) {
-        await SharePlus.instance.share(ShareParams(
-            files: [XFile(output.toString())], text: 'تصدير التقارير JSON'));
-        _snack('تم تصدير JSON بنجاح');
-      }
+      _snack('تم تصدير التقرير (JSON)');
     } catch (e) {
-      _snack('خطأ في التصدير: $e');
+      _snack('تعذّر التصدير: $e');
     }
   }
 
@@ -439,29 +453,36 @@ class _ReportsPageState extends State<_ReportsPage> {
     try {
       final excel = Excel.createExcel();
 
-      // شيت ملخص الإحصائيات
+      // شيت الملخص — مؤشر/قيمة بالأسماء العربية
       final summary = excel['الملخص'];
       _writeRow(summary, 0, ['المؤشر', 'القيمة'], bold: true);
-      final stats = (_reportData['stats'] as Map).cast<String, dynamic>();
+      final stats = (_reportData['stats'] as Map? ?? {}).cast<String, dynamic>();
       final pending =
-          (_reportData['pendingCounts'] as Map).cast<String, dynamic>();
+          (_reportData['pendingCounts'] as Map? ?? {}).cast<String, dynamic>();
+      int sum(Map<String, dynamic> m) =>
+          m.values.fold<int>(0, (acc, e) => acc + ((e as num?)?.toInt() ?? 0));
       final rows = <List<String>>[
+        ['المستخدمون', '${stats['users'] ?? 0}'],
         ['المستخدمون النشطون', '${_reportData['activeUsers'] ?? 0}'],
-        ['إجمالي المحتوى', '${stats.values.fold<int>(0, (p, e) => p + ((e as num?)?.toInt() ?? 0))}'],
-        ['بانتظار المراجعة', '${pending.values.fold<int>(0, (p, e) => p + ((e as num?)?.toInt() ?? 0))}'],
-        ...stats.entries.map((e) => [_statLabel(e.key), '${e.value}']),
-        ...pending.entries.map((e) => ['بانتظار: ${_statLabel(e.key)}', '${e.value}']),
+        ['إجمالي المحتوى', '${sum(stats)}'],
+        ['بانتظار المراجعة', '${sum(pending)}'],
+        ...stats.entries
+            .where((e) => e.key != 'users')
+            .map((e) => [_statLabel(e.key), '${e.value}']),
+        ...pending.entries
+            .where((e) => (e.value as num?)?.toInt() != 0)
+            .map((e) => ['بانتظار: ${_statLabel(e.key)}', '${e.value}']),
       ];
       for (int i = 0; i < rows.length; i++) {
         _writeRow(summary, i + 1, rows[i]);
       }
-      summary.setColumnWidth(0, 30.0);
+      summary.setColumnWidth(0, 32.0);
       summary.setColumnWidth(1, 16.0);
 
-      // شيت أفضل المنتجات (العمود الرابع: الإعجابات — `views` حقل الأخبار لا المنتجات)
+      // شيت أحدث المنتجات — الإعجابات لا المشاهدات (views حقل الأخبار)
       final products = excel['المنتجات'];
-      _writeRow(products, 0,
-          ['المنتج', 'السعر', 'البائع', 'الإعجابات'], bold: true);
+      _writeRow(products, 0, ['المنتج', 'السعر', 'البائع', 'الإعجابات'],
+          bold: true);
       final top = (_reportData['topProducts'] as List?)?.cast<Map>();
       if (top != null && top.isNotEmpty) {
         for (int i = 0; i < top.length; i++) {
@@ -469,7 +490,7 @@ class _ReportsPageState extends State<_ReportsPage> {
           _writeRow(products, i + 1, [
             '${p['name'] ?? 'بدون اسم'}',
             '${p['price'] ?? 0}',
-            '${p['sellerName'] ?? ''}',
+            '${p['sellerName'] ?? p['uploadedByName'] ?? ''}',
             '${p['likes'] ?? 0}',
           ]);
         }
@@ -483,37 +504,33 @@ class _ReportsPageState extends State<_ReportsPage> {
       excel.delete('Sheet1');
 
       final fileBytes = excel.encode();
-      if (fileBytes == null) throw Exception('فشل في إنشاء ملف Excel');
-
-      final output = await FilePicker.saveFile(
-        dialogTitle: 'حفظ ملف Excel',
-        fileName: 'report_export_${DateTime.now().millisecondsSinceEpoch}.xlsx',
-        type: FileType.custom,
-        allowedExtensions: ['xlsx'],
+      if (fileBytes == null) throw Exception('فشل إنشاء ملف Excel');
+      await exportFile(
+        fileName: 'qarity_report_$_stamp.xlsx',
+        mimeType:
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         bytes: Uint8List.fromList(fileBytes),
       );
-
-      if (output != null) {
-        await SharePlus.instance.share(ShareParams(
-            files: [XFile(output.toString())], text: 'تصدير التقارير Excel'));
-        _snack('تم تصدير Excel بنجاح');
-      }
+      _snack('تم تصدير التقرير (Excel)');
     } catch (e) {
-      _snack('خطأ في التصدير: $e');
+      _snack('تعذّر التصدير: $e');
     }
   }
 
+  /// ألوان الخلية يجب أن تكون `ExcelColor` — تمرير نص `'#6F4E37'` كان يرمي
+  /// TypeError داخل المحاولة فيظهر «خطأ في التصدير» ولا يُنتج ملف.
   void _writeRow(dynamic sheet, int rowIndex, List<String> values,
       {bool bold = false}) {
     for (int c = 0; c < values.length; c++) {
-      final cell =
-          sheet.cell(CellIndex.indexByColumnRow(columnIndex: c, rowIndex: rowIndex));
+      final cell = sheet
+          .cell(CellIndex.indexByColumnRow(columnIndex: c, rowIndex: rowIndex));
       cell.value = TextCellValue(values[c]);
       cell.cellStyle = CellStyle(
         bold: bold,
         horizontalAlign: HorizontalAlign.Center,
-        backgroundColorHex: bold ? '#6F4E37' as dynamic : null,
-        fontColorHex: bold ? '#FFFFFF' as dynamic : null,
+        fontColorHex: bold ? ExcelColor.white : ExcelColor.black,
+        backgroundColorHex:
+            bold ? ExcelColor.fromInt(0xFF6F4E37) : ExcelColor.none,
       );
     }
   }
@@ -533,6 +550,7 @@ class _ReportsPageState extends State<_ReportsPage> {
       'village_clinics': 'عيادات القرية',
       'pharmacies': 'الصيدليات',
       'medical_labs': 'معامل التحاليل',
+      'optical_shops': 'نظارات طبية',
       'blood_donors': 'المتبرعون بالدم',
       'blood_requests': 'طلبات الدم',
       'medical_center_clinics': 'عيادات المركز',

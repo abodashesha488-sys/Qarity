@@ -2,6 +2,9 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/utils/firebase_ts.dart';
+import '../../core/utils/helpers.dart';
+import '../../models/medical_models.dart';
 import '../../routes/app_routes.dart';
 import '../../services/admin_service.dart';
 import '../../widgets/qurity_app_bar.dart';
@@ -264,6 +267,13 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
   String _formatValue(String key, dynamic value) {
     if (value == null) return 'لا يوجد';
     if (key == 'isApproved') return value == true ? 'معتمد' : 'قيد المراجعة';
+    if (key == 'adType') {
+      return value == kOpticalAdFeatured ? 'عرض مميز' : 'عرض عادي';
+    }
+    if (key == 'featuredUntil') {
+      final d = tsToDateTime(value);
+      return d == null ? 'غير محدد' : 'ينتهي في ${AppHelpers.formatDate(d)}';
+    }
     if (value is bool) return value ? 'نعم' : 'لا';
     if (value is List) {
       // قائمة أقارب المتوفى: كائنات فيها name/type
@@ -326,6 +336,11 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
       'type': 'النوع',
       'userId': 'المستخدم',
       'userName': 'اسم المستخدم',
+      'adType': 'نوع الإعلان',
+      'featuredUntil': 'مدة العرض المميز',
+      'categories': 'التخصصات',
+      'ownerName': 'صاحب المحل',
+      'address': 'العنوان',
     };
     return labels[key] ?? key;
   }
@@ -350,6 +365,8 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
         return Icons.search_rounded;
       case 'medical_labs':
         return Icons.science_rounded;
+      case 'optical_shops':
+        return Icons.remove_red_eye_rounded;
       case 'village_clinics':
         return Icons.add_business_rounded;
       case 'pharmacies':
@@ -379,6 +396,8 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
         return 'إعلان مفقودات';
       case 'medical_labs':
         return 'معمل تحاليل';
+      case 'optical_shops':
+        return 'محل بصريات';
       case 'village_clinics':
         return 'عيادة';
       case 'pharmacies':

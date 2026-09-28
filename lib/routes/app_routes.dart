@@ -25,6 +25,7 @@ import '../features/market/seller_reviews.dart';
 import '../features/market/sellers_list.dart';
 import '../features/medical/clinic_detail_screen.dart';
 import '../features/medical/medical_home_screen.dart';
+import '../features/medical/optical_shop_detail_screen.dart';
 import '../features/news/add.dart';
 import '../features/news/list.dart';
 import '../features/news/view.dart';
@@ -154,6 +155,7 @@ static const String marketProducts = '/market';
   static const String medicalClinicDetail = '/medical/clinic-detail';
   static const String medicalPharmacyDetail = '/medical/pharmacy-detail';
   static const String medicalLabDetail = '/medical/lab-detail';
+  static const String medicalOpticalDetail = '/medical/optical-detail';
   static const String medical = '/medical';
   static const String medicalSection = '/medical/section';
   static const String notificationsInbox = '/notifications';
@@ -228,6 +230,7 @@ obituariesAdd: (_) => const AddObituaryScreen(),
     medicalClinicDetail: (_ ) => const VillageClinicDetailScreen(),
     medicalPharmacyDetail: (_ ) => const PharmacyDetailScreen(),
     medicalLabDetail: (_ ) => const MedicalLabDetailScreen(),
+    medicalOpticalDetail: (_ ) => const OpticalShopDetailScreen(),
     medical: (_ ) => const MedicalHomeScreen(),
     notificationsInbox: (_ ) => const NotificationsInboxScreen(),
     notificationOpen: (_ ) => const NotificationOpenScreen(),

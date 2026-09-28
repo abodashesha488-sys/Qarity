@@ -66,6 +66,48 @@ class _UsersPageState extends State<_UsersPage> {
   late final Stream<List<Map<String, dynamic>>> _usersStream =
       widget.adminService.getAllUsersStream();
 
+  /// المستخدمون الظاهرون الآن (بعد البحث والفلترة والترتيب) — هم من يُصدَّر،
+  /// فيكون مخرَج التصدير مطابقاً لما تراه العين.
+  List<Map<String, dynamic>> _visible = const [];
+
+  /// رتبة الدور للترتيب: الأدمن بمختلف أنواعه أولاً، ثم البائعون، ثم المستخدمون.
+  static const Map<String, int> _roleRank = {
+    'admin': 0,
+    'assistant_admin': 1,
+    'medical_admin': 2,
+    'agricultural_admin': 3,
+    'moderator': 4,
+    'seller': 5,
+  };
+
+  static int _rankOf(String role) => _roleRank[role] ?? 6;
+
+  /// مقارنة ضمن نفس الرتبة حسب الترتيب المختار.
+  int _compareWithinRank(Map<String, dynamic> a, Map<String, dynamic> b) {
+    switch (_sortBy) {
+      case 'name':
+        return (a['name'] ?? '').toString().compareTo((b['name'] ?? '').toString());
+      case 'email':
+        return (a['email'] ?? '').toString().compareTo((b['email'] ?? '').toString());
+      case 'oldest':
+        return _compareJoin(a, b, newestFirst: false);
+      default:
+        return _compareJoin(a, b, newestFirst: true);
+    }
+  }
+
+  /// تاريخ التسجيل الفعلي (`joinDate`) — `createdAt` غير موجود في مستندات
+  /// المستخدمين، فكان الترتيب والتصدير والتواريخ كلها تعمل على null.
+  static int _compareJoin(Map<String, dynamic> a, Map<String, dynamic> b,
+      {required bool newestFirst}) {
+    final da = signupAt(a);
+    final db = signupAt(b);
+    if (da == null && db == null) return 0;
+    if (da == null) return 1;
+    if (db == null) return -1;
+    return newestFirst ? db.compareTo(da) : da.compareTo(db);
+  }
+
   @override
   void dispose() {
     _search.dispose();
@@ -103,30 +145,13 @@ class _UsersPageState extends State<_UsersPage> {
           }
         }
 
-        // ترتيب: الأحدث أولاً افتراضياً
-        all.sort((a, b) {
-          final da = a['createdAt'] as DateTime?;
-          final db = b['createdAt'] as DateTime?;
-          if (da == null && db == null) return 0;
-          if (da == null) return 1;
-          if (db == null) return -1;
-          return db.compareTo(da);
-        });
-
-        // إضافة رقم تسلسلي (يبدأ من 1 للأقدم)
+        // الرقم التسلسلي = ترتيب التسجيل الفعلي (الأقدم = 1)، ثابت مهما تغيّر
+        // الترتيب المعروض.
         final sortedForIndex = List<Map<String, dynamic>>.from(all)
-          ..sort((a, b) {
-            final da = a['createdAt'] as DateTime?;
-            final db = b['createdAt'] as DateTime?;
-            if (da == null && db == null) return 0;
-            if (da == null) return 1;
-            if (db == null) return -1;
-            return da.compareTo(db);
-          });
+          ..sort((a, b) => _compareJoin(a, b, newestFirst: false));
         for (int i = 0; i < sortedForIndex.length; i++) {
           sortedForIndex[i]['_serial'] = i + 1;
         }
-        // دمج الرقم التسلسلي في القائمة الأصلية
         final serialMap = {
           for (final u in sortedForIndex) u['id'] as String: u['_serial'] as int
         };
@@ -159,33 +184,15 @@ class _UsersPageState extends State<_UsersPage> {
               (u['phone']?.toString().toLowerCase().contains(q) ?? false);
         }).toList();
 
-        // تطبيق الترتيب على المصفاة
+        // الترتيب: الأدمن بمختلف أنواعه أولاً، ثم البائعون، ثم المستخدمون،
+        // وداخل كل مجموعة الترتيب المختار (الأحدث/الأقدم/الاسم/البريد).
         filtered.sort((a, b) {
-          switch (_sortBy) {
-            case 'oldest':
-              final da = a['createdAt'] as DateTime?;
-              final db = b['createdAt'] as DateTime?;
-              if (da == null && db == null) return 0;
-              if (da == null) return 1;
-              if (db == null) return -1;
-              return da.compareTo(db);
-            case 'name':
-              return (a['name'] ?? '')
-                  .toString()
-                  .compareTo((b['name'] ?? '').toString());
-            case 'email':
-              return (a['email'] ?? '')
-                  .toString()
-                  .compareTo((b['email'] ?? '').toString());
-            default:
-              final da = a['createdAt'] as DateTime?;
-              final db = b['createdAt'] as DateTime?;
-              if (da == null && db == null) return 0;
-              if (da == null) return 1;
-              if (db == null) return -1;
-              return db.compareTo(da);
-          }
+          final rank = _rankOf((a['role'] ?? 'user').toString())
+              .compareTo(_rankOf((b['role'] ?? 'user').toString()));
+          if (rank != 0) return rank;
+          return _compareWithinRank(a, b);
         });
+        _visible = filtered;
 
         return Column(
           children: [
@@ -383,7 +390,7 @@ class _UsersPageState extends State<_UsersPage> {
                                 Icon(Icons.table_chart_rounded,
                                     size: 18, color: Colors.green),
                                 SizedBox(width: 8),
-                                Text('تصدير Excel'),
+                                Text('Excel — القائمة الظاهرة'),
                               ],
                             ),
                           ),
@@ -394,7 +401,7 @@ class _UsersPageState extends State<_UsersPage> {
                                 Icon(Icons.table_chart_rounded,
                                     size: 18, color: Colors.orange),
                                 SizedBox(width: 8),
-                                Text('تصدير CSV'),
+                                Text('CSV — القائمة الظاهرة'),
                               ],
                             ),
                           ),
@@ -405,7 +412,7 @@ class _UsersPageState extends State<_UsersPage> {
                                 Icon(Icons.code_rounded,
                                     size: 18, color: Colors.blue),
                                 SizedBox(width: 8),
-                                Text('تصدير JSON'),
+                                Text('JSON — القائمة الظاهرة'),
                               ],
                             ),
                           ),
@@ -494,189 +501,128 @@ class _UsersPageState extends State<_UsersPage> {
     }
   }
 
-  Future<void> _handleExport(String type) async {
-    final allUsers = await _usersStream.first;
-    if (allUsers.isEmpty) {
-      _snack('لا يوجد بيانات للتصدير');
-      return;
-    }
-
-    // ترتيب حسب الأقدم أولاً للتصدير
-    allUsers.sort((a, b) {
-      final da = a['createdAt'] as DateTime?;
-      final db = b['createdAt'] as DateTime?;
-      if (da == null && db == null) return 0;
-      if (da == null) return 1;
-      if (db == null) return -1;
-      return da.compareTo(db);
-    });
-
-    final exportData = allUsers.asMap().entries.map((entry) {
-      final u = entry.value;
+  /// الصفوف المُصدَّرة = ما هو ظاهر على الشاشة بالضبط (نفس البحث والفلترة
+  /// والترتيب)، فيفهم المستخدم ما الذي خرج من الزر.
+  List<Map<String, dynamic>> _exportRows() {
+    final rows = <Map<String, dynamic>>[];
+    for (final u in _visible) {
       final role = (u['role'] ?? 'user').toString();
       final opt = _roleOptions[role] ?? _roleOptions['user']!;
-      return {
-        'الرقم_التسلسلي': entry.key + 1,
-        'المعرف': u['id'] ?? '',
+      rows.add({
+        'الرقم': u['_serial'] ?? '',
         'الاسم': u['name'] ?? '',
-        'البريد_الإلكتروني': u['email'] ?? '',
-        'رقم_الهاتف': u['phone'] ?? '',
         'الدور': opt.$1,
-        'نوع_البائع': role == 'seller'
+        'نوع البائع': role == 'seller'
             ? _typeLabel((u['sellerType'] ?? '').toString())
-            : 'غير مطبق',
+            : '',
         'الحالة': u['isActive'] == false ? 'معطّل' : 'مفعّل',
-        'تاريخ_التسجيل':
-            u['createdAt'] != null ? _formatDate(u['createdAt']) : '',
-        'آخر_تسجيل_دخول':
-            u['lastSignIn'] != null ? _formatDate(u['lastSignIn']) : '',
-        'الصورة': u['photoUrl'] ?? '',
-        'معرف_Google': u['googleId'] ?? '',
-      };
-    }).toList();
-
-    if (type == 'json') {
-      await _exportJson(exportData);
-    } else if (type == 'excel') {
-      await _exportExcel(exportData);
-    } else if (type == 'csv') {
-      await _exportCsv(exportData);
+        'تاريخ التسجيل': _formatDate(signupAt(u)) ?? '',
+        'آخر تسجيل دخول': _formatDate(lastLoginAt(u)) ?? '',
+        'البريد الإلكتروني': u['email'] ?? '',
+        'الهاتف': u['phone'] ?? '',
+        'المعرف': u['id'] ?? '',
+      });
     }
+    return rows;
   }
 
-  Future<void> _exportJson(List<Map<String, dynamic>> data) async {
-    try {
-      final jsonStr = const JsonEncoder.withIndent('  ').convert(data);
-      final output = await FilePicker.saveFile(
-        dialogTitle: 'حفظ ملف JSON',
-        fileName: 'users_export_${DateTime.now().millisecondsSinceEpoch}.json',
-        type: FileType.custom,
-        allowedExtensions: ['json'],
-        bytes: utf8.encode(jsonStr),
-      );
-      if (output != null) {
-        final path = output.toString();
-        await SharePlus.instance.share(
-            ShareParams(files: [XFile(path)], text: 'تصدير المستخدمين JSON'));
-        _snack('تم تصدير JSON بنجاح');
-      }
-    } catch (e) {
-      _snack('خطأ في التصدير: $e');
-    }
+  String get _stamp {
+    final now = DateTime.now();
+    String two(int v) => v.toString().padLeft(2, '0');
+    return '${now.year}${two(now.month)}${two(now.day)}_${two(now.hour)}${two(now.minute)}';
   }
 
-  Future<void> _exportExcel(List<Map<String, dynamic>> data) async {
+  Future<void> _handleExport(String type) async {
+    final rows = _exportRows();
+    if (rows.isEmpty) {
+      _snack('لا يوجد مستخدمون في القائمة الحالية للتصدير');
+      return;
+    }
     try {
-      if (data.isEmpty) return;
-
-      final excel = Excel.createExcel();
-      final sheet = excel['المستخدمون'];
-
-      // encabezados
-      final headers = data.first.keys.toList();
-      for (int i = 0; i < headers.length; i++) {
-        sheet.cell(CellIndex.indexByColumnRow(columnIndex: i, rowIndex: 0))
-          ..value = TextCellValue(headers[i])
-          ..cellStyle = CellStyle(
-            bold: true,
-            backgroundColorHex: '#6F4E37' as dynamic,
-            fontColorHex: '#FFFFFF' as dynamic,
-            horizontalAlign: HorizontalAlign.Center,
-          );
-      }
-
-      // البيانات
-      for (int rowIndex = 0; rowIndex < data.length; rowIndex++) {
-        final row = data[rowIndex];
-        for (int colIndex = 0; colIndex < headers.length; colIndex++) {
-          final value = row[headers[colIndex]]?.toString() ?? '';
-          sheet.cell(CellIndex.indexByColumnRow(
-              columnIndex: colIndex, rowIndex: rowIndex + 1))
-            ..value = TextCellValue(value)
-            ..cellStyle = CellStyle(
-              horizontalAlign: HorizontalAlign.Center,
-            );
+      if (type == 'json') {
+        final jsonStr = const JsonEncoder.withIndent('  ').convert(rows);
+        await exportFile(
+          fileName: 'qarity_users_$_stamp.json',
+          mimeType: 'application/json',
+          bytes: utf8.encode(jsonStr),
+        );
+        _snack('تم تصدير ${rows.length} مستخدم (JSON)');
+      } else if (type == 'excel') {
+        final bytes = _buildUsersXlsx(rows);
+        await exportFile(
+          fileName: 'qarity_users_$_stamp.xlsx',
+          mimeType:
+              'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          bytes: bytes,
+        );
+        _snack('تم تصدير ${rows.length} مستخدم (Excel)');
+      } else if (type == 'csv') {
+        // BOM في أول الملف: بدونه يفتح Excel العربية كمربعات/حروف مكسورة.
+        final csv = StringBuffer('﻿');
+        final headers = rows.first.keys.toList();
+        csv.writeln(headers.join(','));
+        for (final row in rows) {
+          csv.writeln(headers
+              .map((h) =>
+                  '"${row[h]?.toString().replaceAll('"', '""') ?? ''}"')
+              .join(','));
         }
-      }
-
-      // ضبط عرض الأعمدة
-      for (int i = 0; i < headers.length; i++) {
-        sheet.setColumnWidth(i, 20.0);
-      }
-
-      final fileBytes = excel.encode();
-      if (fileBytes == null) throw Exception('فشل في إنشاء ملف Excel');
-
-      final output = await FilePicker.saveFile(
-        dialogTitle: 'حفظ ملف Excel',
-        fileName: 'users_export_${DateTime.now().millisecondsSinceEpoch}.xlsx',
-        type: FileType.custom,
-        allowedExtensions: ['xlsx'],
-        bytes: Uint8List.fromList(fileBytes),
-      );
-
-      if (output != null) {
-        final path = output.toString();
-        await SharePlus.instance.share(
-            ShareParams(files: [XFile(path)], text: 'تصدير المستخدمين Excel'));
-        _snack('تم تصدير Excel بنجاح');
+        await exportFile(
+          fileName: 'qarity_users_$_stamp.csv',
+          mimeType: 'text/csv',
+          bytes: utf8.encode(csv.toString()),
+        );
+        _snack('تم تصدير ${rows.length} مستخدم (CSV)');
       }
     } catch (e) {
-      _snack('خطأ في التصدير: $e');
+      _snack('تعذّر التصدير: $e');
     }
   }
 
-  Future<void> _exportCsv(List<Map<String, dynamic>> data) async {
-    try {
-      if (data.isEmpty) return;
-      final headers = data.first.keys.toList();
-      final csv = StringBuffer();
-      csv.writeln(headers.join(','));
-      for (final row in data) {
-        csv.writeln(headers
-            .map((h) => '"${row[h]?.toString().replaceAll('"', '""') ?? ''}"')
-            .join(','));
-      }
+  Uint8List _buildUsersXlsx(List<Map<String, dynamic>> rows) {
+    final excel = Excel.createExcel();
+    final sheet = excel['المستخدمون'];
+    final headers = rows.first.keys.toList();
 
-      final output = await FilePicker.saveFile(
-        dialogTitle: 'حفظ ملف CSV',
-        fileName: 'users_export_${DateTime.now().millisecondsSinceEpoch}.csv',
-        type: FileType.custom,
-        allowedExtensions: ['csv'],
-        bytes: Uint8List.fromList(utf8.encode(csv.toString())),
-      );
-
-      if (output != null) {
-        final path = output.toString();
-        await SharePlus.instance.share(
-            ShareParams(files: [XFile(path)], text: 'تصدير المستخدمين CSV'));
-        _snack('تم تصدير CSV بنجاح');
-      }
-    } catch (e) {
-      _snack('خطأ في التصدير: $e');
+    for (int i = 0; i < headers.length; i++) {
+      sheet.cell(CellIndex.indexByColumnRow(columnIndex: i, rowIndex: 0))
+        ..value = TextCellValue(headers[i])
+        ..cellStyle = CellStyle(
+          bold: true,
+          fontColorHex: ExcelColor.white,
+          backgroundColorHex: ExcelColor.fromInt(0xFF6F4E37),
+          horizontalAlign: HorizontalAlign.Center,
+        );
     }
+    for (int r = 0; r < rows.length; r++) {
+      for (int c = 0; c < headers.length; c++) {
+        sheet
+            .cell(CellIndex.indexByColumnRow(columnIndex: c, rowIndex: r + 1))
+          ..value = TextCellValue(rows[r][headers[c]]?.toString() ?? '')
+          ..cellStyle = CellStyle(horizontalAlign: HorizontalAlign.Center);
+      }
+    }
+    for (int i = 0; i < headers.length; i++) {
+      sheet.setColumnWidth(i, 22.0);
+    }
+    final bytes = excel.encode();
+    if (bytes == null) throw Exception('فشل إنشاء ملف Excel');
+    return Uint8List.fromList(bytes);
   }
 
-  String _formatDate(dynamic dt) {
-    if (dt == null) {
-      return '';
-    }
-    DateTime? date;
-    if (dt is DateTime) {
-      date = dt;
-    } else if (dt is Timestamp) {
-      date = dt.toDate();
-    } else if (dt is String) {
-      date = DateTime.tryParse(dt);
-    } else if (dt != null && dt.runtimeType.toString().contains('Timestamp')) {
-      try {
-        date = (dt as dynamic).toDate() as DateTime?;
-      } catch (_) {}
-    }
-    if (date == null) {
-      return '';
-    }
-    return '${date.year}/${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+  /// تاريخ + ساعة مقروء (`2026/09/26 · 14:05`)، أو null عند غياب التاريخ.
+  String? _formatDate(DateTime? date) {
+    if (date == null) return null;
+    String two(int v) => v.toString().padLeft(2, '0');
+    return '${date.year}/${two(date.month)}/${two(date.day)} · '
+        '${two(date.hour)}:${two(date.minute)}';
+  }
+
+  /// يوم واحد فقط — لسطر البطاقة المدمج.
+  String _formatDay(DateTime? date) {
+    if (date == null) return 'بلا تاريخ';
+    String two(int v) => v.toString().padLeft(2, '0');
+    return '${date.year}/${two(date.month)}/${two(date.day)}';
   }
 
   Widget _miniStat(ThemeData theme, String label, String value, Color color) {
@@ -822,7 +768,7 @@ class _UsersPageState extends State<_UsersPage> {
                     width: 44,
                     alignment: Alignment.centerRight,
                     child: Text(
-                      _formatDate(u['createdAt']),
+                      _formatDay(signupAt(u)),
                       style: TextStyle(
                         fontSize: 10,
                         color: theme.colorScheme.onSurfaceVariant,
@@ -902,14 +848,30 @@ class _UsersPageState extends State<_UsersPage> {
               Center(
                 child: Column(
                   children: [
-                    CircleAvatar(
-                      radius: 50,
-                      backgroundColor: opt.$2.withValues(alpha: 0.14),
-                      backgroundImage:
-                          photoUrl.isNotEmpty ? NetworkImage(photoUrl) : null,
-                      child: photoUrl.isEmpty
-                          ? Icon(opt.$3, color: opt.$2, size: 44)
-                          : null,
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                            color: opt.$2.withValues(alpha: 0.45), width: 3),
+                        boxShadow: [
+                          BoxShadow(
+                            color: opt.$2.withValues(alpha: 0.25),
+                            blurRadius: 14,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
+                      ),
+                      child: CircleAvatar(
+                        radius: 78,
+                        backgroundColor: opt.$2.withValues(alpha: 0.14),
+                        backgroundImage: photoUrl.isNotEmpty
+                            ? NetworkImage(photoUrl)
+                            : null,
+                        child: photoUrl.isEmpty
+                            ? Icon(opt.$3, color: opt.$2, size: 64)
+                            : null,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Text(
@@ -953,9 +915,14 @@ class _UsersPageState extends State<_UsersPage> {
                   disabled ? Icons.block_rounded : Icons.check_circle_rounded,
                   color: disabled ? theme.colorScheme.error : Colors.green),
               _buildDetailRow(theme, 'تاريخ التسجيل',
-                  _formatDate(u['createdAt']), Icons.calendar_today_rounded),
+                  _formatDate(signupAt(u)) ?? 'غير مسجّل',
+                  Icons.calendar_today_rounded),
               _buildDetailRow(theme, 'آخر تسجيل دخول',
-                  _formatDate(u['lastSignIn']), Icons.login_rounded),
+                  _formatDate(lastLoginAt(u)) ?? 'لم يسجّل الدخول بعد',
+                  Icons.login_rounded,
+                  color: lastLoginAt(u) == null
+                      ? theme.colorScheme.onSurfaceVariant
+                      : null),
               if ((u['googleId'] ?? '').toString().isNotEmpty)
                 _buildDetailRow(theme, 'معرف Google', u['googleId'],
                     Icons.g_mobiledata_rounded),

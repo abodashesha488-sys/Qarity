@@ -55,9 +55,7 @@ class _OverviewPageState extends State<_OverviewPage> {
             pendingCounts: widget.pendingCounts,
             totalPending: widget.totalPending,
           ),
-          const SizedBox(height: 20),
-
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
 
           // عناصر تحتاج مراجعة
           if (widget.totalPending > 0) ...[
@@ -86,7 +84,8 @@ class _OverviewPageState extends State<_OverviewPage> {
   }
 }
 
-/// شبكة الإحصائيات السريعة
+/// شبكة الإحصائيات السريعة — أربع خلايا مدمجة أفقية بدل بطاقات 2×2 كبيرة،
+/// فتأخذ النظرة العامة ثلث المساحة التي كانت تستهلكها.
 class _QuickStatsGrid extends StatelessWidget {
   const _QuickStatsGrid({
     required this.stats,
@@ -100,155 +99,102 @@ class _QuickStatsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final content = (stats['news'] ?? 0) +
+        (stats['market_products'] ?? 0) +
+        (stats['forum_posts'] ?? 0);
+    final medical = (stats['village_clinics'] ?? 0) +
+        (stats['pharmacies'] ?? 0) +
+        (stats['medical_labs'] ?? 0) +
+        (stats['optical_shops'] ?? 0) +
+        (stats['medical_center_clinics'] ?? 0);
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 2,
-      mainAxisSpacing: 12,
-      crossAxisSpacing: 12,
-      childAspectRatio: 1.5,
+      crossAxisCount: 4,
+      mainAxisSpacing: 10,
+      crossAxisSpacing: 10,
+      mainAxisExtent: 88,
       children: [
-        _StatCardOverview(
-          title: 'المستخدمون',
-          value: '${stats['users'] ?? 0}',
-          icon: Icons.people_rounded,
-          color: Colors.teal,
-          trend: '+${stats['users_trend'] ?? 0}',
-        ),
-        _StatCardOverview(
-          title: 'المحتوى',
-          value:
-              '${(stats['news'] ?? 0) + (stats['market_products'] ?? 0) + (stats['forum_posts'] ?? 0)}',
-          icon: Icons.article_rounded,
-          color: Colors.deepPurple,
-          trend: '+${stats['content_trend'] ?? 0}',
-        ),
-        _StatCardOverview(
-          title: 'بانتظار المراجعة',
-          value: '$totalPending',
-          icon: Icons.pending_actions_rounded,
-          color: totalPending > 0 ? Colors.orange : Colors.green,
-          highlight: totalPending > 0,
-        ),
-        _StatCardOverview(
-          title: 'الخدمات الطبية',
-          value:
-              '${(stats['village_clinics'] ?? 0) + (stats['pharmacies'] ?? 0) + (stats['medical_labs'] ?? 0)}',
-          icon: Icons.local_hospital_rounded,
-          color: const Color(0xFF00897B),
-        ),
+        _StatCellOverview(
+            label: 'مستخدمون',
+            value: '${stats['users'] ?? 0}',
+            icon: Icons.people_rounded,
+            color: Colors.teal),
+        _StatCellOverview(
+            label: 'محتوى',
+            value: '$content',
+            icon: Icons.article_rounded,
+            color: Colors.deepPurple),
+        _StatCellOverview(
+            label: 'معلّق',
+            value: '$totalPending',
+            icon: Icons.pending_actions_rounded,
+            color: totalPending > 0 ? Colors.orange : Colors.green,
+            highlight: totalPending > 0),
+        _StatCellOverview(
+            label: 'طبي',
+            value: '$medical',
+            icon: Icons.local_hospital_rounded,
+            color: const Color(0xFF00897B)),
       ],
     );
   }
 }
 
-/// بطاقة إحصائية (نسخة النظرة العامة)
-class _StatCardOverview extends StatelessWidget {
-  const _StatCardOverview({
-    required this.title,
+/// خلية إحصائية مدمجة: أيقونة صغيرة + رقم بارز + اسم قصير.
+class _StatCellOverview extends StatelessWidget {
+  const _StatCellOverview({
+    required this.label,
     required this.value,
     required this.icon,
     required this.color,
-    this.trend,
     this.highlight = false,
   });
 
-  final String title;
+  final String label;
   final String value;
   final IconData icon;
   final Color color;
-  final String? trend;
   final bool highlight;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-        side: BorderSide(
-          color: highlight
-              ? color.withValues(alpha: 0.4)
-              : theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
-          width: highlight ? 2 : 1,
-        ),
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: highlight ? 0.14 : 0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+            color: color.withValues(alpha: highlight ? 0.45 : 0.22),
+            width: highlight ? 1.6 : 1),
       ),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          gradient: highlight
-              ? LinearGradient(
-                  begin: Alignment.topRight,
-                  end: Alignment.bottomLeft,
-                  colors: [
-                    color.withValues(alpha: 0.08),
-                    color.withValues(alpha: 0.03),
-                  ],
-                )
-              : null,
-        ),
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(icon, color: color, size: 22),
-                ),
-                if (trend != null)
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.green.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      trend!,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.green,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const Spacer(),
-            Text(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: color, size: 16),
+          const SizedBox(height: 4),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
               value,
               style: TextStyle(
-                fontWeight: FontWeight.w900,
-                color: color,
-                fontSize: 28,
-              ),
+                  fontWeight: FontWeight.w900, color: color, fontSize: 19),
             ),
-            const SizedBox(height: 4),
-            Text(
-              title,
-              style: theme.textTheme.labelMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
+          ),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
+          ),
+        ],
       ),
     );
   }
 }
 
-/// قسم العناصر المعلقة
+/// قسم العناصر المعلقة — شرائط مضغوطة بدل صفوف طويلة: كل شريط يحمل
+/// اسم القسم وعدد معلّقاته، واللمسة تفتح مراجعته مباشرة.
 class _PendingReviewSection extends StatelessWidget {
   const _PendingReviewSection({
     required this.pendingCounts,
@@ -258,15 +204,33 @@ class _PendingReviewSection extends StatelessWidget {
   final Map<String, int> pendingCounts;
   final void Function(String) onOpenReview;
 
+  static const Map<String, String> _labels = {
+    'news': 'الأخبار',
+    'market_products': 'المنتجات',
+    'shops': 'المحلات',
+    'obituaries': 'العزاء',
+    'occasions': 'المناسبات',
+    'forum_posts': 'المنتدى',
+    'seller_requests': 'طلبات المتاجر',
+    'phone_directory': 'دليل الهاتف',
+    'service_providers': 'دليل الخدمات',
+    'lost_items': 'المفقودات',
+    'medical_center_clinics': 'عيادات المركز',
+    'village_clinics': 'عيادات القرية',
+    'pharmacies': 'الصيدليات',
+    'medical_labs': 'معامل التحاليل',
+    'optical_shops': 'نظارات طبية',
+    'blood_requests': 'طلبات الدم',
+    'blood_donors': 'المتبرعون بالدم',
+  };
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final pending = pendingCounts.entries
         .where((e) => e.value > 0)
-        .map((e) => MapEntry(_getLabelForCollection(e.key), e.value))
         .toList()
       ..sort((a, b) => b.value.compareTo(a.value));
-
     if (pending.isEmpty) return const SizedBox.shrink();
 
     return Card(
@@ -290,150 +254,92 @@ class _PendingReviewSection extends StatelessWidget {
             ],
           ),
         ),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: Colors.orange.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(Icons.pending_actions_rounded,
-                      color: Colors.orange, size: 22),
+                      color: Colors.orange, size: 18),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'عناصر تحتاج مراجعة',
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      Text(
-                        '${pending.length} فئة بها محتوى معلق',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    'عناصر تحتاج مراجعة (${pending.length} قسم)',
+                    style: theme.textTheme.titleSmall
+                        ?.copyWith(fontWeight: FontWeight.w900),
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: () => onOpenReview(kAllPending),
+                  icon: const Icon(Icons.layers_rounded, size: 16),
+                  label: const Text('كل المعلّقات'),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    visualDensity: VisualDensity.compact,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            const Divider(height: 1),
-            const SizedBox(height: 12),
-            ...pending.take(5).map((e) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: InkWell(
-                    onTap: () => onOpenReview(_getCollectionForLabel(e.key)),
-                    borderRadius: BorderRadius.circular(10),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 32,
-                            height: 32,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: Colors.orange.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              '${e.value}',
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: pending.map((e) {
+                final label = _labels[e.key] ?? e.key;
+                return InkWell(
+                  onTap: () => onOpenReview(e.key),
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.6),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                          color: Colors.orange.withValues(alpha: 0.35)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(label,
+                            style: const TextStyle(
+                                fontSize: 12, fontWeight: FontWeight.w700)),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 7, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withValues(alpha: 0.9),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text('${e.value}',
                               style: const TextStyle(
-                                fontWeight: FontWeight.w900,
-                                color: Colors.orange,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              e.key,
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                          const Icon(Icons.chevron_left_rounded,
-                              size: 20, color: Colors.grey),
-                        ],
-                      ),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white)),
+                        ),
+                      ],
                     ),
                   ),
-                )),
-            if (pending.length > 5) ...[
-              const SizedBox(height: 8),
-              Center(
-                child: TextButton.icon(
-                  onPressed: () => onOpenReview('news'),
-                  icon: const Icon(Icons.visibility_rounded, size: 16),
-                  label: const Text('عرض الكل'),
-                ),
-              ),
-            ],
+                );
+              }).toList(),
+            ),
           ],
         ),
       ),
     );
   }
-
-  String _getLabelForCollection(String collection) {
-    const map = {
-      'news': 'الأخبار',
-      'market_products': 'المنتجات',
-      'shops': 'المحلات',
-      'obituaries': 'العزاء',
-      'occasions': 'المناسبات',
-      'forum_posts': 'المنتدى',
-      'seller_requests': 'طلبات المتاجر',
-      'phone_directory': 'دليل الهاتف',
-      'service_providers': 'دليل الخدمات',
-      'lost_items': 'المفقودات',
-      'medical_center_clinics': 'عيادات المركز',
-      'village_clinics': 'عيادات القرية',
-      'pharmacies': 'الصيدليات',
-      'medical_labs': 'معامل التحاليل',
-      'blood_requests': 'طلبات الدم',
-      'blood_donors': 'المتبرعون بالدم',
-    };
-    return map[collection] ?? collection;
-  }
-
-  String _getCollectionForLabel(String label) {
-    const map = {
-      'الأخبار': 'news',
-      'المنتجات': 'market_products',
-      'المحلات': 'shops',
-      'العزاء': 'obituaries',
-      'المناسبات': 'occasions',
-      'المنتدى': 'forum_posts',
-      'طلبات المتاجر': 'seller_requests',
-      'دليل الهاتف': 'phone_directory',
-      'دليل الخدمات': 'service_providers',
-      'المفقودات': 'lost_items',
-      'عيادات المركز': 'medical_center_clinics',
-      'عيادات القرية': 'village_clinics',
-      'الصيدليات': 'pharmacies',
-      'معامل التحاليل': 'medical_labs',
-      'طلبات الدم': 'blood_requests',
-      'المتبرعون بالدم': 'blood_donors',
-    };
-    return map[label] ?? 'news';
-  }
 }
 
-/// شبكة الإجراءات السريعة
+/// شبكة الإجراءات السريعة — صف واحد من أربع أزرار مدمجة بدل بطاقات 2×2.
 class _QuickActionsGrid extends StatelessWidget {
   const _QuickActionsGrid({
     required this.onOpenUsers,
@@ -453,7 +359,7 @@ class _QuickActionsGrid extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+          padding: const EdgeInsets.only(bottom: 8),
           child: Text(
             'إجراءات سريعة',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -461,39 +367,34 @@ class _QuickActionsGrid extends StatelessWidget {
                 ),
           ),
         ),
-        const SizedBox(height: 8),
         GridView.count(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 2,
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: 1.8,
+          crossAxisCount: 4,
+          mainAxisSpacing: 10,
+          crossAxisSpacing: 10,
+          mainAxisExtent: 74,
           children: [
             _QuickActionCard(
-              title: 'إدارة المستخدمين',
-              icon: Icons.people_rounded,
-              color: Colors.teal,
-              onTap: onOpenUsers,
-            ),
+                title: 'مستخدمون',
+                icon: Icons.people_rounded,
+                color: Colors.teal,
+                onTap: onOpenUsers),
             _QuickActionCard(
-              title: 'التقارير',
-              icon: Icons.insights_rounded,
-              color: Colors.deepPurple,
-              onTap: onOpenReports,
-            ),
+                title: 'تقارير',
+                icon: Icons.insights_rounded,
+                color: Colors.deepPurple,
+                onTap: onOpenReports),
             _QuickActionCard(
-              title: 'التنبيهات',
-              icon: Icons.warning_amber_rounded,
-              color: Colors.orange,
-              onTap: onOpenAlerts,
-            ),
+                title: 'تنبيهات',
+                icon: Icons.warning_amber_rounded,
+                color: Colors.orange,
+                onTap: onOpenAlerts),
             _QuickActionCard(
-              title: 'الإرسال الجماعي',
-              icon: Icons.send_rounded,
-              color: Colors.blue,
-              onTap: onOpenBroadcast,
-            ),
+                title: 'إرسال',
+                icon: Icons.send_rounded,
+                color: Colors.blue,
+                onTap: onOpenBroadcast),
           ],
         ),
       ],
@@ -501,7 +402,7 @@ class _QuickActionsGrid extends StatelessWidget {
   }
 }
 
-/// بطاقة إجراء سريع
+/// زر إجراء سريع مدمج (أيقونة فوق الاسم).
 class _QuickActionCard extends StatelessWidget {
   const _QuickActionCard({
     required this.title,
@@ -517,45 +418,36 @@ class _QuickActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
-        ),
-      ),
+    return Material(
+      color: color.withValues(alpha: 0.1),
+      borderRadius: BorderRadius.circular(14),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: color, size: 24),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
+        borderRadius: BorderRadius.circular(14),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: color.withValues(alpha: 0.28)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, color: color, size: 20),
+                const SizedBox(height: 6),
+                Text(
                   title,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 13,
-                  ),
-                  maxLines: 2,
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 11,
+                  ),
                 ),
-              ),
-              Icon(Icons.chevron_left_rounded,
-                  size: 20, color: theme.colorScheme.onSurfaceVariant),
-            ],
+              ],
+            ),
           ),
         ),
       ),
