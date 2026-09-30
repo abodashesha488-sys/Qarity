@@ -1,7 +1,7 @@
 {
-  "versionCode": 2018,
-  "versionName": "1.1.18",
+  "versionCode": 2019,
+  "versionName": "1.1.19",
   "apkUrl": "https://github.com/abodashesha488-sys/Qarity/releases/latest/download/Qarity.apk",
   "forceUpdate": false,
-  "releaseNotes": "مدير المركز الطبي صار يدير المركز الطبي الخيري فقط. يمكن الآن إضافة صورة لكل عيادة وتظهر في البطاقة المنسّقة، ومواعيد العمل تُختار من منتقي الوقت بدل كتابتها."
+  "releaseNotes": "إصلاح التحديث التلقائي: يطلب إذن التثبيت قبل التنزيل ويُكمل التثبيت فور العودة من إعدادات النظام."
 }
