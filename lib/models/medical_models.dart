@@ -57,6 +57,7 @@ class MedicalCenterClinic {
   final String description;
   final List<String> workingDays; // ['السبت','الأحد',...]
   final String workingHours; // '9 ص - 2 م'
+  final String imageUrl; // صورة العيادة (اختيارية)
   final double fees; // أجر رمزي
   final bool isActive;
   final bool isApproved; // وثائق المركز القديمة تُعتبر معتمدة ضمناً
@@ -70,6 +71,7 @@ class MedicalCenterClinic {
     this.description = '',
     this.workingDays = const [],
     this.workingHours = '',
+    this.imageUrl = '',
     this.fees = 0,
     this.isActive = true,
     this.isApproved = true,
@@ -89,6 +91,7 @@ class MedicalCenterClinic {
               .toList() ??
           const [],
       workingHours: json['workingHours'] as String? ?? '',
+      imageUrl: json['imageUrl'] as String? ?? '',
       fees: (json['fees'] as num?)?.toDouble() ?? 0,
       isActive: json['isActive'] as bool? ?? true,
       isApproved: json['isApproved'] as bool? ?? true,
@@ -103,6 +106,7 @@ class MedicalCenterClinic {
         'description': description,
         'workingDays': workingDays,
         'workingHours': workingHours,
+        'imageUrl': imageUrl,
         'fees': fees,
         'isActive': isActive,
         'isApproved': isApproved,
@@ -116,6 +120,7 @@ class MedicalCenterClinic {
     String? description,
     List<String>? workingDays,
     String? workingHours,
+    String? imageUrl,
     double? fees,
     bool? isActive,
   }) =>
@@ -127,6 +132,7 @@ class MedicalCenterClinic {
         description: description ?? this.description,
         workingDays: workingDays ?? this.workingDays,
         workingHours: workingHours ?? this.workingHours,
+        imageUrl: imageUrl ?? this.imageUrl,
         fees: fees ?? this.fees,
         isActive: isActive ?? this.isActive,
         updatedAt: updatedAt,

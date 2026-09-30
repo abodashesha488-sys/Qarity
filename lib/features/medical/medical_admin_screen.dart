@@ -3,10 +3,12 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../models/medical_models.dart';
 import '../../services/medical_service.dart';
+import '../../widgets/clinic_photo_tile.dart';
 import '../../widgets/qurity_app_bar.dart';
+import 'medical_home_screen.dart' show MedicalImageField;
 
 /// شاشة إدارة المركز الطبي الخيري — لمدير المركز الطبي.
-/// إضافة/تعديل/حذف عيادات المركز مع الأيام والساعات والأجور.
+/// إضافة/تعديل/حذف عيادات المركز مع الأيام والساعات والأجور وصورة العيادة.
 class MedicalCenterAdminScreen extends StatefulWidget {
   const MedicalCenterAdminScreen({super.key});
 
@@ -46,7 +48,7 @@ class _MedicalCenterAdminScreenState extends State<MedicalCenterAdminScreen> {
     final res = await showModalBottomSheet<MedicalCenterClinic>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => _ClinicEditForm(
+      builder: (_) => ClinicEditForm(
         days: _days,
         existing: existing,
       ),
@@ -83,8 +85,12 @@ class _MedicalCenterAdminScreenState extends State<MedicalCenterAdminScreen> {
       ),
     );
     if (ok == true) {
-      await _service.deleteClinic(c.id);
-      _snack('تم الحذف');
+      try {
+        await _service.deleteClinic(c.id);
+        _snack('تم الحذف');
+      } catch (e) {
+        _snack('تعذّر الحذف: $e');
+      }
     }
   }
 
@@ -125,23 +131,20 @@ class _MedicalCenterAdminScreenState extends State<MedicalCenterAdminScreen> {
                           .withValues(alpha: 0.4)),
                 ),
                 child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor:
-                        const Color(0xFF00897B).withValues(alpha: 0.12),
-                    child: const Icon(Icons.medical_services_rounded,
-                        color: Color(0xFF00897B)),
-                  ),
+                  contentPadding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+                  leading: ClinicPhotoTile(imageUrl: c.imageUrl, side: 52),
                   title: Text(c.name,
                       style: const TextStyle(fontWeight: FontWeight.w800)),
-                   subtitle: Column(
-                     crossAxisAlignment: CrossAxisAlignment.start,
-                     children: [
-                       Text(
-                           '${c.specialty} • ${c.scheduleLabel}'
-                           '${c.fees > 0 ? ' • ${c.fees.toStringAsFixed(0)} ج.م' : ''}',
-                           maxLines: 2,
-                           overflow: TextOverflow.ellipsis),
-                       if (!c.isApproved)
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 4),
+                      Text(
+                          '${c.specialty} • ${c.scheduleLabel}'
+                          '${c.fees > 0 ? ' • ${c.fees.toStringAsFixed(0)} ج.م' : ''}',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis),
+                      if (!c.isApproved)
                         const Padding(
                           padding: EdgeInsets.only(top: 2),
                           child: Text('⏳ بانتظار موافقة المدير العام',
@@ -150,8 +153,8 @@ class _MedicalCenterAdminScreenState extends State<MedicalCenterAdminScreen> {
                                   fontWeight: FontWeight.w700,
                                   color: Colors.orange)),
                         ),
-                     ],
-                   ),
+                    ],
+                  ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -191,26 +194,70 @@ extension on MedicalCenterClinic {
         'description': description,
         'workingDays': workingDays,
         'workingHours': workingHours,
+        'imageUrl': imageUrl,
         'fees': fees,
         'isActive': isActive,
       };
 }
 
-class _ClinicEditForm extends StatefulWidget {
-  const _ClinicEditForm({required this.days, this.existing});
+/// صيغة مواعيد العمل المحفوظة: «9 ص - 2 م» — نفس صيغة الوثائق القديمة،
+/// فلا حاجة لهجرة أو حقل جديد.
+String formatClinicHours(TimeOfDay start, TimeOfDay end) =>
+    '${clinicHourLabel(start)} - ${clinicHourLabel(end)}';
+
+/// توقيت عربي مستقل عن إعدادات اللغة: «9 ص»، «9:30 م»، «12 ص» لمنتصف الليل.
+String clinicHourLabel(TimeOfDay t) {
+  final suffix = t.hour < 12 ? 'ص' : 'م';
+  var h12 = t.hour % 12;
+  if (h12 == 0) h12 = 12;
+  return t.minute == 0
+      ? '$h12 $suffix'
+      : '$h12:${t.minute.toString().padLeft(2, '0')} $suffix';
+}
+
+/// يقرأ «9 ص - 2 م» و«9:30 ص - 14:00» وغيرها؛ يعيد null إن لم يجد وقتين
+/// صالحين — فيبقى النص المحفوظ كما هو بدل أن يُستبدل بتقدير خاطئ.
+({TimeOfDay start, TimeOfDay end})? parseClinicHours(String text) {
+  final found = <TimeOfDay>[];
+  for (final m in RegExp(r'(\d{1,2})(?::(\d{2}))?\s*(ص|م)?').allMatches(text)) {
+    final h = int.tryParse(m.group(1) ?? '');
+    final minute = int.tryParse(m.group(2) ?? '0') ?? 0;
+    final period = m.group(3);
+    if (h == null || h < 1 || h > 12 && period != null || h > 23) return null;
+    if (minute > 59) return null;
+    int hour = h;
+    if (period == 'ص' && h == 12) hour = 0;
+    if (period == 'م' && h != 12) hour = h + 12;
+    found.add(TimeOfDay(hour: hour, minute: minute));
+    if (found.length == 2) break;
+  }
+  if (found.length < 2) return null;
+  return (start: found[0], end: found[1]);
+}
+
+/// النص الذي يُحفظ في `workingHours`: الوقتان المختاران معًا، أو النص المحفوظ
+/// كما هو إن لم يلمس أحدٌ الاختيار. `null` = وقت واحد فقط (حالة مرفوضة).
+String? resolveClinicHours(
+    {TimeOfDay? start, TimeOfDay? end, String? existing}) {
+  if ((start == null) != (end == null)) return null;
+  if (start != null && end != null) return formatClinicHours(start, end);
+  return existing ?? '';
+}
+
+/// نموذج إضافة/تعديل عيادة المركز الطبي الخيري.
+class ClinicEditForm extends StatefulWidget {
+  const ClinicEditForm({super.key, required this.days, this.existing});
   final List<String> days;
   final MedicalCenterClinic? existing;
 
   @override
-  State<_ClinicEditForm> createState() => _ClinicEditFormState();
+  State<ClinicEditForm> createState() => _ClinicEditFormState();
 }
 
-class _ClinicEditFormState extends State<_ClinicEditForm> {
+class _ClinicEditFormState extends State<ClinicEditForm> {
   late final _nameC = TextEditingController(text: widget.existing?.name ?? '');
   late final _doctorC =
       TextEditingController(text: widget.existing?.doctorName ?? '');
-  late final _hoursC =
-      TextEditingController(text: widget.existing?.workingHours ?? '');
   late final _feesC = TextEditingController(
       text: (widget.existing?.fees ?? 0) > 0
           ? (widget.existing!.fees).toStringAsFixed(0)
@@ -221,14 +268,90 @@ class _ClinicEditFormState extends State<_ClinicEditForm> {
   late final Set<String> _days = {...?widget.existing?.workingDays};
   late bool _active = widget.existing?.isActive ?? true;
 
+  late String _imageUrl = widget.existing?.imageUrl ?? '';
+  String? _photoError;
+
+  TimeOfDay? _open;
+  TimeOfDay? _close;
+  String? _hoursError;
+  String? _nameError;
+
+  @override
+  void initState() {
+    super.initState();
+    final parsed = parseClinicHours(widget.existing?.workingHours ?? '');
+    _open = parsed?.start;
+    _close = parsed?.end;
+  }
+
   @override
   void dispose() {
     _nameC.dispose();
     _doctorC.dispose();
-    _hoursC.dispose();
     _feesC.dispose();
     _descC.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickTime({required bool isStart}) async {
+    final initial = isStart ? _open : _close;
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: initial ?? const TimeOfDay(hour: 9, minute: 0),
+      helpText: isStart ? 'وقت بداية العمل' : 'وقت نهاية العمل',
+    );
+    if (picked == null) return;
+    setState(() {
+      if (isStart) {
+        _open = picked;
+      } else {
+        _close = picked;
+      }
+      _hoursError = null;
+    });
+  }
+
+  Widget _timeRow(String key, String label, TimeOfDay? value) {
+    final theme = Theme.of(context);
+    return InkWell(
+      key: Key(key),
+      borderRadius: BorderRadius.circular(12),
+      onTap: () => _pickTime(isStart: key.endsWith('start')),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: theme.colorScheme.outlineVariant),
+          color: theme.colorScheme.surfaceContainerHighest
+              .withValues(alpha: 0.3),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.access_time_rounded,
+                size: 18, color: Color(0xFF00897B)),
+            const SizedBox(width: 8),
+            Text(label,
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: theme.colorScheme.onSurfaceVariant)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                value == null ? 'اختر الوقت' : clinicHourLabel(value),
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: value == null
+                        ? theme.colorScheme.onSurfaceVariant
+                        : const Color(0xFF00897B)),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -242,10 +365,16 @@ class _ClinicEditFormState extends State<_ClinicEditForm> {
         children: [
           Row(
             children: [
-              Text(widget.existing == null ? 'إضافة عيادة' : 'تعديل عيادة',
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w900, fontSize: 18)),
-              const Spacer(),
+              Expanded(
+                child: Text(
+                    widget.existing == null
+                        ? 'إضافة عيادة'
+                        : 'تعديل عيادة',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w900, fontSize: 18)),
+              ),
               IconButton(
                   onPressed: () => Navigator.pop(context),
                   icon: const Icon(Icons.close_rounded)),
@@ -257,6 +386,21 @@ class _ClinicEditFormState extends State<_ClinicEditForm> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _f(_nameC, 'اسم العيادة', Icons.medical_services_rounded),
+                  if (_nameError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: Text(
+                          _nameError!,
+                          key: const Key('clinic-name-error'),
+                          style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFFB71C1C)),
+                        ),
+                      ),
+                    ),
                   DropdownButtonFormField<String>(
                     initialValue: _specialty,
                     decoration: const InputDecoration(labelText: 'التخصص'),
@@ -269,9 +413,44 @@ class _ClinicEditFormState extends State<_ClinicEditForm> {
                   ),
                   const SizedBox(height: 12),
                   _f(_doctorC, 'اسم الطبيب', Icons.person_rounded),
-                  const SizedBox(height: 12),
-                  _f(_hoursC, 'مواعيد العمل (مثال: 9 ص - 2 م)',
-                      Icons.access_time_rounded),
+                  const SizedBox(height: 4),
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Text('مواعيد العمل',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            color: Theme.of(context).colorScheme.primary)),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                          child: _timeRow('clinic-hours-start', 'من', _open)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                          child: _timeRow('clinic-hours-end', 'إلى', _close)),
+                    ],
+                  ),
+                  if (_hoursError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(_hoursError!,
+                          style: const TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFFB71C1C))),
+                    ),
+                  if (_open == null && _close == null &&
+                      (widget.existing?.workingHours ?? '').isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(
+                          'المواعيد المحفوظة: ${widget.existing!.workingHours} — اختر الوقتين لتغييرها',
+                          style: TextStyle(
+                              fontSize: 11,
+                              color:
+                                  Theme.of(context).colorScheme.onSurfaceVariant)),
+                    ),
                   const SizedBox(height: 12),
                   _f(_feesC, 'الأجر الرمزي (ج.م)', Icons.attach_money_rounded,
                       type: TextInputType.number),
@@ -300,6 +479,39 @@ class _ClinicEditFormState extends State<_ClinicEditForm> {
                       );
                     }).toList(),
                   ),
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Text('صورة العيادة',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            color: Theme.of(context).colorScheme.primary)),
+                  ),
+                  const SizedBox(height: 8),
+                  ClinicPhotoPreviewTile(imageUrl: _imageUrl),
+                  const SizedBox(height: 8),
+                  MedicalImageField(
+                    key: ValueKey('clinic-photo-field-$_imageUrl'),
+                    maxImages: 1,
+                    initial: _imageUrl.isEmpty ? const [] : [_imageUrl],
+                    onError: (msg) => setState(() => _photoError = msg),
+                    onChanged: (urls) => setState(() {
+                      _imageUrl = urls.isEmpty ? '' : urls.first;
+                      if (_imageUrl.isNotEmpty) _photoError = null;
+                    }),
+                  ),
+                  if (_photoError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(
+                        _photoError!,
+                        key: const Key('clinic-photo-error'),
+                        style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFFB71C1C)),
+                      ),
+                    ),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     title: const Text('ظاهرة للجمهور'),
@@ -315,29 +527,41 @@ class _ClinicEditFormState extends State<_ClinicEditForm> {
             style: FilledButton.styleFrom(
                 backgroundColor: const Color(0xFF00897B),
                 padding: const EdgeInsets.symmetric(vertical: 14)),
-            onPressed: () {
-              if (_nameC.text.trim().isEmpty) return;
-              Navigator.pop(
-                context,
-                MedicalCenterClinic(
-                  id: widget.existing?.id ?? '',
-                  name: _nameC.text.trim(),
-                  specialty: _specialty,
-                  doctorName: _doctorC.text.trim(),
-                  description: _descC.text.trim(),
-                  workingDays: _days.toList(),
-                  workingHours: _hoursC.text.trim(),
-                  fees: double.tryParse(_feesC.text) ?? 0,
-                  isActive: _active,
-                  // الإضافة الجديدة تنتظر موافقة المدير العام؛ التعديل يحافظ على الحالة.
-                  isApproved: widget.existing?.isApproved ?? false,
-                ),
-              );
-            },
+            onPressed: _save,
             child: const Text('حفظ',
                 style: TextStyle(fontWeight: FontWeight.w800)),
           ),
         ],
+      ),
+    );
+  }
+
+  void _save() {
+    if (_nameC.text.trim().isEmpty) {
+      setState(() => _nameError = 'اكتب اسم العيادة أولاً');
+      return;
+    }
+    final hours = resolveClinicHours(
+        start: _open, end: _close, existing: widget.existing?.workingHours);
+    if (hours == null) {
+      setState(() => _hoursError = 'اختر وقت البداية ووقت النهاية معًا');
+      return;
+    }
+    Navigator.pop(
+      context,
+      MedicalCenterClinic(
+        id: widget.existing?.id ?? '',
+        name: _nameC.text.trim(),
+        specialty: _specialty,
+        doctorName: _doctorC.text.trim(),
+        description: _descC.text.trim(),
+        workingDays: _days.toList(),
+        workingHours: hours,
+        imageUrl: _imageUrl,
+        fees: double.tryParse(_feesC.text) ?? 0,
+        isActive: _active,
+        // الإضافة الجديدة تنتظر موافقة المدير العام؛ التعديل يحافظ على الحالة.
+        isApproved: widget.existing?.isApproved ?? false,
       ),
     );
   }
@@ -352,6 +576,21 @@ class _ClinicEditFormState extends State<_ClinicEditForm> {
         maxLines: maxLines,
         decoration: InputDecoration(labelText: label, prefixIcon: Icon(icon)),
       ),
+    );
+  }
+}
+
+/// معاينة صورة العيادة داخل النموذج (تُخفي نفسها بلا صورة).
+class ClinicPhotoPreviewTile extends StatelessWidget {
+  const ClinicPhotoPreviewTile({super.key, required this.imageUrl});
+  final String imageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    if (imageUrl.isEmpty) return const SizedBox.shrink();
+    return Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: ClinicPhotoTile(imageUrl: imageUrl, side: 96, radius: 16),
     );
   }
 }

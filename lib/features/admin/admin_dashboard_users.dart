@@ -1233,7 +1233,7 @@ class _UsersPageState extends State<_UsersPage> {
       case 'assistant_admin':
         return 'نفس صلاحيات المدير العام، لكن لا يستطيع حذف (أو تنحية) المدير العام';
       case 'medical_admin':
-        return 'إدارة المركز الطبي ومراجعة العيادات/الصيدليات/بنك الدم';
+        return 'إدارة المركز الطبي الخيري فقط — لا يراجع بقية محتوى الخدمات الطبية';
       case 'admin':
         return 'كل الصلاحيات + تعيين الأدوار';
       default:

@@ -3,7 +3,9 @@
 // الأمان (بدون أي سر في البناء):
 //   1) يطلب التطبيق `Authorization: Bearer <Firebase ID Token>` لتسجيل الدخول الحالي.
 //   2) نتحقق من التوكن بـ firebase-admin (وأنه لم يُلغَ).
-//   3) نقرأ users/{uid} من Firestore ونقبل فقط إذا role == 'admin' أو 'medical_admin'.
+//   3) نقرأ users/{uid} من Firestore ونقبل فقط إذا كان الدور من مديري المحتوى:
+//      'admin' أو 'assistant_admin' (مدير المركز الطبي محصور في عيادات المركز
+//      الخيري، فلا يُرسِل إشعارات القرية كلها).
 //   => أي شخص غير أدمن مسجّل دخول لا يستطيع إرسال أي إشعار، ولا يوجد secret
 //      ليُضبط أو يُسرّب أو يُدوَّر.
 //
@@ -17,11 +19,10 @@
 
 import admin from 'firebase-admin';
 
-const ALLOWED_ROLES = ['admin', 'medical_admin'];
+const ALLOWED_ROLES = ['admin', 'assistant_admin'];
 
 // أنواع الطلبات التي تستدعي موافقة الأدمن — النصوص تُبنى هنا حصراً
 // (لا يقبل الخادم نصاً من العميل في وضع admin_notify، فلا حقن أو سبام).
-// medical:true => يُبلَّغ بها مدير المركز الطبي أيضاً.
 const PENDING_KINDS = {
   news: { t: '📰 خبر جديد بانتظار المراجعة', b: 'أرسل أحد الأهالي خبراً جديداً للوحة التحكم.' },
   market_products: { t: '🛒 منتج جديد بانتظار المراجعة', b: 'أضاف بائع منتجاً جديداً للسوق.' },
@@ -35,12 +36,12 @@ const PENDING_KINDS = {
   service_providers: { t: '🧰 إضافة جديدة بدليل الخدمات', b: 'إضافة جديدة في دليل الخدمات بانتظار المراجعة.' },
   lost_items: { t: '🔎 إعلان مفقودات جديد', b: 'أضاف أحد الأهالي إعلاناً في المفقودات بانتظار المراجعة.' },
   seller_requests: { t: '🏪 طلب بائعية جديد', b: 'قدّم أحد الأهالي طلباً لفتح متجر.' },
-  village_clinics: { t: '🏥 عيادة جديدة بانتظار المراجعة', b: 'إضافة جديدة لعيادات القرية.', medical: true },
-  pharmacies: { t: '💊 صيدلية جديدة بانتظار المراجعة', b: 'إضافة جديدة لصيدليات القرية.', medical: true },
-  medical_labs: { t: '🧪 معمل تحاليل جديد بانتظار المراجعة', b: 'إضافة جديدة لمعامل التحاليل.', medical: true },
-  optical_shops: { t: '👓 محل نظارات جديد بانتظار المراجعة', b: 'إضافة جديدة لقسم النظارات الطبية.', medical: true },
-  blood_requests: { t: '🩸 طلب تبرع دم جديد', b: 'طلب تبرع دم جديد يحتاج موافقتك.', medical: true },
-  blood_donors: { t: '❤️ تسجيل متبرع جديد', b: 'متبرع جديد بانتظار الموافقة.', medical: true },
+  village_clinics: { t: '🏥 عيادة جديدة بانتظار المراجعة', b: 'إضافة جديدة لعيادات القرية.' },
+  pharmacies: { t: '💊 صيدلية جديدة بانتظار المراجعة', b: 'إضافة جديدة لصيدليات القرية.' },
+  medical_labs: { t: '🧪 معمل تحاليل جديد بانتظار المراجعة', b: 'إضافة جديدة لمعامل التحاليل.' },
+  optical_shops: { t: '👓 محل نظارات جديد بانتظار المراجعة', b: 'إضافة جديدة لقسم النظارات الطبية.' },
+  blood_requests: { t: '🩸 طلب تبرع دم جديد', b: 'طلب تبرع دم جديد يحتاج موافقتك.' },
+  blood_donors: { t: '❤️ تسجيل متبرع جديد', b: 'متبرع جديد بانتظار الموافقة.' },
   medical_center_clinics: { t: '🏥 عيادة مركزية جديدة بانتظار موافقتك', b: 'مدير المركز الطبي أضاف عيادة جديدة للمركز الخيري.' },
   village_contributions: { t: '🗄️ مساهمة جديدة في أرشيف القرية', b: 'أرسل أحد الأهالي مادة (صورة/وثيقة/تسجيل) لمرجع القرية بانتظار المراجعة.' },
 };
@@ -115,11 +116,12 @@ export default async function handler(req, res) {
       }
       await rlRef.set({ at: now, by: decoded.uid }, { merge: true });
 
-      const roles = kind.medical ? ['admin', 'medical_admin'] : ['admin'];
+      // المراجعة هنا للمدير العام وحده: مدير المركز الطبي صلاحيته محصورة في
+      // عيادات المركز الخيري، فلا يُبلَّغ بمحتوى طبي لا يستطيع اعتماده.
       const usersSnap = await admin
         .firestore()
         .collection('users')
-        .where('role', 'in', roles)
+        .where('role', '==', 'admin')
         .get();
 
       const seen = new Set();
@@ -128,14 +130,10 @@ export default async function handler(req, res) {
         const tok = d.data()?.fcmToken;
         if (!tok || seen.has(tok)) continue;
         seen.add(tok);
-        const role = d.data()?.role;
         messages.push({
           token: tok,
           notification: { title: kind.t, body: kind.b },
-          data: {
-            route:
-              role === 'medical_admin' && kind.medical ? '/medical' : '/admin',
-          },
+          data: { route: '/admin' },
           android: {
             priority: 'high',
             notification: { channelId: 'qarity_channel', color: '#1565C0' },

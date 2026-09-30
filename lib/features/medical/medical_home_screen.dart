@@ -11,6 +11,7 @@ import '../../services/image_upload_service.dart';
 import '../../services/medical_service.dart';
 import '../../services/share_service.dart';
 import '../../services/user_service.dart';
+import '../../widgets/clinic_photo_tile.dart';
 import '../../widgets/qurity_app_bar.dart';
 import 'medical_admin_screen.dart';
 import 'optical_shop_detail_screen.dart';
@@ -416,6 +417,8 @@ class _CenterClinicCard extends StatelessWidget {
   const _CenterClinicCard({required this.clinic});
   final MedicalCenterClinic clinic;
 
+  static const _accent = Color(0xFF00897B);
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -424,100 +427,140 @@ class _CenterClinicCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
-        side:
-            BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
+        side: BorderSide(color: _accent.withValues(alpha: 0.22)),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(9),
-                  decoration: BoxDecoration(
-                      color: const Color(0xFF00897B).withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(12)),
-                  child: const Icon(Icons.medical_services_rounded,
-                      color: Color(0xFF00897B)),
-                ),
+                ClinicPhotoTile(imageUrl: clinic.imageUrl),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(clinic.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                              fontWeight: FontWeight.w900, fontSize: 15)),
+                              fontWeight: FontWeight.w900, fontSize: 15.5)),
+                      const SizedBox(height: 4),
                       if (clinic.specialty.isNotEmpty)
-                        Text(clinic.specialty,
-                            style: TextStyle(
-                                fontSize: 12,
-                                color: theme.colorScheme.primary,
-                                fontWeight: FontWeight.w700)),
+                        _Pill(
+                            icon: Icons.category_rounded,
+                            text: clinic.specialty,
+                            color: _accent),
+                      if (clinic.doctorName.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            const Icon(Icons.person_rounded,
+                                size: 14, color: Colors.grey),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                  clinic.doctorName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w700)),
+                            ),
+                          ],
+                        ),
+                      ],
+                      if (clinic.fees > 0) ...[
+                        const SizedBox(height: 6),
+                        _Pill(
+                            icon: Icons.payments_rounded,
+                            text:
+                                'أجر رمزي ${clinic.fees.toStringAsFixed(0)} ج.م',
+                            color: const Color(0xFFB8860B),
+                            filled: true),
+                      ],
                     ],
                   ),
                 ),
-                if (clinic.fees > 0)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                        color: Colors.teal.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(10)),
-                    child: Text('${clinic.fees.toStringAsFixed(0)} ج.م',
-                        style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.teal)),
-                  ),
               ],
             ),
-            if (clinic.doctorName.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  const Icon(Icons.person_rounded, size: 14, color: Colors.grey),
-                  const SizedBox(width: 6),
-                  Text(clinic.doctorName, style: const TextStyle(fontSize: 12)),
-                ],
-              ),
-            ],
-            if (clinic.workingDays.isNotEmpty) ...[
-              const SizedBox(height: 8),
+            if (clinic.workingHours.isNotEmpty ||
+                clinic.workingDays.isNotEmpty) ...[
+              const SizedBox(height: 10),
               Wrap(
-                spacing: 6,
-                runSpacing: 4,
-                children: clinic.workingDays
-                    .map((d) => Chip(
-                          label: Text(d, style: const TextStyle(fontSize: 10)),
-                          visualDensity: VisualDensity.compact,
-                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ))
-                    .toList(),
-              ),
-            ],
-            if (clinic.workingHours.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              Row(
+                spacing: 8,
+                runSpacing: 6,
                 children: [
-                  const Icon(Icons.access_time_rounded, size: 14, color: Colors.grey),
-                  const SizedBox(width: 6),
-                  Text(clinic.workingHours, style: const TextStyle(fontSize: 12)),
+                  if (clinic.workingHours.isNotEmpty)
+                    _Pill(
+                        icon: Icons.access_time_rounded,
+                        text: clinic.workingHours,
+                        color: _accent,
+                        filled: true),
+                  if (clinic.workingDays.isNotEmpty)
+                    _Pill(
+                        icon: Icons.event_available_rounded,
+                        text: clinic.workingDays.join(' • '),
+                        color: theme.colorScheme.onSurfaceVariant),
                 ],
               ),
             ],
             if (clinic.description.isNotEmpty) ...[
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               Text(clinic.description,
                   style: TextStyle(
-                      fontSize: 12, color: theme.colorScheme.onSurfaceVariant)),
+                      fontSize: 12,
+                      height: 1.45,
+                      color: theme.colorScheme.onSurfaceVariant)),
             ],
           ],
         ),
       ),
     ).animate().fadeIn(duration: 200.ms);
+  }
+}
+
+/// وسم صغير موحد الشكل داخل بطاقة عيادة المركز (تخصص/مواعيد/أيام/أجر).
+class _Pill extends StatelessWidget {
+  const _Pill(
+      {required this.icon,
+      required this.text,
+      required this.color,
+      this.filled = false});
+  final IconData icon;
+  final String text;
+  final Color color;
+  final bool filled;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: filled ? 0.10 : 0.0),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: color),
+          const SizedBox(width: 5),
+          Flexible(
+            child: Text(text,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w800,
+                    color: color)),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -2336,11 +2379,19 @@ Widget _field(TextEditingController c, String label, IconData icon,
 }
 
 /// حقل صور متعددة يستخدم خدمة ImgBB الخاصة بالتطبيق.
+/// [initial] يعرض الصور المحفوظة مسبقاً عند التعديل، و[onError] يبلّغ فشل الرفع
+/// بدل ابتلاعه — صورة تُفقد بصمتًا أسوأ من صورة بلا رفع.
 class MedicalImageField extends StatefulWidget {
   final int maxImages;
   final ValueChanged<List<String>> onChanged;
+  final List<String> initial;
+  final ValueChanged<String>? onError;
   const MedicalImageField(
-      {super.key, required this.maxImages, required this.onChanged});
+      {super.key,
+      required this.maxImages,
+      required this.onChanged,
+      this.initial = const [],
+      this.onError});
 
   @override
   State<MedicalImageField> createState() => _MedicalImageFieldState();
@@ -2349,7 +2400,7 @@ class MedicalImageField extends StatefulWidget {
 class _MedicalImageFieldState extends State<MedicalImageField> {
   final ImagePicker _picker = ImagePicker();
   final ImageUploadService _uploader = ImageUploadService();
-  final List<String> _urls = [];
+  late final List<String> _urls = List.of(widget.initial);
   bool _uploading = false;
 
   bool get _atMax => _urls.length >= widget.maxImages;
@@ -2368,7 +2419,8 @@ class _MedicalImageFieldState extends State<MedicalImageField> {
       final url = await _uploader.uploadImage(bytes);
       setState(() => _urls.add(url));
       widget.onChanged(List.of(_urls));
-    } catch (_) {
+    } catch (e) {
+      widget.onError?.call(e.toString().replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _uploading = false);
     }
