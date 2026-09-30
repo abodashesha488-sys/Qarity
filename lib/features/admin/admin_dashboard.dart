@@ -77,7 +77,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     _Cat('seller_requests', 'طلبات المتاجر', Icons.storefront_rounded,
         Colors.orange),
     _Cat('phone_directory', 'دليل الهاتف', Icons.phone_rounded, Colors.cyan),
-    _Cat('service_providers', 'دليل الخدمات', Icons.category_rounded,
+    _Cat('service_providers', 'سجلات دليل الخدمات', Icons.category_rounded,
         Color(0xFF6D4C41)),
     _Cat('lost_items', 'المفقودات', Icons.search_rounded, Color(0xFF5E35B1)),
     _Cat('medical_center_clinics', 'عيادات المركز الخيري',

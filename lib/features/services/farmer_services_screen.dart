@@ -4,7 +4,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../routes/app_routes.dart';
 import '../../widgets/qurity_app_bar.dart';
 
-/// بوابة خدمات المزارع — خمس خدمات بصور موحّدة مثل شبكة الصفحة الرئيسية.
+/// بوابة خدمات المزارع — ست خدمات بصور موحّدة مثل شبكة الصفحة الرئيسية.
+/// منها صفحة «خدمات زراعية» المستقلة (سجل مقدّمي الخدمات الزراعية).
 class FarmerServicesScreen extends StatelessWidget {
   const FarmerServicesScreen({super.key});
 
@@ -14,6 +15,12 @@ class FarmerServicesScreen extends StatelessWidget {
       route: AppRoutes.farmerWorkersEquipment,
       image: 'assets/images/tools.jpg',
       description: 'عمال، جرارات، معدات وخدمات الحقول',
+    ),
+    _FarmerService(
+      title: 'خدمات زراعية',
+      route: AppRoutes.agriculturalServices,
+      image: 'assets/images/farmer.jpg',
+      description: 'سجل مقدّمي الآلات والخدمات الزراعية في القرية',
     ),
     _FarmerService(
       title: 'مستشارك الزراعي',

@@ -20,7 +20,7 @@ class VillageMemorialScreen extends StatelessWidget {
       subtitle: 'رحمهم الله — رجال ونساء من أهل أبودشيشة',
       accent: kMemorialColor,
       icon: Icons.church_rounded,
-      stream: _service.watchMemorialPeople(),
+      streamFactory: _service.watchMemorialPeople,
       searchHint: 'ابحث بالاسم…',
       searchText: (p) => '${p.fullName} ${p.field} ${p.biography}',
       nameOf: (p) => p.fullName,

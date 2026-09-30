@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/constants/app_config.dart';
+import '../../core/utils/helpers.dart';
 import '../../models/data_models.dart';
 import '../../models/village_content_models.dart';
 import '../../services/admin_service.dart';
@@ -76,17 +77,36 @@ Future<String?> pickAndUploadImage(BuildContext context,
     final url = await ImageUploadService().uploadImage(bytes);
     if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
     return url;
-  } catch (_) {
+  } catch (e) {
     if (context.mounted) {
       Navigator.of(context, rootNavigator: true).pop();
     }
+    // لا تضييع لصورة بصمتًا: سبب رفض ImgBB يصل كما هو، والمسار يبقى مفتوحًا
+    // للحفظ بلا صورة.
+    AppHelpers.showToast(villageUploadFailureAr(e),
+        isError: true);
     return current;
   }
 }
 
+/// نص الفشل الموحّد لرفع الصور: تُجرد بادئة الاستثناء العربية وتبقى رسالة
+/// الخدمة نفسها («تعذّر رفع الصورة (…) — أعد المحاولة»).
+String villageUploadFailureAr(Object error) {
+  var reason = '$error';
+  if (reason.startsWith('Exception: ')) {
+    reason = reason.substring('Exception: '.length);
+  }
+  return '$reason — يمكنك المتابعة بلا صورة.';
+}
+
+/// نص موحّد يُعرض حين ترفض Firestore الكتابة: لا يدّعي نجاحًا ولا يترك
+/// الأدمن يخمّن ماذا جرى.
+const String kVillageSaveFailedAr =
+    'تعذّر الحفظ — تحقّق من الاتصال ومن صلاحياتك، ثم أعد المحاولة.';
+
 /// قائمة إدارة عامة لعنصر من عناصر محتوى القرية.
 /// النماذج تحفظ بياناتها بنفسها — هنا نتدفّق مع التحديث الفوري للقائمة.
-Future<void> manageVillageContent<T>(
+Future<void> manageVillageContent<T extends VillageContentItem>(
   BuildContext context, {
   required String title,
   required Color accent,
@@ -112,6 +132,43 @@ Future<void> manageVillageContent<T>(
     );
   }
 
+  void tell(String text) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context)
+      ..removeCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(text)));
+  }
+
+  Future<void> confirmRemove(T item) async {
+    final id = item.id;
+    if (id.isEmpty) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('تأكيد الحذف'),
+        content: Text('سيُحذف «${nameOf(item)}» من هذا القسم نهائيًا. '
+            'هل تريد المتابعة؟'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('إلغاء')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('حذف'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await remove(id);
+      tell('تم حذف «${nameOf(item)}»');
+    } catch (_) {
+      tell('تعذّر الحذف — تحقق من الاتصال أو من صلاحياتك.');
+    }
+  }
+
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -123,6 +180,64 @@ Future<void> manageVillageContent<T>(
         stream: stream,
         builder: (context, snap) {
           final items = snap.data ?? const [];
+          final Widget body;
+          if (snap.hasError) {
+            body = _sheetMessage(context,
+                'تعذّر تحميل العناصر — تحقق من الاتصال وأعد فتح الإدارة.');
+          } else if (snap.connectionState == ConnectionState.waiting &&
+              !snap.hasData) {
+            body = const Center(
+                child: CircularProgressIndicator(strokeWidth: 2));
+          } else if (items.isEmpty) {
+            body = _sheetMessage(context, 'لا توجد عناصر بعد — أضف أول عنصر ＋');
+          } else {
+            body = ListView.separated(
+              controller: scrollController,
+              padding: const EdgeInsets.all(12),
+              itemCount: items.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (context, i) {
+                final item = items[i];
+                return Card(
+                  elevation: 0,
+                  margin: EdgeInsets.zero,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    side:
+                        BorderSide(color: accent.withValues(alpha: 0.35)),
+                  ),
+                  child: ListTile(
+                    dense: true,
+                    title: Text(nameOf(item),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w800, fontSize: 13)),
+                    subtitle: (subtitleOf?.call(item) ?? '').isNotEmpty
+                        ? Text(subtitleOf!(item),
+                            maxLines: 1,
+                            style: const TextStyle(fontSize: 11))
+                        : null,
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          tooltip: 'تعديل',
+                          icon: const Icon(Icons.edit_rounded,
+                              size: 17, color: Color(0xFF1565C0)),
+                          onPressed: () => openForm(item),
+                        ),
+                        IconButton(
+                          tooltip: 'حذف',
+                          icon: const Icon(Icons.delete_outline_rounded,
+                              size: 17, color: Colors.red),
+                          onPressed: () => confirmRemove(item),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            );
+          }
           return Column(
             children: [
               Padding(
@@ -151,77 +266,7 @@ Future<void> manageVillageContent<T>(
                 ),
               ),
               const Divider(height: 1),
-              Expanded(
-                child: items.isEmpty
-                    ? Center(
-                        child: Text('لا توجد عناصر بعد — أضف أول عنصر ＋',
-                            style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant)),
-                      )
-                    : ListView.separated(
-                        controller: scrollController,
-                        padding: const EdgeInsets.all(12),
-                        itemCount: items.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 8),
-                        itemBuilder: (context, i) {
-                          final item = items[i];
-                          return Card(
-                            elevation: 0,
-                            margin: EdgeInsets.zero,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                              side: BorderSide(
-                                  color: accent.withValues(alpha: 0.35)),
-                            ),
-                            child: ListTile(
-                              dense: true,
-                              title: Text(nameOf(item),
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w800,
-                                      fontSize: 13)),
-                              subtitle:
-                                  (subtitleOf?.call(item) ?? '').isNotEmpty
-                                      ? Text(subtitleOf!(item),
-                                          maxLines: 1,
-                                          style: const TextStyle(fontSize: 11))
-                                      : null,
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    tooltip: 'تعديل',
-                                    icon: const Icon(Icons.edit_rounded,
-                                        size: 17, color: Color(0xFF1565C0)),
-                                    onPressed: () => openForm(item),
-                                  ),
-                                  IconButton(
-                                    tooltip: 'حذف',
-                                    icon: const Icon(
-                                        Icons.delete_outline_rounded,
-                                        size: 17,
-                                        color: Colors.red),
-                                    onPressed: () async {
-                                      final id = switch (item) {
-                                        final HistoryEra e => e.id,
-                                        final VillageFigure f => f.id,
-                                        final VillageArchivePhoto p => p.id,
-                                        final VillageInstitution n => n.id,
-                                        _ => '',
-                                      };
-                                      if (id.isEmpty) return;
-                                      await remove(id);
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-              ),
+              Expanded(child: body),
             ],
           );
         },
@@ -229,6 +274,42 @@ Future<void> manageVillageContent<T>(
     ),
   );
 }
+
+/// سطر خطأ أحمر داخل النموذج: يظهر حين ترفض Firestore الكتابة أو ينقص
+/// حقل مطلوب، ويبقى النموذج مفتوحًا حتى يُصلح الأدمن السبب ويعيد الحفظ.
+Widget villageFormError(String? message) => message == null
+    ? const SizedBox.shrink()
+    : Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: Row(
+          children: [
+            const Icon(Icons.error_outline_rounded,
+                size: 16, color: Color(0xFFB71C1C)),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFFB71C1C)),
+              ),
+            ),
+          ],
+        ),
+      );
+
+Widget _sheetMessage(BuildContext context, String text) => Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Text(text,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 12.5,
+                color: Theme.of(context).colorScheme.onSurfaceVariant)),
+      ),
+    );
 
 // ═══════════════ أنموذج حقبة تاريخية ═══════════════
 class HistoryEraForm extends StatefulWidget {
@@ -249,6 +330,7 @@ class _HistoryEraFormState extends State<HistoryEraForm> {
   late String _imageUrl = widget.editing?.imageUrl ?? '';
   bool _uploading = false;
   bool _saving = false;
+  String? _error;
 
   @override
   void dispose() {
@@ -261,22 +343,33 @@ class _HistoryEraFormState extends State<HistoryEraForm> {
 
   Future<void> _save() async {
     if (_title.text.trim().isEmpty || _narrative.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('العنوان والسرد مطلوبان'),
-          backgroundColor: Colors.orange));
+      setState(() => _error = 'العنوان والسرد مطلوبان');
       return;
     }
-    setState(() => _saving = true);
-    await VillageContentService().saveEra(HistoryEra(
-      id: widget.editing?.id ?? '',
-      title: _title.text.trim(),
-      years: _years.text.trim(),
-      narrative: _narrative.text.trim(),
-      imageUrl: _imageUrl,
-      sortOrder: int.tryParse(_order.text.trim()) ?? 0,
-      createdAt: widget.editing?.createdAt,
-    ));
-    if (mounted) Navigator.pop(context, true);
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      await VillageContentService().saveEra(HistoryEra(
+        id: widget.editing?.id ?? '',
+        title: _title.text.trim(),
+        years: _years.text.trim(),
+        narrative: _narrative.text.trim(),
+        imageUrl: _imageUrl,
+        sortOrder: int.tryParse(_order.text.trim()) ?? 0,
+        createdAt: widget.editing?.createdAt,
+      ));
+      if (!mounted) return;
+      Navigator.pop(context, true);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('تم الحفظ')));
+    } catch (_) {
+      setState(() {
+        _saving = false;
+        _error = kVillageSaveFailedAr;
+      });
+    }
   }
 
   @override
@@ -313,6 +406,7 @@ class _HistoryEraFormState extends State<HistoryEraForm> {
             ],
           ),
           const SizedBox(height: 14),
+          villageFormError(_error),
           SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
@@ -392,6 +486,7 @@ class _FigureFormState extends State<FigureForm> {
   late String _photoUrl = widget.editing?.photoUrl ?? '';
   bool _uploading = false;
   bool _saving = false;
+  String? _error;
 
   @override
   void dispose() {
@@ -405,23 +500,35 @@ class _FigureFormState extends State<FigureForm> {
 
   Future<void> _save() async {
     if (_name.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('اسم الشخصية مطلوب'), backgroundColor: Colors.orange));
+      setState(() => _error = 'اسم الشخصية مطلوب');
       return;
     }
-    setState(() => _saving = true);
-    await VillageContentService().saveFigure(VillageFigure(
-      id: widget.editing?.id ?? '',
-      name: _name.text.trim(),
-      category: _category,
-      title: _title.text.trim(),
-      era: _era.text.trim(),
-      bio: _bio.text.trim(),
-      photoUrl: _photoUrl,
-      sortOrder: int.tryParse(_order.text.trim()) ?? 0,
-      createdAt: widget.editing?.createdAt,
-    ));
-    if (mounted) Navigator.pop(context, true);
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      await VillageContentService().saveFigure(VillageFigure(
+        id: widget.editing?.id ?? '',
+        name: _name.text.trim(),
+        category: _category,
+        title: _title.text.trim(),
+        era: _era.text.trim(),
+        bio: _bio.text.trim(),
+        photoUrl: _photoUrl,
+        sortOrder: int.tryParse(_order.text.trim()) ?? 0,
+        createdAt: widget.editing?.createdAt,
+      ));
+      if (!mounted) return;
+      Navigator.pop(context, true);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('تم الحفظ')));
+    } catch (_) {
+      setState(() {
+        _saving = false;
+        _error = kVillageSaveFailedAr;
+      });
+    }
   }
 
   @override
@@ -529,6 +636,7 @@ class _FigureFormState extends State<FigureForm> {
             ],
           ),
           const SizedBox(height: 14),
+          villageFormError(_error),
           SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
@@ -563,6 +671,7 @@ class _ArchivePhotoFormState extends State<ArchivePhotoForm> {
   late String _imageUrl = widget.editing?.imageUrl ?? '';
   bool _uploading = false;
   bool _saving = false;
+  String? _error;
 
   @override
   void dispose() {
@@ -575,21 +684,33 @@ class _ArchivePhotoFormState extends State<ArchivePhotoForm> {
 
   Future<void> _save() async {
     if (_title.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('عنوان الصورة مطلوب'), backgroundColor: Colors.orange));
+      setState(() => _error = 'عنوان الصورة مطلوب');
       return;
     }
-    setState(() => _saving = true);
-    await VillageContentService().saveArchivePhoto(VillageArchivePhoto(
-      id: widget.editing?.id ?? '',
-      title: _title.text.trim(),
-      year: _year.text.trim(),
-      description: _description.text.trim(),
-      source: _source.text.trim(),
-      imageUrl: _imageUrl,
-      createdAt: widget.editing?.createdAt,
-    ));
-    if (mounted) Navigator.pop(context, true);
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+        await VillageContentService().saveArchivePhoto(VillageArchivePhoto(
+          id: widget.editing?.id ?? '',
+          title: _title.text.trim(),
+          year: _year.text.trim(),
+          description: _description.text.trim(),
+          source: _source.text.trim(),
+          imageUrl: _imageUrl,
+          createdAt: widget.editing?.createdAt,
+        ));
+      if (!mounted) return;
+      Navigator.pop(context, true);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('تم الحفظ')));
+    } catch (_) {
+      setState(() {
+        _saving = false;
+        _error = kVillageSaveFailedAr;
+      });
+    }
   }
 
   @override
@@ -659,6 +780,7 @@ class _ArchivePhotoFormState extends State<ArchivePhotoForm> {
             ),
           ),
           const SizedBox(height: 14),
+          villageFormError(_error),
           SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
@@ -698,6 +820,7 @@ class _InstitutionFormState extends State<InstitutionForm> {
   late final List<String> _images = [...?widget.editing?.imageUrls];
   bool _uploading = false;
   bool _saving = false;
+  String? _error;
 
   @override
   void dispose() {
@@ -712,24 +835,36 @@ class _InstitutionFormState extends State<InstitutionForm> {
 
   Future<void> _save() async {
     if (_name.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('اسم المنشأة مطلوب'), backgroundColor: Colors.orange));
+      setState(() => _error = 'اسم المنشأة مطلوب');
       return;
     }
-    setState(() => _saving = true);
-    await VillageContentService().saveInstitution(VillageInstitution(
-      id: widget.editing?.id ?? '',
-      name: _name.text.trim(),
-      type: _type,
-      description: _description.text.trim(),
-      location: _location.text.trim(),
-      phone: _phone.text.trim(),
-      workingHours: _hours.text.trim(),
-      imageUrls: _images,
-      sortOrder: int.tryParse(_order.text.trim()) ?? 0,
-      createdAt: widget.editing?.createdAt,
-    ));
-    if (mounted) Navigator.pop(context, true);
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+        await VillageContentService().saveInstitution(VillageInstitution(
+          id: widget.editing?.id ?? '',
+          name: _name.text.trim(),
+          type: _type,
+          description: _description.text.trim(),
+          location: _location.text.trim(),
+          phone: _phone.text.trim(),
+          workingHours: _hours.text.trim(),
+          imageUrls: _images,
+          sortOrder: int.tryParse(_order.text.trim()) ?? 0,
+          createdAt: widget.editing?.createdAt,
+        ));
+      if (!mounted) return;
+      Navigator.pop(context, true);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('تم الحفظ')));
+    } catch (_) {
+      setState(() {
+        _saving = false;
+        _error = kVillageSaveFailedAr;
+      });
+    }
   }
 
   @override
@@ -854,6 +989,7 @@ class _InstitutionFormState extends State<InstitutionForm> {
             ],
           ),
           const SizedBox(height: 14),
+          villageFormError(_error),
           SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
@@ -897,6 +1033,7 @@ class _VillageIntroFormState extends State<VillageIntroForm> {
   final _mapUrl = TextEditingController();
   String _imageUrl = '';
   bool _saving = false;
+  String? _error;
 
   @override
   void initState() {
@@ -940,31 +1077,43 @@ class _VillageIntroFormState extends State<VillageIntroForm> {
 
   Future<void> _save() async {
     if (_name.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('اسم القرية مطلوب'), backgroundColor: Colors.orange));
+      setState(() => _error = 'اسم القرية مطلوب');
       return;
     }
-    setState(() => _saving = true);
-    await VillageInfoService().saveInfo(VillageInfo(
-      id: 'main',
-      name: _name.text.trim(),
-      description: _desc.text.trim(),
-      population: _pop.text.trim(),
-      area: _area.text.trim(),
-      founded: _founded.text.trim(),
-      nameOrigin: _origin.text.trim(),
-      location: _location.text.trim(),
-      administrative: _admin.text.trim(),
-      nature: _nature.text.trim(),
-      famousFor: _famous.text.trim(),
-      mapUrl: _mapUrl.text.trim(),
-      imageUrl: _imageUrl,
-      // الحقول القديمة تُدار من شاشاتها — نحافظ عليها كما هي
-      history: widget.info?.history ?? const [],
-      institutions: widget.info?.institutions ?? const [],
-      archive: widget.info?.archive ?? const [],
-    ));
-    if (mounted) Navigator.pop(context, true);
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+        await VillageInfoService().saveInfo(VillageInfo(
+          id: 'main',
+          name: _name.text.trim(),
+          description: _desc.text.trim(),
+          population: _pop.text.trim(),
+          area: _area.text.trim(),
+          founded: _founded.text.trim(),
+          nameOrigin: _origin.text.trim(),
+          location: _location.text.trim(),
+          administrative: _admin.text.trim(),
+          nature: _nature.text.trim(),
+          famousFor: _famous.text.trim(),
+          mapUrl: _mapUrl.text.trim(),
+          imageUrl: _imageUrl,
+          // الحقول القديمة تُدار من شاشاتها — نحافظ عليها كما هي
+          history: widget.info?.history ?? const [],
+          institutions: widget.info?.institutions ?? const [],
+          archive: widget.info?.archive ?? const [],
+        ));
+      if (!mounted) return;
+      Navigator.pop(context, true);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('تم الحفظ')));
+    } catch (_) {
+      setState(() {
+        _saving = false;
+        _error = kVillageSaveFailedAr;
+      });
+    }
   }
 
   @override
@@ -1083,6 +1232,7 @@ class _VillageIntroFormState extends State<VillageIntroForm> {
                   decoration: vdec('رابط الموقع على خريطة جوجل (اختياري)',
                       label: 'رابط الخريطة')),
               const SizedBox(height: 14),
+              villageFormError(_error),
               SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(

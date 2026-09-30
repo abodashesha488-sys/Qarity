@@ -13,7 +13,7 @@ class ServiceCategory {
 
   static String label(String c) => switch (c) {
         technicians => 'دليل الحرفيين',
-        agricultural => 'خدمات المزارع',
+        agricultural => 'خدمات زراعية',
         educational => 'خدمات تعليمية',
         farmerWorkersEquipment => 'عمال و معدات',
         _ => c,

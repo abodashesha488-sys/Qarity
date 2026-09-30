@@ -22,7 +22,7 @@ class VillageBeforeAfterScreen extends StatelessWidget {
       subtitle: 'أماكن القرية: كيف كانت وكيف أصبحت',
       accent: kBeforeAfterColor,
       icon: Icons.compare_rounded,
-      stream: _service.watchBeforeAfter(),
+      streamFactory: _service.watchBeforeAfter,
       searchHint: 'ابحث عن مكان…',
       searchText: (b) => '${b.location} ${b.description}',
       nameOf: (b) => b.location,

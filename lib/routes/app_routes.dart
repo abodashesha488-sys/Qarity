@@ -75,6 +75,7 @@ import '../features/village/village_notable_people_screen.dart';
 import '../features/village/village_people_screen.dart';
 import '../features/village/village_profile_screen.dart';
 import '../features/weather/weather_detail_screen.dart';
+import '../models/service_provider_model.dart';
 import '../services/admin_service.dart';
 
 /// 🛣️ Qarity App Routes
@@ -142,7 +143,11 @@ static const String marketProducts = '/market';
   static const String completeProfile = '/complete-profile';
   static const String settingsIndex = '/settings';
   static const String notificationsSettings = '/settings/notifications';
-  static const String serviceCategory = '/services/category';
+  /// صفحات مستقلة — كل فئة خدمة لها مسارها الخاص بلا وسائط (مثل بقية صفحات
+  /// الشاشة الرئيسية)، فبوّابة «دليل الخدمات» الجامعة أُلغيت.
+  static const String techniciansDirectory = '/services/technicians';
+  static const String agriculturalServices = '/services/agricultural';
+  static const String educationalServices = '/services/educational';
   static const String farmerServices = '/services/farmer';
   static const String farmerWorkersEquipment = '/services/farmer/workers-equipment';
   static const String farmerAdvisor = '/services/farmer/advisor';
@@ -162,6 +167,15 @@ static const String marketProducts = '/market';
   static const String notificationOpen = '/open';
   static const String weather = '/weather';
   static const String children = '/children';
+
+  /// مسار صفحة الخدمة المستقلة حسب فئة السجل — تُستعمل في إشعارات لوحة
+  /// التحكم حتى يفتح النقر الصفحة الصحيحة بدل بوّابة ملغاة.
+  static String routeForProviderCategory(Object? category) =>
+      switch ('${category ?? ''}') {
+        ServiceCategory.agricultural => agriculturalServices,
+        ServiceCategory.educational => educationalServices,
+        _ => techniciansDirectory,
+      };
 
   static final routes = <String, Widget Function(BuildContext)>{
     splash: (_) => const SplashScreen(),
@@ -219,6 +233,12 @@ obituariesAdd: (_) => const AddObituaryScreen(),
     settingsIndex: (_ ) => const SettingsScreen(),
     notificationsSettings: (_ ) => const NotificationsSettingsScreen(),
     serviceProviderDetail: (_ ) => const ServiceProviderDetailScreen(),
+    techniciansDirectory: (_) =>
+        const ProviderCategoryScreen(category: ServiceCategory.technicians),
+    agriculturalServices: (_) =>
+        const ProviderCategoryScreen(category: ServiceCategory.agricultural),
+    educationalServices: (_) =>
+        const ProviderCategoryScreen(category: ServiceCategory.educational),
     lostItems: (_ ) => const LostItemsScreen(),
     lostItemDetail: (_ ) => const LostItemDetailScreen(),
     farmerServices: (_ ) => const FarmerServicesScreen(),
@@ -289,13 +309,6 @@ obituariesAdd: (_) => const AddObituaryScreen(),
       final index = settings.arguments is int ? settings.arguments as int : 0;
       return _buildSlideRoute(
         (_) => MedicalSectionScreen(index: index),
-        settings,
-      );
-    }
-    if (settings.name == serviceCategory) {
-      final category = settings.arguments as String? ?? 'technicians';
-      return _buildSlideRoute(
-        (_) => ProviderCategoryScreen(category: category),
         settings,
       );
     }

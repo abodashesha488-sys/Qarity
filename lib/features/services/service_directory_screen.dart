@@ -1,7 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -14,106 +13,11 @@ import '../../services/user_service.dart';
 import '../../widgets/edu_kind_mark.dart';
 import '../../widgets/qurity_app_bar.dart';
 
-/// دليل الخدمات — شبكة أزرار لفئات قابلة للتوسّع مستقبلاً.
-/// كل زر يفتح شاشة الفئة الخاصة بها (بحث منسدل + مربّع بحث + مميز/الأكثر تقييماً).
-class ServiceDirectoryScreen extends StatelessWidget {
-  const ServiceDirectoryScreen({super.key});
-
-  static const _categories = [
-    ServiceCategory.technicians,
-    ServiceCategory.agricultural,
-    ServiceCategory.educational,
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: const QurityAppBar(title: 'دليل الخدمات'),
-      body: GridView.count(
-        padding: const EdgeInsets.all(16),
-        crossAxisCount: 2,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        childAspectRatio: 0.98,
-        children: [
-          for (final c in _categories) _CategoryTile(category: c),
-        ],
-      ),
-    );
-  }
-}
-
-class _CategoryTile extends StatelessWidget {
-  const _CategoryTile({required this.category});
-  final String category;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final color = ServiceCategory.color(category);
-    return Card(
-      elevation: 0,
-      color: color.withValues(alpha: 0.07),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: color.withValues(alpha: 0.35)),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: () => Navigator.pushNamed(context, AppRoutes.serviceCategory,
-            arguments: category),
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [
-                    color,
-                    color.withValues(alpha: 0.72),
-                  ]),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                        color: color.withValues(alpha: 0.35),
-                        blurRadius: 12,
-                        offset: const Offset(0, 5)),
-                  ],
-                ),
-                child: Icon(ServiceCategory.icon(category),
-                    color: Colors.white, size: 26),
-              ),
-              const SizedBox(height: 10),
-              Text(ServiceCategory.label(category),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      fontWeight: FontWeight.w900, fontSize: 14, color: color)),
-              const SizedBox(height: 3),
-              Text(
-                switch (category) {
-                  ServiceCategory.technicians => 'كل الحرف والورش الفنية',
-                  ServiceCategory.agricultural => 'آلات وخدمات المزارعين',
-                  _ => 'مدرّسون لكل المراحل والمواد',
-                },
-                maxLines: 2,
-                textAlign: TextAlign.center,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.labelSmall?.copyWith(
-                    fontSize: 10, color: theme.colorScheme.onSurfaceVariant),
-              ),
-            ],
-          ),
-        ),
-      ),
-    ).animate().fadeIn(duration: 250.ms).scale(begin: const Offset(0.94, 0.94));
-  }
-}
-
-// ═══════════ شاشة الفئة: قائمة فئات منسدلة + بحث + مميز/الأكثر تقييماً ═══════════
+/// شاشة فئة في دليل الخدمات — صفحة **مستقلة** لكل فئة (مسارها الخاص في
+/// `AppRoutes`: technicians / agricultural / educational)، تُفتح مباشرة من
+/// الشبكة في الشاشة الرئيسية مثل بقية الصفحات. كانت تُفتح قديمًا عبر بوّابة
+/// «دليل الخدمات» الجامعة، وقد أُلغيت.
+/// المحتوى: مرشّحات الفئة + مربّع بحث + أقسام المميز/الأكثر تقييماً/الكل.
 class ProviderCategoryScreen extends StatefulWidget {
   const ProviderCategoryScreen(
       {super.key, required this.category, this.service});

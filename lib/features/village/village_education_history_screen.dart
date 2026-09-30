@@ -21,7 +21,7 @@ class VillageEducationHistoryScreen extends StatelessWidget {
       subtitle: 'رحلة التعليم في أبودشيشة: مدارس ومعلمون وذكريات',
       accent: kEducationColor,
       icon: Icons.school_rounded,
-      stream: _service.watchEducationHistory(),
+      streamFactory: _service.watchEducationHistory,
       searchText: (e) =>
           '${e.historyOfEducation} ${e.oldSchools.join(' ')} ${e.formerTeachers.join(' ')}',
       nameOf: (e) => e.historyOfEducation.isNotEmpty

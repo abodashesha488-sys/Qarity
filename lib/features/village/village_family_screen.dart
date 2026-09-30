@@ -20,7 +20,7 @@ class VillageFamilyScreen extends StatelessWidget {
       subtitle: 'أصول عائلات أبودشيشة وفروعها وتاريخها',
       accent: kFamilyColor,
       icon: Icons.family_restroom_rounded,
-      stream: _service.watchFamilies(),
+      streamFactory: _service.watchFamilies,
       searchHint: 'ابحث عن عائلة…',
       searchText: (f) =>
           '${f.name} ${f.originHistory} ${f.branches.join(' ')} ${f.residenceArea}',

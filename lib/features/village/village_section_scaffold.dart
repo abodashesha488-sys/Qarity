@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
+import '../../models/village_content_models.dart';
 import '../../widgets/qurity_app_bar.dart';
 import '../../widgets/village_ornament.dart';
 import 'village_content_admin.dart';
@@ -9,24 +10,26 @@ import 'village_content_admin.dart';
 /// ترويسة مزخرفة + بحث (اختياري) + قائمة بطاقات + شريط إدارة للأدمن.
 /// يحلّ حالة الأدمن بنفسه عبر [canManageVillageContent]، فلا تكرّر الشاشات
 /// منطق الصلاحيات.
-class VillageSectionScaffold<T> extends StatefulWidget {
+class VillageSectionScaffold<T extends VillageContentItem> extends StatefulWidget {
   const VillageSectionScaffold({
     super.key,
     required this.title,
     required this.subtitle,
     required this.accent,
     required this.icon,
-    required this.stream,
+    required this.streamFactory,
     required this.cardBuilder,
-    required this.formBuilder,
+    this.formBuilder,
     required this.nameOf,
     required this.remove,
     this.subtitleOf,
     this.searchText,
+    this.acceptsItem,
     this.emptyText = 'لا يوجد محتوى منشور بعد',
     this.searchHint = 'ابحث…',
     this.topBuilder,
     this.manageTitle,
+    this.manageStreamFactory,
     this.headerHeight = 150,
   });
 
@@ -35,14 +38,23 @@ class VillageSectionScaffold<T> extends StatefulWidget {
   final Color accent;
   final IconData icon;
 
-  /// تدفّق العناصر المعروضة (قراءة عامة).
-  final Stream<List<T>> stream;
+  /// مُنشئ تدفّق العناصر المعروضة (قراءة عامة). يُنادى مرة واحدة في `initState`:
+  /// تمرير التدفّق نفسه (أو إنشاءه داخل `build`) كان يعيد الاشتراك في Firestore
+  /// عند كل إعادة بناء — رسائل عشوائية للجودة، وواجهة تفقد بياناتها لحظيًا.
+  final Stream<List<T>> Function() streamFactory;
+
+  /// مُنشئ تدفّق لوحة الإدارة. افتراضيًا نفس [streamFactory]، وتُمرّر هنا
+  /// مجموعة كاملة حين يعرض القسم نسخة مفلترة (الأرشيف مثلاً) حتى لا يفقد
+  /// الأدمن القدرة على تعديل عنصر مخفي عن العامة أو حذفه.
+  final Stream<List<T>> Function()? manageStreamFactory;
 
   /// بطاقة العنصر (تُبنى لكل عنصر بترتيبه).
   final Widget Function(BuildContext ctx, T item, int index) cardBuilder;
 
-  /// نموذج الإضافة/التعديل — يُمرّر `null` عند الإضافة.
-  final Widget Function(BuildContext ctx, T? editing) formBuilder;
+  /// نموذج الإضافة/التعديل (يُمرّر العنصر المُعدَّل، أو `null` عند الإضافة).
+  /// إن كان هذا الحقل `null` لا تظهر لوحة الإدارة أصلًا — للشاشات التي تعرض
+  /// محتوى قسمٍ إدارته في مكان آخر، كـ«خريطة القرية» التي تعرض معالم شاشة المعالم.
+  final Widget Function(BuildContext ctx, T? editing)? formBuilder;
 
   /// اسم العنصر داخل قائمة الإدارة.
   final String Function(T item) nameOf;
@@ -55,6 +67,11 @@ class VillageSectionScaffold<T> extends StatefulWidget {
 
   /// نص بحث داخل العنصر. إن كانت `null` لا يظهر حقل البحث.
   final String Function(T item)? searchText;
+
+  /// عنصر مقبول في العرض العام (شريحة فئة، أو «له إحداثيات» مثلاً).
+  /// التصفية هنا — لا في التدفّق — حتى يبقى التدفّق ثابتًا، ولكي ترى لوحة
+  /// الإدارة كل العناصر بما فيها ما أخفته هذه القاعدة.
+  final bool Function(T item)? acceptsItem;
 
   final String emptyText;
   final String searchHint;
@@ -72,10 +89,12 @@ class VillageSectionScaffold<T> extends StatefulWidget {
       _VillageSectionScaffoldState<T>();
 }
 
-class _VillageSectionScaffoldState<T> extends State<VillageSectionScaffold<T>> {
+class _VillageSectionScaffoldState<T extends VillageContentItem>
+    extends State<VillageSectionScaffold<T>> {
   final TextEditingController _search = TextEditingController();
   String _query = '';
   bool _isAdmin = false;
+  late final Stream<List<T>> _stream = widget.streamFactory();
 
   @override
   void initState() {
@@ -92,24 +111,28 @@ class _VillageSectionScaffoldState<T> extends State<VillageSectionScaffold<T>> {
   }
 
   List<T> _filter(List<T> items) {
+    final accepts = widget.acceptsItem;
+    final base = accepts == null ? items : items.where(accepts).toList();
     final searchText = widget.searchText;
-    if (searchText == null || _query.isEmpty) return items;
+    if (searchText == null || _query.isEmpty) return base;
     final q = _query.toLowerCase();
-    return items
+    return base
         .where((i) => searchText(i).toLowerCase().contains(q))
         .toList(growable: false);
   }
 
   Future<void> _manage() async {
+    final formBuilder = widget.formBuilder;
+    if (formBuilder == null) return;
     await manageVillageContent<T>(
       context,
       title: widget.manageTitle ?? widget.title,
       accent: widget.accent,
-      stream: widget.stream,
+      stream: (widget.manageStreamFactory ?? widget.streamFactory)(),
       nameOf: widget.nameOf,
       subtitleOf: widget.subtitleOf,
       remove: widget.remove,
-      formBuilder: widget.formBuilder,
+      formBuilder: formBuilder,
     );
   }
 
@@ -118,7 +141,7 @@ class _VillageSectionScaffoldState<T> extends State<VillageSectionScaffold<T>> {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: QurityAppBar(title: widget.title),
-      floatingActionButton: _isAdmin
+      floatingActionButton: (_isAdmin && widget.formBuilder != null)
           ? FloatingActionButton.extended(
               heroTag: 'village_manage_${widget.title}',
               backgroundColor: widget.accent,
@@ -171,7 +194,7 @@ class _VillageSectionScaffoldState<T> extends State<VillageSectionScaffold<T>> {
             ),
           Expanded(
             child: StreamBuilder<List<T>>(
-              stream: widget.stream,
+              stream: _stream,
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
                   return _message(theme,

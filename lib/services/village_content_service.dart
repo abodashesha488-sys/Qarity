@@ -5,6 +5,11 @@ import '../models/village_content_models.dart';
 /// خدمة محتوى «تعرف على القرية»: تواريخ، شخصيات، أرشيف صور، منشآت.
 /// قراءة عامة والكتابة للأدمن (بقواعد Firestore)، مع هجرة أحادية
 /// للمحتوى النصي القديم المخزّن داخل وثيقة village_info/main.
+///
+/// كل القراءات تطلب المجموعة كما هي وتُرتّب في الكلاينت (انظر مُرتّبات
+/// `village_content_models.dart`)، لأن Firestore يُسقط من نتائج أي استعلام
+/// مرتَّب الوثائقَ التي لا تملك الحقل المرتَّب عليه — فكانت وثيقة أرشيف بلا
+/// `sortOrder` أو `createdAt` تختفي نهائيًا عن الأدمن بعد أن يضيفها.
 class VillageContentService {
   final FirebaseFirestore _firestore;
   VillageContentService([FirebaseFirestore? firestore])
@@ -17,28 +22,42 @@ class VillageContentService {
           T Function(Map<String, dynamic>, String) f) =>
       s.docs.map((d) => f(d.data(), d.id)).toList();
 
+  Stream<List<T>> _readSorted<T>(
+    String collection,
+    T Function(Map<String, dynamic>, String) from,
+    int Function(T a, T b) compare,
+  ) =>
+      _col(collection)
+          .snapshots()
+          .map((s) => [..._mapDocs(s, from)]..sort(compare));
+
   /// ترتيب الحقبات تصاعديًا (الأقدم أولًا) — نفس ترتيب سلسلة العمد.
-  Stream<List<HistoryEra>> watchEras() => _col('village_history')
-      .orderBy('sortOrder')
-      .snapshots()
-      .map((s) => _mapDocs(s, HistoryEra.fromJson));
+  Stream<List<HistoryEra>> watchEras() => _readSorted(
+        'village_history',
+        HistoryEra.fromJson,
+        (a, b) => villageByOrderThenNewest(
+            a.sortOrder, a.createdAt, b.sortOrder, b.createdAt),
+      );
 
-  Stream<List<VillageFigure>> watchFigures() => _col('village_figures')
-      .orderBy('sortOrder')
-      .snapshots()
-      .map((s) => _mapDocs(s, VillageFigure.fromJson));
+  Stream<List<VillageFigure>> watchFigures() => _readSorted(
+        'village_figures',
+        VillageFigure.fromJson,
+        (a, b) => villageByOrderThenNewest(
+            a.sortOrder, a.createdAt, b.sortOrder, b.createdAt),
+      );
 
-  Stream<List<VillageArchivePhoto>> watchArchivePhotos() =>
-      _col('village_archive_photos')
-          .orderBy('createdAt', descending: true)
-          .snapshots()
-          .map((s) => _mapDocs(s, VillageArchivePhoto.fromJson));
+  Stream<List<VillageArchivePhoto>> watchArchivePhotos() => _readSorted(
+        'village_archive_photos',
+        VillageArchivePhoto.fromJson,
+        (a, b) => villageByNewest(a.createdAt, b.createdAt),
+      );
 
-  Stream<List<VillageInstitution>> watchInstitutions() =>
-      _col('village_institutions')
-          .orderBy('sortOrder')
-          .snapshots()
-          .map((s) => _mapDocs(s, VillageInstitution.fromJson));
+  Stream<List<VillageInstitution>> watchInstitutions() => _readSorted(
+        'village_institutions',
+        VillageInstitution.fromJson,
+        (a, b) => villageByOrderThenNewest(
+            a.sortOrder, a.createdAt, b.sortOrder, b.createdAt),
+      );
 
   Future<void> saveEra(HistoryEra e) =>
       e.id.isEmpty ? _col('village_history').add(e.toJson())

@@ -17,6 +17,15 @@ class VillageArchiveListScreen extends StatelessWidget {
 
   static final VillageExtendedService _service = VillageExtendedService();
 
+  /// مواد هذه الفئة. `approvedOnly` للعرض العام؛ ولوحة الإدارة ترى كل الحالات
+  /// حتى تُراجع مساهمة معلّقة أو تحذفها من نفس الشاشة.
+  Stream<List<VillageArchiveItem>> _items({bool approvedOnly = false}) =>
+      _service.watchArchiveItems().map((all) => all
+          .where((i) =>
+              i.category == category &&
+              (!approvedOnly || i.approvalStatus == 'approved'))
+          .toList(growable: false));
+
   @override
   Widget build(BuildContext context) {
     final color = ArchiveItemCategory.color(category);
@@ -26,8 +35,8 @@ class VillageArchiveListScreen extends StatelessWidget {
       subtitle: 'مواد «$label» الموثّقة من ذاكرة أبودشيشة',
       accent: color,
       icon: ArchiveItemCategory.icon(category),
-      stream: _service.watchApprovedArchiveItems().map((items) =>
-          items.where((i) => i.category == category).toList(growable: false)),
+      streamFactory: () => _items(approvedOnly: true),
+      manageStreamFactory: _items,
       emptyText: 'لا يوجد محتوى في «$label» بعد',
       searchHint: 'ابحث في «$label»…',
       searchText: (i) =>

@@ -96,7 +96,7 @@ exports.sendServiceRequestNotification = functions.firestore
     const title = '🔔 طلب خدمة جديد';
     const body = request.type || 'طلب خدمة';
     await sendToTopic('village_services', title, body, {
-      route: '/services',
+      route: '/services/technicians',
       type: 'service',
       requestId: context.params.requestId,
     });

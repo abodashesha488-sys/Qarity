@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/service_provider_model.dart';
+import '../routes/app_routes.dart';
 import 'notification_inbox_service.dart';
 import 'notification_service.dart';
 import 'remote_push_service.dart';
@@ -29,17 +30,19 @@ class ServiceProviderService {
     }
     final ref = await _col.add(provider.toJson());
     unawaited(RemotePushService.notifyAdmins('service_providers'));
+    // صفحة الفئة **المستقلة** التي أُضيف السجل فيها — لا بوّابة جامعة.
+    final categoryRoute = AppRoutes.routeForProviderCategory(provider.category);
     await NotificationService.showLocalNotification(
       title: '🧰 إضافة في دليل الخدمات',
       body: 'تم إرسال "${provider.name}" للمراجعة',
-      payload: '/services',
+      payload: categoryRoute,
     );
     if (uid != null) {
       unawaited(NotificationInboxService.instance.push(
         userId: uid,
         title: '🧰 تم إرسال طلبك',
         body: 'تم إرسال "${provider.name}" للمراجعة وسيظهر بعد موافقة الإدارة',
-        route: '/services',
+        route: categoryRoute,
         kind: 'info',
       ));
     }

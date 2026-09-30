@@ -25,11 +25,6 @@ class _VillageDigitalArchiveScreenState
   static final VillageExtendedService _service = VillageExtendedService();
   String _category = '';
 
-  Stream<List<VillageArchiveItem>> _stream() =>
-      _service.watchApprovedArchiveItems().map((items) => _category.isEmpty
-          ? items
-          : items.where((i) => i.category == _category).toList());
-
   @override
   Widget build(BuildContext context) {
     return VillageSectionScaffold<VillageArchiveItem>(
@@ -37,7 +32,10 @@ class _VillageDigitalArchiveScreenState
       subtitle: 'ذاكرة أبودشيشة محفوظة: صور ووثائق وفيديو وصوت',
       accent: kArchiveColor,
       icon: Icons.archive_rounded,
-      stream: _stream(),
+      streamFactory: _service.watchApprovedArchiveItems,
+      acceptsItem: (i) => _category.isEmpty || i.category == _category,
+      // لوحة الإدارة ترى كل المواد بكل حالاتها، لا المعتمدة المرشّحة للعرض.
+      manageStreamFactory: _service.watchAllArchiveItems,
       emptyText: 'الأرشيف فارغ — أضف أول عنصر من زر الإدارة ＋',
       searchHint: 'ابحث في الأرشيف…',
       searchText: (i) =>

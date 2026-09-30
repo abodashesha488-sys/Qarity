@@ -27,16 +27,14 @@ class VillageMapScreen extends StatelessWidget {
       subtitle: 'معالم أبودشيشة على الخريطة — اضغط للفتح في خرائط جوجل',
       accent: kMapColor,
       icon: Icons.map_rounded,
-      stream: _service.watchLandmarks().map((items) =>
-          items.where((l) => l.mapLocation.isNotEmpty).toList(growable: false)),
+      streamFactory: _service.watchLandmarks,
+      acceptsItem: (l) => l.mapLocation.isNotEmpty,
       emptyText: 'لا توجد معالم مرتبطة بالخريطة بعد',
       searchHint: 'ابحث عن معلم…',
       searchText: (l) => '${l.name} ${l.location}',
       nameOf: (l) => l.name,
       subtitleOf: (l) => l.location,
       remove: (id) => _service.deleteLandmark(id),
-      formBuilder: (ctx, editing) =>
-          throw UnsupportedError('إدارة المعالم تتم من شاشة المعالم'),
       cardBuilder: (ctx, l, i) => VillageInfoCard(
         accent: kMapColor,
         title: l.name,

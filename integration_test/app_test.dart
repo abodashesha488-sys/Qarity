@@ -115,7 +115,9 @@ void main() {
       _Entry(AppRoutes.marketSellerReviews, <String, String>{'name': 'بائع', 'phone': '123'}),
       _Entry(AppRoutes.marketSellerGallery, <String, String>{'name': 'بائع', 'sellerId': ''}),
       
-      _Entry(AppRoutes.serviceCategory, 'technicians'),
+      _Entry(AppRoutes.techniciansDirectory),
+      _Entry(AppRoutes.agriculturalServices),
+      _Entry(AppRoutes.educationalServices),
       _Entry(AppRoutes.serviceProviderDetail,
           const ServiceProvider(id: 'sp1', category: 'technicians', name: 'ورشة', specialty: 'نجارة')),
       _Entry(AppRoutes.emergencyContacts),

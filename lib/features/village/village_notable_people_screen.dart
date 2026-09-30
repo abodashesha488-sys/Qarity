@@ -20,7 +20,7 @@ class VillageNotablePeopleScreen extends StatelessWidget {
       subtitle: 'رموز أبودشيشة ورجالها ونساؤها المؤثرون',
       accent: kNotableColor,
       icon: Icons.workspace_premium_rounded,
-      stream: _service.watchNotablePeople(),
+      streamFactory: _service.watchNotablePeople,
       searchHint: 'ابحث عن شخصية…',
       searchText: (p) => '${p.fullName} ${p.field} ${p.biography}',
       nameOf: (p) => p.fullName,

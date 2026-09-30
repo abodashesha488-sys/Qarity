@@ -5,6 +5,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/utils/firebase_ts.dart';
 import '../../core/utils/helpers.dart';
 import '../../models/medical_models.dart';
+import '../../models/service_provider_model.dart';
 import '../../routes/app_routes.dart';
 import '../../services/admin_service.dart';
 import '../../widgets/qurity_app_bar.dart';
@@ -273,6 +274,10 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
     if (key == 'featuredUntil') {
       final d = tsToDateTime(value);
       return d == null ? 'غير محدد' : 'ينتهي في ${AppHelpers.formatDate(d)}';
+    }
+    // تصنيف سجلات دليل الخدمات = الصفحة التي يظهر فيها السجل.
+    if (key == 'category' && value is String) {
+      return ServiceCategory.label(value);
     }
     if (value is bool) return value ? 'نعم' : 'لا';
     if (value is List) {

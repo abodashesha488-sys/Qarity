@@ -630,7 +630,11 @@ class _ReviewCard extends StatelessWidget {
         'forum_posts' => 'منشور في المندرة',
         'seller_requests' => 'طلب تحوّل إلى بائع',
         'phone_directory' => 'رقم في دليل الهاتف',
-        'service_providers' => 'سجل في دليل الخدمات',
+        'service_providers' => switch ('${item['category'] ?? ''}') {
+            'agricultural' => 'سجل في صفحة خدمات زراعية',
+            'educational' => 'سجل في صفحة خدمات تعليمية',
+            _ => 'سجل في صفحة دليل الحرفيين',
+          },
         'lost_items' => 'إعلان مفقودات',
         'medical_center_clinics' => 'عيادة المركز الطبي الخيري',
         'village_clinics' => 'عيادة من الخدمات الطبية',

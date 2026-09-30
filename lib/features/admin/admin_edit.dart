@@ -235,8 +235,9 @@ class _AdminEditScreenState extends State<AdminEditScreen> {
           _FieldSpec('name',
               isEdu ? 'اسم المدرّس / اسم المدرسة' : 'الاسم / اسم الورشة',
               required: true),
-          const _FieldSpec(
-              'category', 'الفئة (technicians/agricultural/educational)'),
+          // الفئة تحسم **أي صفحة مستقلة** يظهر فيها السجل.
+          const _FieldSpec('category',
+              'الصفحة (technicians = دليل الحرفيين / agricultural = خدمات زراعية / educational = خدمات تعليمية)'),
           if (isEdu) ...[
             const _FieldSpec('providerKind', 'الصفة (مدرس / مدرسة)'),
             const _FieldSpec('eduTypes', 'أنواع التعليم (تعليم عام، أزهري، خاص)',

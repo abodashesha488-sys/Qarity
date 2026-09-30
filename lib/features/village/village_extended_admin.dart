@@ -99,6 +99,7 @@ class _FamilyFormState extends State<FamilyForm> {
   String _category = 'notable';
   String _imageUrl = '';
   bool _saving = false;
+  String? _error;
   bool _uploading = false;
 
   @override
@@ -141,8 +142,14 @@ class _FamilyFormState extends State<FamilyForm> {
   }
 
   Future<void> _save() async {
-    if (_name.text.trim().isEmpty) return;
-    setState(() => _saving = true);
+    if (_name.text.trim().isEmpty) {
+      setState(() => _error = 'الحقل المعلَّم بـ * ضروري — اكتبه قبل الحفظ.');
+      return;
+    }
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
     final e = widget.editing;
     try {
       await VillageExtendedService().saveFamily(VillageFamily(
@@ -165,7 +172,12 @@ class _FamilyFormState extends State<FamilyForm> {
             .showSnackBar(const SnackBar(content: Text('تم الحفظ')));
       }
     } catch (_) {
-      if (mounted) setState(() => _saving = false);
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _error = kVillageSaveFailedAr;
+        });
+      }
     }
   }
 
@@ -226,6 +238,7 @@ class _FamilyFormState extends State<FamilyForm> {
         _ImageUploadField(
             url: _imageUrl, uploading: _uploading, onPick: _pickImage),
         const SizedBox(height: 14),
+        villageFormError(_error),
         SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
@@ -273,6 +286,7 @@ class _NotablePersonFormState extends State<NotablePersonForm> {
   String _category = 'other';
   String _photoUrl = '';
   bool _saving = false;
+  String? _error;
   bool _uploading = false;
 
   @override
@@ -309,8 +323,14 @@ class _NotablePersonFormState extends State<NotablePersonForm> {
   }
 
   Future<void> _save() async {
-    if (_name.text.trim().isEmpty) return;
-    setState(() => _saving = true);
+    if (_name.text.trim().isEmpty) {
+      setState(() => _error = 'الحقل المعلَّم بـ * ضروري — اكتبه قبل الحفظ.');
+      return;
+    }
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
     final e = widget.editing;
     try {
       await VillageExtendedService().saveNotablePerson(VillageNotablePerson(
@@ -334,7 +354,12 @@ class _NotablePersonFormState extends State<NotablePersonForm> {
             .showSnackBar(const SnackBar(content: Text('تم الحفظ')));
       }
     } catch (_) {
-      if (mounted) setState(() => _saving = false);
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _error = kVillageSaveFailedAr;
+        });
+      }
     }
   }
 
@@ -381,6 +406,7 @@ class _NotablePersonFormState extends State<NotablePersonForm> {
             onPick: _pickImage,
             label: 'صورة شخصية'),
         const SizedBox(height: 14),
+        villageFormError(_error),
         SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
@@ -429,6 +455,7 @@ class _MemorialPersonFormState extends State<MemorialPersonForm> {
   String _photoUrl = '';
   DateTime? _dateOfDeath;
   bool _saving = false;
+  String? _error;
   bool _uploading = false;
 
   @override
@@ -476,8 +503,14 @@ class _MemorialPersonFormState extends State<MemorialPersonForm> {
   }
 
   Future<void> _save() async {
-    if (_name.text.trim().isEmpty) return;
-    setState(() => _saving = true);
+    if (_name.text.trim().isEmpty) {
+      setState(() => _error = 'الحقل المعلَّم بـ * ضروري — اكتبه قبل الحفظ.');
+      return;
+    }
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
     final e = widget.editing;
     try {
       await VillageExtendedService().saveMemorialPerson(VillageMemorialPerson(
@@ -501,7 +534,12 @@ class _MemorialPersonFormState extends State<MemorialPersonForm> {
             .showSnackBar(const SnackBar(content: Text('تم الحفظ')));
       }
     } catch (_) {
-      if (mounted) setState(() => _saving = false);
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _error = kVillageSaveFailedAr;
+        });
+      }
     }
   }
 
@@ -568,6 +606,7 @@ class _MemorialPersonFormState extends State<MemorialPersonForm> {
             onPick: _pickImage,
             label: 'صورة شخصية'),
         const SizedBox(height: 14),
+        villageFormError(_error),
         SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
@@ -616,6 +655,7 @@ class _HeritageFormState extends State<HeritageForm> {
   String _category = 'customs';
   String _imageUrl = '';
   bool _saving = false;
+  String? _error;
   bool _uploading = false;
 
   @override
@@ -656,8 +696,14 @@ class _HeritageFormState extends State<HeritageForm> {
   }
 
   Future<void> _save() async {
-    if (_title.text.trim().isEmpty) return;
-    setState(() => _saving = true);
+    if (_title.text.trim().isEmpty) {
+      setState(() => _error = 'الحقل المعلَّم بـ * ضروري — اكتبه قبل الحفظ.');
+      return;
+    }
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
     final e = widget.editing;
     try {
       await VillageExtendedService().saveHeritage(VillageHeritage(
@@ -681,7 +727,12 @@ class _HeritageFormState extends State<HeritageForm> {
             .showSnackBar(const SnackBar(content: Text('تم الحفظ')));
       }
     } catch (_) {
-      if (mounted) setState(() => _saving = false);
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _error = kVillageSaveFailedAr;
+        });
+      }
     }
   }
 
@@ -740,6 +791,7 @@ class _HeritageFormState extends State<HeritageForm> {
         _ImageUploadField(
             url: _imageUrl, uploading: _uploading, onPick: _pickImage),
         const SizedBox(height: 14),
+        villageFormError(_error),
         SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
@@ -788,6 +840,7 @@ class _LandmarkFormState extends State<LandmarkForm> {
   String _historicalImageUrl = '';
   String _currentImageUrl = '';
   bool _saving = false;
+  String? _error;
   bool _uploading = false;
 
   @override
@@ -838,8 +891,14 @@ class _LandmarkFormState extends State<LandmarkForm> {
   }
 
   Future<void> _save() async {
-    if (_name.text.trim().isEmpty) return;
-    setState(() => _saving = true);
+    if (_name.text.trim().isEmpty) {
+      setState(() => _error = 'الحقل المعلَّم بـ * ضروري — اكتبه قبل الحفظ.');
+      return;
+    }
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
     final e = widget.editing;
     try {
       await VillageExtendedService().saveLandmark(VillageLandmark(
@@ -867,7 +926,12 @@ class _LandmarkFormState extends State<LandmarkForm> {
             .showSnackBar(const SnackBar(content: Text('تم الحفظ')));
       }
     } catch (_) {
-      if (mounted) setState(() => _saving = false);
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _error = kVillageSaveFailedAr;
+        });
+      }
     }
   }
 
@@ -938,6 +1002,7 @@ class _LandmarkFormState extends State<LandmarkForm> {
             label: 'صورة حديثة',
             onPick: () => _pickImage(false)),
         const SizedBox(height: 14),
+        villageFormError(_error),
         SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
@@ -976,6 +1041,7 @@ class _BeforeAfterFormState extends State<BeforeAfterForm> {
   String _historicalImage = '';
   String _currentImage = '';
   bool _saving = false;
+  String? _error;
   bool _uploading = false;
 
   @override
@@ -1025,7 +1091,10 @@ class _BeforeAfterFormState extends State<BeforeAfterForm> {
 
   Future<void> _save() async {
     final e = widget.editing;
-    setState(() => _saving = true);
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
     try {
       await VillageExtendedService().saveBeforeAfter(VillageBeforeAfter(
         id: e?.id ?? '',
@@ -1045,7 +1114,12 @@ class _BeforeAfterFormState extends State<BeforeAfterForm> {
             .showSnackBar(const SnackBar(content: Text('تم الحفظ')));
       }
     } catch (_) {
-      if (mounted) setState(() => _saving = false);
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _error = kVillageSaveFailedAr;
+        });
+      }
     }
   }
 
@@ -1099,6 +1173,7 @@ class _BeforeAfterFormState extends State<BeforeAfterForm> {
             keyboardType: TextInputType.number,
             decoration: vdec('0', label: 'الترتيب')),
         const SizedBox(height: 14),
+        villageFormError(_error),
         SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
@@ -1138,6 +1213,7 @@ class _AgricultureHistoryFormState extends State<AgricultureHistoryForm> {
   final _order = TextEditingController(text: '0');
   String _imageUrl = '';
   bool _saving = false;
+  String? _error;
   bool _uploading = false;
 
   @override
@@ -1183,7 +1259,10 @@ class _AgricultureHistoryFormState extends State<AgricultureHistoryForm> {
 
   Future<void> _save() async {
     final e = widget.editing;
-    setState(() => _saving = true);
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
     try {
       await VillageExtendedService()
           .saveAgricultureHistory(VillageAgricultureHistory(
@@ -1205,7 +1284,12 @@ class _AgricultureHistoryFormState extends State<AgricultureHistoryForm> {
             .showSnackBar(const SnackBar(content: Text('تم الحفظ')));
       }
     } catch (_) {
-      if (mounted) setState(() => _saving = false);
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _error = kVillageSaveFailedAr;
+        });
+      }
     }
   }
 
@@ -1256,6 +1340,7 @@ class _AgricultureHistoryFormState extends State<AgricultureHistoryForm> {
         const SizedBox(height: 10),
         _ImageUploadField(url: _imageUrl, uploading: _uploading, onPick: _pick),
         const SizedBox(height: 14),
+        villageFormError(_error),
         SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
@@ -1295,6 +1380,7 @@ class _EducationHistoryFormState extends State<EducationHistoryForm> {
   final _sources = TextEditingController();
   final _order = TextEditingController(text: '0');
   bool _saving = false;
+  String? _error;
 
   @override
   void initState() {
@@ -1329,7 +1415,10 @@ class _EducationHistoryFormState extends State<EducationHistoryForm> {
 
   Future<void> _save() async {
     final e = widget.editing;
-    setState(() => _saving = true);
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
     try {
       await VillageExtendedService()
           .saveEducationHistory(VillageEducationHistory(
@@ -1351,7 +1440,12 @@ class _EducationHistoryFormState extends State<EducationHistoryForm> {
             .showSnackBar(const SnackBar(content: Text('تم الحفظ')));
       }
     } catch (_) {
-      if (mounted) setState(() => _saving = false);
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _error = kVillageSaveFailedAr;
+        });
+      }
     }
   }
 
@@ -1408,6 +1502,7 @@ class _EducationHistoryFormState extends State<EducationHistoryForm> {
             keyboardType: TextInputType.number,
             decoration: vdec('0', label: 'الترتيب')),
         const SizedBox(height: 14),
+        villageFormError(_error),
         SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
@@ -1447,6 +1542,7 @@ class _DevelopmentTimelineFormState extends State<DevelopmentTimelineForm> {
   String _beforeImage = '';
   String _afterImage = '';
   bool _saving = false;
+  String? _error;
   bool _uploading = false;
 
   @override
@@ -1496,7 +1592,10 @@ class _DevelopmentTimelineFormState extends State<DevelopmentTimelineForm> {
 
   Future<void> _save() async {
     final e = widget.editing;
-    setState(() => _saving = true);
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
     try {
       await VillageExtendedService()
           .saveDevelopmentTimeline(VillageDevelopmentTimeline(
@@ -1518,7 +1617,12 @@ class _DevelopmentTimelineFormState extends State<DevelopmentTimelineForm> {
             .showSnackBar(const SnackBar(content: Text('تم الحفظ')));
       }
     } catch (_) {
-      if (mounted) setState(() => _saving = false);
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _error = kVillageSaveFailedAr;
+        });
+      }
     }
   }
 
@@ -1572,6 +1676,7 @@ class _DevelopmentTimelineFormState extends State<DevelopmentTimelineForm> {
             label: 'صورة ما بعد',
             onPick: () => _pick(false)),
         const SizedBox(height: 14),
+        villageFormError(_error),
         SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
@@ -1609,6 +1714,7 @@ class _AchievementFormState extends State<AchievementForm> {
   final _order = TextEditingController(text: '0');
   String _image = '';
   bool _saving = false;
+  String? _error;
   bool _uploading = false;
 
   @override
@@ -1650,7 +1756,10 @@ class _AchievementFormState extends State<AchievementForm> {
 
   Future<void> _save() async {
     final e = widget.editing;
-    setState(() => _saving = true);
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
     try {
       await VillageExtendedService().saveAchievement(VillageAchievement(
         id: e?.id ?? '',
@@ -1670,7 +1779,12 @@ class _AchievementFormState extends State<AchievementForm> {
             .showSnackBar(const SnackBar(content: Text('تم الحفظ')));
       }
     } catch (_) {
-      if (mounted) setState(() => _saving = false);
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _error = kVillageSaveFailedAr;
+        });
+      }
     }
   }
 
@@ -1711,6 +1825,7 @@ class _AchievementFormState extends State<AchievementForm> {
         const SizedBox(height: 10),
         _ImageUploadField(url: _image, uploading: _uploading, onPick: _pick),
         const SizedBox(height: 14),
+        villageFormError(_error),
         SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
@@ -1766,6 +1881,7 @@ class _ArchiveItemFormState extends State<ArchiveItemForm> {
   String _category = ArchiveItemCategory.photos;
   String _imageUrl = '';
   bool _saving = false;
+  String? _error;
   bool _uploading = false;
 
   VillageArchiveItem? get _src =>
@@ -1824,7 +1940,10 @@ class _ArchiveItemFormState extends State<ArchiveItemForm> {
 
   Future<void> _save() async {
     final e = _src;
-    setState(() => _saving = true);
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
     try {
       await VillageExtendedService().saveArchiveItem(VillageArchiveItem(
         id: e?.id ?? '',
@@ -1851,7 +1970,12 @@ class _ArchiveItemFormState extends State<ArchiveItemForm> {
             .showSnackBar(const SnackBar(content: Text('تم الحفظ')));
       }
     } catch (_) {
-      if (mounted) setState(() => _saving = false);
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _error = kVillageSaveFailedAr;
+        });
+      }
     }
   }
 
@@ -1944,6 +2068,7 @@ class _ArchiveItemFormState extends State<ArchiveItemForm> {
             keyboardType: TextInputType.number,
             decoration: vdec('0', label: 'الترتيب')),
         const SizedBox(height: 14),
+        villageFormError(_error),
         SizedBox(
             width: double.infinity,
             child: FilledButton.icon(

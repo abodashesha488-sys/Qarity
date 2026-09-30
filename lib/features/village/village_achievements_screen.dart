@@ -20,7 +20,7 @@ class VillageAchievementsScreen extends StatelessWidget {
       subtitle: 'إنجازات وأمجاد أبودشيشة التي يفتخر بها أهلها',
       accent: kAchievementColor,
       icon: Icons.emoji_events_rounded,
-      stream: _service.watchAchievements(),
+      streamFactory: _service.watchAchievements,
       searchHint: 'ابحث في الإنجازات…',
       searchText: (a) =>
           '${a.title} ${a.description} ${a.relatedPeople.join(' ')}',

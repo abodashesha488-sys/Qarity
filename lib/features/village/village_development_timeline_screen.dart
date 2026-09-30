@@ -21,7 +21,7 @@ class VillageDevelopmentTimelineScreen extends StatelessWidget {
       subtitle: 'محطات تطوّر أبودشيشة: مشاريع ومرافق وتغيّرات',
       accent: kDevelopmentColor,
       icon: Icons.timeline_rounded,
-      stream: _service.watchDevelopmentTimeline(),
+      streamFactory: _service.watchDevelopmentTimeline,
       searchHint: 'ابحث في المحطات…',
       searchText: (d) => '${d.title} ${d.description} ${d.relatedProject}',
       nameOf: (d) => d.title,

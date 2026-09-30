@@ -901,8 +901,8 @@ class ModernServiceGrid extends StatelessWidget {
     _ServiceItem('مندرة القرية', AppRoutes.forumPosts, 'assets/images/mandra.jpg'),
     _ServiceItem('الخدمات الطبية', AppRoutes.medical, 'assets/images/doctor.jpg'),
     _ServiceItem('دليل الهاتف', AppRoutes.phoneDirectory, 'assets/images/telphone.jpg'),
-    _ServiceItem('دليل الحرفيين', AppRoutes.serviceCategory, 'assets/images/herafeen.jpg', arguments: 'technicians'),
-    _ServiceItem('خدمات تعليمية', AppRoutes.serviceCategory, 'assets/images/tetcher.jpg', arguments: 'educational'),
+    _ServiceItem('دليل الحرفيين', AppRoutes.techniciansDirectory, 'assets/images/herafeen.jpg'),
+    _ServiceItem('خدمات تعليمية', AppRoutes.educationalServices, 'assets/images/tetcher.jpg'),
     _ServiceItem('خدمات المزارع', AppRoutes.farmerServices, 'assets/images/farmer.jpg'),
     _ServiceItem('المناسبات', AppRoutes.occasionsList, 'assets/images/festefal.jpg'),
     _ServiceItem('المفقودات', AppRoutes.lostItems, 'assets/images/mafkodat2.jpg'),
@@ -946,7 +946,7 @@ class ModernServiceGrid extends StatelessWidget {
         color: theme.colorScheme.surface,
         child: InkWell(
           borderRadius: radius,
-          onTap: () => Navigator.pushNamed(context, service.route, arguments: service.arguments),
+          onTap: () => Navigator.pushNamed(context, service.route),
           child: Image.asset(service.image,
               width: double.infinity,
               height: double.infinity,
@@ -963,8 +963,7 @@ class _ServiceItem {
   final String title;
   final String route;
   final String image;
-  final Object? arguments;
-  const _ServiceItem(this.title, this.route, this.image, {this.arguments});
+  const _ServiceItem(this.title, this.route, this.image);
 }
 
 // ═══════════════ ساعة التوقيت المحلي للقرية (تحت التاريخ) ═══════════════

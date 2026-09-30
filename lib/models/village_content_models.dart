@@ -3,8 +3,55 @@ import 'package:flutter/material.dart';
 
 import '../core/utils/firebase_ts.dart';
 
+// ═══════════════ عقد مشترك للعناصر القابلة للإدارة ═══════════════
+//
+// كل نماذج محتوى القرية تملك معرّف وثيقة. لوحة الإدارة داخل كل قسم تعرض قائمة
+// العناصر وتحذفها عبر هذا العقد، فالحذف يعمل لكل الأقسام بلا استثناء — بدل
+// مفتاح أنواع كان يعرف أربعة نماذج فقط ويُبقي بقية الأزرار بلا أثر.
+abstract class VillageContentItem {
+  String get id;
+}
+
+// ═══════════════ مُرتّبات مشتركة لمجموعات محتوى القرية ═══════════════
+//
+// كل قراءات محتوى «تعرّف على القرية» تطلب المجموعة كما هي وتُرتّب هنا، لأن
+// Firestore يُسقط من نتائج أي استعلام مرتَّب الوثائقَ التي لا تملك الحقل
+// المرتَّب عليه — فالوثيقة التي بلا `sortOrder` تختفي عن الأدمن بعد أن يضيفها.
+
+/// `sortOrder` تصاعديًا ثم الأحدث إنشاءً.
+int villageByOrderThenNewest(
+  int aOrder,
+  DateTime? aCreated,
+  int bOrder,
+  DateTime? bCreated,
+) {
+  final o = aOrder.compareTo(bOrder);
+  if (o != 0) return o;
+  if (aCreated == null || bCreated == null) return 0;
+  return bCreated.compareTo(aCreated);
+}
+
+/// للمجموعات التي بلا حقل ترتيب (الشخصيات): أبجديًا ثم الأحدث.
+int villageByNameThenNewest(
+  String aName,
+  DateTime? aCreated,
+  String bName,
+  DateTime? bCreated,
+) {
+  final n = aName.compareTo(bName);
+  if (n != 0) return n;
+  return villageByNewest(aCreated, bCreated);
+}
+
+/// الأحدث إنشاءً أولًا — للمجموعات التي تُعرض بالزمن وحده (الأرشيف، المساهمات).
+int villageByNewest(DateTime? aCreated, DateTime? bCreated) {
+  if (aCreated == null || bCreated == null) return 0;
+  return bCreated.compareTo(aCreated);
+}
+
 // ═══════════════ حقبة تاريخية (village_history) ═══════════════
-class HistoryEra {
+class HistoryEra implements VillageContentItem {
+  @override
   final String id;
   final String title;
   final String years;
@@ -99,7 +146,8 @@ class FigureCategory {
       };
 }
 
-class VillageFigure {
+class VillageFigure implements VillageContentItem {
+  @override
   final String id;
   final String name;
   final String category;
@@ -162,7 +210,8 @@ class VillageFigure {
 }
 
 // ═══════════════ صور ووثائق الأرشيف (village_archive_photos) ═══════════════
-class VillageArchivePhoto {
+class VillageArchivePhoto implements VillageContentItem {
+  @override
   final String id;
   final String title;
   final String year;
@@ -264,7 +313,8 @@ class FamilyCategory {
       };
 }
 
-class VillageFamily {
+class VillageFamily implements VillageContentItem {
+  @override
   final String id;
   final String name;
   final String category;
@@ -344,7 +394,8 @@ class VillageFamily {
   String get imageUrl => imageUrls.isNotEmpty ? imageUrls.first : '';
 }
 
-class VillageNotablePerson {
+class VillageNotablePerson implements VillageContentItem {
+  @override
   final String id;
   final String fullName;
   final String photoUrl;
@@ -428,7 +479,8 @@ class VillageNotablePerson {
       );
 }
 
-class VillageMemorialPerson {
+class VillageMemorialPerson implements VillageContentItem {
+  @override
   final String id;
   final String fullName;
   final String photoUrl;
@@ -513,7 +565,8 @@ class VillageMemorialPerson {
       );
 }
 
-class VillageHeritage {
+class VillageHeritage implements VillageContentItem {
+  @override
   final String id;
   final String title;
   final String category;
@@ -595,7 +648,8 @@ class VillageHeritage {
       );
 }
 
-class VillageLandmark {
+class VillageLandmark implements VillageContentItem {
+  @override
   final String id;
   final String name;
   final String category;
@@ -692,7 +746,8 @@ class VillageLandmark {
       );
 }
 
-class VillageBeforeAfter {
+class VillageBeforeAfter implements VillageContentItem {
+  @override
   final String id;
   final String historicalImage;
   final String currentImage;
@@ -759,7 +814,8 @@ class VillageBeforeAfter {
       );
 }
 
-class VillageAgricultureHistory {
+class VillageAgricultureHistory implements VillageContentItem {
+  @override
   final String id;
   final String crop;
   final String agriculturalArea;
@@ -832,7 +888,8 @@ class VillageAgricultureHistory {
       );
 }
 
-class VillageEducationHistory {
+class VillageEducationHistory implements VillageContentItem {
+  @override
   final String id;
   final String historyOfEducation;
   final List<String> oldSchools;
@@ -914,7 +971,8 @@ class VillageEducationHistory {
       );
 }
 
-class VillageDevelopmentTimeline {
+class VillageDevelopmentTimeline implements VillageContentItem {
+  @override
   final String id;
   final String date;
   final String title;
@@ -988,7 +1046,8 @@ class VillageDevelopmentTimeline {
       );
 }
 
-class VillageAchievement {
+class VillageAchievement implements VillageContentItem {
+  @override
   final String id;
   final String date;
   final String title;
@@ -1056,7 +1115,8 @@ class VillageAchievement {
       );
 }
 
-class VillageArchiveItem {
+class VillageArchiveItem implements VillageContentItem {
+  @override
   final String id;
   final String category;
   final String title;
@@ -1281,7 +1341,8 @@ class HeritageCategory {
       };
 }
 
-class VillageContribution {
+class VillageContribution implements VillageContentItem {
+  @override
   final String id;
   final String userId;
   final String userName;
@@ -1437,7 +1498,8 @@ class InstitutionType {
   }
 }
 
-class VillageInstitution {
+class VillageInstitution implements VillageContentItem {
+  @override
   final String id;
   final String name;
   final String type;

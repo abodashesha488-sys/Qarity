@@ -26,7 +26,8 @@ class _VillageHeritageScreenState extends State<VillageHeritageScreen> {
       subtitle: 'عادات وأكلات وأمثال وحرف من تراث القرية',
       accent: kHeritageColor,
       icon: Icons.diversity_3_rounded,
-      stream: _heritageStream(),
+      streamFactory: _service.watchHeritage,
+      acceptsItem: (h) => _category.isEmpty || h.category == _category,
       searchHint: 'ابحث في التراث…',
       searchText: (h) => '${h.title} ${h.description} ${h.contributor}',
       nameOf: (h) => h.title,
@@ -59,11 +60,6 @@ class _VillageHeritageScreenState extends State<VillageHeritageScreen> {
       ),
     );
   }
-
-  Stream<List<VillageHeritage>> _heritageStream() =>
-      _service.watchHeritage().map((items) => _category.isEmpty
-          ? items
-          : items.where((h) => h.category == _category).toList());
 
   Widget _catChip(String value, String? unused) {
     final selected = _category == value;

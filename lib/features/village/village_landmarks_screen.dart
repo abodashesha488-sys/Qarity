@@ -22,7 +22,7 @@ class VillageLandmarksScreen extends StatelessWidget {
       subtitle: 'مساجد ومدارس ومرافق وأماكن تاريخية في أبودشيشة',
       accent: kLandmarkColor,
       icon: Icons.landscape_rounded,
-      stream: _service.watchLandmarks(),
+      streamFactory: _service.watchLandmarks,
       searchHint: 'ابحث عن معلم…',
       searchText: (l) => '${l.name} ${l.description} ${l.location}',
       nameOf: (l) => l.name,

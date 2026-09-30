@@ -22,12 +22,13 @@ const List<PromoPlacement> kPromoPlacements = [
   PromoPlacement('village_history', 'تعرف على القرية — التاريخ', 'التراث'),
   PromoPlacement('village_archive', 'تعرف على القرية — الأرشيف', 'التراث'),
   PromoPlacement('village_institutions', 'تعرف على القرية — المنشآت', 'التراث'),
-  PromoPlacement('services', 'دليل الخدمات — الصفحة الرئيسية', 'دليل الخدمات'),
-  PromoPlacement('svc_technicians', 'دليل الخدمات — الفنيون', 'دليل الخدمات'),
-  PromoPlacement('svc_agricultural', 'دليل الخدمات — خدمات زراعية', 'دليل الخدمات'),
-  PromoPlacement('svc_educational', 'دليل الخدمات — خدمات تعليمية', 'دليل الخدمات'),
-  PromoPlacement('phone_directory', 'دليل الخدمات — دليل الهاتف', 'دليل الخدمات'),
-  PromoPlacement('lost_items', 'دليل الخدمات — المفقودات', 'دليل الخدمات'),
+  // صفحات خدمية مستقلة (كل واحدة لها مسارها الخاص بعد إلغاء بوّابة
+  // «دليل الخدمات» الجامعة).
+  PromoPlacement('svc_technicians', 'دليل الحرفيين', 'الأقسام الخدمية'),
+  PromoPlacement('svc_agricultural', 'خدمات زراعية', 'الأقسام الخدمية'),
+  PromoPlacement('svc_educational', 'خدمات تعليمية', 'الأقسام الخدمية'),
+  PromoPlacement('phone_directory', 'دليل الهاتف', 'الأقسام الخدمية'),
+  PromoPlacement('lost_items', 'المفقودات', 'الأقسام الخدمية'),
   PromoPlacement('medical', 'المركز الطبي — الصفحة الرئيسية', 'المركز الطبي'),
   PromoPlacement('med_center', 'المركز الطبي — المركز الخيري', 'المركز الطبي'),
   PromoPlacement('med_blood', 'المركز الطبي — بنك الدم', 'المركز الطبي'),
@@ -69,13 +70,12 @@ String promoKeyForRoute(String name, Object? args) {
       return 'village_archive';
     case AppRoutes.villageInstitutions:
       return 'village_institutions';
-    case AppRoutes.serviceCategory:
-      return switch (args) {
-        'technicians' => 'svc_technicians',
-        'agricultural' => 'svc_agricultural',
-        'educational' => 'svc_educational',
-        _ => 'services',
-      };
+    case AppRoutes.techniciansDirectory:
+      return 'svc_technicians';
+    case AppRoutes.agriculturalServices:
+      return 'svc_agricultural';
+    case AppRoutes.educationalServices:
+      return 'svc_educational';
     case AppRoutes.lostItems:
       return 'lost_items';
     case AppRoutes.phoneDirectory:
@@ -131,9 +131,9 @@ const List<PromoInternalLink> kPromoInternalLinks = [
   PromoInternalLink('أرشيف القرية', AppRoutes.villageArchive),
   PromoInternalLink('منشآت القرية', AppRoutes.villageInstitutions),
   
-  PromoInternalLink('دليل الخدمات — الفنيون', AppRoutes.serviceCategory, 'technicians'),
-  PromoInternalLink('دليل الخدمات — خدمات زراعية', AppRoutes.serviceCategory, 'agricultural'),
-  PromoInternalLink('دليل الخدمات — خدمات تعليمية', AppRoutes.serviceCategory, 'educational'),
+  PromoInternalLink('دليل الحرفيين', AppRoutes.techniciansDirectory),
+  PromoInternalLink('خدمات زراعية', AppRoutes.agriculturalServices),
+  PromoInternalLink('خدمات تعليمية', AppRoutes.educationalServices),
   PromoInternalLink('دليل الهاتف', AppRoutes.phoneDirectory),
   PromoInternalLink('المفقودات', AppRoutes.lostItems),
   PromoInternalLink('المركز الطبي', AppRoutes.medical),

@@ -54,10 +54,16 @@ void main() {
       expect(promoKeyForRoute(AppRoutes.newsList, null), 'news');
       expect(promoKeyForRoute(AppRoutes.marketProducts, null), 'market');
     });
-    test('maps category sub-screens via arguments', () {
-      expect(promoKeyForRoute(AppRoutes.serviceCategory, 'technicians'), 'svc_technicians');
-      expect(promoKeyForRoute(AppRoutes.serviceCategory, 'educational'), 'svc_educational');
-      expect(promoKeyForRoute(AppRoutes.serviceCategory, null), 'services');
+    test('maps the standalone service pages (no arguments)', () {
+      expect(promoKeyForRoute(AppRoutes.techniciansDirectory, null),
+          'svc_technicians');
+      expect(promoKeyForRoute(AppRoutes.agriculturalServices, null),
+          'svc_agricultural');
+      expect(promoKeyForRoute(AppRoutes.educationalServices, null),
+          'svc_educational');
+    });
+    test('the cancelled launcher page has no placement', () {
+      expect(promoKeyForRoute('/services', null), '');
     });
     test('maps medical sections via int index', () {
       expect(promoKeyForRoute(AppRoutes.medicalSection, 1), 'med_blood');
@@ -122,10 +128,17 @@ void main() {
 
   group('PromoInternalLink', () {
     test('encode/decode with args', () {
-      const l = PromoInternalLink('ف', AppRoutes.serviceCategory, 'technicians');
+      const l = PromoInternalLink('ذ', AppRoutes.villageMemoryList, 'era-1');
       final (route, args) = PromoInternalLink.decode(l.encoded);
-      expect(route, AppRoutes.serviceCategory);
-      expect(args, 'technicians');
+      expect(route, AppRoutes.villageMemoryList);
+      expect(args, 'era-1');
+    });
+    test('service links are plain routes now', () {
+      final link = kPromoInternalLinks
+          .firstWhere((l) => l.route == AppRoutes.techniciansDirectory);
+      final (route, args) = PromoInternalLink.decode(link.encoded);
+      expect(route, AppRoutes.techniciansDirectory);
+      expect(args, isNull);
     });
     test('medical section decodes to int', () {
       final (route, args) = PromoInternalLink.decode('${AppRoutes.medicalSection}|2');

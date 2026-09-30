@@ -20,7 +20,7 @@ class VillageAgricultureHistoryScreen extends StatelessWidget {
       subtitle: 'المحاصيل والزراعة التقليدية في أبودشيشة عبر الزمن',
       accent: kAgricultureColor,
       icon: Icons.agriculture_rounded,
-      stream: _service.watchAgricultureHistory(),
+      streamFactory: _service.watchAgricultureHistory,
       searchHint: 'ابحث عن محصول…',
       searchText: (a) =>
           '${a.crop} ${a.traditionalFarming} ${a.farmerStory} ${a.historicalTools}',

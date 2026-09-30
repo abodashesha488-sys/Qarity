@@ -519,7 +519,8 @@ class AdminService {
         targetTitle: title,
       );
     } catch (_) {}
-    _announceApproval(collection, title.toString(), itemId: docId);
+    _announceApproval(collection, title.toString(),
+        itemId: docId, data: doc.data());
     // إشعار شخصي لمقدم المحتوى: تمت الموافقة على منشورك.
     _notifySubmitter(collection, doc.data(), approved: true, itemId: docId);
   }
@@ -557,7 +558,7 @@ class AdminService {
       final body = approved
           ? 'تمت الموافقة على $label الخاص بك وهو منشور الآن'
           : 'لم يُقبل $label الخاص بك بعد المراجعة — يمكنك التعديل وإعادة الإرسال';
-      final route = _routeForCollection(collection);
+      final route = _routeForCollection(collection, data);
       // مسارك الخاص بالعنصر: صندوق الإشعارات يحوّله لتفاصيل البيان نفسه.
       final inboxRoute = (itemId != null && itemId.isNotEmpty)
           ? NotificationDeepLink.encode(route, collection, itemId)
@@ -588,7 +589,10 @@ class AdminService {
     }
   }
 
-  static String _routeForCollection(String c) {
+  /// مسار القائمة/الصفحة الذي يفتح النقر عليه. `data` تُستعمل لاختيار صفحة
+  /// الخدمة **المستقلة** الصحيحة (فنيون / زراعية / تعليمية) بدل بوّابة ملغاة.
+  static String _routeForCollection(
+      String c, [Map<String, dynamic>? data]) {
     switch (c) {
       case 'news':
         return '/news';
@@ -604,7 +608,9 @@ class AdminService {
       case 'forum_posts':
         return '/forum';
       case 'service_providers':
-        return '/services';
+        return _routeForProviderCategory(data?['category']);
+      case 'service_requests':
+        return '/services/technicians';
       case 'lost_items':
         return '/services/lost-items';
       case 'village_clinics':
@@ -619,6 +625,15 @@ class AdminService {
         return '/';
     }
   }
+
+  /// كل فئة خدمة لها صفحتها المستقلة بمسارها الخاص — النقر على إشعار يفتح
+  /// صفحتها هي، لا بوّابة جامعة أُلغيت.
+  static String _routeForProviderCategory(Object? category) =>
+      switch ('${category ?? ''}') {
+        'agricultural' => '/services/agricultural',
+        'educational' => '/services/educational',
+        _ => '/services/technicians',
+      };
 
   static String _labelForCollection(String c) {
     switch (c) {
@@ -664,9 +679,9 @@ class AdminService {
   /// إشعار عام بعد الموافقة/النشر — Push للمواضيع + محلي على جهاز الأدمن.
   /// عند تمرير itemId يصبح النقر موجهاً لتفاصيل العنصر نفسه لا قائمته.
   void _announceApproval(String collection, String itemTitle,
-      {String? itemId}) {
+      {String? itemId, Map<String, dynamic>? data}) {
     final topic = kPushTopicForCollection[collection];
-    final (title, body, route) = _pushMessageFor(collection, itemTitle);
+    final (title, body, route) = _pushMessageFor(collection, itemTitle, data);
     if (topic != null) {
       RemotePushService.send(
         topic: topic,
@@ -688,7 +703,7 @@ class AdminService {
   }
 
   static (String title, String body, String route) _pushMessageFor(
-      String collection, String item) {
+      String collection, String item, [Map<String, dynamic>? data]) {
     final preview = item.length > 60 ? '${item.substring(0, 60)}…' : item;
     return switch (collection) {
       'news' => ('📰 خبر جديد', preview, '/news'),
@@ -696,8 +711,12 @@ class AdminService {
       'occasions' => ('🎉 مناسبة جديدة', preview, '/occasions'),
       'market_products' => ('🛒 منتج جديد', preview, '/market'),
       'forum_posts' => ('💬 منشور جديد', preview, '/forum'),
-      'service_requests' => ('🔔 طلب خدمة', preview, '/services'),
-      'service_providers' => ('🧰 خدمة جديدة في الدليل', preview, '/services'),
+      'service_requests' => ('🔔 طلب خدمة', preview, '/services/technicians'),
+      'service_providers' => (
+          '🧰 خدمة جديدة في الدليل',
+          preview,
+          _routeForProviderCategory(data?['category'])
+        ),
       'lost_items' => (
           '🔎 إعلان مفقودات جديد',
           preview,
