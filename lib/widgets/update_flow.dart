@@ -1,10 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../core/utils/helpers.dart';
 import '../services/update_service.dart';
 
-/// تنفيذ التحديث بعد أن يوافق المستخدم على الحوار: تنزيل بمؤشّر تقدّم، ثم طلب
-/// إذن «تثبيت من هذا المصدر» إن كان ناقصًا، ثم فتح مثبّت أندرويد.
+/// تنفيذ التحديث بعد أن يوافق المستخدم على الحوار: إذن التثبيت أولًا، ثم تنزيل
+/// بمؤشّر تقدّم، ثم فتح مثبّت أندرويد.
 ///
 /// مسار واحد تمرّ منه الفحوصات الثلاثة (الإقلاع، بطاقة الإعدادات، درج الرئيسية)
 /// حتى لا يكتفي زر «تحديث الآن» بإغلاق الحوار بلا أي إجراء.
@@ -14,15 +16,37 @@ class UpdateFlow {
   static bool _inFlight = false;
 
   /// `service` seam للاختبارات بلا شبكة ولا قناة أصل — الإنتاج يمرّره null.
+  /// `waitForResume` seam بنفس الغرض: الإنتاج ينتظر عودة التطبيق فعليًا.
   static Future<void> install(
     BuildContext context,
     UpdateInfo info, {
     UpdateService? service,
+    Future<void> Function()? waitForResume,
   }) async {
     if (_inFlight) return;
     _inFlight = true;
     final updates = service ?? UpdateService();
+    final resume = waitForResume ?? _awaitAppResume;
     try {
+      // الإذن قبل التنزيل: حزمته ~36 ميجابايت، وطلب الإذن بعدها كان يترك
+      // المستخدم أمام شاشة إعدادات بعد تنزيل كامل بلا تثبيت.
+      if (!await updates.canInstallPackages()) {
+        AppHelpers.showToast(
+          'يلزم السماح بالتثبيت من هذا المصدر — تُفتح إعدادات التطبيق الآن.',
+          isError: true,
+        );
+        await updates.openInstallPermissionSettings();
+        await resume();
+        if (!await updates.canInstallPackages()) {
+          AppHelpers.showToast(
+            'لم يتم منح الإذن. سمح بالتثبيت من الإعدادات ثم أعد المحاولة.',
+            isError: true,
+          );
+          return;
+        }
+      }
+
+      if (!context.mounted) return;
       final result = await showDialog<UpdateInstallResult>(
         context: context,
         barrierDismissible: false,
@@ -43,21 +67,6 @@ class UpdateFlow {
 
       AppHelpers.showToast('جاري فتح مثبت التطبيقات...');
 
-      if (!await updates.canInstallPackages()) {
-        AppHelpers.showToast(
-          'يتوجب عليك السماح بتثبيت التطبيقات من هذا المصدر.',
-          isError: true,
-        );
-        await updates.openInstallPermissionSettings();
-        if (!await updates.canInstallPackages()) {
-          AppHelpers.showToast(
-            'لم يتم منح الإذن. يمكنك محاولة التحديث لاحقاً من الإعدادات.',
-            isError: true,
-          );
-          return;
-        }
-      }
-
       final install = await updates.installApk(apkPath);
       if (!install.isSuccess) {
         AppHelpers.showToast(
@@ -67,6 +76,22 @@ class UpdateFlow {
       }
     } finally {
       _inFlight = false;
+    }
+  }
+
+  /// ينتظر رجوع التطبيق من شاشة إعدادات الإذن. إعادة الفحص فور فتح الشاشة كانت
+  /// ترى الإذن مرفوضًا دائمًا لأن النشاط الخاري لم يبدأ بعد.
+  static Future<void> _awaitAppResume() async {
+    final resumed = Completer<void>();
+    final listener = AppLifecycleListener(
+      onResume: () {
+        if (!resumed.isCompleted) resumed.complete();
+      },
+    );
+    try {
+      await resumed.future.timeout(const Duration(minutes: 5), onTimeout: () {});
+    } finally {
+      listener.dispose();
     }
   }
 }

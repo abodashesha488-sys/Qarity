@@ -175,7 +175,7 @@ void main() {
     expect(find.textContaining('لم يتم التثبيت'), findsOneWidget);
   });
 
-  testWidgets('بلا إذن تثبيت يُفتح مسار الأذن ولا يُستدعى المثبّت',
+  testWidgets('بلا إذن تثبيت يُفتح مسار الإذن أولًا ولا يُنزَّل شيء',
       (tester) async {
     await pumpHost(tester);
     final service = _FakeUpdateService(
@@ -184,7 +184,8 @@ void main() {
     );
 
     var finished = false;
-    UpdateFlow.install(navigatorKey.currentContext!, info, service: service)
+    UpdateFlow.install(navigatorKey.currentContext!, info,
+            service: service, waitForResume: () async {})
         .whenComplete(() => finished = true);
 
     await tester.pump();
@@ -193,8 +194,33 @@ void main() {
     await driveUntilText(tester, 'لم يتم منح الإذن');
 
     expect(service.settingsOpens, 1);
+    // الحزمة ~36 ميجابايت: لا تُنزَّل قبل أن يكون الإذن موجودًا فعلًا.
+    expect(service.downloadCalls, 0);
     expect(service.installCalls, isEmpty);
     expect(find.textContaining('لم يتم منح الإذن'), findsOneWidget);
+  });
+
+  testWidgets('الإذن بعد العودة من الإعدادات يُنزّل ويثبّت في نفس الضغط',
+      (tester) async {
+    await pumpHost(tester);
+    final service = _FakeUpdateService(
+      downloadResult: UpdateInstallResult.success('/tmp/Qarity_update.apk'),
+      permissions: [false, true],
+    );
+
+    var finished = false;
+    UpdateFlow.install(navigatorKey.currentContext!, info,
+            service: service, waitForResume: () async {})
+        .whenComplete(() => finished = true);
+
+    await tester.pump();
+    expect(find.text('جاري تنزيل التحديث...'), findsOneWidget);
+
+    await driveUntil(tester, () => finished);
+    expect(finished, isTrue);
+    expect(service.settingsOpens, 1);
+    expect(service.downloadCalls, 1);
+    expect(service.installCalls, ['/tmp/Qarity_update.apk']);
   });
 
   testWidgets('ضغطة مزدوجة لا تفتح تنزيلين متوازيين', (tester) async {
