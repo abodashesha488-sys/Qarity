@@ -49,7 +49,6 @@ class _AgriculturalAdvisorScreenState extends State<AgriculturalAdvisorScreen> {
     return Scaffold(
       appBar: const QurityAppBar(
         title: 'مستشارك الزراعي',
-        color: color,
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),

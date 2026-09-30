@@ -61,7 +61,6 @@ class _ColoringScreenState extends State<ColoringScreen> {
       backgroundColor: const Color(0xFFFFF8E7),
       appBar: QurityAppBar(
         title: 'لوحة التلوين',
-        color: const Color(0xFFD81B60),
         actions: [
           IconButton(
             tooltip: 'تراجع',

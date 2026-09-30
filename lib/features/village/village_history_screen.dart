@@ -48,7 +48,7 @@ class _VillageHistoryScreenState extends State<VillageHistoryScreen> {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: const QurityAppBar(
-          title: 'تاريخ القرية', color: kVillageHistoryColor),
+          title: 'تاريخ القرية'),
       floatingActionButton: _isAdmin
           ? FloatingActionButton.extended(
               onPressed: _manage,

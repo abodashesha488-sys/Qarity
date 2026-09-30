@@ -42,7 +42,7 @@ class MedicalHomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const QurityAppBar(
-          title: 'الخدمات الطبية', color: Color(0xFF00897B)),
+          title: 'الخدمات الطبية'),
       body: GridView.builder(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
         itemCount: _sections.length,
@@ -204,63 +204,30 @@ class _MedicalSectionScreenState extends State<MedicalSectionScreen> {
     }
   }
 
+  /// إجراء «+» في الهيدر لكل قسم، أو null حيث لا يوجد إدخال مستخدم:
+  /// ٠ (إدارة المركز) يبقى بزرّه السفلي لأنه إدارة لا إضافة، و١ (بنك الدم)
+  /// له مساراته داخل التبويب.
+  ({VoidCallback run, String label})? _add() {
+    return switch (widget.index) {
+      2 => (run: _addClinic, label: 'أضف عيادة'),
+      3 => (run: _addPharmacy, label: 'أضف صيدلية'),
+      4 => (run: _addLab, label: 'أضف معملاً'),
+      5 => (run: _addOpticalShop, label: 'أضف محل نظارات'),
+      _ => null,
+    };
+  }
+
   Widget? _fab() {
-    switch (widget.index) {
-      case 0:
-        if (!_isMedicalAdmin) return null;
-        return FloatingActionButton.extended(
-          heroTag: 'medical_section_fab_0',
-          onPressed: () => Navigator.push(context,
-              MaterialPageRoute(builder: (_) => const MedicalCenterAdminScreen())),
-          icon: const Icon(Icons.medical_information_rounded),
-          label: const Text('إدارة المركز',
-              style: TextStyle(fontWeight: FontWeight.w800)),
-          backgroundColor: _color,
-          foregroundColor: Colors.white,
-        );
-      case 2:
-        return FloatingActionButton.extended(
-          heroTag: 'medical_section_fab_2',
-          onPressed: _addClinic,
-          icon: const Icon(Icons.add_business_rounded),
-          label: const Text('أضف عيادة',
-              style: TextStyle(fontWeight: FontWeight.w800)),
-          backgroundColor: _color,
-          foregroundColor: Colors.white,
-        );
-      case 3:
-        return FloatingActionButton.extended(
-          heroTag: 'medical_section_fab_3',
-          onPressed: _addPharmacy,
-          icon: const Icon(Icons.add_rounded),
-          label: const Text('أضف صيدلية',
-              style: TextStyle(fontWeight: FontWeight.w800)),
-          backgroundColor: _color,
-          foregroundColor: Colors.white,
-        );
-      case 4:
-        return FloatingActionButton.extended(
-          heroTag: 'medical_section_fab_4',
-          onPressed: _addLab,
-          icon: const Icon(Icons.science_rounded),
-          label: const Text('أضف معملاً',
-              style: TextStyle(fontWeight: FontWeight.w800)),
-          backgroundColor: _color,
-          foregroundColor: Colors.white,
-        );
-      case 5:
-        return FloatingActionButton.extended(
-          heroTag: 'medical_section_fab_5',
-          onPressed: _addOpticalShop,
-          icon: const Icon(Icons.remove_red_eye_rounded),
-          label: const Text('أضف محل نظارات',
-              style: TextStyle(fontWeight: FontWeight.w800)),
-          backgroundColor: _color,
-          foregroundColor: Colors.white,
-        );
-      default:
-        return null;
-    }
+    if (widget.index != 0 || !_isMedicalAdmin) return null;
+    return FloatingActionButton.extended(
+      heroTag: 'medical_section_fab_0',
+      onPressed: () => Navigator.push(context,
+          MaterialPageRoute(builder: (_) => const MedicalCenterAdminScreen())),
+      icon: const Icon(Icons.medical_information_rounded),
+      label: const Text('إدارة المركز', style: TextStyle(fontWeight: FontWeight.w800)),
+      backgroundColor: _color,
+      foregroundColor: Colors.white,
+    );
   }
 
   Future<void> _addClinic() async {
@@ -346,8 +313,13 @@ class _MedicalSectionScreenState extends State<MedicalSectionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final add = _add();
     return Scaffold(
-      appBar: QurityAppBar(title: _title, color: _color),
+      appBar: QurityAppBar(
+        title: _title,
+        onAdd: add?.run,
+        addTooltip: add?.label ?? 'إضافة',
+      ),
       floatingActionButton: _fab(),
       body: _body(),
     );

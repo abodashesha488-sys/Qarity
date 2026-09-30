@@ -3,11 +3,17 @@ import 'package:flutter/material.dart';
 import '../models/service_provider_model.dart';
 
 /// علامة الصفة (مدرس / مدرسة) — صورة «mal/femal» بنفس مقاس الرموز التي تستبدلها.
+/// تُستعمل أيضًا كصورة افتراضية للسجل التعليمي الذي بلا صورة مرفوعة.
 class EduKindMark extends StatelessWidget {
-  const EduKindMark({super.key, required this.kind, this.size = 15});
+  const EduKindMark(
+      {super.key, required this.kind, this.size = 15, this.radius});
 
   final String kind;
   final double size;
+
+  /// نصف قطر التقليم — الافتراضي يناسب الرموز الصغيرة؛ الصور الكبيرة تمرّر
+  /// نصف قطر إطارها حتى تأخذ نفس شكل الصورة المرفوعة.
+  final double? radius;
 
   static String? imageOf(String kind) {
     if (kind == kEduKindSchool) return 'assets/images/femal.jpg';
@@ -26,7 +32,7 @@ class EduKindMark extends StatelessWidget {
     final dpr = MediaQuery.maybeOf(context)?.devicePixelRatio ?? 3.0;
     return ClipRRect(
       key: ValueKey('edu-kind-mark-$kind'),
-      borderRadius: BorderRadius.circular(size / 3),
+      borderRadius: BorderRadius.circular(radius ?? size / 3),
       child: Image.asset(
         path,
         width: size,

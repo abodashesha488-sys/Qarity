@@ -117,13 +117,10 @@ class _ObituariesListScreenState extends State<ObituariesListScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: const QurityAppBar(title: 'سجل العزاء'),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.pushNamed(context, AppRoutes.obituariesAdd),
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('إضافة تعزية'),
-        backgroundColor: theme.colorScheme.primary,
-        foregroundColor: theme.colorScheme.onPrimary,
+      appBar: QurityAppBar(
+        title: 'سجل العزاء',
+        onAdd: () => Navigator.pushNamed(context, AppRoutes.obituariesAdd),
+        addTooltip: 'إضافة تعزية',
       ),
       body: OfflineStreamBuilder<List<Obituary>>(
         stream: _service.getObituariesStream(),

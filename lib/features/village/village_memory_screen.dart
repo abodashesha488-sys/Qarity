@@ -16,7 +16,7 @@ class VillageMemoryScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar:
-          const QurityAppBar(title: 'ذاكرة القرية', color: kVillageMemoryColor),
+          const QurityAppBar(title: 'ذاكرة القرية'),
       body: ListView(
         padding: const EdgeInsets.only(bottom: 28),
         children: [

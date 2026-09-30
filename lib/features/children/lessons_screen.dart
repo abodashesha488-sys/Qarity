@@ -34,7 +34,7 @@ class LessonsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFFFF8E7),
-      appBar: QurityAppBar(title: title, color: accent),
+      appBar: QurityAppBar(title: title),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
         children: [

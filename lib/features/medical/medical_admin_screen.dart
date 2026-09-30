@@ -92,13 +92,10 @@ class _MedicalCenterAdminScreenState extends State<MedicalCenterAdminScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: const QurityAppBar(title: 'إدارة المركز الطبي الخيري'),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _addOrEdit(),
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('إضافة عيادة'),
-        backgroundColor: theme.colorScheme.primary,
-        foregroundColor: theme.colorScheme.onPrimary,
+      appBar: QurityAppBar(
+        title: 'إدارة المركز الطبي الخيري',
+        onAdd: () => _addOrEdit(),
+        addTooltip: 'إضافة عيادة',
       ),
       body: StreamBuilder<List<MedicalCenterClinic>>(
         stream: _service.getClinicsStream(),

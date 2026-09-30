@@ -63,7 +63,9 @@ class _ServiceProviderDetailScreenState
     } catch (_) {}
     if (uid != null && _initial.id.isNotEmpty) {
       _service.getUserComment(_initial.id, uid).then((c) {
-        if (mounted && c != null) setState(() => _myRating = c.rating.toDouble());
+        if (mounted && c != null) {
+          setState(() => _myRating = c.rating.toDouble());
+        }
       }).catchError((_) {});
     }
   }
@@ -161,8 +163,7 @@ class _ServiceProviderDetailScreenState
                       if (provider.isEducational &&
                           provider.offersPrivateTutoring)
                         'امكانية تدريس خاص ✓',
-                      if (provider.description.isNotEmpty)
-                        provider.description,
+                      if (provider.description.isNotEmpty) provider.description,
                       if (provider.address.isNotEmpty)
                         'العنوان: ${provider.address}',
                       if (provider.phone.isNotEmpty) 'هاتف: ${provider.phone}',
@@ -204,8 +205,7 @@ class _ServiceProviderDetailScreenState
         color:
             theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
         borderRadius: BorderRadius.circular(16),
-        border:
-            Border.all(color: accent.withValues(alpha: 0.22)),
+        border: Border.all(color: accent.withValues(alpha: 0.22)),
       );
 
   /// بطاقة مدمجة: الصورة والاسم والصفة والتقييم وشارات الوسوم في كتلة واحدة.
@@ -235,8 +235,7 @@ class _ServiceProviderDetailScreenState
                   runSpacing: 5,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    if (provider.isEducational)
-                      _kindChip(provider, accent),
+                    if (provider.isEducational) _kindChip(provider, accent),
                     if (provider.isFeatured) _featuredChip(),
                     if (provider.isEducational &&
                         provider.offersPrivateTutoring)
@@ -264,34 +263,32 @@ class _ServiceProviderDetailScreenState
 
   static const double _kPhotoSide = 68;
 
-  Widget _photo(
-      ThemeData theme, ServiceProvider provider, Color accent) {
+  Widget _photo(ThemeData theme, ServiceProvider provider, Color accent) {
     final url = provider.photoUrl ?? '';
-    Widget inner;
-    if (url.isEmpty) {
-      inner = provider.isEducational
-          ? EduKindMark(kind: provider.providerKind, size: _kPhotoSide)
-          : ColoredBox(
-              color: accent.withValues(alpha: 0.12),
-              child: Center(
-                  child: Icon(ServiceCategory.icon(provider.category),
-                      size: 30, color: accent)),
-            );
-    } else {
-      inner = CachedNetworkImage(
-        imageUrl: url,
-        memCacheWidth: (_kPhotoSide * 3).ceil(),
-        fit: BoxFit.cover,
-        placeholder: (_, __) =>
-            ColoredBox(color: accent.withValues(alpha: 0.12)),
-        errorWidget: (_, __, ___) => Icon(Icons.person_rounded,
-            size: 30, color: accent),
-      );
-    }
+    // الصورة الافتراضية للسجل التعليمي = صورة الصفة (mal / femal) ملء الإطار،
+    // وتُستعمل أيضًا حين يفسد رابط الصورة المرفوعة.
+    Widget fallback() => provider.isEducational
+        ? EduKindMark(
+            kind: provider.providerKind, size: _kPhotoSide, radius: 14)
+        : ColoredBox(
+            color: accent.withValues(alpha: 0.12),
+            child: Center(
+                child: Icon(ServiceCategory.icon(provider.category),
+                    size: 30, color: accent)),
+          );
+    final inner = url.isEmpty
+        ? fallback()
+        : CachedNetworkImage(
+            imageUrl: url,
+            memCacheWidth: (_kPhotoSide * 3).ceil(),
+            fit: BoxFit.cover,
+            placeholder: (_, __) =>
+                ColoredBox(color: accent.withValues(alpha: 0.12)),
+            errorWidget: (_, __, ___) => fallback(),
+          );
     return ClipRRect(
       borderRadius: BorderRadius.circular(14),
-      child: SizedBox(
-          width: _kPhotoSide, height: _kPhotoSide, child: inner),
+      child: SizedBox(width: _kPhotoSide, height: _kPhotoSide, child: inner),
     );
   }
 
@@ -336,12 +333,9 @@ class _ServiceProviderDetailScreenState
       key: key,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
       decoration: BoxDecoration(
-        color: filled
-            ? color
-            : color.withValues(alpha: 0.12),
+        color: filled ? color : color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(9),
-        border: Border.all(
-            color: color.withValues(alpha: filled ? 1 : 0.35)),
+        border: Border.all(color: color.withValues(alpha: filled ? 1 : 0.35)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -416,8 +410,7 @@ class _ServiceProviderDetailScreenState
             _factLine(theme, 'النوع', provider.eduTypes, accent),
           if (provider.stageChips.isNotEmpty)
             _factLine(theme, 'المراحل', provider.stageChips, accent),
-          if (subjects.isNotEmpty)
-            _factLine(theme, 'المواد', subjects, accent),
+          if (subjects.isNotEmpty) _factLine(theme, 'المواد', subjects, accent),
           if (university.isNotEmpty)
             _factLine(theme, 'جامعي', [university], accent),
         ],
@@ -426,8 +419,7 @@ class _ServiceProviderDetailScreenState
   }
 
   /// نبذة قابلة للطي حتى لا تغطي الشاشة على حساب بقية البيانات.
-  Widget _aboutCard(
-      ThemeData theme, ServiceProvider provider, Color accent) {
+  Widget _aboutCard(ThemeData theme, ServiceProvider provider, Color accent) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
@@ -441,19 +433,15 @@ class _ServiceProviderDetailScreenState
           const SizedBox(height: 6),
           Text(provider.description,
               maxLines: _descExpanded ? null : 3,
-              overflow: _descExpanded
-                  ? null
-                  : TextOverflow.ellipsis,
-              style:
-                  theme.textTheme.bodySmall?.copyWith(height: 1.55)),
+              overflow: _descExpanded ? null : TextOverflow.ellipsis,
+              style: theme.textTheme.bodySmall?.copyWith(height: 1.55)),
           if (provider.description.length > 120)
             TextButton(
               style: TextButton.styleFrom(
                   padding: EdgeInsets.zero,
                   minimumSize: const Size(0, 30),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-              onPressed: () =>
-                  setState(() => _descExpanded = !_descExpanded),
+              onPressed: () => setState(() => _descExpanded = !_descExpanded),
               child: Text(_descExpanded ? 'أقل' : 'المزيد',
                   style: const TextStyle(
                       fontSize: 12, fontWeight: FontWeight.w800)),
@@ -464,8 +452,7 @@ class _ServiceProviderDetailScreenState
   }
 
   /// بيانات التواصل: أسطر مدمجة + زر اتصال أخضر صغير.
-  Widget _contactCard(
-      ThemeData theme, ServiceProvider provider, Color accent) {
+  Widget _contactCard(ThemeData theme, ServiceProvider provider, Color accent) {
     final by = provider.submittedByName ?? '';
     final hasLines = provider.phone.isNotEmpty ||
         provider.address.isNotEmpty ||
@@ -479,11 +466,10 @@ class _ServiceProviderDetailScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (provider.address.isNotEmpty)
-            _inlineLine(theme, Icons.location_on_rounded,
-                provider.address, accent),
-          if (by.isNotEmpty)
             _inlineLine(
-                theme, Icons.person_rounded, 'أضافها: $by', accent),
+                theme, Icons.location_on_rounded, provider.address, accent),
+          if (by.isNotEmpty)
+            _inlineLine(theme, Icons.person_rounded, 'أضافها: $by', accent),
           if (provider.phone.isNotEmpty) ...[
             const SizedBox(height: 10),
             SizedBox(
@@ -588,23 +574,21 @@ class _ServiceProviderDetailScreenState
           : _service.getCommentsStream(_initial.id),
       builder: (context, snap) {
         final comments = snap.data ?? [];
-        final visible =
-            _allComments || comments.length <= 2 ? comments : comments.take(2).toList();
+        final visible = _allComments || comments.length <= 2
+            ? comments
+            : comments.take(2).toList();
         return MedSection(
           title: 'تعليقات المستخدمين (${comments.length})',
           accent: accent,
           child: snap.connectionState == ConnectionState.waiting
-              ? const Center(
-                  child:
-                      CircularProgressIndicator(strokeWidth: 2))
+              ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
               : comments.isEmpty
                   ? Text('لا توجد تعليقات بعد — كن أول المقيّمين.',
                       style: theme.textTheme.bodySmall
                           ?.copyWith(color: Colors.grey))
                   : Column(
                       children: [
-                        ...visible
-                            .map((c) => _commentTile(theme, c, accent)),
+                        ...visible.map((c) => _commentTile(theme, c, accent)),
                         if (visible.length < comments.length)
                           TextButton(
                             style: TextButton.styleFrom(
@@ -614,11 +598,9 @@ class _ServiceProviderDetailScreenState
                                     MaterialTapTargetSize.shrinkWrap),
                             onPressed: () =>
                                 setState(() => _allComments = true),
-                            child: Text(
-                                'عرض كل التعليقات (${comments.length})',
+                            child: Text('عرض كل التعليقات (${comments.length})',
                                 style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w800)),
+                                    fontSize: 12, fontWeight: FontWeight.w800)),
                           ),
                       ],
                     ),
@@ -643,8 +625,7 @@ class _ServiceProviderDetailScreenState
               c.photoUrl != null && c.photoUrl!.isNotEmpty
                   ? ''
                   : (c.userName.isNotEmpty ? c.userName.substring(0, 1) : '؟'),
-              style: TextStyle(
-                  color: accent, fontWeight: FontWeight.w900),
+              style: TextStyle(color: accent, fontWeight: FontWeight.w900),
             ),
           ),
           const SizedBox(width: 10),
@@ -657,15 +638,14 @@ class _ServiceProviderDetailScreenState
                     Expanded(
                       child: Text(c.userName,
                           style: const TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 13)),
+                              fontWeight: FontWeight.w800, fontSize: 13)),
                     ),
                     RatingBarIndicator(
                       rating: c.rating.toDouble(),
                       itemSize: 14,
                       unratedColor: Colors.grey.withValues(alpha: 0.25),
-                      itemBuilder: (_, __) => const Icon(
-                          Icons.star_rounded, color: Colors.amber),
+                      itemBuilder: (_, __) =>
+                          const Icon(Icons.star_rounded, color: Colors.amber),
                     ),
                   ],
                 ),

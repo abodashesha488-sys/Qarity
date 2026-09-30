@@ -16,7 +16,7 @@ class VillagePeopleScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar:
-          const QurityAppBar(title: 'أهل أبودشيشة', color: kVillagePeopleColor),
+          const QurityAppBar(title: 'أهل أبودشيشة'),
       body: ListView(
         padding: const EdgeInsets.only(bottom: 28),
         children: [

@@ -48,7 +48,7 @@ class _VillageInstitutionsScreenState extends State<VillageInstitutionsScreen> {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: const QurityAppBar(
-          title: 'منشآت القرية', color: kVillageInstitutionsColor),
+          title: 'منشآت القرية'),
       floatingActionButton: _isAdmin
           ? FloatingActionButton.extended(
               heroTag: 'village_inst_manage',

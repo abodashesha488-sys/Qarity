@@ -8,9 +8,9 @@ import '../../routes/app_routes.dart';
 import '../../services/cache_service.dart';
 import '../../services/news_service.dart';
 import '../../widgets/common_appbar_actions.dart';
+import '../../widgets/header_action_buttons.dart';
 import '../../widgets/offline_stream_builder.dart';
 import '../../widgets/qurity_app_bar.dart';
-import '../../widgets/qurity_logo.dart';
 
 class NewsScreen extends StatefulWidget {
   const NewsScreen({super.key, this.newsService});
@@ -104,15 +104,6 @@ class _NewsScreenState extends State<NewsScreen>
     final theme = Theme.of(context);
 
     return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: 'news-add',
-        onPressed: () => Navigator.pushNamed(context, AppRoutes.newsAdd),
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('إضافة خبر',
-            style: TextStyle(fontWeight: FontWeight.w800)),
-        backgroundColor: theme.colorScheme.primary,
-        foregroundColor: theme.colorScheme.onPrimary,
-      ),
       body: OfflineStreamBuilder<List<NewsItem>>(
         stream: _newsService.getNewsStream(),
         onlineBuilder: (context, snapshot) {
@@ -223,7 +214,7 @@ class _NewsScreenState extends State<NewsScreen>
       titleSpacing: 10,
       title: const Row(
         children: [
-          QurityLogo(size: 32),
+          HeaderHomeButton(),
           SizedBox(width: 10),
           Expanded(
             child: Text('أخبار القرية',
@@ -236,7 +227,13 @@ class _NewsScreenState extends State<NewsScreen>
           ),
         ],
       ),
-      actions: CommonAppBarActions.actions(context),
+      actions: [
+        HeaderAddButton(
+          onPressed: () => Navigator.pushNamed(context, AppRoutes.newsAdd),
+          tooltip: 'إضافة خبر',
+        ),
+        ...CommonAppBarActions.actions(context),
+      ],
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(74),
 child: Padding(

@@ -154,6 +154,10 @@ class _ShopDetailScreen extends StatelessWidget {
     return Scaffold(
       appBar: QurityAppBar(
         title: shop.name,
+        onAdd: isOwner
+            ? () => Navigator.pushNamed(context, AppRoutes.marketAdd)
+            : null,
+        addTooltip: 'أضف منتجاً لمحلي',
         actions: [
           IconButton(
             tooltip: 'مشاركة المحل',
@@ -258,15 +262,6 @@ class _ShopDetailScreen extends StatelessWidget {
           );
         },
       ),
-      floatingActionButton: isOwner
-          ? FloatingActionButton.extended(
-              heroTag: 'shop_add',
-              onPressed: () =>
-                  Navigator.pushNamed(context, AppRoutes.marketAdd),
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('أضف منتجاً لمحلي'),
-            )
-          : null,
     );
   }
 }

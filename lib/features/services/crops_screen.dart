@@ -365,7 +365,6 @@ class CropsScreen extends StatelessWidget {
     return Scaffold(
       appBar: const QurityAppBar(
         title: 'المحاصيل الزراعية',
-        color: color,
       ),
       body: Column(
         children: [
@@ -558,7 +557,6 @@ class CropDetailScreen extends StatelessWidget {
     return Scaffold(
       appBar: QurityAppBar(
         title: crop.name,
-        color: color,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),

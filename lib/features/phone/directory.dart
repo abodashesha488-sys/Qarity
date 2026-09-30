@@ -117,7 +117,8 @@ class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
           ? null
           : QurityAppBar(
               title: 'دليل الهاتف',
-              color: const Color(0xFF37474F),
+              onAdd: _navigateToAddScreen,
+              addTooltip: 'إضافة جهة اتصال',
               actions: _isAdmin
                   ? [
                       IconButton(
@@ -183,13 +184,6 @@ class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
           ],
         ),
       ),
-floatingActionButton: FloatingActionButton.extended(
-                onPressed: () => _navigateToAddScreen(),
-                icon: const Icon(Icons.add_rounded),
-                label: const Text('إضافة جهة اتصال'),
-                tooltip: 'إضافة جهة اتصال جديدة',
-                backgroundColor: theme.colorScheme.primary,
-              ),
     );
   }
 

@@ -188,7 +188,7 @@ class _LettersGameScreenState extends State<LettersGameScreen> {
     final word = q.target.word;
     return Scaffold(
       backgroundColor: const Color(0xFFFFF8E7),
-      appBar: const QurityAppBar(title: 'لعبة الحروف', color: Color(0xFF43A047)),
+      appBar: const QurityAppBar(title: 'لعبة الحروف'),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),

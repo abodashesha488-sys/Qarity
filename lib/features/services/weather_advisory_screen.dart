@@ -65,7 +65,6 @@ class _WeatherAdvisoryScreenState extends State<WeatherAdvisoryScreen> {
     return Scaffold(
       appBar: QurityAppBar(
         title: 'أحوال الطقس والإرشادات',
-        color: color,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded),

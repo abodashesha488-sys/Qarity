@@ -10,19 +10,39 @@ class ImageUploadService {
   static const String _apiKey = AppConfig.imgbbApiKey;
 
   /// يرفع صورة إلى ImgBB ويعيد URL بنتيجة الرفع.
-  /// يُخزّن مفتاح الحذف (delete_key) داخل URL كمعلمة استعلام.
+  /// أي استجابة بلا رابط تُرمى كخطأ — لا يُقبل رابط فارغ إطلاقًا.
   Future<String> uploadImage(Uint8List bytes) async {
     final request = http.MultipartRequest('POST', Uri.parse('$_uploadUrl?key=$_apiKey'));
     request.files.add(http.MultipartFile.fromBytes('image', bytes, filename: 'upload.jpg'));
 
-    final response = await request.send();
+    final response = await request.send().timeout(
+      const Duration(seconds: 60),
+      onTimeout: () => throw Exception(
+          'انتهت مهلة رفع الصورة — تحقق من الاتصال وأعد المحاولة'),
+    );
     final responseBody = await response.stream.bytesToString();
+    return parseUploadResponse(response.statusCode, responseBody);
+  }
 
-    if (response.statusCode == 200) {
-      final data = json.decode(responseBody);
-      return data['data']['url'] as String? ?? '';
+  /// يفكّ استجابة ImgBB: يرد الرابط فقط عند نجاح حقيقي، ويرمّي رسالة مفهومة
+  /// عند الرفض أو عند غياب الرابط — وإلا ضاعت الصورة بصمت داخل السجل.
+  static String parseUploadResponse(int statusCode, String body) {
+    Object? decoded;
+    try {
+      decoded = jsonDecode(body);
+    } catch (_) {
+      decoded = null;
     }
-    throw Exception('Failed to upload image: ${response.statusCode}');
+    final data = decoded is Map ? decoded['data'] : null;
+    final url = data is Map ? data['url'] as String? : null;
+    if (statusCode == 200 && url != null && url.isNotEmpty) return url;
+
+    final error = decoded is Map ? decoded['error'] : null;
+    var reason = error is Map ? (error['message'] as String?) : null;
+    if (reason == null || reason.isEmpty) {
+      reason = statusCode == 200 ? 'لم يرجع الخدمة رابط الصورة' : 'رمز $statusCode';
+    }
+    throw Exception('تعذّر رفع الصورة ($reason) — أعد المحاولة');
   }
 
   /// يستخرج مفتاح الحذف من URL الصورة.

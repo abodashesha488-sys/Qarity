@@ -132,11 +132,10 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: const QurityAppBar(title: 'حوارات المندرة'),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.pushNamed(context, AppRoutes.forumCreatePost),
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('موضوع جديد'),
+      appBar: QurityAppBar(
+        title: 'حوارات المندرة',
+        onAdd: () => Navigator.pushNamed(context, AppRoutes.forumCreatePost),
+        addTooltip: 'موضوع جديد',
       ),
       body: Column(
         children: [

@@ -39,7 +39,6 @@ class _FertilizersPesticidesScreenState
     return Scaffold(
       appBar: QurityAppBar(
         title: 'الأسمدة والمبيدات',
-        color: color,
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.white,

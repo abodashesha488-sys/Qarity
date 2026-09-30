@@ -340,6 +340,63 @@ void main() {
       expect(find.byKey(const ValueKey('edu-subject-اللغة العربية')),
           findsOneWidget);
     });
+
+    testWidgets('دائرة الصورة: mal للمدرّس وfemal للمدرسة بلا رفع',
+        (tester) async {
+      bigScreen(tester);
+      await openEduForm(tester);
+
+      String circleAsset() {
+        final found = find.descendant(
+            of: find.byType(CircleAvatar), matching: find.byType(Image));
+        expect(found, findsOneWidget, reason: 'الصورة الافتراضية تملأ الدائرة');
+        final p = tester.widget<Image>(found).image;
+        return p is ResizeImage
+            ? (p.imageProvider as AssetImage).assetName
+            : (p as AssetImage).assetName;
+      }
+
+      expect(circleAsset(), 'assets/images/mal.jpg');
+      await tapKey(tester, const ValueKey('edu-kind-مدرسة'));
+      expect(circleAsset(), 'assets/images/femal.jpg');
+    });
+
+    testWidgets('نموذج غير تعليمي: دائرته أيقونة شخص بلا صورة صفة',
+        (tester) async {
+      bigScreen(tester);
+      await tester.pumpWidget(MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: FilledButton(
+                onPressed: () => showModalBottomSheet<ServiceProvider>(
+                  context: context,
+                  isScrollControlled: true,
+                  builder: (_) => const ProviderFormSheet(
+                    category: ServiceCategory.technicians,
+                    userId: 'u1',
+                    userName: 'أحمد',
+                  ),
+                ),
+                child: const Text('افتح النموذج'),
+              ),
+            ),
+          ),
+        ),
+      ));
+      await tester.tap(find.text('افتح النموذج'));
+      await tester.pumpAndSettle();
+
+      expect(
+          find.descendant(
+              of: find.byType(CircleAvatar), matching: find.byType(Image)),
+          findsNothing);
+      expect(
+          find.descendant(
+              of: find.byType(CircleAvatar),
+              matching: find.byIcon(Icons.person_rounded)),
+          findsOneWidget);
+    });
   });
 
   group('عرض وتصفية صفحة الخدمات التعليمية', () {
@@ -486,6 +543,35 @@ void main() {
       expect(ratio, inInclusiveRange(0.27, 0.37));
     });
 
+    testWidgets('بطاقة بلا صورة مرفوعة: صورة الصفة الافتراضية بدل حرف الاسم',
+        (tester) async {
+      bigScreen(tester);
+      final fake = await seed();
+      await pumpScreen(tester, fake);
+
+      // السجلات الثلاثة مزروعة بلا photoUrl.
+      final docs = (await fake.collection('service_providers').get()).docs;
+      final byName = {for (final d in docs) d.data()['name'] as String: d.id};
+
+      String cardAsset(String label, String id) {
+        final found = find.descendant(
+            of: find.byKey(ValueKey('card-image-$id')),
+            matching: find.byType(Image));
+        expect(found, findsOneWidget, reason: '$label تعرض صورة، لا حرفًا');
+        final p = tester.widget<Image>(found).image;
+        return p is ResizeImage
+            ? (p.imageProvider as AssetImage).assetName
+            : (p as AssetImage).assetName;
+      }
+
+      expect(cardAsset('المدرّس', byName['أ. منى']!), 'assets/images/mal.jpg');
+      expect(cardAsset('المدرسة', byName['مدرسة النور']!),
+          'assets/images/femal.jpg');
+      // السجل القديم بلا providerKind ⇒ يُعامل كمدرّس.
+      expect(cardAsset('السجل القديم', byName['أ. سالم']!),
+          'assets/images/mal.jpg');
+    });
+
     testWidgets('تصفية المرحلة تطابق السجل متعدد المراحل', (tester) async {
       bigScreen(tester);
       await pumpScreen(tester, await seed());
@@ -564,6 +650,34 @@ void main() {
 
     Finder field(String label) =>
         find.widgetWithText(TextFormField, label);
+
+    testWidgets('حقل رابط الصورة يظهر ويحمّل الصورة المخزنة', (tester) async {
+      bigScreen(tester);
+      await openEdit(tester, {
+        ...eduItem,
+        'photoUrl': 'https://i.ibb.co/abc/upload.jpg',
+      });
+
+      expect(
+          tester
+              .widget<TextFormField>(field('رابط صورة السجل (https://…)'))
+              .controller!
+              .text,
+          'https://i.ibb.co/abc/upload.jpg');
+    });
+
+    testWidgets('سجل بلا صورة: حقل الرابط ظاهر وفارغ ليُرفَد بدل حذف السجل',
+        (tester) async {
+      bigScreen(tester);
+      await openEdit(tester, eduItem);
+
+      expect(
+          tester
+              .widget<TextFormField>(field('رابط صورة السجل (https://…)'))
+              .controller!
+              .text,
+          isEmpty);
+    });
 
     testWidgets('حقول التعليمية: قوائم نصية وبلا حقل الحرفة', (tester) async {
       bigScreen(tester);

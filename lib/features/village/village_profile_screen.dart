@@ -42,7 +42,7 @@ class _VillageProfileScreenState extends State<VillageProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar:
-          const QurityAppBar(title: 'عن أبودشيشة', color: kVillageProfileColor),
+          const QurityAppBar(title: 'عن أبودشيشة'),
       body: OfflineStreamBuilder<VillageInfo?>(
         stream: _stream,
         onlineBuilder: (context, snapshot) {

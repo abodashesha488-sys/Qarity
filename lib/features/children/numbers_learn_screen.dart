@@ -20,7 +20,7 @@ class LearnNumbersScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFFFF8E7),
       appBar:
-          const QurityAppBar(title: 'تعلّم الأرقام', color: Color(0xFFF9A825)),
+          const QurityAppBar(title: 'تعلّم الأرقام'),
       body: GridView.builder(
         padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
         itemCount: kNumberLessons.length,

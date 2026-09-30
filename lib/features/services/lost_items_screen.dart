@@ -108,15 +108,10 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: const QurityAppBar(title: 'المفقودات', color: kLostItemsColor),
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: 'lost_items_fab',
-        onPressed: _openForm,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('أضف إعلاناً',
-            style: TextStyle(fontWeight: FontWeight.w800)),
-        backgroundColor: kLostItemsColor,
-        foregroundColor: Colors.white,
+      appBar: QurityAppBar(
+        title: 'المفقودات',
+        onAdd: _openForm,
+        addTooltip: 'أضف إعلاناً',
       ),
       body: Column(
         children: [
@@ -406,7 +401,7 @@ class _LostItemDetailScreenState extends State<LostItemDetailScreen> {
     final item = _item;
     if (item == null) {
       return const Scaffold(
-        appBar: QurityAppBar(title: 'المفقودات', color: kLostItemsColor),
+        appBar: QurityAppBar(title: 'المفقودات'),
         body: Center(child: CircularProgressIndicator()),
       );
     }
@@ -426,7 +421,6 @@ class _LostItemDetailScreenState extends State<LostItemDetailScreen> {
     return Scaffold(
       appBar: QurityAppBar(
         title: item.title,
-        color: kLostItemsColor,
         actions: [
           IconButton(
             tooltip: 'مشاركة الإعلان',

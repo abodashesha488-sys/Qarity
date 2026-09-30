@@ -70,7 +70,7 @@ class _VillageArchiveScreenState extends State<VillageArchiveScreen> {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: const QurityAppBar(
-          title: 'أرشيف القرية', color: kVillageArchiveColor),
+          title: 'أرشيف القرية'),
       floatingActionButton: _isAdmin
           ? FloatingActionButton.extended(
               heroTag: 'village_archive_manage',

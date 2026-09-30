@@ -214,7 +214,7 @@ class _NumbersGameScreenState extends State<NumbersGameScreen> {
     final round = _current;
     return Scaffold(
       backgroundColor: const Color(0xFFFFF8E7),
-      appBar: const QurityAppBar(title: 'لعبة الأرقام', color: Color(0xFF1E88E5)),
+      appBar: const QurityAppBar(title: 'لعبة الأرقام'),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),

@@ -5,8 +5,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../models/medical_models.dart';
 import '../../services/share_service.dart';
 import '../../widgets/common_appbar_actions.dart';
+import '../../widgets/header_action_buttons.dart';
 import '../../widgets/qurity_app_bar.dart';
-import '../../widgets/qurity_logo.dart';
 
 /// صف معلومة (أيقونة + عنوان + قيمة) — مشترك بين شاشات التفاصيل الطبية.
 class MedInfoRow extends StatelessWidget {
@@ -106,6 +106,8 @@ class MedDetailHeader extends StatelessWidget {
     required this.imageUrl,
     required this.icon,
     this.onShare,
+    this.onAdd,
+    this.addTooltip = 'إضافة',
   });
   final String title;
   final Color accent;
@@ -113,6 +115,10 @@ class MedDetailHeader extends StatelessWidget {
   final String imageUrl;
   final IconData icon;
   final VoidCallback? onShare;
+
+  /// إجراء إضافة الشاشة — يظهر كزر «+» الأخضر في الهيدر (لا في شاشات لا إضافة لها).
+  final VoidCallback? onAdd;
+  final String addTooltip;
 
   @override
   Widget build(BuildContext context) {
@@ -128,7 +134,7 @@ class MedDetailHeader extends StatelessWidget {
           titleSpacing: 10,
           title: Row(
             children: [
-              const QurityLogo(size: 32),
+              const HeaderHomeButton(),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(title,
@@ -147,6 +153,8 @@ class MedDetailHeader extends StatelessWidget {
                   tooltip: 'مشاركة',
                   icon: const Icon(Icons.share_rounded),
                   onPressed: onShare),
+            if (onAdd != null)
+              HeaderAddButton(onPressed: onAdd!, tooltip: addTooltip),
             const NotificationBellButton(),
           ],
         ),

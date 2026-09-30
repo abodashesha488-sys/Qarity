@@ -55,15 +55,10 @@ class _WorkersEquipmentScreenState extends State<WorkersEquipmentScreen> {
     const color = Color(0xFFEF6C00);
 
     return Scaffold(
-      appBar:
-          const QurityAppBar(title: 'عمال و معدات', color: Color(0xFFEF6C00)),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddDialog(context),
-        backgroundColor: color,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('إضافة خدمة',
-            style: TextStyle(fontWeight: FontWeight.w800)),
+      appBar: QurityAppBar(
+        title: 'عمال و معدات',
+        onAdd: () => _showAddDialog(context),
+        addTooltip: 'إضافة خدمة',
       ),
       body: Column(
         children: [

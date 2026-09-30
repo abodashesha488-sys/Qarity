@@ -120,13 +120,10 @@ class _OccasionsListScreenState extends State<OccasionsListScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: const QurityAppBar(title: 'مناسبات القرية'),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.pushNamed(context, AppRoutes.occasionsAdd),
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('إضافة مناسبة', style: TextStyle(fontWeight: FontWeight.w800)),
-        backgroundColor: theme.colorScheme.primary,
-        foregroundColor: theme.colorScheme.onPrimary,
+      appBar: QurityAppBar(
+        title: 'مناسبات القرية',
+        onAdd: () => Navigator.pushNamed(context, AppRoutes.occasionsAdd),
+        addTooltip: 'إضافة مناسبة',
       ),
       body: OfflineStreamBuilder<List<Occasion>>(
         stream: _service.getOccasionsStream(),

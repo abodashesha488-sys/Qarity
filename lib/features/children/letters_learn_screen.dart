@@ -27,7 +27,7 @@ class LearnLettersScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFFFF8E7),
-      appBar: const QurityAppBar(title: 'تعلّم الحروف', color: Color(0xFF6A1B9A)),
+      appBar: const QurityAppBar(title: 'تعلّم الحروف'),
       body: GridView.builder(
         padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
         itemCount: kArabicLetters.length,

@@ -157,7 +157,7 @@ class _VillageContributionScreenState extends State<VillageContributionScreen> {
     final signedIn = FirebaseAuth.instance.currentUser != null;
     return Scaffold(
       appBar: const QurityAppBar(
-          title: 'ساهم في ذاكرة القرية', color: kContributionColor),
+          title: 'ساهم في ذاكرة القرية'),
       body: Form(
         key: _formKey,
         child: ListView(

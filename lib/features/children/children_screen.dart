@@ -150,7 +150,6 @@ class _ChildrenScreenState extends State<ChildrenScreen> {
       backgroundColor: const Color(0xFFFFF3DC),
       appBar: QurityAppBar(
         title: 'ركن الأطفال',
-        color: const Color(0xFF6A1B9A),
         actions: [
           IconButton(
             tooltip: 'تقرير الأهل',

@@ -253,6 +253,7 @@ class _AdminEditScreenState extends State<AdminEditScreen> {
           ] else
             const _FieldSpec('specialty', 'الحرفة / الخدمة'),
           const _FieldSpec('phone', 'الهاتف'),
+          const _FieldSpec('photoUrl', 'رابط صورة السجل (https://…)'),
           const _FieldSpec('address', 'العنوان'),
           const _FieldSpec('description', 'نبذة', multiline: true),
           const _FieldSpec('isFeatured',

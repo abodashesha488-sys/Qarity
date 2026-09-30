@@ -105,6 +105,16 @@ class _OpticalShopDetailScreenState extends State<OpticalShopDetailScreen> {
                 accentDark: kOpticalAccentDark,
                 imageUrl: shop.imageUrl,
                 icon: Icons.remove_red_eye_rounded,
+                onAdd: isOwner
+                    ? () => Navigator.pushNamed(
+                        context,
+                        AppRoutes.marketAdd,
+                        arguments: <String, dynamic>{
+                          kCategoryOptionsArgKey: kOpticalCategories,
+                        },
+                      )
+                    : null,
+                addTooltip: 'أضف منتجاً لمحلي',
                 onShare: () => ShareService.shareText(
                     title: '👓 ${shop.name}',
                     body: [
@@ -334,20 +344,6 @@ class _OpticalShopDetailScreenState extends State<OpticalShopDetailScreen> {
           );
         },
       ),
-      floatingActionButton: isOwner
-          ? FloatingActionButton.extended(
-              heroTag: 'optical_add_product',
-              onPressed: () => Navigator.pushNamed(
-                context,
-                AppRoutes.marketAdd,
-                arguments: <String, dynamic>{
-                  kCategoryOptionsArgKey: kOpticalCategories,
-                },
-              ),
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('أضف منتجاً لمحلي'),
-            )
-          : null,
     );
   }
 }

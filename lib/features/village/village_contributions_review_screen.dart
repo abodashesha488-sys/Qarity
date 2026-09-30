@@ -111,7 +111,7 @@ class _VillageContributionsReviewScreenState
     final theme = Theme.of(context);
     return Scaffold(
       appBar: const QurityAppBar(
-          title: 'مراجعة مساهمات الأهالي', color: kVillageContribColor),
+          title: 'مراجعة مساهمات الأهالي'),
       body: Column(
         children: [
           // فلاتر الحالة

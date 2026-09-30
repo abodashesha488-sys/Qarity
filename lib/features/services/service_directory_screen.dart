@@ -115,7 +115,8 @@ class _CategoryTile extends StatelessWidget {
 
 // ═══════════ شاشة الفئة: قائمة فئات منسدلة + بحث + مميز/الأكثر تقييماً ═══════════
 class ProviderCategoryScreen extends StatefulWidget {
-  const ProviderCategoryScreen({super.key, required this.category, this.service});
+  const ProviderCategoryScreen(
+      {super.key, required this.category, this.service});
   final String category;
 
   /// حقن اختياري للاختبارات (بلا Firebase).
@@ -265,12 +266,14 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
         labelText: 'تصفية حسب الفئة',
         prefixIcon: Icon(Icons.filter_alt_rounded, size: 20, color: _color),
         isDense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
       items: [
         const DropdownMenuItem(value: '', child: Text('كل الفئات')),
         ..._groupOptions.map((g) => DropdownMenuItem(
-            value: g, child: Text(g, maxLines: 1, overflow: TextOverflow.ellipsis))),
+            value: g,
+            child: Text(g, maxLines: 1, overflow: TextOverflow.ellipsis))),
         const DropdownMenuItem(value: 'غير مصنّف', child: Text('غير مصنّف')),
       ],
       onChanged: (v) => setState(() => _group = v ?? ''),
@@ -300,7 +303,8 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
                       : theme.colorScheme.outlineVariant),
               labelStyle: TextStyle(
                   fontSize: 12,
-                  fontWeight: _kindFilter == k ? FontWeight.w800 : FontWeight.w600,
+                  fontWeight:
+                      _kindFilter == k ? FontWeight.w800 : FontWeight.w600,
                   color: _kindFilter == k
                       ? _color
                       : theme.colorScheme.onSurfaceVariant),
@@ -323,8 +327,7 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
                     : theme.colorScheme.outlineVariant),
             labelStyle: TextStyle(
                 fontSize: 12,
-                fontWeight:
-                    _privateOnly ? FontWeight.w800 : FontWeight.w600,
+                fontWeight: _privateOnly ? FontWeight.w800 : FontWeight.w600,
                 color: _privateOnly
                     ? kEduPrivateTagColor
                     : theme.colorScheme.onSurfaceVariant),
@@ -392,12 +395,14 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
         labelText: label,
         prefixIcon: Icon(icon, size: 19, color: _color),
         isDense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       ),
       items: [
         DropdownMenuItem(value: '', child: Text(allLabel)),
         ...options.map((o) => DropdownMenuItem(
-            value: o, child: Text(o, maxLines: 1, overflow: TextOverflow.ellipsis))),
+            value: o,
+            child: Text(o, maxLines: 1, overflow: TextOverflow.ellipsis))),
       ],
       onChanged: (v) => onChanged(v ?? ''),
     );
@@ -408,21 +413,13 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: QurityAppBar(
-          title: ServiceCategory.label(widget.category), color: _color),
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: 'svc_cat_fab',
-        onPressed: _openForm,
-        icon: const Icon(Icons.add_rounded),
-        label: Text(
-          switch (widget.category) {
-            ServiceCategory.technicians => 'أضف حرفياً',
-            ServiceCategory.agricultural => 'أضف خدمة',
-            _ => 'أضف مدرّساً أو مدرسة',
-          },
-          style: const TextStyle(fontWeight: FontWeight.w800),
-        ),
-        backgroundColor: _color,
-        foregroundColor: Colors.white,
+        title: ServiceCategory.label(widget.category),
+        onAdd: _openForm,
+        addTooltip: switch (widget.category) {
+          ServiceCategory.technicians => 'أضف حرفياً',
+          ServiceCategory.agricultural => 'أضف خدمة',
+          _ => 'أضف مدرّساً أو مدرسة',
+        },
       ),
       body: Column(
         children: [
@@ -453,7 +450,8 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
                             onPressed: () => _search.clear(),
                           )
                         : null,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                   ),
                 ),
               ],
@@ -717,8 +715,8 @@ class _ProviderCard extends StatelessWidget {
           child: Text(provider.name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                  fontWeight: FontWeight.w900, fontSize: 14)),
+              style:
+                  const TextStyle(fontWeight: FontWeight.w900, fontSize: 14)),
         ),
         if (provider.isEducational) ...[
           const SizedBox(width: 5),
@@ -861,7 +859,22 @@ class _ProviderCard extends StatelessWidget {
     );
   }
 
-  Widget _avatar(ThemeData theme, Color accent) => Container(
+  Widget _avatar(ThemeData theme, Color accent) {
+    final path = provider.isEducational
+        ? EduKindMark.imageOf(provider.providerKind)
+        : null;
+    if (path == null) return _letterAvatar(theme, accent);
+    return Image.asset(
+      path,
+      width: _kImageSide,
+      height: _kImageSide,
+      fit: BoxFit.cover,
+      cacheWidth: (_kImageSide * 3).round(),
+      errorBuilder: (_, __, ___) => _letterAvatar(theme, accent),
+    );
+  }
+
+  Widget _letterAvatar(ThemeData theme, Color accent) => Container(
         color: accent.withValues(alpha: 0.1),
         alignment: Alignment.center,
         child: Text(
@@ -946,6 +959,7 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
   bool _saving = false;
   bool _uploading = false;
   String? _photoUrl;
+  String? _photoError;
 
   bool get _isEdu => widget.category == ServiceCategory.educational;
 
@@ -970,8 +984,31 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
     super.dispose();
   }
 
+  /// الصورة الافتراضية داخل دائرة الصورة حين لا يرفع المستخدم شيئًا:
+  /// «mal» للمدرّس و«femal» للمدرسة، مملوءة كامل الدائرة كما ستُعرض لاحقًا.
+  Widget _defaultPhotoMark() {
+    final path = _isEdu ? EduKindMark.imageOf(_kind) : null;
+    if (path == null) {
+      return Icon(Icons.person_rounded, size: 36, color: _accent);
+    }
+    return ClipOval(
+      child: Image.asset(
+        path,
+        width: 80,
+        height: 80,
+        fit: BoxFit.cover,
+        cacheWidth: 240,
+        errorBuilder: (_, __, ___) =>
+            Icon(Icons.person_rounded, size: 36, color: _accent),
+      ),
+    );
+  }
+
   Future<void> _pickPhoto() async {
-    setState(() => _uploading = true);
+    setState(() {
+      _uploading = true;
+      _photoError = null;
+    });
     try {
       final XFile? image = await _picker.pickImage(
           source: ImageSource.gallery,
@@ -982,12 +1019,18 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
       final bytes = await image.readAsBytes();
       final url = await ImageUploadService().uploadImage(bytes);
       if (!mounted) return;
-      setState(() => _photoUrl = url);
+      setState(() {
+        _photoUrl = url;
+        _photoError = null;
+      });
     } catch (e) {
+      // التنبيه المؤقت وحده كان يُبتلع عند ظهور أي رسالة أخرى، فتُحفظ السجل
+      // بلا صورة دون أن يعرف صاحبها. الآن يبقى الخطر ظاهرًا داخل النموذج.
+      final raw = e.toString().replaceFirst('Exception: ', '').trim();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('خطأ في رفع الصورة: $e'),
-            backgroundColor: Colors.red));
+        setState(() => _photoError = raw.isEmpty
+            ? 'تعذّر رفع الصورة — المس الدائرة للمحاولة مرة أخرى'
+            : raw);
       }
     } finally {
       if (mounted) setState(() => _uploading = false);
@@ -1005,6 +1048,10 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
   }
 
   void _submit() {
+    if (_uploading) {
+      _warn('الصورة ما زالت تُرفع… انتظر ثوانٍ ثم اضغط حفظ');
+      return;
+    }
     final name = _nameC.text.trim();
     final phone = _phoneC.text.trim();
     if (name.isEmpty || phone.isEmpty) {
@@ -1045,11 +1092,13 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
         submittedBy: widget.userId,
         submittedByName: widget.userName,
         providerKind: _kind,
-        eduTypes: _isEdu ? kEduTypes.where(_eduTypes.contains).toList() : const [],
+        eduTypes:
+            _isEdu ? kEduTypes.where(_eduTypes.contains).toList() : const [],
         stages: _isEdu ? kEduStages.where(_stages.contains).toList() : const [],
         subjects: _isEdu ? subjects : const [],
         universityNote: wantsUniversity ? _universityC.text.trim() : '',
-        offersPrivateTutoring: _isEdu && _kind == kEduKindTeacher && _privateTutoring,
+        offersPrivateTutoring:
+            _isEdu && _kind == kEduKindTeacher && _privateTutoring,
       ),
     );
   }
@@ -1072,7 +1121,8 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
                     color: _accent, size: 22),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text('إضافة إلى ${ServiceCategory.label(widget.category)}',
+                  child: Text(
+                      'إضافة إلى ${ServiceCategory.label(widget.category)}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -1092,12 +1142,12 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
                     CircleAvatar(
                       radius: 40,
                       backgroundColor: _accent.withValues(alpha: 0.1),
-                      foregroundImage: _photoUrl != null
+                      foregroundImage: (_photoUrl?.isNotEmpty ?? false)
                           ? CachedNetworkImageProvider(_photoUrl!)
                           : null,
-                      child: _photoUrl == null
-                          ? Icon(Icons.person_rounded, size: 36, color: _accent)
-                          : null,
+                      child: (_photoUrl?.isNotEmpty ?? false)
+                          ? null
+                          : _defaultPhotoMark(),
                     ),
                     Positioned(
                       bottom: 0,
@@ -1124,7 +1174,28 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
                 ),
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 6),
+            if (_photoError != null) ...[
+              Row(
+                key: const Key('photo-upload-error'),
+                children: [
+                  const Icon(Icons.error_outline_rounded,
+                      size: 16, color: Color(0xFFB71C1C)),
+                  const SizedBox(width: 5),
+                  Expanded(
+                    child: Text(
+                      '${_photoError!} — المس الدائرة لإعادة المحاولة، أو احفظ بلا صورة',
+                      style: const TextStyle(
+                          color: Color(0xFFB71C1C),
+                          fontWeight: FontWeight.w700,
+                          fontSize: 11.5,
+                          height: 1.35),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            const SizedBox(height: 10),
             if (isEdu) ...[
               _kindSelector(theme),
               const SizedBox(height: 12),
@@ -1166,15 +1237,11 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
               ),
               if (_stages.contains(kEduStageUniversity)) ...[
                 const SizedBox(height: 12),
-                _field(
-                    theme,
-                    _universityC,
-                    'التخصص / الكلية (اكتبه بنفسك)',
+                _field(theme, _universityC, 'التخصص / الكلية (اكتبه بنفسك)',
                     Icons.edit_note_rounded,
                     key: const Key('edu-university-note')),
                 const SizedBox(height: 2),
-                Text(
-                    'اكتب التخصصات الجامعية التي تدرّسها، وافصل بينها بفاصلة.',
+                Text('اكتب التخصصات الجامعية التي تدرّسها، وافصل بينها بفاصلة.',
                     style: theme.textTheme.labelSmall
                         ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
               ],
@@ -1278,8 +1345,8 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
                     style: theme.textTheme.titleSmall
                         ?.copyWith(fontWeight: FontWeight.w900)),
                 Text(hint,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant)),
+                    style: theme.textTheme.labelSmall
+                        ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
               ],
             ),
           ),
@@ -1291,7 +1358,9 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
                   borderRadius: BorderRadius.circular(10)),
               child: Text('$count',
                   style: TextStyle(
-                      fontSize: 11, fontWeight: FontWeight.w900, color: _accent)),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                      color: _accent)),
             ),
         ],
       ),
@@ -1330,9 +1399,8 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
                       : theme.colorScheme.outlineVariant),
               labelStyle: TextStyle(
                 fontSize: 12,
-                fontWeight: selected.contains(o)
-                    ? FontWeight.w800
-                    : FontWeight.w600,
+                fontWeight:
+                    selected.contains(o) ? FontWeight.w800 : FontWeight.w600,
                 color: selected.contains(o)
                     ? _accent
                     : theme.colorScheme.onSurfaceVariant,
@@ -1396,7 +1464,8 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
                   )
                 : null,
             isDense: true,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
@@ -1404,8 +1473,8 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
         if (matches != null)
           matches.isEmpty
               ? Text('لا مادة بهذا الاسم',
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(color: Colors.grey))
+                  style:
+                      theme.textTheme.bodySmall?.copyWith(color: Colors.grey))
               : _chipCloud(theme, matches, _subjects, 'edu-subject')
         else
           for (final entry in kEgyptSubjectSections.entries) ...[
@@ -1419,14 +1488,12 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
             _chipCloud(theme, entry.value, _subjects, 'edu-subject'),
           ],
         const SizedBox(height: 10),
-        _field(
-            theme,
-            _customSubjectC,
-            'تخصص آخر — اكتبه بنفسك',
+        _field(theme, _customSubjectC, 'تخصص آخر — اكتبه بنفسك',
             Icons.edit_note_rounded,
             key: const Key('edu-subject-custom')),
         const SizedBox(height: 2),
-        Text('إن لم تجد مادتك في القوائم اكتبها هنا (وافصل بين عدة تخصصات بفاصلة).',
+        Text(
+            'إن لم تجد مادتك في القوائم اكتبها هنا (وافصل بين عدة تخصصات بفاصلة).',
             style: theme.textTheme.labelSmall
                 ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
       ],
@@ -1520,11 +1587,11 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('تدريس خاص',
-                    style: theme.textTheme.titleSmall
-                        ?.copyWith(fontWeight: FontWeight.w900, fontSize: 13.5)),
+                    style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w900, fontSize: 13.5)),
                 Text('لديّ إمكانية إعطاء دروس خصوصية',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant)),
+                    style: theme.textTheme.labelSmall
+                        ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
               ],
             ),
           ),

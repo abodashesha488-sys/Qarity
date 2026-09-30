@@ -121,9 +121,12 @@ class _MarketTabsScreenState extends State<MarketTabsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final (addLabel, addAction) = _addForTab();
     return Scaffold(
       appBar: QurityAppBar(
         title: 'سوق القرية',
+        onAdd: addAction,
+        addTooltip: addLabel,
         bottom: TabBar(
           controller: _tabController,
           onTap: (_) => setState(() {}),
@@ -140,7 +143,6 @@ class _MarketTabsScreenState extends State<MarketTabsScreen>
           ],
         ),
       ),
-      floatingActionButton: _buildFab(),
       body: TabBarView(
         controller: _tabController,
         children: const [
@@ -153,28 +155,17 @@ class _MarketTabsScreenState extends State<MarketTabsScreen>
     );
   }
 
-  Widget _buildFab() {
-    final theme = Theme.of(context);
-    final idx = _tabController.index;
-    final configs = <(String, IconData, VoidCallback)>[
-      (
-        'إضافة منتج',
-        Icons.add_rounded,
-        () => Navigator.pushNamed(context, AppRoutes.marketAdd)
-      ),
-      ('إنشاء محل', Icons.storefront_rounded, _createShop),
-      ('طلب سلعة', Icons.request_quote_rounded, _createBuyRequest),
-      ('تبرّع بسلعة', Icons.volunteer_activism_rounded, _createDonation),
-    ];
-    final c = configs[idx];
-    return FloatingActionButton.extended(
-      heroTag: 'market_tab_fab_$idx',
-      onPressed: c.$3,
-      icon: Icon(c.$2),
-      label: Text(c.$1, style: const TextStyle(fontWeight: FontWeight.w800)),
-      backgroundColor: theme.colorScheme.primary,
-      foregroundColor: theme.colorScheme.onPrimary,
-    );
+  /// تسمية وإجراء زر «+» في الهيدر يتبعان التبويب المفتوح.
+  (String, VoidCallback) _addForTab() {
+    return switch (_tabController.index) {
+      1 => ('إنشاء محل', _createShop),
+      2 => ('طلب سلعة', _createBuyRequest),
+      3 => ('تبرّع بسلعة', _createDonation),
+      _ => (
+          'إضافة منتج',
+          () => Navigator.pushNamed(context, AppRoutes.marketAdd)
+        ),
+    };
   }
 
   Future<String?> _requireUser() async {

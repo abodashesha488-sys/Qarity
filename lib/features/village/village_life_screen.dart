@@ -16,7 +16,7 @@ class VillageLifeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const QurityAppBar(
-          title: 'معالم وحياة القرية', color: kVillageLifeColor),
+          title: 'معالم وحياة القرية'),
       body: ListView(
         padding: const EdgeInsets.only(bottom: 28),
         children: [

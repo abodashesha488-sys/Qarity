@@ -117,7 +117,7 @@ class _VillageSectionScaffoldState<T> extends State<VillageSectionScaffold<T>> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: QurityAppBar(title: widget.title, color: widget.accent),
+      appBar: QurityAppBar(title: widget.title),
       floatingActionButton: _isAdmin
           ? FloatingActionButton.extended(
               heroTag: 'village_manage_${widget.title}',
