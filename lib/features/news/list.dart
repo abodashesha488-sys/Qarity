@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:shimmer/shimmer.dart';
 
+import '../../core/utils/relative_time.dart';
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
 import '../../services/cache_service.dart';
@@ -156,22 +157,22 @@ class _NewsScreenState extends State<NewsScreen>
     final showHero = _selectedCategory == 'الكل' && _searchQuery.isEmpty;
     final featured = showHero && all.isNotEmpty ? all.first : null;
     final trending = showHero ? _trending(all) : <NewsItem>[];
-    final rest = showHero
-        ? filtered.where((n) => n.id != featured?.id).toList()
-        : filtered;
+    // «كل الأخبار» تعرض كل الأخبار مرتّبة الأحدث أولًا (بما فيها الخبر الرئيسي).
+    final rest = filtered;
 
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [
         _buildAppBar(theme),
+        // التصنيف أعلى الأخبار وتحت الهيدر مباشرة (لا داخل تكوينه).
+        SliverToBoxAdapter(child: _buildCategoryChips(theme)),
         if (featured != null)
           SliverToBoxAdapter(child: _FeaturedHero(item: featured)),
-        SliverToBoxAdapter(child: _buildCategoryChips(theme)),
         if (trending.length > 1)
           SliverToBoxAdapter(child: _buildTrending(theme, trending)),
         SliverToBoxAdapter(
           child: _SectionHeader(
-            title: _selectedCategory == 'الكل' ? 'أحدث الأخبار' : _selectedCategory,
+            title: _selectedCategory == 'الكل' ? 'كل الأخبار' : _selectedCategory,
             count: rest.length,
           ),
         ),
@@ -372,13 +373,11 @@ child: Padding(
                     children: [
                       Expanded(
                         child: Stack(
+                          fit: StackFit.expand,
                           children: [
                             ClipRRect(
                               borderRadius: BorderRadius.circular(14),
-                              child: SizedBox(
-                                width: double.infinity,
-                                child: _thumb(n),
-                              ),
+                              child: _thumb(n),
                             ),
                             // ترتيب القراءة (رقم الزاوية)
                             Positioned(
@@ -423,19 +422,35 @@ child: Padding(
   void _open(NewsItem item) =>
       Navigator.pushNamed(context, AppRoutes.newsView, arguments: item);
 
-  Widget _thumb(NewsItem item, {BoxFit fit = BoxFit.cover}) {
+  Widget _thumb(NewsItem item) => _NewsThumb(item: item, iconSize: 40);
+}
+
+/// صورة الخبر في أي موضع (رئيسي/شبكة/بطاقة): تملأ المساحة المخصّصة لها بالكامل،
+/// صغيرة كانت الصورة أم كبيرة، فتظهر كل الأخبار بقالب واحد.
+class _NewsThumb extends StatelessWidget {
+  const _NewsThumb({required this.item, this.iconSize = 36});
+
+  final NewsItem item;
+  final double iconSize;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final url = item.imageUrls.isNotEmpty ? item.imageUrls.first : item.imageUrl;
     if (url.isEmpty) {
       return ColoredBox(
         color: theme.colorScheme.surfaceContainerHighest,
-        child: Icon(Icons.newspaper_rounded,
-            size: 40, color: theme.colorScheme.onSurfaceVariant),
+        child: Center(
+          child: Icon(Icons.newspaper_rounded,
+              size: iconSize, color: theme.colorScheme.onSurfaceVariant),
+        ),
       );
     }
     return CachedNetworkImage(
       imageUrl: url,
-      fit: fit,
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: double.infinity,
       placeholder: (c, u) => ColoredBox(
         color: theme.colorScheme.surfaceContainerHighest,
         child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
@@ -443,7 +458,7 @@ child: Padding(
       errorWidget: (c, u, e) => ColoredBox(
         color: theme.colorScheme.surfaceContainerHighest,
         child: Icon(Icons.broken_image_rounded,
-            color: theme.colorScheme.onSurfaceVariant),
+            size: iconSize, color: theme.colorScheme.onSurfaceVariant),
       ),
     );
   }
@@ -468,7 +483,7 @@ class _FeaturedHero extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              _HeroThumb(item: item),
+              _NewsThumb(item: item, iconSize: 60),
               DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -543,37 +558,6 @@ class _FeaturedHero extends StatelessWidget {
         ),
       ),
     ).animate().fadeIn(duration: 400.ms);
-  }
-}
-
-class _HeroThumb extends StatelessWidget {
-  const _HeroThumb({required this.item});
-  final NewsItem item;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final url = item.imageUrls.isNotEmpty ? item.imageUrls.first : item.imageUrl;
-    if (url.isEmpty) {
-      return ColoredBox(
-        color: theme.colorScheme.surfaceContainerHighest,
-        child: Icon(Icons.newspaper_rounded,
-            size: 60, color: theme.colorScheme.onSurfaceVariant),
-      );
-    }
-    return CachedNetworkImage(
-      imageUrl: url,
-      fit: BoxFit.cover,
-      placeholder: (c, u) => ColoredBox(
-        color: theme.colorScheme.surfaceContainerHighest,
-        child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-      ),
-      errorWidget: (c, u, e) => ColoredBox(
-        color: theme.colorScheme.surfaceContainerHighest,
-        child: Icon(Icons.broken_image_rounded,
-            color: theme.colorScheme.onSurfaceVariant),
-      ),
-    );
   }
 }
 
@@ -696,7 +680,7 @@ class _NewsCard extends StatelessWidget {
                 child: SizedBox(
                   width: 104,
                   height: 104,
-                  child: _CardThumb(item: item),
+                  child: _NewsThumb(item: item),
                 ),
               ),
             ],
@@ -707,38 +691,6 @@ class _NewsCard extends StatelessWidget {
   }
 }
 
-class _CardThumb extends StatelessWidget {
-  const _CardThumb({required this.item});
-  final NewsItem item;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final url = item.imageUrls.isNotEmpty ? item.imageUrls.first : item.imageUrl;
-    if (url.isEmpty) {
-      return ColoredBox(
-        color: theme.colorScheme.surfaceContainerHighest,
-        child: Icon(Icons.newspaper_rounded,
-            size: 36, color: theme.colorScheme.onSurfaceVariant),
-      );
-    }
-    return CachedNetworkImage(
-      imageUrl: url,
-      fit: BoxFit.cover,
-      width: double.infinity,
-      placeholder: (c, u) => ColoredBox(
-        color: theme.colorScheme.surfaceContainerHighest,
-        child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-      ),
-      errorWidget: (c, u, e) => ColoredBox(
-        color: theme.colorScheme.surfaceContainerHighest,
-        child: Icon(Icons.broken_image_rounded,
-            color: theme.colorScheme.onSurfaceVariant),
-      ),
-    );
-  }
-}
-
 class _NewsMeta extends StatelessWidget {
   const _NewsMeta({required this.item, this.light = false});
   final NewsItem item;
@@ -746,28 +698,33 @@ class _NewsMeta extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = light ? Colors.white70 : Theme.of(context).colorScheme.onSurfaceVariant;
-    final readMin = (item.subtitle.split(RegExp(r'\s+')).length / 180).ceil().clamp(1, 20);
-    return Row(
+    final color =
+        light ? Colors.white70 : Theme.of(context).colorScheme.onSurfaceVariant;
+    final style =
+        TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: color);
+    // الوقت الحقيقي منذ إنشاء الخبر (كان سطرًا تقديرًا لدقائق القراءة).
+    final since = relativeTimeLabelAr(item.createdAt);
+    return Wrap(
+      spacing: 10,
+      runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        Icon(Icons.visibility_rounded, size: 13, color: color),
-        const SizedBox(width: 3),
-        Text('${item.views}', style: TextStyle(fontSize: 10.5, color: color)),
-        const SizedBox(width: 10),
-        Icon(Icons.favorite_rounded, size: 13, color: color),
-        const SizedBox(width: 3),
-        Text('${item.likes}', style: TextStyle(fontSize: 10.5, color: color)),
-        const SizedBox(width: 10),
-        Icon(Icons.mode_comment_outlined, size: 13, color: color),
-        const SizedBox(width: 3),
-        Text('${item.comments}', style: TextStyle(fontSize: 10.5, color: color)),
-        const SizedBox(width: 10),
-        Icon(Icons.schedule_rounded, size: 13, color: color),
-        const SizedBox(width: 3),
-        Text('$readMin د', style: TextStyle(fontSize: 10.5, color: color)),
+        _chip(Icons.visibility_rounded, '${item.views}', style),
+        _chip(Icons.favorite_rounded, '${item.likes}', style),
+        _chip(Icons.mode_comment_outlined, '${item.comments}', style),
+        if (since.isNotEmpty) _chip(Icons.schedule_rounded, since, style),
       ],
     );
   }
+
+  Widget _chip(IconData icon, String label, TextStyle style) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: style.color),
+          const SizedBox(width: 3),
+          Text(label, style: style),
+        ],
+      );
 }
 
 // ═══════════════════════ States ═══════════════════════

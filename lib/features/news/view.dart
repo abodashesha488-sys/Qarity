@@ -3,8 +3,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-import '../../core/constants/app_colors.dart';
+import '../../core/utils/comment_style.dart';
 import '../../core/utils/helpers.dart';
+import '../../core/utils/relative_time.dart';
 import '../../core/utils/role_style.dart';
 import '../../core/widgets/shared_cards.dart';
 import '../../models/data_models.dart';
@@ -16,10 +17,13 @@ import '../../widgets/qurity_app_bar.dart';
 /// Full article reader. Opened with a [NewsItem] as route argument
 /// (see `AppRoutes.newsView`).
 class NewsViewScreen extends StatefulWidget {
-  const NewsViewScreen({super.key, this.newsService});
+  const NewsViewScreen({super.key, this.newsService, this.userService});
 
   /// اختياري لحقن Firestore في الاختبارات (الإنتاج يتركه فارغاً).
   final NewsService? newsService;
+
+  /// اختياري لقراءة صورة محرر الخبر من ملفه (نفس نمط الحقن).
+  final UserService? userService;
 
   @override
   State<NewsViewScreen> createState() => _NewsViewScreenState();
@@ -27,6 +31,7 @@ class NewsViewScreen extends StatefulWidget {
 
 class _NewsViewScreenState extends State<NewsViewScreen> {
   late final NewsService _newsService = widget.newsService ?? NewsService();
+  late final UserService _userService = widget.userService ?? UserService();
   final TextEditingController _commentController = TextEditingController();
 
   NewsItem? _news;
@@ -36,11 +41,24 @@ class _NewsViewScreenState extends State<NewsViewScreen> {
   String _currentUserName = '';
   // الأدمن العام أو الأدمن المساعد فقط يستطيع حذف التعليقات.
   bool _canModerate = false;
+  // صورة محرر الخبر (من users/{authorId}) — تُقرأ وقت العرض.
+  String _authorPhotoUrl = '';
+  String _authorPhotoFor = '';
 
   @override
   void initState() {
     super.initState();
     _loadUser();
+  }
+
+  Future<void> _loadAuthorPhoto(String authorId) async {
+    try {
+      final model = await _userService.getUser(authorId);
+      if (!mounted) return;
+      setState(() => _authorPhotoUrl = (model?.photoUrl ?? '').trim());
+    } catch (_) {
+      // بلا اتصال أو بلا وثيقة: أيقونة الشخص تكفي، لا تُرك الشاشة معلقة.
+    }
   }
 
   Future<void> _loadUser() async {
@@ -54,7 +72,7 @@ class _NewsViewScreenState extends State<NewsViewScreen> {
     final user = fetched;
     if (user == null) return;
     try {
-      final model = await UserService().getUser(user.uid);
+      final model = await _userService.getUser(user.uid);
       if (!mounted) return;
       setState(() {
         _currentUserId = user.uid;
@@ -78,6 +96,11 @@ class _NewsViewScreenState extends State<NewsViewScreen> {
     if (!_viewCounted && _news != null && _news!.id.isNotEmpty) {
       _viewCounted = true;
       _newsService.incrementViews(_news!.id);
+    }
+    final authorId = _news?.authorId ?? '';
+    if (authorId.isNotEmpty && _authorPhotoFor != authorId) {
+      _authorPhotoFor = authorId;
+      _loadAuthorPhoto(authorId);
     }
   }
 
@@ -213,6 +236,7 @@ class _NewsViewScreenState extends State<NewsViewScreen> {
     final images = item.imageUrls.isNotEmpty
         ? item.imageUrls
         : (item.imageUrl.isNotEmpty ? [item.imageUrl] : const <String>[]);
+    final since = relativeTimeLabelAr(item.createdAt);
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -278,6 +302,8 @@ class _NewsViewScreenState extends State<NewsViewScreen> {
                     ),
                     if (item.date.isNotEmpty)
                       _MetaRow(icon: Icons.calendar_today_outlined, label: item.date),
+                    if (since.isNotEmpty)
+                      _MetaRow(icon: Icons.schedule_rounded, label: since),
                     _MetaRow(icon: Icons.visibility_outlined, label: '${item.views} مشاهدة'),
                   ],
                 ),
@@ -297,9 +323,14 @@ class _NewsViewScreenState extends State<NewsViewScreen> {
                 Row(
                   children: [
                     CircleAvatar(
-                      radius: 18,
+                      key: const Key('article-author-avatar'),
+                      radius: CommentStyle.avatarRadius,
                       backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
-                      child: Icon(Icons.person_rounded, size: 18, color: theme.colorScheme.primary),
+                      backgroundImage: CommentStyle.photoProvider(_authorPhotoUrl),
+                      child: _authorPhotoUrl.isEmpty
+                          ? Icon(Icons.person_rounded,
+                              size: 20, color: theme.colorScheme.primary)
+                          : null,
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -446,29 +477,23 @@ class _NewsViewScreenState extends State<NewsViewScreen> {
                   return InfoListCard(
                     padding: const EdgeInsets.all(14),
                     leading: CircleAvatar(
-                      radius: 18,
+                      radius: CommentStyle.avatarRadius,
                       backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
                       backgroundImage:
                           photo.isNotEmpty ? CachedNetworkImageProvider(photo) : null,
                       child: photo.isEmpty
-                          ? Icon(Icons.person_rounded, size: 16, color: theme.colorScheme.primary)
+                          ? Icon(Icons.person_rounded, size: 20, color: theme.colorScheme.primary)
                           : null,
                     ),
                     title: data['userName'] as String? ?? 'زائر',
                     subtitleBuilder: (context) => [
                       Text(
                         data['userName'] as String? ?? 'زائر',
-                        style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+                        style: CommentStyle.author,
                       ),
-                      const SizedBox(height: 4),
-                      // نص التعليق باللون الأسود
-                      Text(
-                        commentText,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: AppColors.textPrimary,
-                          height: 1.5,
-                        ),
-                      ),
+                      const SizedBox(height: 5),
+                      // نص التعليق: أسود بحجم واضح (تنسيق موحّد لكل التعليقات)
+                      Text(commentText, style: CommentStyle.body),
                     ],
                     trailing: _canModerate
                         ? IconButton(
@@ -549,6 +574,9 @@ class _NewsViewScreenState extends State<NewsViewScreen> {
 }
 
 /// Hero gallery for the article: swipeable with live page indicators.
+///
+/// الصورة تُعرض كاملة بِنِسبها الطبيعية على عرض الشاشة (بلا اقتصاص ولا تمديد)،
+/// مع أسهم السابق/التالي وعدّاد ونقاط تمرير، والعدسة تفتحها بملء الشاشة.
 class _ArticleGallery extends StatefulWidget {
   const _ArticleGallery({required this.images});
 
@@ -559,13 +587,65 @@ class _ArticleGallery extends StatefulWidget {
 }
 
 class _ArticleGalleryState extends State<_ArticleGallery> {
+  static const double _minHeight = 180;
+  static const double _maxHeight = 420;
+  static const double _fallbackRatio = 4 / 3;
+
   final PageController _controller = PageController();
+  final Map<int, double> _ratios = {};
+  final Set<int> _probing = {};
   int _current = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _probeRatios();
+  }
+
+  /// يقيس نسبة كل صورة حقيقية (العرض ÷ الارتفاع) فيُقسّط الشريط على مقاسها
+  /// الطبيعي بدل أن يقتطع منها. الفشل يترك النسبة الافتراضية.
+  void _probeRatios() {
+    for (int i = 0; i < widget.images.length; i++) {
+      _probeOne(i, widget.images[i]);
+    }
+  }
+
+  void _probeOne(int index, String url) {
+    if (url.isEmpty || _probing.contains(index)) return;
+    _probing.add(index);
+    try {
+      CachedNetworkImageProvider(url)
+          .resolve(ImageConfiguration.empty)
+          .addListener(ImageStreamListener((info, _) {
+        final h = info.image.height;
+        if (!mounted || h <= 0) return;
+        setState(() => _ratios[index] = info.image.width / h);
+      }, onError: (Object _, StackTrace? __) {}));
+    } catch (_) {
+      // لا Firebase في اختبارات الواجهة — النسبة الافتراضية تكفي.
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _ArticleGallery oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.images != widget.images) _probeRatios();
+  }
 
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  void _step(int delta) {
+    final target = _current + delta;
+    if (target < 0 || target >= widget.images.length) return;
+    _controller.animateToPage(
+      target,
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   void _showFullScreenImage(BuildContext context, List<String> images, int initialIndex) {
@@ -588,69 +668,204 @@ class _ArticleGalleryState extends State<_ArticleGallery> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return GestureDetector(
-      onTap: () => _showFullScreenImage(context, widget.images, _current),
-      child: SizedBox(
-        height: 240,
-        width: double.infinity,
-        child: Stack(
-          children: [
-            PageView.builder(
-              controller: _controller,
-              itemCount: widget.images.length,
-              onPageChanged: (i) => setState(() => _current = i),
-              itemBuilder: (context, i) => CachedNetworkImage(
-                imageUrl: widget.images[i],
-                fit: BoxFit.cover,
-                width: double.infinity,
-                placeholder: (context, url) => ColoredBox(
-                  color: theme.colorScheme.surfaceContainerHighest,
-                  child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                ),
-                errorWidget: (context, url, error) => ColoredBox(
-                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
-                  child: Center(
-                    child: Icon(Icons.broken_image_rounded, size: 40, color: theme.colorScheme.onSurfaceVariant),
+    final multi = widget.images.length > 1;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final ratio = _ratios[_current] ?? _fallbackRatio;
+        final height =
+            (constraints.maxWidth / ratio).clamp(_minHeight, _maxHeight);
+        return SizedBox(
+          height: height,
+          width: double.infinity,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // خلفية داكنة خلف حواف الصور عند العرض الكامل (تحت الصورة دائمًا)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: ColoredBox(
+                    color: theme.colorScheme.surfaceContainerHighest,
                   ),
                 ),
               ),
-            ),
-            if (widget.images.length > 1)
+              GestureDetector(
+                onTap: () =>
+                    _showFullScreenImage(context, widget.images, _current),
+                child: PageView.builder(
+                  controller: _controller,
+                  itemCount: widget.images.length,
+                  onPageChanged: (i) => setState(() => _current = i),
+                  itemBuilder: (context, i) => _GalleryPage(url: widget.images[i]),
+                ),
+              ),
+              if (multi) ...[
+                // سابق (يمين في RTL) / تالي (يسار)
+                Positioned(
+                  right: 8,
+                  top: 0,
+                  bottom: 0,
+                  child: _NavButton(
+                    key: const Key('gallery-prev'),
+                    icon: Icons.chevron_right_rounded,
+                    onTap: _current > 0 ? () => _step(-1) : null,
+                    tooltip: 'السابق',
+                  ),
+                ),
+                Positioned(
+                  left: 8,
+                  top: 0,
+                  bottom: 0,
+                  child: _NavButton(
+                    key: const Key('gallery-next'),
+                    icon: Icons.chevron_left_rounded,
+                    onTap: _current < widget.images.length - 1
+                        ? () => _step(1)
+                        : null,
+                    tooltip: 'التالي',
+                  ),
+                ),
+                Positioned(
+                  top: 10,
+                  left: 10,
+                  child: Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.55),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '${_current + 1} / ${widget.images.length}',
+                        key: const Key('gallery-counter'),
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  bottom: 12,
+                  left: 0,
+                  right: 0,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(
+                      widget.images.length,
+                      (i) => GestureDetector(
+                        onTap: () => _controller.animateToPage(
+                          i,
+                          duration: const Duration(milliseconds: 280),
+                          curve: Curves.easeOutCubic,
+                        ),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          margin: const EdgeInsets.symmetric(horizontal: 3),
+                          width: i == _current ? 20 : 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: Colors.white
+                                .withValues(alpha: i == _current ? 0.95 : 0.5),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+              // عدسة العرض بملء الشاشة
               Positioned(
                 bottom: 12,
-                left: 0,
-                right: 0,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(
-                    widget.images.length,
-                    (i) => AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      margin: const EdgeInsets.symmetric(horizontal: 3),
-                      width: i == _current ? 20 : 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: i == _current ? 0.95 : 0.5),
-                        borderRadius: BorderRadius.circular(4),
+                right: 12,
+                child: Tooltip(
+                  message: 'عرض بملء الشاشة',
+                  child: Material(
+                    key: const Key('gallery-zoom'),
+                    color: Colors.black.withValues(alpha: 0.55),
+                    shape: const CircleBorder(),
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: () => _showFullScreenImage(
+                          context, widget.images, _current),
+                      child: const Padding(
+                        padding: EdgeInsets.all(8),
+                        child: Icon(Icons.zoom_in_rounded,
+                            size: 20, color: Colors.white),
                       ),
                     ),
                   ),
                 ),
               ),
-            // Zoom hint
-            Positioned(
-              bottom: 12,
-              right: 12,
-              child: Material(
-                color: Colors.black.withValues(alpha: 0.5),
-                shape: const CircleBorder(),
-                child: Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Icon(Icons.zoom_in_rounded, size: 20, color: Colors.white.withValues(alpha: 0.8)),
-                ),
-              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// صفحة صورة واحدة داخل الشريط: تُعرض كاملة (contain) بلا اقتصاص.
+class _GalleryPage extends StatelessWidget {
+  const _GalleryPage({required this.url});
+
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return CachedNetworkImage(
+      imageUrl: url,
+      fit: BoxFit.contain,
+      placeholder: (context, url) => ColoredBox(
+        color: theme.colorScheme.surfaceContainerHighest,
+        child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      ),
+      errorWidget: (context, url, error) => ColoredBox(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+        child: Center(
+          child: Icon(Icons.broken_image_rounded,
+              size: 40, color: theme.colorScheme.onSurfaceVariant),
+        ),
+      ),
+    );
+  }
+}
+
+class _NavButton extends StatelessWidget {
+  const _NavButton({
+    super.key,
+    required this.icon,
+    required this.onTap,
+    required this.tooltip,
+  });
+
+  final IconData icon;
+  final VoidCallback? onTap;
+  final String tooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onTap != null;
+    return Center(
+      child: Tooltip(
+        message: tooltip,
+        child: Material(
+          color: Colors.black.withValues(alpha: enabled ? 0.45 : 0.22),
+          shape: const CircleBorder(),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.all(6),
+              child: Icon(icon,
+                  size: 26,
+                  color: Colors.white.withValues(alpha: enabled ? 1 : 0.5)),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -685,6 +900,16 @@ class _FullScreenImageViewerState extends State<_FullScreenImageViewer> {
     super.dispose();
   }
 
+  void _step(int delta) {
+    final target = _currentIndex + delta;
+    if (target < 0 || target >= widget.images.length) return;
+    _controller.animateToPage(
+      target,
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -712,6 +937,32 @@ class _FullScreenImageViewerState extends State<_FullScreenImageViewer> {
               ),
             ),
           ),
+          if (widget.images.length > 1) ...[
+            Positioned(
+              right: 12,
+              top: 0,
+              bottom: 0,
+              child: _NavButton(
+                key: const Key('viewer-prev'),
+                icon: Icons.chevron_right_rounded,
+                onTap: _currentIndex > 0 ? () => _step(-1) : null,
+                tooltip: 'السابق',
+              ),
+            ),
+            Positioned(
+              left: 12,
+              top: 0,
+              bottom: 0,
+              child: _NavButton(
+                key: const Key('viewer-next'),
+                icon: Icons.chevron_left_rounded,
+                onTap: _currentIndex < widget.images.length - 1
+                    ? () => _step(1)
+                    : null,
+                tooltip: 'التالي',
+              ),
+            ),
+          ],
           SafeArea(
             child: Column(
               children: [
@@ -739,9 +990,13 @@ class _FullScreenImageViewerState extends State<_FullScreenImageViewer> {
                           color: Colors.black.withValues(alpha: 0.5),
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: Text(
-                          '${_currentIndex + 1} / ${widget.images.length}',
-                          style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                        child: Directionality(
+                          textDirection: TextDirection.ltr,
+                          child: Text(
+                            '${_currentIndex + 1} / ${widget.images.length}',
+                            key: const Key('viewer-counter'),
+                            style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                          ),
                         ),
                       ),
                     ],

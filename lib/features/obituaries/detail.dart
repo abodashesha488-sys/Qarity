@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
-import '../../core/constants/app_colors.dart';
+import '../../core/utils/comment_style.dart';
 import '../../core/widgets/shared_cards.dart';
 import '../../models/data_models.dart';
 import '../../services/engagement_service.dart';
@@ -631,14 +631,14 @@ class _CondolenceSectionState extends State<_CondolenceSection> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             CircleAvatar(
-                              radius: 16,
+                              radius: CommentStyle.avatarRadius,
                               backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
                               backgroundImage: (c.photoUrl ?? '').isNotEmpty
                                   ? CachedNetworkImageProvider(c.photoUrl!)
                                   : null,
                               child: (c.photoUrl ?? '').isEmpty
                                   ? Icon(Icons.person_rounded,
-                                      size: 15, color: theme.colorScheme.primary)
+                                      size: 20, color: theme.colorScheme.primary)
                                   : null,
                             ),
                             const SizedBox(width: 10),
@@ -646,17 +646,9 @@ class _CondolenceSectionState extends State<_CondolenceSection> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(c.userName,
-                                      style: theme.textTheme.titleSmall?.copyWith(
-                                          fontWeight: FontWeight.w800)),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    c.message,
-                                    style: theme.textTheme.bodyMedium?.copyWith(
-                                      color: AppColors.textPrimary,
-                                      height: 1.5,
-                                    ),
-                                  ),
+                                  Text(c.userName, style: CommentStyle.author),
+                                  const SizedBox(height: 5),
+                                  Text(c.message, style: CommentStyle.body),
                                 ],
                               ),
                             ),

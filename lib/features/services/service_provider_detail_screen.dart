@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../core/constants/app_colors.dart';
+import '../../core/utils/comment_style.dart';
 import '../../models/service_provider_model.dart';
 import '../../services/service_provider_service.dart';
 import '../../services/share_service.dart';
@@ -600,7 +600,7 @@ class _ServiceProviderDetailScreenState
                                 setState(() => _allComments = true),
                             child: Text('عرض كل التعليقات (${comments.length})',
                                 style: const TextStyle(
-                                    fontSize: 12, fontWeight: FontWeight.w800)),
+                                    fontSize: 14, fontWeight: FontWeight.w800)),
                           ),
                       ],
                     ),
@@ -616,7 +616,7 @@ class _ServiceProviderDetailScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           CircleAvatar(
-            radius: 17,
+            radius: CommentStyle.avatarRadius,
             backgroundColor: accent.withValues(alpha: 0.12),
             foregroundImage: c.photoUrl != null && c.photoUrl!.isNotEmpty
                 ? CachedNetworkImageProvider(c.photoUrl!)
@@ -635,11 +635,7 @@ class _ServiceProviderDetailScreenState
               children: [
                 Row(
                   children: [
-                    Expanded(
-                      child: Text(c.userName,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w800, fontSize: 13)),
-                    ),
+                    Expanded(child: Text(c.userName, style: CommentStyle.author)),
                     RatingBarIndicator(
                       rating: c.rating.toDouble(),
                       itemSize: 14,
@@ -650,12 +646,8 @@ class _ServiceProviderDetailScreenState
                   ],
                 ),
                 if (c.text.isNotEmpty) ...[
-                  const SizedBox(height: 3),
-                  Text(c.text,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: AppColors.textPrimary,
-                        height: 1.5,
-                      )),
+                  const SizedBox(height: 5),
+                  Text(c.text, style: CommentStyle.body),
                 ],
               ],
             ),

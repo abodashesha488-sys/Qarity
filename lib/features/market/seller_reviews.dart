@@ -2,7 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
-import '../../core/constants/app_colors.dart';
+import '../../core/utils/comment_style.dart';
 import '../../services/review_service.dart';
 import '../../widgets/qurity_app_bar.dart';
 
@@ -102,17 +102,17 @@ class _SellerReviewsScreenState extends State<SellerReviewsScreen> {
                 Row(
                   children: [
                     CircleAvatar(
-                      radius: 16,
+                      radius: CommentStyle.avatarRadius,
                       backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
                       backgroundImage: photo.isNotEmpty ? CachedNetworkImageProvider(photo) : null,
                       child: photo.isEmpty
-                          ? Icon(Icons.person, size: 16, color: theme.colorScheme.primary)
+                          ? Icon(Icons.person, size: 20, color: theme.colorScheme.primary)
                           : null,
                     ),
                     const SizedBox(width: 10),
                     Text(
                       r['userName'] ?? 'مستخدم',
-                      style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+                      style: CommentStyle.author,
                     ),
                   ],
                 ),
@@ -129,10 +129,7 @@ class _SellerReviewsScreenState extends State<SellerReviewsScreen> {
               const SizedBox(height: 10),
               Text(
                 r['comment'] as String,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: AppColors.textPrimary,
-                  height: 1.5,
-                ),
+                style: CommentStyle.body,
               ),
             ],
             _buildDateRow(theme, r['createdAt']),

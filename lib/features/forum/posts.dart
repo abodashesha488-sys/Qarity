@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
-import '../../core/constants/app_colors.dart';
+import '../../core/utils/comment_style.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/utils/role_style.dart';
 import '../../core/widgets/shared_cards.dart';
@@ -741,26 +741,23 @@ class _CommentsSheetState extends State<CommentsSheet> {
                     return InfoListCard(
                       padding: const EdgeInsets.all(14),
                       leading: CircleAvatar(
-                        radius: 18,
+                        radius: CommentStyle.avatarRadius,
                         backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
                         backgroundImage: photo.isNotEmpty ? CachedNetworkImageProvider(photo) : null,
                         child: photo.isEmpty
-                            ? Icon(Icons.person_rounded, size: 16, color: theme.colorScheme.primary)
+                            ? Icon(Icons.person_rounded, size: 20, color: theme.colorScheme.primary)
                             : null,
                       ),
                       title: data['userName'] as String? ?? 'مستخدم',
                       subtitleBuilder: (context) => [
                         Text(
                           data['userName'] as String? ?? 'مستخدم',
-                          style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+                          style: CommentStyle.author,
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 5),
                         Text(
                           data['text'] as String? ?? '',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: AppColors.textPrimary,
-                            height: 1.5,
-                          ),
+                          style: CommentStyle.body,
                         ),
                       ],
                     );

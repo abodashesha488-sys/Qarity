@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../core/constants/app_colors.dart';
+import '../../core/utils/comment_style.dart';
 import '../../core/utils/role_style.dart';
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
@@ -712,14 +712,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   Row(
                     children: [
                       CircleAvatar(
-                        radius: 18,
+                        radius: CommentStyle.avatarRadius,
                         backgroundColor: theme.colorScheme.primaryContainer,
                         backgroundImage: review.userPhotoUrl != null
                             ? CachedNetworkImageProvider(review.userPhotoUrl!)
                             : null,
                         child: review.userPhotoUrl == null
                             ? Icon(Icons.person,
-                                size: 16, color: theme.colorScheme.primary)
+                                size: 20, color: theme.colorScheme.primary)
                             : null,
                       ),
                       const SizedBox(width: 10),
@@ -728,8 +728,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(review.userName,
-                                style: theme.textTheme.labelMedium
-                                    ?.copyWith(fontWeight: FontWeight.w800)),
+                                style: CommentStyle.author),
                             Text(_formatDate(review.createdAt),
                                 style: theme.textTheme.labelSmall?.copyWith(
                                     color: theme.colorScheme.onSurfaceVariant)),
@@ -766,11 +765,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               color: Colors.amber,
                               size: 16))),
                   const SizedBox(height: 8),
-                  Text(review.comment,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: AppColors.textPrimary,
-                        height: 1.5,
-                      )),
+                  Text(review.comment, style: CommentStyle.body),
                   if (review.images.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     SizedBox(
