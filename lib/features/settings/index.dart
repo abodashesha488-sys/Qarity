@@ -7,6 +7,7 @@ import '../../routes/app_routes.dart';
 import '../../services/theme_service.dart';
 import '../../services/update_service.dart';
 import '../../widgets/qurity_app_bar.dart';
+import '../../widgets/update_flow.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -220,7 +221,11 @@ class _UpdateTileState extends State<_UpdateTile> {
       if (!mounted) return;
       switch (check.status) {
         case UpdateCheckStatus.updateAvailable:
-          await UpdateService.showUpdateDialog(context, check.info!);
+          final info = check.info!;
+          final choice = await UpdateService.showUpdateDialog(context, info);
+          if (choice != DialogResult.updateNow) return;
+          if (!mounted) return;
+          await UpdateFlow.install(context, info);
         case UpdateCheckStatus.checkFailed:
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(

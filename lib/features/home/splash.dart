@@ -11,6 +11,7 @@ import '../../routes/app_routes.dart';
 import '../../services/user_service.dart';
 // ignore: directives_ordering
 import '../../services/update_service.dart';
+import '../../widgets/update_flow.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -24,7 +25,6 @@ class _SplashScreenState extends State<SplashScreen>
   late final AnimationController _logoController;
   late final AnimationController _textController;
   bool _navigated = false;
-  bool _isDownloading = false;
 
   @override
   void initState() {
@@ -115,7 +115,7 @@ class _SplashScreenState extends State<SplashScreen>
       if (result == DialogResult.updateNow) {
         if (!mounted) return;
         // ignore: use_build_context_synchronously
-        await _handleDownloadAndInstall(ctx, updateInfo);
+        await UpdateFlow.install(ctx, updateInfo);
         if (!mounted) return;
         _safeNavigate(AppRoutes.home);
         return;
@@ -123,79 +123,6 @@ class _SplashScreenState extends State<SplashScreen>
       if (!mounted) return;
     }
     _safeNavigate(AppRoutes.home);
-  }
-
-  Future<void> _handleDownloadAndInstall(
-    BuildContext context,
-    UpdateInfo info,
-  ) async {
-    if (_isDownloading) return;
-    _isDownloading = true;
-
-    final UpdateInstallResult? result = await showDialog<UpdateInstallResult>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => _DownloadProgressDialog(
-        apkUrl: info.apkUrl,
-      ),
-    );
-
-    if (!mounted) {
-      _isDownloading = false;
-      return;
-    }
-
-    _isDownloading = false;
-
-    if (result == null || !result.isSuccess) {
-      // ignore: use_build_context_synchronously
-      _showSnackBar(context, 'تعذر تنزيل التحديث. حاول مرة أخرى.');
-      return;
-    }
-
-    final apkPath = result.apkPath;
-    if (apkPath == null) {
-      // ignore: use_build_context_synchronously
-      _showSnackBar(context, 'تعذر تنزيل التحديث.');
-      return;
-    }
-
-    // ignore: use_build_context_synchronously
-    _showSnackBar(context, 'جاري فتح مثبت التطبيقات...');
-
-    final service = UpdateService();
-    final canInstall = await service.canInstallPackages();
-    if (!canInstall) {
-      // ignore: use_build_context_synchronously
-      _showSnackBar(context,
-          'يتوجب عليك السماح بتثبيت التطبيقات من هذا المصدر.');
-      await service.openInstallPermissionSettings();
-      if (!mounted) return;
-      final canInstallNow = await service.canInstallPackages();
-      if (!canInstallNow) {
-        // ignore: use_build_context_synchronously
-        _showSnackBar(context,
-            'لم يتم منح الإذن. يمكنك محاولة التحديث لاحقاً من الإعدادات.');
-        return;
-      }
-    }
-
-    final installResult = await service.installApk(apkPath);
-
-    if (!installResult.isSuccess) {
-      // ignore: use_build_context_synchronously
-      _showSnackBar(context,
-          'لم يتم التثبيت. يمكنك محاولة التحديث لاحقاً.');
-    }
-  }
-
-  void _showSnackBar(BuildContext context, String message) {
-    if (!mounted) return;
-    final ctx = navigatorKey.currentContext;
-    if (ctx == null) return;
-    ScaffoldMessenger.of(ctx).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
   }
 
   @override
@@ -313,102 +240,6 @@ class _SplashScreenState extends State<SplashScreen>
         ),
       ),
       ),
-    );
-  }
-}
-
-class _DownloadProgressDialog extends StatefulWidget {
-  final String apkUrl;
-
-  const _DownloadProgressDialog({required this.apkUrl});
-
-  @override
-  State<_DownloadProgressDialog> createState() =>
-      _DownloadProgressDialogState();
-}
-
-class _DownloadProgressDialogState extends State<_DownloadProgressDialog> {
-  final UpdateService _service = UpdateService();
-  final ValueNotifier<int> _receivedNotifier = ValueNotifier<int>(0);
-  final ValueNotifier<int?> _totalNotifier = ValueNotifier<int?>(null);
-  bool _completed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _startDownload();
-  }
-
-  Future<void> _startDownload() async {
-    debugPrint('[UPDATE] download start');
-    final stopwatch = Stopwatch()..start();
-    debugPrint('[UPDATE] timer started at ${stopwatch.elapsed.inMilliseconds}ms');
-
-    final result = await _service.downloadAndInstall(
-      widget.apkUrl,
-      (int received, int? total) {
-        if (!mounted) return;
-        _receivedNotifier.value = received;
-        _totalNotifier.value = total;
-        debugPrint('[UPDATE] progress: received=$received total=$total at ${stopwatch.elapsed.inMilliseconds}ms');
-      },
-    ).then((result) {
-      debugPrint('[UPDATE] downloadAndInstall completed at ${stopwatch.elapsed.inMilliseconds}ms');
-      return result;
-    }).catchError((dynamic e, StackTrace st) {
-      debugPrint('[UPDATE][ERROR] type=${e.runtimeType} message=$e');
-      debugPrint('[UPDATE][ERROR] stack=$st');
-      return UpdateInstallResult.failure(e.toString());
-    });
-
-    if (!mounted) return;
-    if (_completed) return;
-    _completed = true;
-    debugPrint('[UPDATE] calling Navigator.pop at ${stopwatch.elapsed.inMilliseconds}ms');
-    Navigator.pop(context, result);
-  }
-
-  @override
-  void dispose() {
-    _receivedNotifier.dispose();
-    _totalNotifier.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ValueListenableBuilder<int>(
-      valueListenable: _receivedNotifier,
-      builder: (context, received, _) {
-        final total = _totalNotifier.value;
-        String progressText;
-        if (total != null && total > 0) {
-          final pct = (received / total * 100).round();
-          progressText =
-              '${(received / (1024 * 1024)).toStringAsFixed(1)} MB / ${(total / (1024 * 1024)).toStringAsFixed(1)} MB ($pct%)';
-        } else {
-          progressText = '${(received / (1024 * 1024)).toStringAsFixed(1)} MB';
-        }
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-          title: const Row(
-            children: [
-              SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-              SizedBox(width: 12),
-              Text(
-                'جاري تنزيل التحديث...',
-                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17),
-              ),
-            ],
-          ),
-          content: Text(progressText,
-              style: const TextStyle(fontSize: 14)),
-        );
-      },
     );
   }
 }

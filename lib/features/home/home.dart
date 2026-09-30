@@ -26,6 +26,7 @@ import '../../widgets/alert_wisdom_bar.dart';
 import '../../widgets/common_appbar_actions.dart';
 import '../../widgets/offline_stream_builder.dart';
 import '../../widgets/qurity_logo.dart';
+import '../../widgets/update_flow.dart';
 import '../../widgets/village_weather_bar.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -254,7 +255,11 @@ class HomeDrawer extends StatelessWidget {
     if (ctx == null || !ctx.mounted) return;
     switch (check.status) {
       case UpdateCheckStatus.updateAvailable:
-        await UpdateService.showUpdateDialog(ctx, check.info!);
+        final info = check.info!;
+        final choice = await UpdateService.showUpdateDialog(ctx, info);
+        if (choice != DialogResult.updateNow) return;
+        if (!ctx.mounted) return;
+        await UpdateFlow.install(ctx, info);
       case UpdateCheckStatus.checkFailed:
         AppHelpers.showToast('تعذّر فحص التحديثات — تحقق من الاتصال وأعد المحاولة');
       case UpdateCheckStatus.notSupported:
