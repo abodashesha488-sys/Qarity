@@ -7,14 +7,20 @@ import 'package:intl/intl.dart';
 
 import '../../core/network/network_info.dart';
 import '../../core/utils/helpers.dart';
+import '../../core/utils/obituary_card_assets.dart';
 import '../../models/data_models.dart';
 import '../../services/image_upload_service.dart';
 import '../../services/obituary_service.dart';
 import '../../services/share_service.dart';
+import '../../widgets/obituary_share_card.dart';
 import '../../widgets/qurity_app_bar.dart';
 
 class AddObituaryScreen extends StatefulWidget {
-  const AddObituaryScreen({super.key});
+  const AddObituaryScreen({super.key, this.service});
+
+  /// حقن اختياري وفق نمط المشروع: فتح النموذج في اختبار بلا Firebase
+  /// لا يجب أن يهيّئFirestore عند بناء الشاشة.
+  final ObituaryService? service;
 
   @override
   State<AddObituaryScreen> createState() => _AddObituaryScreenState();
@@ -23,23 +29,32 @@ class AddObituaryScreen extends StatefulWidget {
 class _AddObituaryScreenState extends State<AddObituaryScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _ageController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _funeralLocationController = TextEditingController();
+  final _burialLocationController = TextEditingController();
   final _condolenceLocationController = TextEditingController();
-  final _mosqueController = TextEditingController();
 
-  final ObituaryService _obituaryService = ObituaryService();
+  late final ObituaryService _obituaryService =
+      widget.service ?? ObituaryService();
   final ImagePicker _picker = ImagePicker();
 
   DateTime? _selectedDeathDate;
   DateTime? _selectedFuneralDate;
   String? _imageUrl;
+  String? _photoError;
   bool _isUploading = false;
   bool _isSaving = false;
   String? _submittedBy;
 
+  /// نوع المتوفى: يحسم تسميات مجموعات القرابة («عم كلاً من» مقابل «عمّة كلاً من»).
+  String _gender = '';
+  String? _genderError;
+
+  /// مفتاح خلفية البطاقة ضمن القائمة البيضاء `kObituaryCardBackgrounds`.
+  String _cardBackground = kDefaultObituaryCardBackground;
+
   final List<Relative> _relatives = [];
+  int _relativeSeq = 0;
 
   @override
   void initState() {
@@ -50,18 +65,19 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
   @override
   void dispose() {
     _nameController.dispose();
-    _ageController.dispose();
     _descriptionController.dispose();
     _funeralLocationController.dispose();
+    _burialLocationController.dispose();
     _condolenceLocationController.dispose();
-    _mosqueController.dispose();
     super.dispose();
   }
 
   Future<void> _loadSubmitter() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null && mounted) {
-      setState(() => _submittedBy = user.uid);
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null && mounted) setState(() => _submittedBy = user.uid);
+    } catch (_) {
+      // FirebaseAuth غير مهيأ (اختبارات بلا Firebase) — السجل يُرسل بلا مُقدِّم
     }
   }
 
@@ -90,130 +106,93 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
   }
 
   Future<void> _pickAndUploadImage() async {
-    setState(() => _isUploading = true);
+    setState(() {
+      _isUploading = true;
+      _photoError = null;
+    });
     try {
       final XFile? image = await _picker.pickImage(
           source: ImageSource.gallery,
           imageQuality: 85,
           maxWidth: 1200,
           maxHeight: 1200);
-      if (image == null) return;
+      if (image == null) {
+        if (mounted) setState(() => _isUploading = false);
+        return;
+      }
       final bytes = await image.readAsBytes();
       final url = await ImageUploadService().uploadImage(bytes);
       if (!mounted) return;
       setState(() => _imageUrl = url);
-      AppHelpers.showSnackBar(context, 'تم رفع الصورة بنجاح', isSuccess: true);
     } catch (e) {
+      // خطأ دائم تحت دائرة الصورة، لا شريط مؤقت يمسحه الرفع التالي
       if (mounted) {
-        AppHelpers.showSnackBar(context, 'خطأ في رفع الصورة: $e', isError: true);
+        setState(() =>
+            _photoError =
+                'تعذّر رفع صورة المتوفى (${e.toString().replaceFirst('Exception: ', '')}) — يمكنك المتابعة بلا صورة.');
       }
     } finally {
       if (mounted) setState(() => _isUploading = false);
     }
   }
 
-  void _removeImage() => setState(() => _imageUrl = null);
+  void _removeImage() => setState(() {
+        _imageUrl = null;
+        _photoError = null;
+      });
 
-  void _showRelativeDialog({Relative? existing, int? editIndex}) {
-    final nameController = TextEditingController(text: existing?.name ?? '');
-    final phoneController = TextEditingController(text: existing?.phone ?? '');
-    var selectedType = existing?.type ?? RelativeType.son;
+  /// أسماء مجموعة قرابة واحدة كما أدخلها المستخدم، بترتيب الإدخال.
+  List<String> _namesOf(RelativeType group) =>
+      _relatives.where((r) => r.type == group).map((r) => r.name).toList();
 
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSt) => AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Text(existing == null ? 'إضافة قريب' : 'تعديل قريب'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                DropdownButtonFormField<RelativeType>(
-                  initialValue: selectedType,
-                  decoration: const InputDecoration(
-                      labelText: 'نوع القرابة',
-                      prefixIcon: Icon(Icons.family_restroom_rounded)),
-                  items: RelativeType.values
-                      .map((t) => DropdownMenuItem(
-                          value: t,
-                          child: Row(children: [
-                            Icon(t.icon,
-                                size: 18,
-                                color: Theme.of(ctx).colorScheme.primary),
-                            const SizedBox(width: 8),
-                            Text(t.label),
-                          ])))
-                      .toList(),
-                  onChanged: (v) => setSt(() => selectedType = v!),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(
-                      labelText: 'الاسم',
-                      prefixIcon: Icon(Icons.person_outline)),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: phoneController,
-                  decoration: const InputDecoration(
-                      labelText: 'الهاتف (اختياري)',
-                      prefixIcon: Icon(Icons.phone)),
-                  keyboardType: TextInputType.phone,
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('إلغاء')),
-            FilledButton(
-              onPressed: () {
-                final name = nameController.text.trim();
-                if (name.isEmpty) return;
-                final relative = Relative(
-                  id: existing?.id ??
-                      'rel_${DateTime.now().millisecondsSinceEpoch}',
-                  name: name,
-                  type: selectedType,
-                  phone: phoneController.text.trim().isEmpty
-                      ? null
-                      : phoneController.text.trim(),
-                  order: editIndex ?? _relatives.length,
-                );
-                setState(() {
-                  if (editIndex != null) {
-                    _relatives[editIndex] = relative;
-                  } else {
-                    _relatives.add(relative);
-                  }
-                });
-                Navigator.pop(ctx);
-              },
-              child: Text(existing == null ? 'إضافة' : 'حفظ'),
-            ),
-          ],
-        ),
-      ),
-    );
+  void _addRelativeName(RelativeType group, String rawName) {
+    final name = rawName.trim();
+    if (name.isEmpty) {
+      AppHelpers.showSnackBar(context, 'اكتب اسمًا أولاً', isError: true);
+      return;
+    }
+    if (_namesOf(group).contains(name)) {
+      AppHelpers.showSnackBar(context,
+          '«$name» مضاف بالفعل في «${group.labelFor(_gender)}»',
+          isError: true);
+      return;
+    }
+    setState(() {
+      _relatives.add(Relative(
+        id: 'rel_${DateTime.now().millisecondsSinceEpoch}_${_relativeSeq++}',
+        name: name,
+        type: group,
+        order: _namesOf(group).length,
+      ));
+    });
   }
 
-  void _removeRelative(int index) {
+  void _removeRelativeName(RelativeType group, String name) {
     setState(() {
-      _relatives.removeAt(index);
+      _relatives.removeWhere((r) => r.type == group && r.name == name);
+      var order = 0;
       for (var i = 0; i < _relatives.length; i++) {
-        _relatives[i] = _relatives[i].copyWith(order: i);
+        if (_relatives[i].type == group) {
+          _relatives[i] = _relatives[i].copyWith(order: order++);
+        }
       }
     });
   }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_gender.isEmpty) {
+      setState(() => _genderError = 'يجب اختيار نوع المتوفى (رجل أو امرأة)');
+      return;
+    }
+    setState(() => _genderError = null);
     if (_selectedDeathDate == null) {
       AppHelpers.showSnackBar(context, 'يرجى اختيار تاريخ الوفاة',
+          isError: true);
+      return;
+    }
+    if (_isUploading) {
+      AppHelpers.showSnackBar(context, 'الصورة ما زالت تُرفع… انتظر ثوانٍ ثم أرسل',
           isError: true);
       return;
     }
@@ -227,14 +206,16 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
       final obituary = Obituary(
         id: '',
         name: _nameController.text.trim(),
-        age: _ageController.text.trim(),
+        age: '',
+        gender: _gender,
         dateOfDeath: DateFormat('yyyy/MM/dd').format(_selectedDeathDate!),
         funeralDate: _selectedFuneralDate != null
             ? DateFormat('yyyy/MM/dd').format(_selectedFuneralDate!)
             : '',
         funeralLocation: _funeralLocationController.text.trim(),
+        burialLocation: _burialLocationController.text.trim(),
         condolenceLocation: _condolenceLocationController.text.trim(),
-        mosque: _mosqueController.text.trim(),
+        cardBackground: _cardBackground,
         imageUrl: _imageUrl,
         description: _descriptionController.text.trim(),
         relatives: _relatives,
@@ -260,20 +241,18 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
       name: _nameController.text.trim().isEmpty
           ? 'اسم المتوفى'
           : _nameController.text.trim(),
-      age: _ageController.text.trim().isEmpty ? '—' : _ageController.text.trim(),
+      age: '',
+      gender: _gender,
       dateOfDeath: _selectedDeathDate != null
           ? DateFormat('yyyy/MM/dd').format(_selectedDeathDate!)
-          : '—',
+          : '',
       funeralDate: _selectedFuneralDate != null
           ? DateFormat('yyyy/MM/dd').format(_selectedFuneralDate!)
           : '',
-      funeralLocation: _funeralLocationController.text.trim().isEmpty
-          ? 'مكان الصلاة'
-          : _funeralLocationController.text.trim(),
-      condolenceLocation: _condolenceLocationController.text.trim().isEmpty
-          ? 'مكان العزاء'
-          : _condolenceLocationController.text.trim(),
-      mosque: _mosqueController.text.trim(),
+      funeralLocation: _funeralLocationController.text.trim(),
+      burialLocation: _burialLocationController.text.trim(),
+      condolenceLocation: _condolenceLocationController.text.trim(),
+      cardBackground: _cardBackground,
       imageUrl: _imageUrl,
       description: _descriptionController.text.trim(),
       relatives: _relatives,
@@ -311,6 +290,11 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
             _buildRelativesSection(theme)
                 .animate()
                 .fadeIn(delay: 400.ms)
+                .slideY(begin: 0.2),
+            const SizedBox(height: 16),
+            _buildBackgroundCard(theme)
+                .animate()
+                .fadeIn(delay: 450.ms)
                 .slideY(begin: 0.2),
             const SizedBox(height: 16),
             _buildDescriptionCard(theme)
@@ -363,7 +347,7 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
       icon: Icons.photo_library_rounded,
       children: [
         Text(
-          'اختياري — إن لم تُرفع صورة ستظهر صورة رمزية في البطاقة',
+          'اختياري — إن لم تُرفع صورة تظهر صورة العزاء الافتراضية في البطاقة',
           style: theme.textTheme.bodySmall
               ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
         ),
@@ -426,6 +410,10 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
               label: Text(_isUploading ? 'جاري الرفع...' : 'إضافة صورة'),
             ),
           ),
+        if (_photoError != null) ...[
+          const SizedBox(height: 12),
+          _FormErrorLine(message: _photoError!, keyName: 'obituary-photo-error'),
+        ],
       ],
     );
   }
@@ -443,20 +431,10 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
           validator: (v) => (v == null || v.trim().isEmpty) ? 'مطلوب' : null,
         ),
         const SizedBox(height: 16),
+        _buildGenderSelector(theme),
+        const SizedBox(height: 16),
         Row(
           children: [
-            Expanded(
-              child: _buildTextField(
-                controller: _ageController,
-                label: 'العمر *',
-                hint: '0',
-                icon: Icons.cake_outlined,
-                keyboardType: TextInputType.number,
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'مطلوب' : null,
-              ),
-            ),
-            const SizedBox(width: 12),
             Expanded(
               child: _buildDateField(
                 theme: theme,
@@ -465,15 +443,54 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
                 onTap: _pickDeathDate,
               ),
             ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildDateField(
+                theme: theme,
+                label: 'تاريخ صلاة الجنازة',
+                value: _selectedFuneralDate,
+                onTap: _pickFuneralDate,
+              ),
+            ),
           ],
         ),
-        const SizedBox(height: 16),
-        _buildDateField(
-          theme: theme,
-          label: 'تاريخ الدفن / الصلاة',
-          value: _selectedFuneralDate,
-          onTap: _pickFuneralDate,
+      ],
+    );
+  }
+
+  /// رجل/امرأة — العنوان المطلوب، وقيمته تحسم تسميات مجموعات القرابة.
+  Widget _buildGenderSelector(ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('نوع المتوفى *',
+            style:
+                theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800)),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            for (final value in kObituaryGenders) ...[
+              if (value != kObituaryGenders.first) const SizedBox(width: 10),
+              Expanded(
+                child: _ObituaryGenderOption(
+                  value: value,
+                  icon: value == kObituaryGenderMale
+                      ? Icons.male_rounded
+                      : Icons.female_rounded,
+                  selected: _gender == value,
+                  onTap: () => setState(() {
+                    _gender = value;
+                    _genderError = null;
+                  }),
+                ),
+              ),
+            ],
+          ],
         ),
+        if (_genderError != null) ...[
+          const SizedBox(height: 6),
+          _FormErrorLine(message: _genderError!, keyName: 'obituary-gender-error'),
+        ],
       ],
     );
   }
@@ -485,9 +502,16 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
       children: [
         _buildTextField(
           controller: _funeralLocationController,
-          label: 'مكان الصلاة / الجنازة',
-          hint: 'مثال: مسجد النور، حي السلام',
+          label: 'صلاة الجنازة',
+          hint: 'مثال: مسجد القرية الكبير',
           icon: Icons.mosque_rounded,
+        ),
+        const SizedBox(height: 16),
+        _buildTextField(
+          controller: _burialLocationController,
+          label: 'مكان الدفن',
+          hint: 'مثال: مقابر القرية',
+          icon: Icons.terrain_rounded,
         ),
         const SizedBox(height: 16),
         _buildTextField(
@@ -496,113 +520,83 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
           hint: 'مثال: منزل العائلة، شارع الملك فهد',
           icon: Icons.home_rounded,
         ),
-        const SizedBox(height: 16),
-        _buildTextField(
-          controller: _mosqueController,
-          label: 'اسم المسجد (اختياري)',
-          hint: 'مثال: مسجد القرية الكبير',
-          icon: Icons.mosque_rounded,
-        ),
       ],
     );
   }
 
   Widget _buildRelativesSection(ThemeData theme) {
     return _SectionCard(
-      title: 'أقارب المتوفى',
+      title: _gender == kObituaryGenderFemale ? 'قريبات المتوفاة' : 'أقارب المتوفى',
       icon: Icons.family_restroom_rounded,
-      trailing: TextButton.icon(
-        onPressed: () => _showRelativeDialog(),
-        icon: const Icon(Icons.add_rounded, size: 18),
-        label: const Text('إضافة قريب'),
-      ),
       children: [
         Text(
-          'أضف الأبناء والبنات والإخوة والأعمام والأخوال والنسايب',
+          'كل مجموعة تقبل أسماء متعددة — اكتب الاسم ثم اضغط «إضافة». '
+          'العناوين تتبدّل تلقائيًا بحسب نوع المتوفى.',
           style: theme.textTheme.bodySmall
               ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
         ),
         const SizedBox(height: 16),
-        if (_relatives.isEmpty)
+        if (_gender.isEmpty)
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color:
-                  theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(16),
+              color: theme.colorScheme.surfaceContainerHighest
+                  .withValues(alpha: 0.4),
+              borderRadius: BorderRadius.circular(14),
             ),
-            child: Column(
-              children: [
-                Icon(Icons.family_restroom_rounded,
-                    size: 40, color: theme.colorScheme.onSurfaceVariant),
-                const SizedBox(height: 10),
-                Text('لا يوجد أقارب مضافون',
-                    style: theme.textTheme.titleSmall
-                        ?.copyWith(fontWeight: FontWeight.w700)),
-                const SizedBox(height: 4),
-                Text('اضغط "إضافة قريب" لإدراج أقرباء المتوفى',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant),
-                    textAlign: TextAlign.center),
-              ],
+            child: Text(
+              'اختر نوع المتوفى أولًا في «بيانات المتوفى» حتى تظهر عناوين المجموعات '
+              'بصيغتها الصحيحة (عم كلاً من / عمّة كلاً من …).',
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
           )
         else
-          ..._relatives.asMap().entries.map((entry) {
-            final index = entry.key;
-            final r = entry.value;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 14, vertical: 12),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest
-                      .withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                      color: theme.colorScheme.outlineVariant
-                          .withValues(alpha: 0.3)),
-                ),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 18,
-                      backgroundColor: theme.colorScheme.primaryContainer,
-                      child: Icon(r.type.icon,
-                          size: 18, color: theme.colorScheme.primary),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(r.name,
-                              style: theme.textTheme.bodyMedium
-                                  ?.copyWith(fontWeight: FontWeight.w700)),
-                          Text(r.type.label,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.colorScheme.primary,
-                                  fontWeight: FontWeight.w600)),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.edit_rounded, size: 20),
-                      onPressed: () =>
-                          _showRelativeDialog(existing: r, editIndex: index),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete_rounded,
-                          size: 20, color: Colors.red),
-                      onPressed: () => _removeRelative(index),
-                    ),
-                  ],
-                ),
+          for (final group in kObituaryRelativeGroups)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _RelativeGroupEditor(
+                key: ValueKey('rel-group-${group.name}'),
+                group: group,
+                gender: _gender,
+                names: _namesOf(group),
+                onAdd: (name) => _addRelativeName(group, name),
+                onRemove: (name) => _removeRelativeName(group, name),
               ),
-            );
-          }),
+            ),
+      ],
+    );
+  }
+
+  /// خلفيات البطاقة: الصور الأربعة المخصصة للعزاء، يُخزَّن المفتاح لا المسار.
+  Widget _buildBackgroundCard(ThemeData theme) {
+    return _SectionCard(
+      title: 'خلفية بطاقة المشاركة',
+      icon: Icons.wallpaper_rounded,
+      children: [
+        Text(
+          'اختر الصورة التي تريد أن تكون خلفية بطاقة العزاء المُشارَكة',
+          style: theme.textTheme.bodySmall
+              ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            for (var i = 0; i < kObituaryCardBackgroundKeys.length; i++)
+              _BackgroundOption(
+                keyName: 'card-bg-${kObituaryCardBackgroundKeys[i]}',
+                label: kObituaryCardBackgroundLabels[i],
+                assetPath:
+                    kObituaryCardBackgrounds[kObituaryCardBackgroundKeys[i]]!,
+                selected: _cardBackground == kObituaryCardBackgroundKeys[i],
+                onTap: () => setState(
+                    () => _cardBackground = kObituaryCardBackgroundKeys[i]),
+              ),
+          ],
+        ),
       ],
     );
   }
@@ -629,95 +623,32 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
       title: 'معاينة بطاقة المشاركة',
       icon: Icons.preview_rounded,
       children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
+        LayoutBuilder(
+          builder: (context, constraints) => ClipRRect(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3)),
-          ),
-          child: Column(
-            children: [
-              Text('قرية أبوديشيشة',
-                  style: theme.textTheme.labelMedium?.copyWith(
-                      color: theme.colorScheme.primary,
-                      fontWeight: FontWeight.w800)),
-              const SizedBox(height: 12),
-              if (obituary.imageUrl != null &&
-                  obituary.imageUrl!.isNotEmpty)
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: CachedNetworkImage(
-                    imageUrl: obituary.imageUrl!,
-                    height: 120,
-                    width: 120,
-                    fit: BoxFit.cover,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 620),
+              child: SingleChildScrollView(
+                child: Center(
+                  child: ObituaryShareCardPreview(
+                    obituary: obituary,
+                    width: constraints.maxWidth < 300
+                        ? 300
+                        : constraints.maxWidth,
                   ),
-                )
-              else
-                Container(
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(Icons.person_rounded,
-                      size: 48, color: theme.colorScheme.primary),
                 ),
-              const SizedBox(height: 12),
-              Text('انتقل إلى رحمة الله تعالى',
-                  style: theme.textTheme.labelMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant)),
-              const SizedBox(height: 8),
-              Text(obituary.name,
-                  style: theme.textTheme.titleLarge
-                      ?.copyWith(fontWeight: FontWeight.w900),
-                  textAlign: TextAlign.center),
-              const SizedBox(height: 8),
-              Text('العمر: ${obituary.age}   •   الوفاة: ${obituary.dateOfDeath}',
-                  style: theme.textTheme.bodySmall,
-                  textAlign: TextAlign.center),
-              if (obituary.relatives.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                const Divider(),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  alignment: WrapAlignment.center,
-                  children: obituary.relatives
-                      .map((r) => Chip(
-                            avatar: Icon(r.type.icon,
-                                size: 14, color: theme.colorScheme.primary),
-                            label: Text('${r.type.label}: ${r.name}'),
-                            visualDensity: VisualDensity.compact,
-                          ))
-                      .toList(),
-                ),
-              ],
-              const SizedBox(height: 12),
-              Text('"إنا لله وإنا إليه راجعون"',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                      fontStyle: FontStyle.italic,
-                      color: theme.colorScheme.onSurfaceVariant)),
-            ],
+              ),
+            ),
           ),
         ),
         const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () =>
-                    ShareService.shareObituaryAsImage(context, obituary),
-                icon: const Icon(Icons.image_outlined),
-                label: const Text('مشاركة كصورة'),
-              ),
-            ),
-          ],
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () => ShareService.shareObituaryAsImage(context, obituary),
+            icon: const Icon(Icons.image_outlined),
+            label: const Text('مشاركة كصورة'),
+          ),
         ),
       ],
     );
@@ -736,14 +667,14 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
                 child: CircularProgressIndicator(
                     strokeWidth: 2.5, color: Colors.white))
             : const Icon(Icons.send_rounded, size: 24),
+        // بدون لون مخصص: النص يرث لون الزر (أبيض) لا لون الثيم البني
         label: Text(
-          _isSaving ? 'جاري الإرسال...' : 'إرسال التعزية للمراجعة',
-          style: theme.textTheme.labelLarge
-              ?.copyWith(fontWeight: FontWeight.w800, fontSize: 16),
-        ),
+            _isSaving ? 'جاري الإرسال...' : 'إرسال التعزية للمراجعة',
+            style: const TextStyle(
+                fontWeight: FontWeight.w800, fontSize: 16, color: Colors.white)),
         style: FilledButton.styleFrom(
           backgroundColor: theme.colorScheme.primary,
-          foregroundColor: theme.colorScheme.onPrimary,
+          foregroundColor: Colors.white,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
@@ -808,18 +739,291 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
   }
 }
 
+class _ObituaryGenderOption extends StatelessWidget {
+  const _ObituaryGenderOption({
+    required this.value,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String value;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = theme.colorScheme.primary;
+    return Material(
+      key: Key('obituary-gender-$value'),
+      color: selected ? color.withValues(alpha: 0.12) : theme.colorScheme.surface,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          height: 50,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: selected ? color : theme.colorScheme.outlineVariant,
+              width: selected ? 1.6 : 1,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon,
+                  size: 20, color: selected ? color : theme.colorScheme.onSurface),
+              const SizedBox(width: 8),
+              Text(value,
+                  style: TextStyle(
+                    fontWeight: selected ? FontWeight.w900 : FontWeight.w600,
+                    color: selected ? color : theme.colorScheme.onSurface,
+                  )),
+              if (selected) ...[
+                const SizedBox(width: 6),
+                Icon(Icons.check_circle_rounded, size: 16, color: color),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// سطر خطأ أحمر دائم داخل النموذج، بمفتاح نصي واحد.
+class _FormErrorLine extends StatelessWidget {
+  const _FormErrorLine({required this.message, required this.keyName});
+
+  final String message;
+  final String keyName;
+
+  @override
+  Widget build(BuildContext context) => Text(
+        message,
+        key: Key(keyName),
+        style: const TextStyle(
+            color: Color(0xFFB71C1C),
+            fontSize: 12.5,
+            fontWeight: FontWeight.w700),
+      );
+}
+
+/// محرر مجموعة قرابة واحدة: عنوان مصروف بحسب النوع + حقل اسم تقبل إضافة
+/// متكررة + رقائق للأسماء المضافة يمكن حذف أي منها.
+class _RelativeGroupEditor extends StatefulWidget {
+  const _RelativeGroupEditor({
+    super.key,
+    required this.group,
+    required this.gender,
+    required this.names,
+    required this.onAdd,
+    required this.onRemove,
+  });
+
+  final RelativeType group;
+  final String gender;
+  final List<String> names;
+  final ValueChanged<String> onAdd;
+  final ValueChanged<String> onRemove;
+
+  @override
+  State<_RelativeGroupEditor> createState() => _RelativeGroupEditorState();
+}
+
+class _RelativeGroupEditorState extends State<_RelativeGroupEditor> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submitName() {
+    final name = _controller.text.trim();
+    // الرفض ورسالته عند الأب وحده؛ الصمت هنا كان يجعل زر «الإضافة» بلا رد
+    // حين يضغطه من لم يكتب اسمًا بعد.
+    widget.onAdd(name);
+    if (name.isNotEmpty) _controller.clear();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final group = widget.group;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(group.icon, size: 18, color: theme.colorScheme.primary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(group.labelFor(widget.gender),
+                    style: theme.textTheme.titleSmall
+                        ?.copyWith(fontWeight: FontWeight.w800)),
+              ),
+              if (widget.names.isNotEmpty)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text('${widget.names.length}',
+                      style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w800,
+                          color: theme.colorScheme.primary)),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            key: Key('relative-name-${group.name}'),
+            controller: _controller,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _submitName(),
+            decoration: InputDecoration(
+              isDense: true,
+              hintText: group.hintFor(widget.gender),
+              hintStyle: TextStyle(
+                  fontSize: 12.5,
+                  color: theme.colorScheme.onSurfaceVariant
+                      .withValues(alpha: 0.6)),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10)),
+              suffixIcon: IconButton(
+                key: Key('relative-add-${group.name}'),
+                icon: Icon(Icons.add_rounded,
+                    color: theme.colorScheme.primary, size: 22),
+                onPressed: _submitName,
+              ),
+            ),
+          ),
+          if (widget.names.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final name in widget.names)
+                  InputChip(
+                    key: Key('relative-chip-${group.name}-$name'),
+                    label: Text(name,
+                        style: const TextStyle(
+                            fontSize: 12.5, fontWeight: FontWeight.w700)),
+                    onDeleted: () => widget.onRemove(name),
+                    deleteIconColor: theme.colorScheme.error,
+                    visualDensity: VisualDensity.compact,
+                  ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// اختيار خلفية البطاقة: مصغّرة من أصل azaa مع تحديد واضح للخيار المختار.
+class _BackgroundOption extends StatelessWidget {
+  const _BackgroundOption({
+    required this.keyName,
+    required this.label,
+    required this.assetPath,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String keyName;
+  final String label;
+  final String assetPath;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return GestureDetector(
+      key: Key(keyName),
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        width: 86,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+              color: selected
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.outlineVariant,
+              width: selected ? 2.4 : 1),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.28),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3))
+                ]
+              : null,
+        ),
+        child: Column(
+          children: [
+            ClipRRect(
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(11)),
+              child: Image.asset(
+                assetPath,
+                height: 84,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                cacheWidth: 258,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Text(label,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                      color: selected
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.onSurfaceVariant)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _SectionCard extends StatelessWidget {
   const _SectionCard({
     required this.title,
     required this.icon,
     required this.children,
-    this.trailing,
   });
 
   final String title;
   final IconData icon;
   final List<Widget> children;
-  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -853,7 +1057,6 @@ class _SectionCard extends StatelessWidget {
                       style: theme.textTheme.titleMedium
                           ?.copyWith(fontWeight: FontWeight.w800)),
                 ),
-                if (trailing != null) trailing!,
               ],
             ),
             const SizedBox(height: 16),

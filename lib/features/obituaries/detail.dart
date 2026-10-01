@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../core/utils/comment_style.dart';
+import '../../core/utils/obituary_card_assets.dart';
+import '../../core/utils/relative_time.dart';
 import '../../core/widgets/shared_cards.dart';
 import '../../models/data_models.dart';
 import '../../services/engagement_service.dart';
@@ -149,6 +151,13 @@ class _ObituaryDetailContent extends StatelessWidget {
       children: [
         _HeroImage(imageUrl: obituary.imageUrl),
         const SizedBox(height: 20),
+        Text(
+          obituary.transitionPhrase,
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodyMedium
+              ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: 6),
         Row(
           children: [
             Expanded(
@@ -170,10 +179,12 @@ class _ObituaryDetailContent extends StatelessWidget {
           spacing: 8,
           runSpacing: 8,
           children: [
-            if (obituary.age.isNotEmpty)
+            if (obituary.gender.isNotEmpty)
               _MetaChip(
-                icon: Icons.cake_rounded,
-                label: 'العمر: ${obituary.age} سنة',
+                icon: obituary.isFemale
+                    ? Icons.female_rounded
+                    : Icons.male_rounded,
+                label: obituary.gender,
                 color: theme.colorScheme.primary,
               ),
             if (obituary.dateOfDeath.isNotEmpty)
@@ -185,14 +196,22 @@ class _ObituaryDetailContent extends StatelessWidget {
             if (obituary.funeralDate.isNotEmpty)
               _MetaChip(
                 icon: Icons.event_rounded,
-                label: 'الدفن: ${obituary.funeralDate}',
+                label: 'صلاة الجنازة: ${obituary.funeralDate}',
                 color: theme.colorScheme.tertiary,
+              ),
+            // السجلات القديمة فقط هي من يحمل عمرًا؛ النموذج الجديد لا يسأل عنه
+            if (obituary.age.isNotEmpty)
+              _MetaChip(
+                icon: Icons.cake_rounded,
+                label: 'العمر: ${obituary.age} سنة',
+                color: theme.colorScheme.onSurfaceVariant,
               ),
           ],
         ),
         if (obituary.funeralLocation.isNotEmpty ||
-            obituary.condolenceLocation.isNotEmpty ||
-            obituary.mosque.isNotEmpty) ...[
+            obituary.burialLocation.isNotEmpty ||
+            obituary.mosque.isNotEmpty ||
+            obituary.condolenceLocation.isNotEmpty) ...[
           const SizedBox(height: 20),
           AppCard(
             child: Column(
@@ -204,10 +223,17 @@ class _ObituaryDetailContent extends StatelessWidget {
                 const SizedBox(height: 12),
                 if (obituary.funeralLocation.isNotEmpty)
                   _InfoRow(
-                      icon: Icons.location_on_rounded,
-                      label: 'مكان الصلاة',
+                      icon: Icons.mosque_rounded,
+                      label: 'صلاة الجنازة',
                       value: obituary.funeralLocation),
-                if (obituary.mosque.isNotEmpty)
+                if (obituary.burialLocation.isNotEmpty)
+                  _InfoRow(
+                      icon: Icons.terrain_rounded,
+                      label: 'مكان الدفن',
+                      value: obituary.burialLocation),
+                // السجلات القديمة كانت تسأل عن المسجد وحده، فلا مكان دفن لها
+                if (obituary.burialLocation.isEmpty &&
+                    obituary.mosque.isNotEmpty)
                   _InfoRow(
                       icon: Icons.mosque_rounded,
                       label: 'المسجد',
@@ -238,9 +264,9 @@ class _ObituaryDetailContent extends StatelessWidget {
             ),
           ),
         ],
-        if (obituary.relatives.isNotEmpty) ...[
+        if (obituary.hasRelatives) ...[
           const SizedBox(height: 16),
-          _RelativesSection(relatives: obituary.relatives),
+          _RelativesSection(obituary: obituary),
         ],
         const SizedBox(height: 24),
         _CondolenceSection(
@@ -250,18 +276,17 @@ class _ObituaryDetailContent extends StatelessWidget {
   }
 }
 
+/// مجموعات القرابة بعناوينها المصروفة بحسب نوع المتوفى، بالمجموعات التي لها
+/// أسماء فقط (بما فيها تسميات السجلات القديمة).
 class _RelativesSection extends StatelessWidget {
-  const _RelativesSection({required this.relatives});
+  const _RelativesSection({required this.obituary});
 
-  final List<Relative> relatives;
+  final Obituary obituary;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final grouped = <RelativeType, List<Relative>>{};
-    for (final r in relatives) {
-      grouped.putIfAbsent(r.type, () => []).add(r);
-    }
+    final sections = obituary.relativeSections;
 
     return AppCard(
       child: Column(
@@ -272,42 +297,47 @@ class _RelativesSection extends StatelessWidget {
               Icon(Icons.family_restroom_rounded,
                   color: theme.colorScheme.primary, size: 20),
               const SizedBox(width: 8),
-              Text('أقارب المتوفى',
-                  style: theme.textTheme.titleSmall
-                      ?.copyWith(fontWeight: FontWeight.w800)),
+              Expanded(
+                child: Text(
+                    obituary.isFemale ? 'قريبات المتوفاة' : 'أقارب المتوفى',
+                    style: theme.textTheme.titleSmall
+                        ?.copyWith(fontWeight: FontWeight.w800)),
+              ),
             ],
           ),
           const SizedBox(height: 16),
-          ...RelativeType.values.map((type) {
-            final list = grouped[type] ?? [];
-            if (list.isEmpty) return const SizedBox.shrink();
-            return Padding(
+          for (final section in sections)
+            Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Icon(type.icon, size: 16, color: theme.colorScheme.primary),
+                      Icon(section.group.icon,
+                          size: 16, color: theme.colorScheme.primary),
                       const SizedBox(width: 6),
-                      Text(type.label,
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            color: theme.colorScheme.primary,
-                            fontWeight: FontWeight.w800,
-                          )),
+                      Flexible(
+                        child: Text(section.label,
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              color: theme.colorScheme.primary,
+                              fontWeight: FontWeight.w800,
+                            )),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children:
-                        list.map((r) => _RelativeChip(relative: r)).toList(),
+                    children: [
+                      for (final name in section.names)
+                        _RelativeChip(group: section.group, name: name),
+                    ],
                   ),
                 ],
               ),
-            );
-          }),
+            ),
         ],
       ),
     );
@@ -315,9 +345,10 @@ class _RelativesSection extends StatelessWidget {
 }
 
 class _RelativeChip extends StatelessWidget {
-  const _RelativeChip({required this.relative});
+  const _RelativeChip({required this.group, required this.name});
 
-  final Relative relative;
+  final RelativeType group;
+  final String name;
 
   @override
   Widget build(BuildContext context) {
@@ -334,11 +365,13 @@ class _RelativeChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(relative.type.icon, size: 14, color: theme.colorScheme.primary),
+          Icon(group.icon, size: 14, color: theme.colorScheme.primary),
           const SizedBox(width: 6),
-          Text(relative.name,
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(fontWeight: FontWeight.w700)),
+          Flexible(
+            child: Text(name,
+                style:
+                    theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700)),
+          ),
         ],
       ),
     );
@@ -352,17 +385,22 @@ class _HeroImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final url = imageUrl;
 
-    final fallback = DecoratedBox(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Center(
-        child: Icon(Icons.person_rounded,
-            size: 72, color: theme.colorScheme.onSurfaceVariant),
+    // بلا صورة — أو عند فشل تحميل رابطها — تظهر صورة العزاء الافتراضية azaa 0
+    final fallback = ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: Image.asset(
+        kObituaryDeceasedFallbackAsset,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
+        cacheWidth: 1170,
+        errorBuilder: (context, _, __) => ColoredBox(
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          child: Icon(Icons.person_rounded,
+              size: 72, color: Theme.of(context).colorScheme.onSurfaceVariant),
+        ),
       ),
     );
 
@@ -376,6 +414,7 @@ class _HeroImage extends StatelessWidget {
                 imageUrl: url,
                 fit: BoxFit.cover,
                 width: double.infinity,
+                memCacheWidth: 1170,
                 placeholder: (context, _) => fallback,
                 errorWidget: (context, _, __) => fallback,
               ),
@@ -467,9 +506,12 @@ class _CondolenceSection extends StatefulWidget {
 }
 
 class _CondolenceSectionState extends State<_CondolenceSection> {
+  static const int _kPreviewCount = 20;
+
   final EngagementService _engagement = EngagementService();
   final TextEditingController _messageController = TextEditingController();
   bool _submitting = false;
+  bool _showAll = false;
 
   @override
   void dispose() {
@@ -579,12 +621,13 @@ class _CondolenceSectionState extends State<_CondolenceSection> {
                     icon: Icon(done
                         ? Icons.check_circle_rounded
                         : Icons.volunteer_activism_rounded),
+                    // بلا لون مخصص من الثيم: النص يرث foregroundColor (أبيض)
                     label: Text(
                       done
                           ? 'لقد قدّمت تعازيك'
                           : (count > 0 ? 'تقديم التعازي ($count)' : 'تقديم التعازي'),
-                      style: theme.textTheme.labelLarge
-                          ?.copyWith(fontWeight: FontWeight.w700),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w700, fontSize: 15),
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: done
@@ -592,7 +635,7 @@ class _CondolenceSectionState extends State<_CondolenceSection> {
                           : theme.colorScheme.primary,
                       foregroundColor: done
                           ? theme.colorScheme.onSurfaceVariant
-                          : theme.colorScheme.onPrimary,
+                          : Colors.white,
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14)),
                       elevation: 0,
@@ -617,50 +660,132 @@ class _CondolenceSectionState extends State<_CondolenceSection> {
             }
             final list = snapshot.data ?? [];
             if (list.isEmpty) return const SizedBox.shrink();
+            // الأحدث أولًا في القائمة، والترقيم تسلسلي بتاريخ التقديم:
+            // أول من عزّى هو «١» وأحدثهم يحمل رقم الإجمالي.
+            final total = list.length;
+            final visible = _showAll || total <= _kPreviewCount
+                ? list
+                : list.sublist(0, _kPreviewCount);
             return AppCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('التعازي',
-                      style: theme.textTheme.titleSmall
-                          ?.copyWith(fontWeight: FontWeight.w800)),
-                  const SizedBox(height: 12),
-                  ...list.take(5).map((c) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            CircleAvatar(
-                              radius: CommentStyle.avatarRadius,
-                              backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
-                              backgroundImage: (c.photoUrl ?? '').isNotEmpty
-                                  ? CachedNetworkImageProvider(c.photoUrl!)
-                                  : null,
-                              child: (c.photoUrl ?? '').isEmpty
-                                  ? Icon(Icons.person_rounded,
-                                      size: 20, color: theme.colorScheme.primary)
-                                  : null,
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(c.userName, style: CommentStyle.author),
-                                  const SizedBox(height: 5),
-                                  Text(c.message, style: CommentStyle.body),
-                                ],
-                              ),
-                            ),
-                          ],
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text('التعازي',
+                            style: theme.textTheme.titleSmall
+                                ?.copyWith(fontWeight: FontWeight.w800)),
+                      ),
+                      Container(
+                        key: const Key('condolence-total'),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color:
+                              theme.colorScheme.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(20),
                         ),
-                      )),
+                        child: Text(
+                          'الإجمالي: $total تعزية',
+                          style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              color: theme.colorScheme.primary),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  for (var i = 0; i < visible.length; i++)
+                    _CondolenceTile(number: total - i, condolence: visible[i]),
+                  if (total > _kPreviewCount) ...[
+                    const SizedBox(height: 4),
+                    Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: TextButton(
+                        key: const Key('condolence-toggle'),
+                        onPressed: () => setState(() => _showAll = !_showAll),
+                        child: Text(_showAll
+                            ? 'إخفاء الباقي'
+                            : 'عرض كل التعازي ($total)'),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             );
           },
         ),
       ],
+    );
+  }
+}
+
+/// تعزية واحدة مرقّمة بترتيب تقديمها مع تاريخها النسبي.
+class _CondolenceTile extends StatelessWidget {
+  const _CondolenceTile({required this.number, required this.condolence});
+
+  final int number;
+  final Condolence condolence;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final c = condolence;
+    final time = relativeTimeLabelAr(c.createdAt);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            key: Key('condolence-number-$number'),
+            constraints: const BoxConstraints(minWidth: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text('$number',
+                style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w800,
+                    color: theme.colorScheme.primary)),
+          ),
+          const SizedBox(width: 8),
+          CircleAvatar(
+            radius: CommentStyle.avatarRadius,
+            backgroundColor:
+                theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
+            backgroundImage:
+                (c.photoUrl ?? '').isNotEmpty ? CachedNetworkImageProvider(c.photoUrl!) : null,
+            child: (c.photoUrl ?? '').isEmpty
+                ? Icon(Icons.person_rounded,
+                    size: 20, color: theme.colorScheme.primary)
+                : null,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(child: Text(c.userName, style: CommentStyle.author)),
+                    if (time.isNotEmpty)
+                      Text(time,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant)),
+                  ],
+                ),
+                const SizedBox(height: 5),
+                Text(c.message, style: CommentStyle.body),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

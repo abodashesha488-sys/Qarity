@@ -1,21 +1,95 @@
 part of 'data_models.dart';
 
+/// مجموعات أقارب المتوفى. العنوان يتصرف بحسب نوع المتوفى: `label` للمذكر
+/// و`feminineLabel` للمؤنث، لأن «عم كلاً من» لرجل تصبح «عمّة كلاً من» لامرأة.
+/// آخر عشرة قيم للتسجيلات القديمة فقط: لا تُعرض في نموذج الإضافة الجديد لكنها
+/// تظل تُقرأ وتُعرض كما أدخلها صاحبها.
 enum RelativeType {
-  son('أبناء', Icons.boy_rounded),
-  daughter('بنات', Icons.girl_rounded),
-  brother('إخوة', Icons.man_rounded),
-  sister('أخوات', Icons.woman_rounded),
-  paternalUncle('أعمام', Icons.man_rounded),
-  paternalAunt('عمات', Icons.woman_rounded),
-  maternalUncle('أخوال', Icons.man_rounded),
-  maternalAunt('خالات', Icons.woman_rounded),
-  inLaw('نسايب', Icons.family_restroom_rounded),
-  other('أخرى', Icons.person_rounded);
+  children('والد كلاً من', 'والدة كلاً من', Icons.child_care_rounded,
+      'أسماء أبناء المتوفى وبناته', 'أسماء أبنائها وبناتها'),
+  grandchildren('جد كلاً من', 'جدة كلاً من', Icons.elderly_rounded,
+      'أسماء أحفاده', 'أسماء أحفادها'),
+  paternalUncles('عم كلاً من', 'عمّة كلاً من', Icons.man_rounded,
+      'أسماء أعمامه', 'أسماء عمّاتها'),
+  maternalUncles('خال كلاً من', 'خالة كلاً من', Icons.woman_rounded,
+      'أسماء أخواله', 'أسماء خالاتها'),
+  paternalCousins('ابن عم كلاً من', 'ابنة عم كلاً من', Icons.people_alt_rounded,
+      'أسماء أبناء عمومته', 'أسماء بنات عمومتها'),
+  maternalCousins('ابن خال كلاً من', 'ابنة خال كلاً من', Icons.people_alt_rounded,
+      'أسماء أبناء خالته', 'أسماء بنات خالتها'),
+  inLaws('نسيب كلاً من', 'نسيبة كلاً من', Icons.family_restroom_rounded,
+      'أسماء النسايب', 'أسماء النسايب'),
+  families('قريب عائلات', 'قريبة عائلات', Icons.location_city_rounded,
+      'أسماء العائلات', 'أسماء العائلات'),
+  friends('صديق كلاً من', 'صديقة كلاً من', Icons.favorite_rounded,
+      'أسماء أصدقاء المتوفى', 'أسماء صديقاتها'),
+
+  // قيم تراثية — تُقرأ من المستندات القديمة ولا تُدخل من النموذج الجديد
+  son('أبناء', null, Icons.boy_rounded, '', ''),
+  daughter('بنات', null, Icons.girl_rounded, '', ''),
+  brother('إخوة', null, Icons.man_rounded, '', ''),
+  sister('أخوات', null, Icons.woman_rounded, '', ''),
+  paternalUncle('أعمام', null, Icons.man_rounded, '', ''),
+  paternalAunt('عمات', null, Icons.woman_rounded, '', ''),
+  maternalUncle('أخوال', null, Icons.man_rounded, '', ''),
+  maternalAunt('خالات', null, Icons.woman_rounded, '', ''),
+  inLaw('نسايب', null, Icons.family_restroom_rounded, '', ''),
+  other('أخرى', null, Icons.person_rounded, '', '');
 
   final String label;
+  final String? feminineLabel;
   final IconData icon;
-  const RelativeType(this.label, this.icon);
+  final String hint;
+  final String feminineHint;
+  const RelativeType(this.label, this.feminineLabel, this.icon, this.hint,
+      this.feminineHint);
+
+  /// العنوان العربي بحسب نوع المتوفى المحفوظ؛ المذكر هو الوضع الافتراضي
+  /// لأي سجل قديم بلا نوع.
+  String labelFor(String gender) =>
+      gender == kObituaryGenderFemale && feminineLabel != null
+          ? feminineLabel!
+          : label;
+
+  String hintFor(String gender) =>
+      gender == kObituaryGenderFemale && feminineHint.isNotEmpty
+          ? feminineHint
+          : hint;
+
+  bool get isEditableGroup => feminineLabel != null;
 }
+
+/// المجموعات التسع التي يعرضها نموذج الإضافة والتفاصيل بالترتيب المطلوب.
+const List<RelativeType> kObituaryRelativeGroups = [
+  RelativeType.children,
+  RelativeType.grandchildren,
+  RelativeType.paternalUncles,
+  RelativeType.maternalUncles,
+  RelativeType.paternalCousins,
+  RelativeType.maternalCousins,
+  RelativeType.inLaws,
+  RelativeType.families,
+  RelativeType.friends,
+];
+
+/// التسميات القديمة الباقية في سجلات مُحشَرة قبل إعادة التنسيق.
+const List<RelativeType> kLegacyRelativeGroups = [
+  RelativeType.son,
+  RelativeType.daughter,
+  RelativeType.brother,
+  RelativeType.sister,
+  RelativeType.paternalUncle,
+  RelativeType.paternalAunt,
+  RelativeType.maternalUncle,
+  RelativeType.maternalAunt,
+  RelativeType.inLaw,
+  RelativeType.other,
+];
+
+/// أنواع المتوفى: نص عربي كما يُخزَّن، لأن تسميات مجموعات الأقارب تُشتق منه.
+const String kObituaryGenderMale = 'رجل';
+const String kObituaryGenderFemale = 'امرأة';
+const List<String> kObituaryGenders = [kObituaryGenderMale, kObituaryGenderFemale];
 
 class Relative {
   final String id;
@@ -80,11 +154,14 @@ class Obituary implements BaseModel {
   final String id;
   final String name;
   final String age;
+  final String gender;
   final String dateOfDeath;
   final String funeralDate;
   final String funeralLocation;
+  final String burialLocation;
   final String condolenceLocation;
   final String mosque;
+  final String cardBackground;
   final String? imageUrl;
   final String? description;
   final List<Relative> relatives;
@@ -100,10 +177,13 @@ class Obituary implements BaseModel {
     required this.name,
     required this.age,
     required this.dateOfDeath,
+    this.gender = '',
     this.funeralDate = '',
     this.funeralLocation = '',
+    this.burialLocation = '',
     this.condolenceLocation = '',
     this.mosque = '',
+    this.cardBackground = '',
     this.imageUrl,
     this.description,
     this.relatives = const [],
@@ -119,13 +199,16 @@ class Obituary implements BaseModel {
       id: docId,
       name: json['name'] as String? ?? '',
       age: json['age'] as String? ?? '',
+      gender: json['gender'] as String? ?? '',
       dateOfDeath:
           json['dateOfDeath'] as String? ?? json['date'] as String? ?? '',
       funeralDate: json['funeralDate'] as String? ?? '',
       funeralLocation:
           json['funeralLocation'] as String? ?? json['place'] as String? ?? '',
+      burialLocation: json['burialLocation'] as String? ?? '',
       condolenceLocation: json['condolenceLocation'] as String? ?? '',
       mosque: json['mosque'] as String? ?? '',
+      cardBackground: json['cardBackground'] as String? ?? '',
       imageUrl: json['imageUrl'] as String?,
       description: json['description'] as String?,
       relatives: (json['relatives'] as List<dynamic>? ?? [])
@@ -147,11 +230,14 @@ class Obituary implements BaseModel {
     return {
       'name': name,
       'age': age,
+      'gender': gender,
       'dateOfDeath': dateOfDeath,
       'funeralDate': funeralDate,
       'funeralLocation': funeralLocation,
+      'burialLocation': burialLocation,
       'condolenceLocation': condolenceLocation,
       'mosque': mosque,
+      'cardBackground': cardBackground,
       'imageUrl': imageUrl,
       'description': description,
       'relatives': relatives.map((e) => e.toJson()).toList(),
@@ -192,6 +278,57 @@ class Obituary implements BaseModel {
       relatives.where((r) => r.type == RelativeType.inLaw).toList();
   List<Relative> get others =>
       relatives.where((r) => r.type == RelativeType.other).toList();
+
+  /// المرأة تصرف تسميات مجموعات الأقارب إلى المؤنث؛ السجل القديم بلا نوع
+  /// يبقى بالتذكير.
+  bool get isFemale => gender == kObituaryGenderFemale;
+
+  /// الفعل يتصرف بالنوع: «انتقل» للرجل و«انتقلت» للمرأة.
+  String get transitionPhrase =>
+      isFemale ? 'انتقلت إلى رحمة الله تعالى' : 'انتقل إلى رحمة الله تعالى';
+
+  String get prayerPhrase => isFemale ? 'صُلِّيَ عليها' : 'صُلِّيَ عليه';
+
+  List<Relative> relativesOf(RelativeType group) =>
+      relatives.where((r) => r.type == group).toList();
+
+  /// أسماء مجموعة واحدة، مرتبة بحقل `order` كما أُدخِلت؛ الأسماء الفارغة أو
+  /// المسافات وحدها لا تُعرض، فلا يظهر عنوان مجموعة بلا أسماء تحته.
+  List<String> namesOf(RelativeType group) {
+    final list = relativesOf(group)
+      ..sort((a, b) => a.order.compareTo(b.order));
+    return list
+        .map((r) => r.name.trim())
+        .where((n) => n.isNotEmpty)
+        .toList();
+  }
+
+  /// أي مجموعة تحمل أسماء، بما فيها التسميات التراثية، حتى لا تختفي بيانات
+  /// سجل قديم عندما لا يندرج تحت التسع الجديدة.
+  bool get hasRelatives => relatives.any((r) => r.name.trim().isNotEmpty);
+
+  /// أقسام الأقارب غير الفارغة بترتيب العرض وتسمياتها المصروفة حسب النوع.
+  /// تستعملها بطاقة المشاركة وصفحة التفاصيل ولوحة الإدارة، فلا تتفارق
+  /// التسميات بين موضعٍ وأخيه.
+  List<RelativeSection> get relativeSections => [
+        for (final group in kObituaryRelativeGroups)
+          if (namesOf(group).isNotEmpty)
+            RelativeSection(group, group.labelFor(gender), namesOf(group)),
+        for (final group in kLegacyRelativeGroups)
+          if (namesOf(group).isNotEmpty)
+            RelativeSection(group, group.label, namesOf(group)),
+      ];
+}
+
+/// مجموعة أقارب واحدة جاهزة للعرض: المفتاح المخزَّن، عنوانها المصروف، وأسماءها.
+class RelativeSection {
+  const RelativeSection(this.group, this.label, this.names);
+
+  final RelativeType group;
+  final String label;
+  final List<String> names;
+
+  String get namesLine => names.join('، ');
 }
 
 // ═══════════════════════════════════════════════════════════════

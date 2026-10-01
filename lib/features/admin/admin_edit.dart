@@ -116,12 +116,15 @@ class _AdminEditScreenState extends State<AdminEditScreen> {
       case 'obituaries':
         return const [
           _FieldSpec('name', 'اسم المتوفى', required: true),
-          _FieldSpec('age', 'السن'),
+          _FieldSpec('gender', 'نوع المتوفى (رجل أو امرأة)'),
           _FieldSpec('dateOfDeath', 'تاريخ الوفاة'),
-          _FieldSpec('funeralDate', 'تاريخ الدفن'),
-          _FieldSpec('funeralLocation', 'مكان الصلاة'),
+          _FieldSpec('funeralDate', 'تاريخ صلاة الجنازة'),
+          _FieldSpec('funeralLocation', 'مكان صلاة الجنازة'),
+          _FieldSpec('burialLocation', 'مكان الدفن'),
           _FieldSpec('condolenceLocation', 'مكان العزاء'),
-          _FieldSpec('mosque', 'المسجد'),
+          _FieldSpec('cardBackground', 'خلفية البطاقة (azaa1 / azaa2 / azaa3 / azaa4)'),
+          _FieldSpec('age', 'العمر (حقل قديم)'),
+          _FieldSpec('mosque', 'المسجد (حقل قديم)'),
           _FieldSpec('description', 'نبذة', multiline: true),
         ];
       case 'occasions':

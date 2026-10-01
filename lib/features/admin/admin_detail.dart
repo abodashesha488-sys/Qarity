@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/firebase_ts.dart';
 import '../../core/utils/helpers.dart';
+import '../../core/utils/obituary_card_assets.dart';
+import '../../models/data_models.dart';
 import '../../models/medical_models.dart';
 import '../../models/service_provider_model.dart';
 import '../../routes/app_routes.dart';
@@ -271,6 +273,20 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
     if (key == 'adType') {
       return value == kOpticalAdFeatured ? 'عرض مميز' : 'عرض عادي';
     }
+    if (key == 'gender') {
+      final g = value.toString();
+      return g.isEmpty ? 'غير محدد' : g;
+    }
+    if (key == 'cardBackground') {
+      final raw = value.toString();
+      final index = kObituaryCardBackgroundKeys.indexOf(raw);
+      if (index < 0) {
+        return raw.isEmpty
+            ? 'الافتراضية (البطاقة الأولى)'
+            : 'مفتاح غير معروف ($raw) — تُعرض البطاقة الأولى';
+      }
+      return '$raw — ${kObituaryCardBackgroundLabels[index]}';
+    }
     if (key == 'featuredUntil') {
       final d = tsToDateTime(value);
       return d == null ? 'غير محدد' : 'ينتهي في ${AppHelpers.formatDate(d)}';
@@ -281,14 +297,25 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
     }
     if (value is bool) return value ? 'نعم' : 'لا';
     if (value is List) {
-      // قائمة أقارب المتوفى: كائنات فيها name/type
+      // قائمة أقارب المتوفى: كائنات فيها name/type (مفتاح المجموعة)
       if (key == 'relatives') {
-        final names = value
-            .whereType<Map>()
-            .map((r) => (r['name'] ?? '').toString())
-            .where((n) => n.isNotEmpty)
-            .join('، ');
-        return names.isEmpty ? 'لا يوجد' : names;
+        final gender = (widget.item['gender'] ?? '').toString();
+        final grouped = <String, List<String>>{};
+        for (final r in value.whereType<Map>()) {
+          final name = (r['name'] ?? '').toString();
+          if (name.isEmpty) continue;
+          final typeKey = (r['type'] ?? '').toString();
+          final group =
+              RelativeType.values.where((t) => t.name == typeKey).toList();
+          final label = group.isEmpty
+              ? (typeKey.isEmpty ? 'أقارب' : typeKey)
+              : group.first.labelFor(gender);
+          grouped.putIfAbsent(label, () => []).add(name);
+        }
+        if (grouped.isEmpty) return 'لا يوجد';
+        return grouped.entries
+            .map((e) => '${e.key}: ${e.value.join('، ')}')
+            .join('\n');
       }
       // قوائم كائنات عامة: نحاول استخراج الحقول النصية
       if (value.isNotEmpty && value.first is Map) {
@@ -304,6 +331,30 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
   }
 
   String _prettyKey(String key) {
+    // تسميات العزاء منفصلة لأن مفتاحي `gender` و`age` يستعملهما أيضًا
+    // «بنك دم القرية» (متبرع/فصيلة/سن) ولا يجوز أن تُقرأ كتسميات المتوفى.
+    if (widget.collection == 'obituaries') {
+      const obituaryLabels = {
+        'dateOfDeath': 'تاريخ الوفاة',
+        'funeralDate': 'تاريخ صلاة الجنازة',
+        'funeralLocation': 'مكان صلاة الجنازة',
+        'burialLocation': 'مكان الدفن',
+        'condolenceLocation': 'مكان العزاء',
+        'mosque': 'المسجد (حقل قديم)',
+        'gender': 'نوع المتوفى',
+        'age': 'العمر (حقل قديم)',
+        'cardBackground': 'خلفية بطاقة المشاركة',
+        'name': 'اسم المتوفى',
+        'relatives': 'أقارب المتوفى',
+      };
+      final label = obituaryLabels[key];
+      if (label != null) {
+        if (key == 'relatives' && widget.item['gender'] == kObituaryGenderFemale) {
+          return 'قريبات المتوفاة';
+        }
+        return label;
+      }
+    }
     const labels = {
       'title': 'العنوان',
       'name': 'الاسم',
@@ -314,11 +365,6 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
       'deceasedName': 'اسم المتوفى',
       'location': 'الموقع',
       'date': 'التاريخ',
-      'dateOfDeath': 'تاريخ الوفاة',
-      'funeralDate': 'تاريخ الدفن',
-      'funeralLocation': 'مكان الصلاة',
-      'condolenceLocation': 'مكان العزاء',
-      'mosque': 'المسجد',
       'relatives': 'أقارب المتوفى',
       'price': 'السعر',
       'isApproved': 'الحالة',

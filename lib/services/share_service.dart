@@ -7,12 +7,11 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../models/data_models.dart';
+import '../widgets/obituary_share_card.dart';
 
 /// يولّد بطاقة تعزية كصورة عالية الجودة للمشاركة على السوشيال ميديا
 class ShareService {
   ShareService._();
-
-  static const Size _cardSize = Size(800, 1100);
 
   static const String appSignature =
       '📲 تمت المشاركة من خلال تطبيق قرية أبوديشيشة';
@@ -43,132 +42,26 @@ class ShareService {
     );
   }
 
-  /// يرسم بطاقة التعزية ويعيدها كـ PNG bytes
-  static Future<Uint8List> generateMemorialCard(Obituary obituary) async {
-    final recorder = ui.PictureRecorder();
-    final canvas = Canvas(recorder);
-    final size = _cardSize;
-
-    _drawBackground(canvas, size);
-    _drawHeader(canvas, size);
-    _drawDeceasedPlaceholder(canvas, size);
-    _drawDeceasedInfo(canvas, size, obituary);
-    _drawLocations(canvas, size, obituary);
-    _drawRelatives(canvas, size, obituary.relatives);
-    _drawFooter(canvas, size);
-
-    final picture = recorder.endRecording();
-    final image =
-        await picture.toImage(size.width.toInt(), size.height.toInt());
-    final data = await image.toByteData(format: ui.ImageByteFormat.png);
-    return data!.buffer.asUint8List();
-  }
-
-  static void _drawBackground(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFFF5F5F5), Color(0xFFE8EAF6)],
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paint);
-  }
-
-  static void _drawHeader(Canvas canvas, Size size) {
-    _drawText(canvas, 'قرية أبوديشيشة', Offset(size.width / 2, 55),
-        fontSize: 30, fontWeight: FontWeight.w900, color: const Color(0xFF6F4E37));
-    _drawText(canvas, 'سجل العزاء', Offset(size.width / 2, 95),
-        fontSize: 16, fontWeight: FontWeight.w500, color: const Color(0xFF6F4E37));
-    final line = Paint()
-      ..color = const Color(0xFF6F4E37).withValues(alpha: 0.3)
-      ..strokeWidth = 2;
-    canvas.drawLine(Offset(size.width * 0.2, 120), Offset(size.width * 0.8, 120), line);
-  }
-
-  static void _drawDeceasedPlaceholder(Canvas canvas, Size size) {
-    final rect = Rect.fromLTWH(size.width * 0.3, 150, size.width * 0.4, size.width * 0.4);
-    final paint = Paint()..color = Colors.grey.shade300;
-    canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(20)), paint);
-    _drawText(canvas, '🕊', Offset(size.width / 2, rect.center.dy - 24),
-        fontSize: 48, fontWeight: FontWeight.normal, color: Colors.grey.shade600);
-  }
-
-  static void _drawDeceasedInfo(Canvas canvas, Size size, Obituary obituary) {
-    double y = 150 + size.width * 0.4 + 40;
-    _drawText(canvas, 'انتقل إلى رحمة الله تعالى', Offset(size.width / 2, y),
-        fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black87);
-    y += 40;
-    final line = Paint()
-      ..color = const Color(0xFF6F4E37).withValues(alpha: 0.4)
-      ..strokeWidth = 2;
-    canvas.drawLine(Offset(size.width * 0.3, y), Offset(size.width * 0.7, y), line);
-    y += 35;
-    _drawText(canvas, obituary.name, Offset(size.width / 2, y),
-        fontSize: 34, fontWeight: FontWeight.w900, color: Colors.black);
-    y += 55;
-    _drawText(canvas, 'العمر: ${obituary.age} سنة', Offset(size.width / 2, y),
-        fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black87);
-    y += 35;
-    _drawText(canvas, 'تاريخ الوفاة: ${obituary.dateOfDeath}', Offset(size.width / 2, y),
-        fontSize: 18, fontWeight: FontWeight.w600, color: const Color(0xFFC62828));
-  }
-
-  static void _drawLocations(Canvas canvas, Size size, Obituary obituary) {
-    double y = 150 + size.width * 0.4 + 40 + 40 + 35 + 55 + 35 + 35;
-    final line = Paint()
-      ..color = const Color(0xFF6F4E37).withValues(alpha: 0.3)
-      ..strokeWidth = 2;
-    canvas.drawLine(Offset(size.width * 0.2, y), Offset(size.width * 0.8, y), line);
-    y += 35;
-    if (obituary.funeralLocation.isNotEmpty) {
-      _drawText(canvas, 'مكان الصلاة: ${obituary.funeralLocation}', Offset(size.width / 2, y),
-          fontSize: 17, fontWeight: FontWeight.w600, color: Colors.black87);
-      y += 32;
+  /// يرسم بطاقة العزاء ويلتقطها PNG. البطاقة كويجت حقيقي في
+  /// `widgets/obituary_share_card.dart` فتطابق المعاينةُ الصورةَ المُشارَكة.
+  static Future<Uint8List> generateMemorialCard(
+    BuildContext context,
+    Obituary obituary,
+  ) async {
+    final background =
+        await ObituaryCardAssets.loadBackground(obituary.cardBackground);
+    final photo = await ObituaryCardAssets.loadPhoto(obituary.imageUrl);
+    if (!context.mounted) {
+      throw StateError('أُغلقت الشاشة قبل إنشاء البطاقة');
     }
-    if (obituary.funeralDate.isNotEmpty) {
-      _drawText(canvas, 'تاريخ الدفن: ${obituary.funeralDate}', Offset(size.width / 2, y),
-          fontSize: 17, fontWeight: FontWeight.w600, color: const Color(0xFF0D47A1));
-      y += 32;
-    }
-    if (obituary.condolenceLocation.isNotEmpty) {
-      _drawText(canvas, 'مكان العزاء: ${obituary.condolenceLocation}', Offset(size.width / 2, y),
-          fontSize: 17, fontWeight: FontWeight.w600, color: Colors.black87);
-      y += 32;
-    }
-  }
-
-  static void _drawRelatives(Canvas canvas, Size size, List<Relative> relatives) {
-    if (relatives.isEmpty) return;
-    double y = 150 + size.width * 0.4 + 40 + 40 + 35 + 55 + 35 + 35 + 35 + 32 + 32 + 32;
-    final line = Paint()
-      ..color = const Color(0xFF6F4E37).withValues(alpha: 0.3)
-      ..strokeWidth = 2;
-    canvas.drawLine(Offset(size.width * 0.2, y), Offset(size.width * 0.8, y), line);
-    y += 35;
-    _drawText(canvas, 'أقارب المتوفى', Offset(size.width / 2, y),
-        fontSize: 22, fontWeight: FontWeight.w800, color: Colors.black);
-    y += 40;
-
-    final grouped = <RelativeType, List<Relative>>{};
-    for (final r in relatives) {
-      grouped.putIfAbsent(r.type, () => []).add(r);
-    }
-    for (final type in RelativeType.values) {
-      final list = grouped[type];
-      if (list == null || list.isEmpty) continue;
-      _drawText(canvas, '${type.label}: ${list.map((r) => r.name).join('، ')}',
-          Offset(size.width / 2, y),
-          fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black87);
-      y += 30;
-      if (y > size.height - 160) break;
-    }
-  }
-
-  static void _drawFooter(Canvas canvas, Size size) {
-    _drawText(canvas, '"إنا لله وإنا إليه راجعون"', Offset(size.width / 2, size.height - 90),
-        fontSize: 20, fontWeight: FontWeight.w600, color: Colors.black87, italic: true);
-    _drawText(canvas, 'تم النشر عبر تطبيق قرية أبوديشيشة', Offset(size.width / 2, size.height - 50),
-        fontSize: 14, fontWeight: FontWeight.w500, color: Colors.grey.shade600);
+    return ObituaryCardCapturer.capture(
+      context,
+      card: ObituaryShareCard(
+        obituary: obituary,
+        background: background,
+        photo: photo,
+      ),
+    );
   }
 
   static void _drawText(
@@ -200,7 +93,7 @@ class ShareService {
   /// يولّد الصورة ويشاركها عبر نظام المشاركة
   static Future<void> shareObituaryAsImage(BuildContext context, Obituary obituary) async {
     try {
-      final bytes = await generateMemorialCard(obituary);
+      final bytes = await generateMemorialCard(context, obituary);
       final tempDir = await getTemporaryDirectory();
       final file = File(
           '${tempDir.path}/obituary_${DateTime.now().millisecondsSinceEpoch}.png');
@@ -216,7 +109,10 @@ class ShareService {
       if (kDebugMode) debugPrint('Share error: $e');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تعذر مشاركة التعزية'), backgroundColor: Colors.red),
+          const SnackBar(
+            content: Text('تعذر إنشاء صورة التعزية ومشاركتها — تحقق من الاتصال ثم أعد المحاولة.'),
+            backgroundColor: Color(0xFFB71C1C),
+          ),
         );
       }
     }

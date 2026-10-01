@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
+import '../../core/utils/obituary_card_assets.dart';
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
 import '../../services/cache_service.dart';
@@ -300,7 +301,12 @@ class _ObituariesListScreenState extends State<ObituariesListScreen> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        if (isNew)
+                        if (obituary.gender.isNotEmpty) ...[
+                          const SizedBox(width: 6),
+                          _GenderBadge(isFemale: obituary.isFemale),
+                        ],
+                        if (isNew) ...[
+                          const SizedBox(width: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 2),
@@ -316,6 +322,7 @@ class _ObituariesListScreenState extends State<ObituariesListScreen> {
                               ),
                             ),
                           ),
+                        ],
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -424,6 +431,37 @@ class _ObituariesListScreenState extends State<ObituariesListScreen> {
   }
 }
 
+class _GenderBadge extends StatelessWidget {
+  const _GenderBadge({required this.isFemale});
+
+  final bool isFemale;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = theme.colorScheme.primary;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(isFemale ? Icons.female_rounded : Icons.male_rounded,
+              size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(isFemale ? 'امرأة' : 'رجل',
+              style: theme.textTheme.labelSmall?.copyWith(
+                  color: color, fontWeight: FontWeight.w800)),
+        ],
+      ),
+    );
+  }
+}
+
 class _ObituaryThumb extends StatelessWidget {
   const _ObituaryThumb({this.imageUrl, this.size = 56});
 
@@ -433,19 +471,30 @@ class _ObituaryThumb extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final fallback = Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Icon(Icons.person_rounded,
-          size: size * 0.5, color: theme.colorScheme.onSurfaceVariant),
-    );
+    Widget iconFallback() => Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Icon(Icons.person_rounded,
+              size: size * 0.5, color: theme.colorScheme.onSurfaceVariant),
+        );
+
+    // بلا صورة للمتوفى تُرسم «azaa 0» بدل مربّع أيقونة فارغ.
+    Widget imageFallback() => ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: Image.asset(kObituaryDeceasedFallbackAsset,
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              cacheWidth: (size * 3).ceil(),
+              errorBuilder: (context, _, __) => iconFallback()),
+        );
 
     final url = imageUrl;
-    if (url == null || url.isEmpty) return fallback;
+    if (url == null || url.isEmpty) return imageFallback();
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(14),
@@ -454,8 +503,9 @@ class _ObituaryThumb extends StatelessWidget {
         width: size,
         height: size,
         fit: BoxFit.cover,
-        placeholder: (context, _) => fallback,
-        errorWidget: (context, _, __) => fallback,
+        memCacheWidth: (size * 3).ceil(),
+        placeholder: (context, _) => imageFallback(),
+        errorWidget: (context, _, __) => imageFallback(),
       ),
     );
   }

@@ -48,6 +48,35 @@
           ]
         }
       }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:339029236820:android:b7a97499104509fdaba1c1",
+        "android_client_info": {
+          "package_name": "com.example.qarity.debug"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "339029236820-dge33hdrb7mqg24pb0jhb6fgejol76r6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCMeydEO6IX_YtiR-kynhCBc5YFqxLbo3A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "339029236820-dge33hdrb7mqg24pb0jhb6fgejol76r6.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
     }
   ],
   "configuration_version": "1"

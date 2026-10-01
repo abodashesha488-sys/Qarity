@@ -28,6 +28,11 @@ android {
     }
 
     buildTypes {
+        debug {
+            // نسخة التطوير تُثبَّت تطبيقًا مستقلًا بجانب المنشورة (لا فوقها)،
+            // فلا يُطلب حذفها ولا تُمسّ بياناتها ولا يصطدم برقم بنائها الأعلى.
+            applicationIdSuffix = ".debug"
+        }
         release {
             signingConfig = signingConfigs.getByName("debug")
         }
