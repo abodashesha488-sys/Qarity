@@ -527,7 +527,6 @@ class _LostItemDetailScreenState extends State<LostItemDetailScreen> {
           const SizedBox(height: 10),
           _infoRow(Icons.place_rounded, 'المكان', item.location),
           _infoRow(Icons.event_rounded, 'التاريخ', _fmtDate(item.date)),
-          _infoRow(Icons.person_rounded, 'أضافه الإعلان', item.userName),
           _infoRow(Icons.phone_rounded, 'هاتف التواصل', item.phone),
           const SizedBox(height: 16),
           if (item.phone.isNotEmpty)

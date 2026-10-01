@@ -11,6 +11,7 @@ import '../../services/service_provider_service.dart';
 import '../../services/share_service.dart';
 import '../../services/user_service.dart';
 import '../../widgets/edu_kind_mark.dart';
+import '../../widgets/full_fit_image.dart';
 import '../../widgets/qurity_app_bar.dart';
 
 /// شاشة فئة في دليل الخدمات — صفحة **مستقلة** لكل فئة (مسارها الخاص في
@@ -45,7 +46,43 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
   String _subjectFilter = '';
   bool _privateOnly = false;
 
+  /// منطقة البحث والمرشّحات مطوية افتراضيًا: الصفحة تُظهر سجلاتها من أولها،
+  /// والفلاتر المفعّلة تُلوَّخ في الرأس فلا يُخفى شيء على المستخدم.
+  bool _filtersOpen = false;
+
   bool get _isEdu => widget.category == ServiceCategory.educational;
+
+  /// عدد المرشّحات المفعّلة (بلا البحث) — يظهر كشارة على رأس الكارت.
+  int get _activeFilterCount => (_isEdu
+          ? [
+              _kindFilter,
+              _stageFilter,
+              _eduTypeFilter,
+              _subjectFilter,
+            ]
+          : [_group])
+      .where((v) => v.isNotEmpty)
+      .length +
+      (_isEdu && _privateOnly ? 1 : 0);
+
+  /// ما يلصق الكارت مطويًا: الفلاتر المفعّلة + كلمة البحث الحالية.
+  List<String> get _filterSummaryParts => [
+        if (_isEdu && _eduFilterSummary.isNotEmpty) _eduFilterSummary,
+        if (!_isEdu && _group.isNotEmpty) _group,
+        if (_query.isNotEmpty) 'بحث: ${_search.text.trim()}',
+      ];
+
+  void _clearAllFilters() {
+    setState(() {
+      _group = '';
+      _kindFilter = '';
+      _stageFilter = '';
+      _eduTypeFilter = '';
+      _subjectFilter = '';
+      _privateOnly = false;
+      _search.clear();
+    });
+  }
 
   List<String> get _groupOptions => kSubcategoriesFor(widget.category);
 
@@ -159,56 +196,279 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
     ));
   }
 
-  /// قائمة الفئات المنسدلة (الفنيون والخدمات الزراعية).
-  Widget _groupDropdown(ThemeData theme) {
-    return DropdownButtonFormField<String>(
-      initialValue: _group,
-      isExpanded: true,
-      menuMaxHeight: 380,
-      borderRadius: BorderRadius.circular(16),
-      decoration: InputDecoration(
-        labelText: 'تصفية حسب الفئة',
-        prefixIcon: Icon(Icons.filter_alt_rounded, size: 20, color: _color),
-        isDense: true,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+  /// رأس كارت «بحث وتصفية» + جسمه القابل للطي.
+  Widget _filterCard(ThemeData theme) {
+    final summary = _filterSummaryParts;
+    return Material(
+      color: _color.withValues(alpha: 0.06),
+      child: Column(
+        children: [
+          InkWell(
+            key: const Key('filters-toggle'),
+            onTap: () => setState(() => _filtersOpen = !_filtersOpen),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              child: Row(
+                children: [
+                  Icon(_filtersOpen ? Icons.tune_rounded : Icons.search_rounded,
+                      size: 17, color: _color),
+                  const SizedBox(width: 7),
+                  Text('بحث وتصفية',
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                          color: _color)),
+                  if (_activeFilterCount > 0) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      key: const Key('filters-count'),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: _color,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text('$_activeFilterCount',
+                          style: const TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white)),
+                    ),
+                  ],
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Text(
+                        _filtersOpen || summary.isEmpty
+                            ? ''
+                            : summary.join(' · '),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF4B4038)),
+                      ),
+                    ),
+                  ),
+                  if (_activeFilterCount > 0 || _query.isNotEmpty)
+                    IconButton(
+                      key: const Key('filters-clear'),
+                      tooltip: 'مسح الكل',
+                      visualDensity: VisualDensity.compact,
+                      icon: const Icon(Icons.layers_clear_rounded,
+                          size: 18, color: Color(0xFFB71C1C)),
+                      onPressed: _clearAllFilters,
+                    ),
+                  AnimatedRotation(
+                    turns: _filtersOpen ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 180),
+                    child:
+                        Icon(Icons.expand_more_rounded, size: 18, color: _color),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOutCubic,
+            alignment: Alignment.topCenter,
+            child: _filtersOpen
+                ? Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+                    child: Column(
+                      children: [
+                        _searchField(theme),
+                        const SizedBox(height: 10),
+                        if (_isEdu)
+                          ..._eduFilters(theme)
+                        else
+                          _groupPill(theme),
+                      ],
+                    ),
+                  )
+                : const SizedBox(width: double.infinity),
+          ),
+        ],
       ),
-      items: [
-        const DropdownMenuItem(value: '', child: Text('كل الفئات')),
-        ..._groupOptions.map((g) => DropdownMenuItem(
-            value: g,
-            child: Text(g, maxLines: 1, overflow: TextOverflow.ellipsis))),
-        const DropdownMenuItem(value: 'غير مصنّف', child: Text('غير مصنّف')),
-      ],
-      onChanged: (v) => setState(() => _group = v ?? ''),
     );
   }
 
-  /// مرشّحات الخدمات التعليمية: الصفة + تدريس خاص + المرحلة + نوع التعليم + المواد.
+  Widget _searchField(ThemeData theme) {
+    return TextField(
+      key: const Key('provider-search'),
+      controller: _search,
+      textInputAction: TextInputAction.search,
+      decoration: InputDecoration(
+        hintText: switch (widget.category) {
+          ServiceCategory.technicians => 'ابحث في السجلات: اسم أو حرفة…',
+          ServiceCategory.agricultural => 'ابحث في السجلات: اسم أو خدمة…',
+          _ => 'ابحث: اسم، مادة، مرحلة، تخصص جامعي…',
+        },
+        prefixIcon: Icon(Icons.search_rounded, color: _color, size: 19),
+        suffixIcon: _query.isNotEmpty
+            ? IconButton(
+                tooltip: 'مسح',
+                icon: const Icon(Icons.clear_rounded, size: 17),
+                onPressed: _search.clear,
+              )
+            : null,
+        isDense: true,
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: _color.withValues(alpha: 0.35))),
+        enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: _color.withValues(alpha: 0.35))),
+        focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: _color, width: 1.4)),
+      ),
+    );
+  }
+
+  /// زر مرشّح مضغوط يفتح قائمة اختيار أسفل الشاشة، بدل حقل منسدل بارتفاع حقل كامل.
+  Widget _filterPill({
+    required Key key,
+    required String label,
+    required IconData icon,
+    required String value,
+    required String allLabel,
+    required List<String> options,
+    required String group,
+    bool searchable = false,
+  }) {
+    final active = value.isNotEmpty;
+    return InkWell(
+      key: key,
+      borderRadius: BorderRadius.circular(11),
+      onTap: () => _openFilterSheet(
+        title: label,
+        value: value,
+        allLabel: allLabel,
+        options: options,
+        searchable: searchable,
+        group: group,
+      ),
+      child: Container(
+        height: 34,
+        padding: const EdgeInsets.symmetric(horizontal: 7),
+        decoration: BoxDecoration(
+          color: active ? _color.withValues(alpha: 0.12) : Colors.white,
+          borderRadius: BorderRadius.circular(11),
+          border:
+              Border.all(color: active ? _color : _color.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 14, color: _color),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text(active ? value : '$label: $allLabel',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: active ? FontWeight.w900 : FontWeight.w600,
+                      color: active
+                          ? _color
+                          : const Color(0xFF5B4E45))),
+            ),
+            const Icon(Icons.expand_more_rounded,
+                size: 15, color: Color(0xFF5B4E45)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openFilterSheet({
+    required String title,
+    required String value,
+    required String allLabel,
+    required List<String> options,
+    required bool searchable,
+    required String group,
+  }) async {
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      isScrollControlled: true,
+      builder: (_) => _FilterOptionSheet(
+        title: title,
+        value: value,
+        allLabel: allLabel,
+        options: options,
+        searchable: searchable,
+        accent: _color,
+      ),
+    );
+    if (picked == null) return;
+    setState(() {
+      switch (group) {
+        case 'group':
+          _group = picked;
+        case 'stage':
+          _stageFilter = picked;
+        case 'eduType':
+          _eduTypeFilter = picked;
+        case 'subject':
+          _subjectFilter = picked;
+      }
+    });
+  }
+
+  /// مرشّح الفئة في صفحتي الحرفيين والزراعية.
+  Widget _groupPill(ThemeData theme) {
+    return SizedBox(
+      width: double.infinity,
+      child: _filterPill(
+        key: const Key('filter-group'),
+        label: 'الفئة',
+        icon: Icons.filter_alt_rounded,
+        value: _group,
+        allLabel: 'كل الفئات',
+        options: [..._groupOptions, 'غير مصنّف'],
+        searchable: _groupOptions.length > 10,
+        group: 'group',
+      ),
+    );
+  }
+
+  /// مرشّحات الخدمات التعليمية: رقائق الصفة والتدريس الخاص في سطر،
+  /// والمرشّحات الثلاثة في سطر واحد كأزرار مضغوطة.
   List<Widget> _eduFilters(ThemeData theme) {
     return [
       Wrap(
         spacing: 6,
-        runSpacing: 8,
+        runSpacing: 6,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           for (final k in ['', ...kEduKinds])
             ChoiceChip(
               key: ValueKey('filter-kind-${k.isEmpty ? 'all' : k}'),
+              visualDensity: VisualDensity.compact,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               label: Text(k.isEmpty ? 'الكل' : k,
-                  style: const TextStyle(fontSize: 12)),
+                  style: const TextStyle(fontSize: 11.5)),
               selected: _kindFilter == k,
               showCheckmark: false,
-              avatar: k.isEmpty ? null : EduKindMark(kind: k),
+              avatar: k.isEmpty ? null : EduKindMark(kind: k, size: 13),
               selectedColor: _color.withValues(alpha: 0.16),
               side: BorderSide(
                   color: _kindFilter == k
                       ? _color
                       : theme.colorScheme.outlineVariant),
               labelStyle: TextStyle(
-                  fontSize: 12,
+                  fontSize: 11.5,
                   fontWeight:
-                      _kindFilter == k ? FontWeight.w800 : FontWeight.w600,
+                      _kindFilter == k ? FontWeight.w900 : FontWeight.w600,
                   color: _kindFilter == k
                       ? _color
                       : theme.colorScheme.onSurfaceVariant),
@@ -216,11 +476,14 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
             ),
           ChoiceChip(
             key: const Key('filter-private-only'),
-            label: const Text('تدريس خاص', style: TextStyle(fontSize: 12)),
+            visualDensity: VisualDensity.compact,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            label: const Text('تدريس خاص', style: TextStyle(fontSize: 11.5)),
             selected: _privateOnly,
             showCheckmark: false,
             avatar: Icon(Icons.cast_for_education_rounded,
-                size: 15,
+                size: 14,
                 color: _privateOnly
                     ? kEduPrivateTagColor
                     : theme.colorScheme.onSurfaceVariant),
@@ -230,8 +493,8 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
                     ? kEduPrivateTagColor
                     : theme.colorScheme.outlineVariant),
             labelStyle: TextStyle(
-                fontSize: 12,
-                fontWeight: _privateOnly ? FontWeight.w800 : FontWeight.w600,
+                fontSize: 11.5,
+                fontWeight: _privateOnly ? FontWeight.w900 : FontWeight.w600,
                 color: _privateOnly
                     ? kEduPrivateTagColor
                     : theme.colorScheme.onSurfaceVariant),
@@ -243,73 +506,44 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
       Row(
         children: [
           Expanded(
-            child: _filterDropdown(
+            child: _filterPill(
               key: const Key('filter-stage'),
               label: 'المرحلة',
               icon: Icons.school_rounded,
               value: _stageFilter,
-              allLabel: 'كل المراحل',
+              allLabel: 'الكل',
               options: [...kEduStages, kEduStageOther],
-              onChanged: (v) => setState(() => _stageFilter = v),
+              group: 'stage',
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
           Expanded(
-            child: _filterDropdown(
+            child: _filterPill(
               key: const Key('filter-edu-type'),
-              label: 'نوع التعليم',
+              label: 'التعليم',
               icon: Icons.category_rounded,
               value: _eduTypeFilter,
-              allLabel: 'كل الأنواع',
+              allLabel: 'الكل',
               options: kEduTypes,
-              onChanged: (v) => setState(() => _eduTypeFilter = v),
+              group: 'eduType',
+            ),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: _filterPill(
+              key: const Key('filter-subject'),
+              label: 'المادة',
+              icon: Icons.menu_book_rounded,
+              value: _subjectFilter,
+              allLabel: 'الكل',
+              options: kEgyptSubjects,
+              searchable: true,
+              group: 'subject',
             ),
           ),
         ],
       ),
-      const SizedBox(height: 8),
-      _filterDropdown(
-        key: const Key('filter-subject'),
-        label: 'المواد التعليمية',
-        icon: Icons.menu_book_rounded,
-        value: _subjectFilter,
-        allLabel: 'كل المواد',
-        options: kEgyptSubjects,
-        onChanged: (v) => setState(() => _subjectFilter = v),
-      ),
     ];
-  }
-
-  Widget _filterDropdown({
-    required Key key,
-    required String label,
-    required IconData icon,
-    required String value,
-    required String allLabel,
-    required List<String> options,
-    required void Function(String) onChanged,
-  }) {
-    return DropdownButtonFormField<String>(
-      key: key,
-      initialValue: value,
-      isExpanded: true,
-      menuMaxHeight: 340,
-      borderRadius: BorderRadius.circular(16),
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon, size: 19, color: _color),
-        isDense: true,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      ),
-      items: [
-        DropdownMenuItem(value: '', child: Text(allLabel)),
-        ...options.map((o) => DropdownMenuItem(
-            value: o,
-            child: Text(o, maxLines: 1, overflow: TextOverflow.ellipsis))),
-      ],
-      onChanged: (v) => onChanged(v ?? ''),
-    );
   }
 
   @override
@@ -327,40 +561,8 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
       ),
       body: Column(
         children: [
-          // المرشّحات + مربع البحث أسفلها
-          Container(
-            color: _color.withValues(alpha: 0.06),
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-            child: Column(
-              children: [
-                if (_isEdu) ..._eduFilters(theme) else _groupDropdown(theme),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: _search,
-                  decoration: InputDecoration(
-                    hintText: switch (widget.category) {
-                      ServiceCategory.technicians =>
-                        'ابحث في السجلات: اسم أو حرفة…',
-                      ServiceCategory.agricultural =>
-                        'ابحث في السجلات: اسم أو خدمة…',
-                      _ => 'ابحث: اسم، مادة، مرحلة، تخصص جامعي…',
-                    },
-                    prefixIcon:
-                        Icon(Icons.search_rounded, color: _color, size: 20),
-                    suffixIcon: _query.isNotEmpty
-                        ? IconButton(
-                            tooltip: 'مسح',
-                            icon: const Icon(Icons.clear_rounded, size: 18),
-                            onPressed: () => _search.clear(),
-                          )
-                        : null,
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          // كارت واحد قابل للطي: البحث + مرشّحات الفئة.
+          _filterCard(theme),
           Expanded(
             child: StreamBuilder<List<ServiceProvider>>(
               stream: _stream,
@@ -448,6 +650,143 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// قائمة اختيار لمرشّح واحد: تُغلق الشاشة بالقيمة المختارة (نص فارغ = الكل).
+/// القوائم الطويلة (المواد، والحرف عند كثرتها) لها بحث داخلي حتى لا يُطلب
+/// من المستخدم تمرير قائمة من أربعين عنصرًا.
+class _FilterOptionSheet extends StatefulWidget {
+  const _FilterOptionSheet({
+    required this.title,
+    required this.value,
+    required this.allLabel,
+    required this.options,
+    required this.searchable,
+    required this.accent,
+  });
+  final String title;
+  final String value;
+  final String allLabel;
+  final List<String> options;
+  final bool searchable;
+  final Color accent;
+
+  @override
+  State<_FilterOptionSheet> createState() => _FilterOptionSheetState();
+}
+
+class _FilterOptionSheetState extends State<_FilterOptionSheet> {
+  final TextEditingController _q = TextEditingController();
+  String _query = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _q.addListener(() => setState(() => _query = _q.text.trim()));
+  }
+
+  @override
+  void dispose() {
+    _q.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final matches = _query.isEmpty
+        ? widget.options
+        : widget.options
+            .where((o) => o.contains(_query))
+            .toList(growable: false);
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 8, 4),
+            child: Row(
+              children: [
+                Icon(Icons.filter_alt_rounded, size: 18, color: widget.accent),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text('مرشّح ${widget.title}',
+                      style: const TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w900)),
+                ),
+                IconButton(
+                  tooltip: 'إغلاق',
+                  icon: const Icon(Icons.close_rounded, size: 20),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+          ),
+          if (widget.searchable)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+              child: TextField(
+                key: const Key('filter-sheet-search'),
+                controller: _q,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: 'ابحث في ${widget.title}…',
+                  prefixIcon:
+                      const Icon(Icons.search_rounded, size: 19),
+                  isDense: true,
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(11),
+                      borderSide: BorderSide(
+                          color: widget.accent.withValues(alpha: 0.35))),
+                ),
+              ),
+            ),
+          Flexible(
+            child: ListView(
+              shrinkWrap: true,
+              padding: const EdgeInsets.only(bottom: 12),
+              children: [
+                _optionTile(theme, '', widget.allLabel),
+                if (matches.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.all(18),
+                    child: Text('لا خيار مطابق لـ «$_query»',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF6B5F57))),
+                  ),
+                for (final o in matches) _optionTile(theme, o, o),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _optionTile(ThemeData theme, String value, String label) {
+    final selected = widget.value == value;
+    return ListTile(
+      dense: true,
+      visualDensity: const VisualDensity(vertical: -1),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+      leading: selected
+          ? Icon(Icons.check_circle_rounded, size: 19, color: widget.accent)
+          : const Icon(Icons.circle_outlined,
+              size: 19, color: Color(0xFFB9AEA6)),
+      title: Text(label,
+          style: TextStyle(
+              fontSize: 13.5,
+              fontWeight: selected ? FontWeight.w900 : FontWeight.w600,
+              color: selected ? widget.accent : const Color(0xFF2B2118))),
+      onTap: () => Navigator.of(context).pop(value),
     );
   }
 }
@@ -542,24 +881,11 @@ class _ProviderCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ClipRRect(
+              FullFitImage(
                 key: ValueKey('card-image-${provider.id}'),
-                borderRadius: BorderRadius.circular(12),
-                child: SizedBox(
-                  width: _kImageSide,
-                  height: _kImageSide,
-                  child: provider.photoUrl != null &&
-                          provider.photoUrl!.isNotEmpty
-                      ? CachedNetworkImage(
-                          imageUrl: provider.photoUrl!,
-                          fit: BoxFit.cover,
-                          width: _kImageSide,
-                          height: _kImageSide,
-                          memCacheWidth: (_kImageSide * 3).round(),
-                          errorWidget: (_, __, ___) => _avatar(theme, color),
-                        )
-                      : _avatar(theme, color),
-                ),
+                imageUrl: provider.photoUrl ?? '',
+                width: _kImageSide,
+                fallback: _avatar(theme, color),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -652,41 +978,58 @@ class _ProviderCard extends StatelessWidget {
     );
   }
 
-  /// زرا الاتصال (أخضر) ومشاركة (أزرق).
+  /// زرا الاتصال (أخضر) ومشاركة (أزرق) بحجم محتواهما — لا يملأان عرض البطاقة.
   Widget _actions() {
-    return Row(
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
       children: [
-        if (provider.hasContact) ...[
-          Expanded(
-            child: FilledButton.icon(
-              key: ValueKey('card-call-${provider.id}'),
-              onPressed: () async {
-                final uri = Uri(scheme: 'tel', path: provider.phone);
-                if (await canLaunchUrl(uri)) await launchUrl(uri);
-              },
-              style: FilledButton.styleFrom(
-                  backgroundColor: kCallButtonColor,
-                  padding: const EdgeInsets.symmetric(vertical: 7)),
-              icon: const Icon(Icons.call_rounded, size: 15),
-              label: const Text('اتصال',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
-            ),
+        if (provider.hasContact)
+          _miniAction(
+            key: ValueKey('card-call-${provider.id}'),
+            label: 'اتصال',
+            icon: Icons.call_rounded,
+            color: kCallButtonColor,
+            onTap: () async {
+              final uri = Uri(scheme: 'tel', path: provider.phone);
+              if (await canLaunchUrl(uri)) await launchUrl(uri);
+            },
           ),
-          const SizedBox(width: 6),
-        ],
-        Expanded(
-          child: FilledButton.icon(
-            key: ValueKey('card-share-${provider.id}'),
-            onPressed: _share,
-            style: FilledButton.styleFrom(
-                backgroundColor: kShareButtonColor,
-                padding: const EdgeInsets.symmetric(vertical: 7)),
-            icon: const Icon(Icons.share_rounded, size: 15),
-            label: const Text('مشاركة',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
-          ),
+        _miniAction(
+          key: ValueKey('card-share-${provider.id}'),
+          label: 'مشاركة',
+          icon: Icons.share_rounded,
+          color: kShareButtonColor,
+          onTap: _share,
         ),
       ],
+    );
+  }
+
+  Widget _miniAction({
+    required Key key,
+    required String label,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return SizedBox(
+      height: 32,
+      child: FilledButton.icon(
+        key: key,
+        onPressed: onTap,
+        style: FilledButton.styleFrom(
+            backgroundColor: color,
+            visualDensity: VisualDensity.compact,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10)),
+            padding: const EdgeInsets.symmetric(horizontal: 11)),
+        icon: Icon(icon, size: 14),
+        label: Text(label,
+            style:
+                const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800)),
+      ),
     );
   }
 

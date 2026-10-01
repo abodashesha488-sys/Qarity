@@ -279,6 +279,10 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
     }
     if (key == 'cardBackground') {
       final raw = value.toString();
+      if (raw.startsWith('http://') || raw.startsWith('https://')) {
+        // خلفية أضافها صاحب التعزية من صوره، فالقيمة رابط لا مفتاح
+        return 'خلفية مضافة ($raw)';
+      }
       final index = kObituaryCardBackgroundKeys.indexOf(raw);
       if (index < 0) {
         return raw.isEmpty
@@ -398,6 +402,9 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
       'categories': 'التخصصات',
       'ownerName': 'صاحب المحل',
       'address': 'العنوان',
+      'photoUrl': 'صورة السجل',
+      'imageUrl': 'الصورة',
+      'imageUrls': 'الصور',
     };
     return labels[key] ?? key;
   }

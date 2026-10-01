@@ -717,6 +717,20 @@ class _ReviewCard extends StatelessWidget {
       collection == 'service_providers' &&
       item['offersPrivateTutoring'] == true;
 
+  /// صفة السجل التعليمي كما تظهر في بطاقته العامة؛ السجل القديم الذي بلا
+  /// `providerKind` يُعامل كمدرّس، وهو ما يقرأه النموذج نفسه.
+  String get _eduKind {
+    if (collection != 'service_providers' ||
+        item['category'] != ServiceCategory.educational) {
+      return '';
+    }
+    final kind = (item['providerKind'] as String? ?? '').trim();
+    return kind.isEmpty ? kEduKindTeacher : kind;
+  }
+
+  Color get _eduKindColor =>
+      ServiceCategory.color(ServiceCategory.educational);
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -858,6 +872,32 @@ class _ReviewCard extends StatelessWidget {
                                               fontSize: 9,
                                               fontWeight: FontWeight.w900,
                                               color: Colors.white)),
+                                    ],
+                                  ),
+                                ),
+                              if (_eduKind.isNotEmpty)
+                                Container(
+                                  key: ValueKey('review-edu-kind-$id'),
+                                  margin: const EdgeInsets.only(right: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: _eduKindColor.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                        color:
+                                            _eduKindColor.withValues(alpha: .45)),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      EduKindMark(kind: _eduKind, size: 12),
+                                      const SizedBox(width: 3),
+                                      Text(_eduKind,
+                                          style: TextStyle(
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.w900,
+                                              color: _eduKindColor)),
                                     ],
                                   ),
                                 ),

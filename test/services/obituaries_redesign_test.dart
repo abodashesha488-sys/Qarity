@@ -9,9 +9,9 @@ import 'package:qurity/features/obituaries/add.dart';
 import 'package:qurity/models/data_models.dart';
 import 'package:qurity/widgets/obituary_share_card.dart';
 
-/// إعادة تصميم «سجل العزاء»: النوع يصرف تسميات القرابة، الأماكن ثلاثة،
-/// المجموعات تسع تقبل أسماء متعددة، الخلفية مختارة من صور azaa، وبلا سؤال
-/// عن العمر. السجلات القديمة تظل تُقرأ كما هي.
+/// إعادة تصميم «سجل العزاء»: النوع يصرف تسميات القرابة ولا يُعرض، الأماكن ثلاثة،
+/// المجموعات عشر تقبل أسماء متعددة، الخلفية من صور azaa أو من صورة المستخدم،
+/// وبلا سؤال عن العمر. السجلات القديمة تظل تُقرأ كما هي.
 void main() {
   Relative relOf(String name, RelativeType type, {int order = 0}) =>
       Relative(id: 'id_$name', name: name, type: type, order: order);
@@ -61,8 +61,8 @@ void main() {
       );
 
   group('تسميات القرابة المصروفة حسب النوع', () {
-    test('التسع مجموعات لها مذكر ومؤنث مختلفان لكل عنوان', () {
-      expect(kObituaryRelativeGroups, hasLength(9));
+    test('العشر مجموعات لها مذكر ومؤنث مختلفان لكل عنوان', () {
+      expect(kObituaryRelativeGroups, hasLength(10));
       for (final group in kObituaryRelativeGroups) {
         expect(group.isEditableGroup, isTrue, reason: group.name);
         expect(group.labelFor(kObituaryGenderMale), group.label);
@@ -74,9 +74,10 @@ void main() {
       }
     });
 
-    test('العناوين كما طلبها المستخدم، مع جد/جدة', () {
+    test('العناوين كما طلبها المستخدم، مع شقيق/شقيقة بعد والد/والدة', () {
       const expected = {
         RelativeType.children: ('والد كلاً من', 'والدة كلاً من'),
+        RelativeType.siblings: ('شقيق كلاً من', 'شقيقة كلاً من'),
         RelativeType.grandchildren: ('جد كلاً من', 'جدة كلاً من'),
         RelativeType.paternalUncles: ('عم كلاً من', 'عمّة كلاً من'),
         RelativeType.maternalUncles: ('خال كلاً من', 'خالة كلاً من'),
@@ -86,11 +87,14 @@ void main() {
         RelativeType.families: ('قريب عائلات', 'قريبة عائلات'),
         RelativeType.friends: ('صديق كلاً من', 'صديقة كلاً من'),
       };
-      expect(expected.keys, hasLength(9));
+      expect(expected.keys, hasLength(10));
       expected.forEach((group, pair) {
         expect(group.label, pair.$1);
         expect(group.feminineLabel, pair.$2);
       });
+      // «شقيق كلاً من» يأتي مباشرة بعد «والد كلاً من» في النموذج والبطاقة.
+      expect(kObituaryRelativeGroups.take(2).toList(),
+          [RelativeType.children, RelativeType.siblings]);
     });
 
     test('التسميات التراثية تُقرأ ولا تُعرض للإدخال', () {
@@ -184,6 +188,7 @@ void main() {
         burialLocation: 'مقابر القرية',
         relatives: [
           relOf('ابنها الأكبر', RelativeType.children),
+          relOf('شقيقها الأصغر', RelativeType.siblings),
           relOf('عمتها', RelativeType.paternalUncles),
         ],
       )));
@@ -194,6 +199,8 @@ void main() {
       // يطابقها find.text إلا بتفعيل findRichText.
       expect(find.textContaining('والدة كلاً من', findRichText: true),
           findsOne);
+      expect(find.textContaining('شقيقة كلاً من', findRichText: true),
+          findsOne);
       expect(find.textContaining('عمّة كلاً من', findRichText: true), findsOne);
       expect(find.text('مكان صلاة الجنازة'), findsOne);
       expect(find.text('مكان الدفن'), findsOne);
@@ -203,6 +210,9 @@ void main() {
           findsOne);
       // لا عمر في السجل الحديث.
       expect(find.textContaining('العمر'), findsNothing);
+      // النوع لا يُذكر في النتيجة: قيمته نحوية وحدها.
+      expect(find.text('امرأة'), findsNothing);
+      expect(find.text('رجل'), findsNothing);
     });
 
     testWidgets('رجل + سجل قديم بالعمر والمسجد والتسمية التراثية',
@@ -222,6 +232,9 @@ void main() {
       // بلا مكان دفن محفوظ يظهر المسجد كما كان.
       expect(find.text('المسجد'), findsOne);
       expect(find.text('مكان الدفن'), findsNothing);
+      // النوع لا يظهر نصًا في البطاقة رغم أن السجل يحمله.
+      expect(find.text('رجل'), findsNothing);
+      expect(find.text('امرأة'), findsNothing);
     });
 
     testWidgets('أسماء كثيرة وعناوين طويلة تلتف بلا فيضان', (tester) async {
@@ -253,7 +266,7 @@ void main() {
         );
 
     // نافذة طويلة كي يبني `ListView` كل الأقسام (يُبني المرئي فقط)،
-    // فيمكن اختبار المجموعات التسع دون تمرير.
+    // فيمكن اختبار المجموعات العشر دون تمرير.
     void useTallView(WidgetTester tester) {
       tester.view.physicalSize = const Size(1170, 12000);
       tester.view.devicePixelRatio = 3.0;
@@ -306,7 +319,7 @@ void main() {
       expect(find.textContaining('اختر نوع المتوفى أولًا'), findsOne);
     });
 
-    testWidgets('اختيار امرأة يصرف عناوين المجموعات التسع فورًا',
+    testWidgets('اختيار امرأة يصرف عناوين المجموعات العشر فورًا',
         (tester) async {
       await openForm(tester);
 
@@ -405,6 +418,35 @@ void main() {
           greaterThan(0.4));
     });
 
+    testWidgets('تنبيه المراجعة أعلى الصفحة أحمر صريح لا لون الثيم الباهت',
+        (tester) async {
+      await openForm(tester);
+
+      final notice = tester.widget<Text>(find.text(
+          'سيتم مراجعة التعزية من قبل الإدارة قبل نشرها'));
+      expect(notice.style!.color, const Color(0xFFB71C1C));
+      // الشريط الأحمر الفاتح فوق بيج فاتح كان يجعل العبارة غير مقروءة.
+      expect(notice.style!.color!.computeLuminance(), lessThan(0.25));
+      expect(find.byIcon(Icons.warning_amber_rounded), findsOne);
+    });
+
+    testWidgets('بلاطة «أضف صورة» في قائمة الخلفيات، و«خلفيتي» بعد الرفع فقط',
+        (tester) async {
+      await openForm(tester);
+
+      expect(find.byKey(const Key('card-bg-add')), findsOne);
+      // أيقونة «أضف صورة» تستعملها دائرة صورة المتوفى أيضًا، فتُقرأ داخل البلاطة.
+      expect(
+          find.descendant(
+              of: find.byKey(const Key('card-bg-add')),
+              matching: find.byIcon(Icons.add_a_photo_rounded)),
+          findsOne);
+      expect(find.text('أضف صورة'), findsOne);
+      // لم يرفع المستخدم شيئًا بعد: لا بلاطة خلفية مضافة ولا خطأ رفع.
+      expect(find.byKey(const Key('card-bg-custom')), findsNothing);
+      expect(find.byKey(const Key('obituary-bg-error')), findsNothing);
+    });
+
     test('الإرسال يكتب age فارغًا ولا يكتب المسجد', () {
       final src = File('lib/features/obituaries/add.dart').readAsStringSync();
       expect(src, contains("age: '',"));
@@ -458,8 +500,16 @@ void main() {
           contains("kObituaryDeceasedFallbackAsset = 'assets/images/azaa 0"));
     });
 
-    test('كارت السجل يعرض النوع بدل العمر ويستعمل الشارة', () {
-      expect(list, contains('_GenderBadge(isFemale: obituary.isFemale)'));
+    test('النوع لا يُعرض في أي مخرَج: شارة رجل/امرأة لا وجود لها', () {
+      expect(list, isNot(contains('_GenderBadge')));
+      expect(list, isNot(contains('obituary.gender')));
+      expect(detail, isNot(contains('obituary.gender')));
+      expect(card, isNot(contains('o.gender')));
+      // وقيمته تبقى نحوية وحدها: الصرف و«انتقل/انتقلت».
+      expect(detail, contains('obituary.isFemale'));
+      expect(card, contains('obituary.isFemale'));
+      expect(card, contains('o.transitionPhrase'));
+      // العمر لم يعد يُسأل، وبقي مقروءًا للسجلات القديمة.
       expect(list, contains('if (obituary.age.isNotEmpty)'));
     });
 
@@ -480,25 +530,52 @@ void main() {
       expect(share, isNot(contains('generateMemorialCard(Obituary')));
     });
 
-    test('الخلفية المختارة تُرى فعلًا: تبييض خفيف وإطار واضح', () {
-      // السبب: بتبييض 0.88 وإطار 16 كانت الخلفيات الأربع تتطابق في الناتج،
-      // فيصير اختيار «البطاقة الأولى/الثانية/الثالثة/الرابعة» بلا معنى.
-      final wash = RegExp(
-              r'Color\(0xFFFDF6E9\)\.withValues\(alpha: ([\d.]+)\)')
-          .firstMatch(card);
-      expect(wash, isNotNull, reason: 'تغيّرت طبقة التبييض فوق الخلفية');
-      expect(double.parse(wash!.group(1)!), lessThanOrEqualTo(0.6),
-          reason: 'التبييض الثقيل يمحو ملامح azaa المختارة');
+    test('البطاقة تُرسم فوق الخلفية مباشرة: بلا تبييض ولا لوح أبيض', () {
+      // خلفيات azaa الأربع سوداء (قيس متوسط سطوعها فوجد 24–37 من 255)، فكان
+      // التبييض يلغي معنى اختيار الخلفية؛ تُرسم البيانات على الرسم كما هو.
+      expect(card, isNot(contains('0xFFFDF6E9')));
+      expect(card, isNot(contains('Colors.white.withValues')));
 
-      final frameStart = card.indexOf('_CoverImage(image: background)');
-      final frame =
-          RegExp(r'EdgeInsets\.all\((\d+)\)').firstMatch(card.substring(frameStart));
-      expect(frame, isNotNull);
-      expect(int.parse(frame!.group(1)!), greaterThanOrEqualTo(24),
-          reason: 'إطار ضيّق لا يُظهر الرسم');
+      // كل ألوان البطاقة فاتحة محسوبة على أسود، بلا بني يختفي.
+      for (final color in const [
+        ObituaryShareCard.gold,
+        ObituaryShareCard.ivory,
+        ObituaryShareCard.cream,
+        ObituaryShareCard.soft,
+      ]) {
+        expect(color.computeLuminance(), greaterThan(0.45),
+            reason: 'لون داكن فوق خلفية سوداء لا يُقرأ');
+      }
 
-      // وضوح النص مسؤوليته اللوح الداخلي، لا حجب الخلفية.
-      expect(card, contains('Colors.white.withValues(alpha: 0.95)'));
+      // التناسق: كتل موزّعة على بطاقة طولية تستغل المساحة، وارتفاعها من
+      // محتواها لا من الحاوية (فتطابق المعاينةُ الصورةَ المُشارَكة دائمًا).
+      expect(card, contains('minHeight: width * 1.5'));
+      expect(card, contains('MainAxisAlignment.spaceBetween'));
+      expect(card, contains('mainAxisSize: MainAxisSize.min'));
+
+      // الإطار الذهبي لصورة المتوفى وحده — لا إطار ولا حدود حول البيانات.
+      final shareBody =
+          card.substring(0, card.indexOf('class ObituaryShareCardPreview'));
+      expect(shareBody, isNot(contains('Border.all')));
+      expect(shareBody, contains('EdgeInsets.all(3)'));
+      expect(shareBody,
+          contains('ClipPath(clipper: arch, child: _CoverImage(image: photo))'));
+    });
+
+    test('خلفية البطاقة: مفتاح azaa أو رابط صورة يرفعها المستخدم', () {
+      // الرابط يُفكّ كما هو، والمفتاح لا يصبح طلب شبكة، والفشل يسقط للأولى.
+      expect(card, contains('_loadUrl(keyOrUrl)'));
+      expect(card, contains("link.startsWith('http://')"));
+      expect(card, contains('await _loadAsset(obituaryCardAssetFor(keyOrUrl))'));
+
+      expect(add, contains("key: const Key('card-bg-add')"));
+      expect(add, contains('Future<void> _pickAndUploadBackground()'));
+      expect(add, contains('_customBackground = url'));
+      expect(add, contains("keyName: 'card-bg-custom'"));
+      expect(add, contains("keyName: 'obituary-bg-error'"));
+      // الرفع الجاري يمنع الإرسال حتى لا يُحفظ رابط لم يصل بعد.
+      expect(add, contains('if (_bgUploading)'));
+      expect(add, contains('خلفية البطاقة ما زالت تُرفع'));
     });
 
     test('لوحة الإدارة تعرف الحقول الثلاثة وتسميها للعزاء وحده', () {
@@ -508,10 +585,13 @@ void main() {
           File('lib/features/admin/admin_detail.dart').readAsStringSync();
       expect(edit, contains("_FieldSpec('gender', 'نوع المتوفى (رجل أو امرأة)')"));
       expect(edit, contains("_FieldSpec('burialLocation', 'مكان الدفن')"));
-      expect(edit, contains('خلفية البطاقة (azaa1 / azaa2 / azaa3 / azaa4)'));
+      expect(edit, contains('خلفية البطاقة (azaa1 / azaa2 / azaa3 / azaa4'));
+      expect(edit, contains('أو رابط صورة'));
       expect(adminDetail, contains("widget.collection == 'obituaries'"));
       expect(adminDetail, contains("'cardBackground': 'خلفية بطاقة المشاركة'"));
       expect(adminDetail, contains('group.first.labelFor(gender)'));
+      // قيمة الخلفية قد تكون رابطًا من صور المستخدم، فلا تُسمّى مفتاحًا مجهولًا
+      expect(adminDetail, contains("'خلفية مضافة (\$raw)'"));
     });
   });
 }

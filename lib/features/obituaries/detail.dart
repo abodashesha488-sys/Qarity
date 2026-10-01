@@ -179,14 +179,8 @@ class _ObituaryDetailContent extends StatelessWidget {
           spacing: 8,
           runSpacing: 8,
           children: [
-            if (obituary.gender.isNotEmpty)
-              _MetaChip(
-                icon: obituary.isFemale
-                    ? Icons.female_rounded
-                    : Icons.male_rounded,
-                label: obituary.gender,
-                color: theme.colorScheme.primary,
-              ),
+            // نوع المتوفى لا يُعرض في نتيجة الإدخال: قيمته نحوية وحدها
+            // (تسميات المجموعات و«انتقل/انتقلت»)، والنموذج يسأل عنه هناك.
             if (obituary.dateOfDeath.isNotEmpty)
               _MetaChip(
                 icon: Icons.calendar_today_rounded,

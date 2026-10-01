@@ -12,6 +12,10 @@ import '../models/data_models.dart';
 /// بطاقة العزاء التي تُشارك كصورة. مبنية كواجهة حقيقية لا رسم بالإحداثيات،
 /// فتُلفّ الأسطر تلقائيًا وتظهر كل الأسماء مهما كثرت، وتبقى المعاينة على
 /// الشاشة مطابقة تمامًا للصورة المُشارَكة.
+///
+/// تُرسم البيانات فوق صورة الخلفية مباشرة بلا أي تبييض، لأن خلفيات azaa الأربع
+/// سوداء فعليًا (قيسَ متوسط سطوعها فوجد 24–37 من 255)؛ فألوان النص كلها عاجية
+/// وذهبية فاتحة محسوبة على هذا الأسود، والإطار الذهبي لصورة المتوفى وحدها.
 class ObituaryShareCard extends StatelessWidget {
   const ObituaryShareCard({
     super.key,
@@ -30,15 +34,33 @@ class ObituaryShareCard extends StatelessWidget {
   final ui.Image photo;
   final double width;
 
-  static const Color brown = Color(0xFF4E342E);
-  static const Color gold = Color(0xFFB8860B);
-  static const Color ink = Color(0xFF1A1A1A);
-  static const Color muted = Color(0xFF6B5B4C);
+  static const Color gold = Color(0xFFE3B873);
+  static const Color ivory = Color(0xFFFBF4E6);
+  static const Color cream = Color(0xFFE7DBC3);
+  static const Color soft = Color(0xFFC8BCA4);
+
+  /// ظل للنصوص الكبيرة يرفع الحروف عن تفاصيل الخلفية دون حجب الرسم.
+  static const List<Shadow> _lift = [
+    Shadow(color: Color(0xB3000000), blurRadius: 9, offset: Offset(0, 1))
+  ];
 
   @override
   Widget build(BuildContext context) {
     final o = obituary;
     final sections = o.relativeSections;
+    final note = (o.description ?? '').trim();
+
+    // الكتل تُبنى بترتيبها فقط إن كان لها محتوى، فلا يترك `spaceBetween`
+    // فراغًا حيث لا بيانات.
+    final blocks = <Widget>[
+      _crest(),
+      _portrait(),
+      _identity(o),
+      if (_hasPlaces(o)) _places(o),
+      if (sections.isNotEmpty) _relatives(sections),
+      if (note.isNotEmpty) _note(note),
+      _footer(),
+    ];
 
     return SizedBox(
       width: width,
@@ -47,109 +69,21 @@ class ObituaryShareCard extends StatelessWidget {
         child: Stack(
           children: [
             Positioned.fill(child: _CoverImage(image: background)),
-            // التبييض خفيف عمدًا: الغرض أن تُقرأ ملامح خلفية `azaa` المختارة
-            // كإطار حول اللوح، واللوح الأبيض الداخلي هو ما يحمي وضوح النص.
-            Positioned.fill(
-                child: ColoredBox(
-                    color: const Color(0xFFFDF6E9).withValues(alpha: 0.45))),
-            Padding(
-              padding: const EdgeInsets.all(28),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.95),
-                  borderRadius: BorderRadius.circular(20),
-                  border:
-                      Border.all(color: gold.withValues(alpha: 0.55), width: 1.4),
-                ),
-                padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
+            ConstrainedBox(
+              // بطاقة طولية: حدّ أدنى = عرض × ١٫٥ يجعل التوزيع واضحًا ولو
+              // كانت البيانات قليلة، ويتمدد معه عند كثرة الأسماء.
+              constraints: BoxConstraints(minHeight: width * 1.5),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 26),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
+                  // `min`: ارتفاع البطاقة من محتواها لا من إطارها، فتخرج نفس
+                  // البطاقة في المعاينة وفي الصورة المُشارَكة وفي أي حاوية.
+                  // ومع `minHeight` أعلاه تتوزع الكتل بالعدل حين تقل البيانات.
                   mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text('قرية أبوديشيشة',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                            color: brown,
-                            fontSize: 17,
-                            fontWeight: FontWeight.w900)),
-                    const SizedBox(height: 3),
-                    const Text('سجل العزاء',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                            color: gold,
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 1)),
-                    const SizedBox(height: 16),
-                    Center(child: _portrait()),
-                    const SizedBox(height: 14),
-                    Text(
-                      o.transitionPhrase,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                          color: muted,
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w700,
-                          height: 1.4),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      o.name.isEmpty ? '—' : o.name,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                          color: brown,
-                          fontSize: 23,
-                          fontWeight: FontWeight.w900,
-                          height: 1.35),
-                    ),
-                    const SizedBox(height: 10),
-                    _metaWrap(o),
-                    _places(o),
-                    if (sections.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      const _GoldRule(),
-                      const SizedBox(height: 12),
-                      _relatives(sections),
-                    ],
-                    if ((o.description ?? '').trim().isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      const _GoldRule(),
-                      const SizedBox(height: 12),
-                      Text(
-                        o.description!.trim(),
-                        textAlign: TextAlign.center,
-                        maxLines: 5,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            color: ink,
-                            fontSize: 12.5,
-                            height: 1.6,
-                            fontWeight: FontWeight.w500),
-                      ),
-                    ],
-                    const SizedBox(height: 16),
-                    const _GoldRule(),
-                    const SizedBox(height: 12),
-                    const Text(
-                      '«إِنَّا لِلَّهِ وَإِنَّا إِلَيْهِ رَاجِعُونَ»',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                          color: brown,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          height: 1.5),
-                    ),
-                    const SizedBox(height: 10),
-                    const Text(
-                      'تصميم من خلال تطبيق قرية أبوديشيشة',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                          color: gold,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.2),
-                    ),
-                  ],
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: blocks,
                 ),
               ),
             ),
@@ -159,78 +93,129 @@ class ObituaryShareCard extends StatelessWidget {
     );
   }
 
-  Widget _portrait() {
-    return Container(
-      width: 148,
-      height: 176,
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-              color: brown.withValues(alpha: 0.22),
-              blurRadius: 12,
-              offset: const Offset(0, 5)),
-        ],
-      ),
-      child: ClipPath(clipper: _ArchClipper(), child: _CoverImage(image: photo)),
-    );
-  }
-
-  List<Widget> _metaTiles(Obituary o) => [
-        if (o.gender.isNotEmpty) _MetaTile(icon: Icons.wc_rounded, label: o.gender),
-        if (o.dateOfDeath.isNotEmpty)
-          _MetaTile(
-              icon: Icons.calendar_today_rounded,
-              label: 'الوفاة ${o.dateOfDeath}'),
-        if (o.funeralDate.isNotEmpty)
-          _MetaTile(
-              icon: Icons.volunteer_activism_rounded,
-              label: 'صلاة الجنازة ${o.funeralDate}'),
-        if (o.age.isNotEmpty)
-          _MetaTile(icon: Icons.cake_rounded, label: 'العمر ${o.age}'),
-      ];
-
-  Widget _metaWrap(Obituary o) {
-    final tiles = _metaTiles(o);
-    if (tiles.isEmpty) return const SizedBox.shrink();
-    return Column(
+  Widget _crest() {
+    return const Column(
       children: [
-        Wrap(
-          spacing: 7,
-          runSpacing: 7,
-          alignment: WrapAlignment.center,
-          children: tiles,
-        ),
-        const SizedBox(height: 14),
+        Text('قرية أبوديشيشة',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+                color: gold,
+                fontSize: 19,
+                fontWeight: FontWeight.w900,
+                shadows: _lift)),
+        SizedBox(height: 2),
+        Text('سجل العزاء',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+                color: soft,
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 2)),
       ],
     );
   }
 
-  Widget _places(Obituary o) {
-    final lines = <Widget>[
-      if (o.funeralLocation.isNotEmpty)
-        _PlaceLine(label: 'مكان صلاة الجنازة', value: o.funeralLocation),
-      if (o.burialLocation.isNotEmpty)
-        _PlaceLine(label: 'مكان الدفن', value: o.burialLocation),
-      // السجلات القديمة كانت تسأل عن المسجد وحده، فلا مكان دفن لها
-      if (o.burialLocation.isEmpty && o.mosque.isNotEmpty)
-        _PlaceLine(label: 'المسجد', value: o.mosque),
-      if (o.condolenceLocation.isNotEmpty)
-        _PlaceLine(label: 'مكان العزاء', value: o.condolenceLocation),
+  /// الإطار الذهبي وحده حول صورة المتوفى — سطر ذهبي يتبع انحناء المحراب.
+  Widget _portrait() {
+    final arch = _ArchClipper();
+    return Center(
+      child: SizedBox(
+        width: 168,
+        height: 200,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            ClipPath(
+                clipper: arch,
+                child: Container(
+                    decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [gold, gold.withValues(alpha: 0.55)])))),
+            Padding(
+              padding: const EdgeInsets.all(3),
+              child: ClipPath(clipper: arch, child: _CoverImage(image: photo)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _identity(Obituary o) {
+    return Column(
+      children: [
+        Text(o.transitionPhrase,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+                color: cream,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                height: 1.5,
+                shadows: _lift)),
+        const SizedBox(height: 6),
+        Text(o.name.isEmpty ? '—' : o.name,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+                color: ivory,
+                fontSize: 26,
+                fontWeight: FontWeight.w900,
+                height: 1.35,
+                shadows: _lift)),
+        _facts(o),
+      ],
+    );
+  }
+
+  /// تواريخ الوفاة والجنازة سطورًا مقروءة فوق الأسود بلا صناديق. العمر لم يعد
+  /// سؤالًا في النموذج، لكنه يبقى مقروءًا للسجلات القديمة فقط.
+  Widget _facts(Obituary o) {
+    final items = <String>[
+      if (o.dateOfDeath.isNotEmpty) 'الوفاة ${o.dateOfDeath}',
+      if (o.funeralDate.isNotEmpty) 'صلاة الجنازة ${o.funeralDate}',
+      if (o.age.isNotEmpty) 'العمر ${o.age}',
     ];
-    if (lines.isEmpty) return const SizedBox.shrink();
+    if (items.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Wrap(
+        spacing: 14,
+        runSpacing: 4,
+        alignment: WrapAlignment.center,
+        children: [
+          for (final item in items)
+            Text(item,
+                style: const TextStyle(
+                    color: cream,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w800)),
+        ],
+      ),
+    );
+  }
+
+  bool _hasPlaces(Obituary o) =>
+      o.funeralLocation.isNotEmpty ||
+      o.burialLocation.isNotEmpty ||
+      o.mosque.isNotEmpty ||
+      o.condolenceLocation.isNotEmpty;
+
+  Widget _places(Obituary o) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text('الصلوات والأماكن',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-                color: gold, fontSize: 12.5, fontWeight: FontWeight.w800)),
-        const SizedBox(height: 8),
-        ...lines,
-        const SizedBox(height: 6),
+        const _SectionTitle('الصلوات والأماكن'),
+        const SizedBox(height: 10),
+        if (o.funeralLocation.isNotEmpty)
+          _PlaceLine(label: 'مكان صلاة الجنازة', value: o.funeralLocation),
+        if (o.burialLocation.isNotEmpty)
+          _PlaceLine(label: 'مكان الدفن', value: o.burialLocation),
+        // السجلات القديمة كانت تسأل عن المسجد وحده، فلا مكان دفن لها
+        if (o.burialLocation.isEmpty && o.mosque.isNotEmpty)
+          _PlaceLine(label: 'المسجد', value: o.mosque),
+        if (o.condolenceLocation.isNotEmpty)
+          _PlaceLine(label: 'مكان العزاء', value: o.condolenceLocation),
       ],
     );
   }
@@ -239,27 +224,25 @@ class ObituaryShareCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(obituary.isFemale ? 'قريبات المتوفاة' : 'أقارب المتوفى',
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-                color: gold, fontSize: 12.5, fontWeight: FontWeight.w800)),
-        const SizedBox(height: 8),
+        _SectionTitle(
+            obituary.isFemale ? 'قريبات المتوفاة' : 'أقارب المتوفى'),
+        const SizedBox(height: 10),
         for (final section in sections)
           Padding(
             padding: const EdgeInsets.only(bottom: 7),
             child: RichText(
               textAlign: TextAlign.center,
               text: TextSpan(
-                style: const TextStyle(fontSize: 12.5, height: 1.55),
+                style: const TextStyle(fontSize: 12.5, height: 1.6),
                 children: [
                   TextSpan(
                       text: '${section.label}: ',
                       style: const TextStyle(
-                          color: brown, fontWeight: FontWeight.w900)),
+                          color: gold, fontWeight: FontWeight.w900)),
                   TextSpan(
                       text: section.namesLine,
                       style: const TextStyle(
-                          color: ink, fontWeight: FontWeight.w600)),
+                          color: ivory, fontWeight: FontWeight.w600)),
                 ],
               ),
             ),
@@ -267,7 +250,78 @@ class ObituaryShareCard extends StatelessWidget {
       ],
     );
   }
+
+  Widget _note(String text) {
+    return Column(
+      children: [
+        const _GoldRule(),
+        Text(text,
+            textAlign: TextAlign.center,
+            maxLines: 6,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+                color: cream,
+                fontSize: 13,
+                height: 1.7,
+                fontWeight: FontWeight.w500,
+                shadows: _lift)),
+      ],
+    );
+  }
+
+  Widget _footer() {
+    return const Column(
+      children: [
+        _GoldRule(),
+        Text('«إِنَّا لِلَّهِ وَإِنَّا إِلَيْهِ رَاجِعُونَ»',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+                color: ivory,
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                height: 1.5)),
+        SizedBox(height: 8),
+        Text('تصميم من خلال تطبيق قرية أبوديشيشة',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+                color: gold,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.2)),
+      ],
+    );
+  }
 }
+
+/// عنوان قسم ذهبي بين خيطين: بنية واضحة فوق الخلفية بلا صناديق ولا طبقات.
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget hairline() => Container(
+        height: 1,
+        color: ObituaryShareCard.gold.withValues(alpha: 0.45));
+    return Row(
+      children: [
+        Expanded(child: hairline()),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Text(text,
+              style: const TextStyle(
+                  color: ObituaryShareCard.gold,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.4)),
+        ),
+        Expanded(child: hairline()),
+      ],
+    );
+  }
+}
+
 
 /// معاينة على الشاشة: تفكّ الخلفية وصورة المتوفى ثم ترسم البطاقة نفسها،
 /// فتكون المعاينة هي الصورة المُشارَكة سطرًا بسطر.
@@ -362,25 +416,42 @@ class ObituaryCardAssets {
 
   static final Map<String, ui.Image> _decoded = {};
 
-  static Future<ui.Image> loadBackground(String key) =>
-      _loadAsset(obituaryCardAssetFor(key));
+  /// خلفية البطاقة: مفتاح من القائمة البيضاء (`azaa1..4`) أو رابط صورة أضافها
+  /// المستخدم. الرابط يُفكّ كما هو، وأي فشل في تحميله يسقط إلى الخلفية
+  /// الافتراضية — فلا توجد بطاقة بلا خلفية أبدًا.
+  static Future<ui.Image> loadBackground(String keyOrUrl) async {
+    final fromUrl = await _loadUrl(keyOrUrl);
+    return fromUrl ?? await _loadAsset(obituaryCardAssetFor(keyOrUrl));
+  }
 
   /// صورة المتوفى، أو `azaa 0` إن لم تُرفع صورة أو تعذّر تحميلها.
   static Future<ui.Image> loadPhoto(String? url) async {
-    final link = (url ?? '').trim();
-    if (link.isNotEmpty) {
-      try {
-        final response = await http
-            .get(Uri.parse(link))
-            .timeout(const Duration(seconds: 25));
-        if (response.statusCode == 200 && response.bodyBytes.isNotEmpty) {
-          return await _decode(response.bodyBytes);
-        }
-      } catch (_) {
-        // يسقط إلى الصورة الافتراضية، وهو المقصود بلا صورة
-      }
+    final fromUrl = await _loadUrl(url ?? '');
+    return fromUrl ?? await _loadAsset(kObituaryDeceasedFallbackAsset);
+  }
+
+  /// رابط صورة حقيقي فقط؛ ما عدا ذلك (مفتاح خلفية، نص فارغ) يعيد null ليُقرأ
+  /// من الأصول، فلا يتحول مفتاح `azaa2` إلى طلب شبكة.
+  static Future<ui.Image?> _loadUrl(String value) async {
+    final link = value.trim();
+    if (!link.startsWith('http://') && !link.startsWith('https://')) {
+      return null;
     }
-    return _loadAsset(kObituaryDeceasedFallbackAsset);
+    final cached = _decoded[link];
+    if (cached != null) return cached;
+    try {
+      final response = await http
+          .get(Uri.parse(link))
+          .timeout(const Duration(seconds: 25));
+      if (response.statusCode == 200 && response.bodyBytes.isNotEmpty) {
+        final image = await _decode(response.bodyBytes);
+        _decoded[link] = image;
+        return image;
+      }
+    } catch (_) {
+      // السقوط إلى الأصل الافتراضي هو المقصود، بلا رسالة ولا توقف
+    }
+    return null;
   }
 
   static Future<ui.Image> _loadAsset(String path) async {
@@ -523,38 +594,6 @@ class _GoldRule extends StatelessWidget {
       );
 }
 
-class _MetaTile extends StatelessWidget {
-  const _MetaTile({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: ObituaryShareCard.brown.withValues(alpha: 0.07),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-            color: ObituaryShareCard.brown.withValues(alpha: 0.18)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 12, color: ObituaryShareCard.gold),
-          const SizedBox(width: 5),
-          Text(label,
-              style: const TextStyle(
-                  color: ObituaryShareCard.brown,
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w800)),
-        ],
-      ),
-    );
-  }
-}
-
 class _PlaceLine extends StatelessWidget {
   const _PlaceLine({required this.label, required this.value});
 
@@ -564,21 +603,21 @@ class _PlaceLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.only(bottom: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(label,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                  color: ObituaryShareCard.muted,
+                  color: ObituaryShareCard.soft,
                   fontSize: 10.5,
                   fontWeight: FontWeight.w700)),
           const SizedBox(height: 2),
           Text(value,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                  color: ObituaryShareCard.ink,
+                  color: ObituaryShareCard.ivory,
                   fontSize: 13.5,
                   fontWeight: FontWeight.w800,
                   height: 1.45)),

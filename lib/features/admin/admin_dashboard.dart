@@ -23,6 +23,7 @@ import '../../core/utils/file_export.dart';
 import '../../core/utils/firebase_ts.dart';
 import '../../models/data_models.dart';
 import '../../models/promo_model.dart';
+import '../../models/service_provider_model.dart';
 import '../../models/village_alert.dart';
 import '../../routes/app_routes.dart';
 import '../../services/admin_service.dart';
@@ -30,6 +31,7 @@ import '../../services/alert_service.dart';
 import '../../services/image_upload_service.dart';
 import '../../services/promo_service.dart';
 import '../../services/remote_push_service.dart';
+import '../../widgets/edu_kind_mark.dart';
 import '../../widgets/promo_host.dart';
 import '../../widgets/qurity_app_bar.dart';
 

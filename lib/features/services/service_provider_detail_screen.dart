@@ -4,12 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../core/utils/comment_style.dart';
 import '../../models/service_provider_model.dart';
 import '../../services/service_provider_service.dart';
 import '../../services/share_service.dart';
 import '../../services/user_service.dart';
 import '../../widgets/edu_kind_mark.dart';
+import '../../widgets/full_fit_image.dart';
 import '../medical/clinic_detail_screen.dart';
 
 /// شاشة تفاصيل بيان في دليل الخدمات — عرض منسق + تقييم 5 نجوم + تعليقات.
@@ -37,6 +39,10 @@ class _ServiceProviderDetailScreenState
   bool _descExpanded = false;
   bool _allComments = false;
 
+  /// صاحب التعليق نفسه أو الأدمن/الأدمن المساعد فقط يحذف.
+  String _currentUid = '';
+  bool _canModerate = false;
+
   static const _fallbackProvider =
       ServiceProvider(id: '', category: 'technicians', name: 'خدمة');
 
@@ -61,12 +67,26 @@ class _ServiceProviderDetailScreenState
     try {
       uid = FirebaseAuth.instance.currentUser?.uid;
     } catch (_) {}
+    if (uid != null) {
+      _currentUid = uid;
+      _loadModerationRole(uid);
+    }
     if (uid != null && _initial.id.isNotEmpty) {
       _service.getUserComment(_initial.id, uid).then((c) {
         if (mounted && c != null) {
           setState(() => _myRating = c.rating.toDouble());
         }
       }).catchError((_) {});
+    }
+  }
+
+  /// الأدمن العام/الأدمن المساعد يحذفان أي تعليق — تُقرأ الرتبة من ملفه.
+  Future<void> _loadModerationRole(String uid) async {
+    try {
+      final model = await UserService().getUser(uid);
+      if (mounted) setState(() => _canModerate = model?.isAdmin ?? false);
+    } catch (_) {
+      // بلا Firebase (اختبارات واجهة) أو بلا شبكة: لا صلاحيات إشرافية.
     }
   }
 
@@ -98,6 +118,36 @@ class _ServiceProviderDetailScreenState
       _snack('خطأ: $e', error: true);
     } finally {
       if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  /// حذف تعليق بعد تأكيد — يعيد حساب تقييم السجل ذرّيًا داخل الخدمة.
+  Future<void> _deleteComment(ServiceProviderComment c) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('حذف التعليق'),
+        content: Text(c.text.isEmpty
+            ? 'هل أنت متأكد من حذف هذا التعليق؟'
+            : 'هل أنت متأكد من حذف التعليق: "${c.text}"؟'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('إلغاء')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('حذف'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await _service.deleteComment(_initial.id, c.id, c.rating);
+      _snack('تم حذف التعليق');
+    } catch (_) {
+      _snack('تعذّر حذف التعليق — تحقق من الصلاحيات', error: true);
     }
   }
 
@@ -137,7 +187,10 @@ class _ServiceProviderDetailScreenState
                 accent: accent,
                 accentDark: Color.alphaBlend(
                     Colors.black.withValues(alpha: 0.25), accent),
-                imageUrl: imageUrl,
+                // الهيدر هنا بلا بانر مصوَّر: صورة السجل تُرسم كاملة أسفلَه
+                // (`_heroPhoto`)، فـ`MedDetailHeader` يقصّ بـ`cover` ولا يصلح
+                // لسجلٍ صورته عمودية أو ممتدة.
+                imageUrl: '',
                 icon: ServiceCategory.icon(provider.category),
                 onShare: () => ShareService.shareText(
                     title: provider.isEducational
@@ -169,6 +222,7 @@ class _ServiceProviderDetailScreenState
                       if (provider.phone.isNotEmpty) 'هاتف: ${provider.phone}',
                     ].join('\n')),
               ),
+              _heroPhoto(context, accent, imageUrl),
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
@@ -198,6 +252,42 @@ class _ServiceProviderDetailScreenState
           ),
         );
       },
+    );
+  }
+
+  /// صورة السجل كاملة أسفل الهيدر: ارتفاعها من نسبتها الحقيقية فبلا اقتصاص
+  /// (كان `MedDetailHeader` يقصّها بـ`cover` في شريط 210 ثابتًا).
+  Widget _heroPhoto(BuildContext context, Color accent, String imageUrl) {
+    if (imageUrl.isEmpty) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
+    final available = MediaQuery.sizeOf(context).width - 44;
+    final side = available < 320 ? available : 320.0;
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+        child: Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: accent.withValues(alpha: 0.07),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: accent.withValues(alpha: 0.18)),
+          ),
+          child: Center(
+            child: FullFitImage(
+              key: const Key('detail-hero-photo'),
+              imageUrl: imageUrl,
+              width: side,
+              radius: 14,
+              // الصور الممتدة (لافتات/لوحات) تُرى كاملة بشريط أقصر بدل إطار
+              // مربّع يترك فراغًا كبيرًا فوقها وتحتها.
+              maxRatio: side / 140,
+              tint: Colors.transparent,
+              fallback: const SizedBox.shrink(),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -250,8 +340,11 @@ class _ServiceProviderDetailScreenState
                   Text(provider.displaySpecialty,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall
-                          ?.copyWith(fontWeight: FontWeight.w700)),
+                      style: const TextStyle(
+                          fontSize: _kBody,
+                          height: 1.4,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary)),
                 ],
               ],
             ),
@@ -263,8 +356,13 @@ class _ServiceProviderDetailScreenState
 
   static const double _kPhotoSide = 68;
 
+  /// أحجام الخط المشتركة في الشاشة: النصوص القديمة كانت `bodySmall` على
+  /// خلفية رمادية فتقرأ بصعوبة. المصدر واحد فلا يتفارق موضع مع آخر.
+  static const double _kChipText = 13;
+  static const double _kLabel = 13;
+  static const double _kBody = 14.5;
+
   Widget _photo(ThemeData theme, ServiceProvider provider, Color accent) {
-    final url = provider.photoUrl ?? '';
     // الصورة الافتراضية للسجل التعليمي = صورة الصفة (mal / femal) ملء الإطار،
     // وتُستعمل أيضًا حين يفسد رابط الصورة المرفوعة.
     Widget fallback() => provider.isEducational
@@ -276,19 +374,12 @@ class _ServiceProviderDetailScreenState
                 child: Icon(ServiceCategory.icon(provider.category),
                     size: 30, color: accent)),
           );
-    final inner = url.isEmpty
-        ? fallback()
-        : CachedNetworkImage(
-            imageUrl: url,
-            memCacheWidth: (_kPhotoSide * 3).ceil(),
-            fit: BoxFit.cover,
-            placeholder: (_, __) =>
-                ColoredBox(color: accent.withValues(alpha: 0.12)),
-            errorWidget: (_, __, ___) => fallback(),
-          );
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(14),
-      child: SizedBox(width: _kPhotoSide, height: _kPhotoSide, child: inner),
+    // الارتفاع يُقاس من نسبة الصورة الحقيقية فتملأ إطارها كاملة بلا اقتصاص.
+    return FullFitImage(
+      imageUrl: provider.photoUrl ?? '',
+      width: _kPhotoSide,
+      radius: 14,
+      fallback: fallback(),
     );
   }
 
@@ -299,22 +390,22 @@ class _ServiceProviderDetailScreenState
 
   Widget _featuredChip() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4.5),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
             colors: [Color(0xFFF1C40F), Color(0xFFB8860B)]),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(10),
       ),
       child: const Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.star_rounded, color: Colors.white, size: 12),
+          Icon(Icons.star_rounded, color: Colors.white, size: 14),
           SizedBox(width: 3),
           Text('مميز',
               style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w900,
-                  fontSize: 11)),
+                  fontSize: _kChipText)),
         ],
       ),
     );
@@ -331,20 +422,20 @@ class _ServiceProviderDetailScreenState
       {Key? key, IconData? icon, String? mark, bool filled = false}) {
     return Container(
       key: key,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4.5),
       decoration: BoxDecoration(
         color: filled ? color : color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(9),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: color.withValues(alpha: filled ? 1 : 0.35)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (mark != null) ...[
-            EduKindMark(kind: mark, size: 12),
+            EduKindMark(kind: mark, size: 14),
             const SizedBox(width: 4),
           ] else if (icon != null) ...[
-            Icon(icon, size: 12, color: filled ? Colors.white : color),
+            Icon(icon, size: 14, color: filled ? Colors.white : color),
             const SizedBox(width: 4),
           ],
           Flexible(
@@ -354,7 +445,7 @@ class _ServiceProviderDetailScreenState
                 style: TextStyle(
                     color: filled ? Colors.white : color,
                     fontWeight: FontWeight.w800,
-                    fontSize: 11.5)),
+                    fontSize: _kChipText)),
           ),
         ],
       ),
@@ -372,10 +463,10 @@ class _ServiceProviderDetailScreenState
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           Text('$label:',
-              style: TextStyle(
-                  fontSize: 11.5,
+              style: const TextStyle(
+                  fontSize: _kLabel,
                   fontWeight: FontWeight.w900,
-                  color: theme.colorScheme.onSurfaceVariant)),
+                  color: AppColors.textPrimary)),
           for (final v in values) _pill(v, color),
         ],
       ),
@@ -434,7 +525,11 @@ class _ServiceProviderDetailScreenState
           Text(provider.description,
               maxLines: _descExpanded ? null : 3,
               overflow: _descExpanded ? null : TextOverflow.ellipsis,
-              style: theme.textTheme.bodySmall?.copyWith(height: 1.55)),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                  fontSize: _kBody,
+                  height: 1.6,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary)),
           if (provider.description.length > 120)
             TextButton(
               style: TextButton.styleFrom(
@@ -444,7 +539,7 @@ class _ServiceProviderDetailScreenState
               onPressed: () => setState(() => _descExpanded = !_descExpanded),
               child: Text(_descExpanded ? 'أقل' : 'المزيد',
                   style: const TextStyle(
-                      fontSize: 12, fontWeight: FontWeight.w800)),
+                      fontSize: 13, fontWeight: FontWeight.w800)),
             ),
         ],
       ),
@@ -453,10 +548,7 @@ class _ServiceProviderDetailScreenState
 
   /// بيانات التواصل: أسطر مدمجة + زر اتصال أخضر صغير.
   Widget _contactCard(ThemeData theme, ServiceProvider provider, Color accent) {
-    final by = provider.submittedByName ?? '';
-    final hasLines = provider.phone.isNotEmpty ||
-        provider.address.isNotEmpty ||
-        by.isNotEmpty;
+    final hasLines = provider.phone.isNotEmpty || provider.address.isNotEmpty;
     if (!hasLines) return const SizedBox.shrink();
     return Container(
       width: double.infinity,
@@ -468,8 +560,6 @@ class _ServiceProviderDetailScreenState
           if (provider.address.isNotEmpty)
             _inlineLine(
                 theme, Icons.location_on_rounded, provider.address, accent),
-          if (by.isNotEmpty)
-            _inlineLine(theme, Icons.person_rounded, 'أضافها: $by', accent),
           if (provider.phone.isNotEmpty) ...[
             const SizedBox(height: 10),
             SizedBox(
@@ -497,14 +587,17 @@ class _ServiceProviderDetailScreenState
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
         children: [
-          Icon(icon, size: 15, color: accent),
+          Icon(icon, size: 17, color: accent),
           const SizedBox(width: 7),
           Expanded(
             child: Text(value,
-                maxLines: 1,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(fontWeight: FontWeight.w700)),
+                style: const TextStyle(
+                    fontSize: _kBody,
+                    height: 1.45,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary)),
           ),
         ],
       ),
@@ -534,7 +627,10 @@ class _ServiceProviderDetailScreenState
             controller: _textC,
             maxLines: 2,
             maxLength: 240,
-            style: theme.textTheme.bodySmall,
+            // الكتابة بنفس حجم نص التعليق المعروض، واللون من الثيم حتى يبقى
+            // مقروءًا في الوضع الداكن.
+            style: const TextStyle(
+                fontSize: _kBody, fontWeight: FontWeight.w600, height: 1.5),
             decoration: const InputDecoration(
               hintText: 'أضف تعليقك (اختياري)...',
               counterText: '',
@@ -584,8 +680,10 @@ class _ServiceProviderDetailScreenState
               ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
               : comments.isEmpty
                   ? Text('لا توجد تعليقات بعد — كن أول المقيّمين.',
-                      style: theme.textTheme.bodySmall
-                          ?.copyWith(color: Colors.grey))
+                      style: TextStyle(
+                          fontSize: _kBody,
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.onSurfaceVariant))
                   : Column(
                       children: [
                         ...visible.map((c) => _commentTile(theme, c, accent)),
@@ -610,6 +708,9 @@ class _ServiceProviderDetailScreenState
   }
 
   Widget _commentTile(ThemeData theme, ServiceProviderComment c, Color accent) {
+    // صاحب التعليق يحذف تعليقه وحده، والأدمن/الأدمن المساعد يحذفان أي تعليق.
+    final deletable = c.id.isNotEmpty &&
+        (_canModerate || (_currentUid.isNotEmpty && c.userId == _currentUid));
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -635,7 +736,8 @@ class _ServiceProviderDetailScreenState
               children: [
                 Row(
                   children: [
-                    Expanded(child: Text(c.userName, style: CommentStyle.author)),
+                    Expanded(
+                        child: Text(c.userName, style: CommentStyle.author)),
                     RatingBarIndicator(
                       rating: c.rating.toDouble(),
                       itemSize: 14,
@@ -643,6 +745,18 @@ class _ServiceProviderDetailScreenState
                       itemBuilder: (_, __) =>
                           const Icon(Icons.star_rounded, color: Colors.amber),
                     ),
+                    if (deletable)
+                      IconButton(
+                        key: ValueKey('comment-delete-${c.id}'),
+                        tooltip: 'حذف التعليق',
+                        iconSize: 18,
+                        visualDensity: VisualDensity.compact,
+                        constraints: const BoxConstraints(),
+                        padding: EdgeInsets.zero,
+                        icon: Icon(Icons.delete_outline_rounded,
+                            color: theme.colorScheme.error),
+                        onPressed: () => _deleteComment(c),
+                      ),
                   ],
                 ),
                 if (c.text.isNotEmpty) ...[

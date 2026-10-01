@@ -151,7 +151,7 @@ class _NewsViewScreenState extends State<NewsViewScreen> {
     }
   }
 
-  /// حذف تعليق — للأدمن/الأدمن المساعد فقط، مع تأكيد مسبق.
+  /// حذف تعليق — لصاحبه أو للأدمن/الأدمن المساعد، مع تأكيد مسبق.
   Future<void> _deleteComment(NewsItem item, String commentId, String text) async {
     final ok = await showDialog<bool>(
       context: context,
@@ -474,6 +474,11 @@ class _NewsViewScreenState extends State<NewsViewScreen> {
                   final data = doc.data() as Map<String, dynamic>? ?? <String, dynamic>{};
                   final photo = (data['userPhotoUrl'] as String? ?? '').trim();
                   final commentText = data['text'] as String? ?? '';
+                  final commentAuthor = (data['userId'] as String? ?? '').trim();
+                  // صاحب التعليق يحذف تعليقه، والأدمن/الأدمن المساعد يحذفان أي تعليق.
+                  final canDelete = _canModerate ||
+                      (_currentUserId.isNotEmpty &&
+                          commentAuthor == _currentUserId);
                   return InfoListCard(
                     padding: const EdgeInsets.all(14),
                     leading: CircleAvatar(
@@ -495,8 +500,9 @@ class _NewsViewScreenState extends State<NewsViewScreen> {
                       // نص التعليق: أسود بحجم واضح (تنسيق موحّد لكل التعليقات)
                       Text(commentText, style: CommentStyle.body),
                     ],
-                    trailing: _canModerate
+                    trailing: canDelete
                         ? IconButton(
+                            key: ValueKey('news-comment-delete-${doc.id}'),
                             tooltip: 'حذف التعليق',
                             icon: Icon(Icons.delete_outline_rounded,
                                 size: 20, color: theme.colorScheme.error),

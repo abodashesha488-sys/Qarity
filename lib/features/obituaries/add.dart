@@ -50,8 +50,15 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
   String _gender = '';
   String? _genderError;
 
-  /// مفتاح خلفية البطاقة ضمن القائمة البيضاء `kObituaryCardBackgrounds`.
+  /// مفتاح خلفية البطاقة: أحد مفاتيح `kObituaryCardBackgrounds` أو رابط خلفية
+  /// أضافها المستخدم في هذه البطاقة نفسها.
   String _cardBackground = kDefaultObituaryCardBackground;
+
+  /// آخر خلفية رفعها المستخدم، لتبقى بلاطة اختيارًا في القائمة بعد الرجوع إلى
+  /// إحدى صور azaa الأربع.
+  String? _customBackground;
+  bool _bgUploading = false;
+  String? _bgError;
 
   final List<Relative> _relatives = [];
   int _relativeSeq = 0;
@@ -141,6 +148,40 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
         _photoError = null;
       });
 
+  /// خلفية البطاقة من صور المستخدم: تُرفع إلى ImgBB ويخزَّن الرابط في
+  /// `cardBackground` مباشرة، فتصبح البطاقة نموذجًا مثل الصور الأربع.
+  Future<void> _pickAndUploadBackground() async {
+    setState(() {
+      _bgUploading = true;
+      _bgError = null;
+    });
+    try {
+      final XFile? image = await _picker.pickImage(
+          source: ImageSource.gallery,
+          imageQuality: 85,
+          maxWidth: 1600,
+          maxHeight: 1600);
+      if (image == null) {
+        if (mounted) setState(() => _bgUploading = false);
+        return;
+      }
+      final bytes = await image.readAsBytes();
+      final url = await ImageUploadService().uploadImage(bytes);
+      if (!mounted) return;
+      setState(() {
+        _customBackground = url;
+        _cardBackground = url;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() => _bgError =
+            'تعذّر رفع خلفية البطاقة (${e.toString().replaceFirst('Exception: ', '')}) — يمكنك اختيار إحدى صور العزاء بدلها.');
+      }
+    } finally {
+      if (mounted) setState(() => _bgUploading = false);
+    }
+  }
+
   /// أسماء مجموعة قرابة واحدة كما أدخلها المستخدم، بترتيب الإدخال.
   List<String> _namesOf(RelativeType group) =>
       _relatives.where((r) => r.type == group).map((r) => r.name).toList();
@@ -193,6 +234,12 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
     }
     if (_isUploading) {
       AppHelpers.showSnackBar(context, 'الصورة ما زالت تُرفع… انتظر ثوانٍ ثم أرسل',
+          isError: true);
+      return;
+    }
+    if (_bgUploading) {
+      AppHelpers.showSnackBar(
+          context, 'خلفية البطاقة ما زالت تُرفع… انتظر ثوانٍ ثم أرسل',
           isError: true);
       return;
     }
@@ -317,23 +364,28 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
     );
   }
 
+  /// تنبيه المراجعة أحمر صريحًا: نسخة `primaryContainer` الباهتة كانت النص
+  /// يقرأ شبه معدوم فوق خلفية البطاقة الفاتحة.
   Widget _buildReviewNotice(ThemeData theme) {
+    const int red = 0xFFB71C1C;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: theme.colorScheme.primaryContainer.withValues(alpha: 0.4),
+        color: const Color(red).withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(red).withValues(alpha: 0.35)),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.info_outline_rounded,
-              size: 20, color: theme.colorScheme.primary),
+          const Icon(Icons.warning_amber_rounded,
+              size: 22, color: Color(red)),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               'سيتم مراجعة التعزية من قبل الإدارة قبل نشرها',
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(fontWeight: FontWeight.w600),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                  color: const Color(red), fontWeight: FontWeight.w800),
             ),
           ),
         ],
@@ -569,14 +621,15 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
     );
   }
 
-  /// خلفيات البطاقة: الصور الأربعة المخصصة للعزاء، يُخزَّن المفتاح لا المسار.
+  /// خلفيات البطاقة: الصور الأربع المخصصة للعزاء + خلفية أضافها المستخدم،
+  /// فيُخزَّن المفتاح للصور الأربع والرابط للخلفية المضافة.
   Widget _buildBackgroundCard(ThemeData theme) {
     return _SectionCard(
       title: 'خلفية بطاقة المشاركة',
       icon: Icons.wallpaper_rounded,
       children: [
         Text(
-          'اختر الصورة التي تريد أن تكون خلفية بطاقة العزاء المُشارَكة',
+          'اختر إحدى صور العزاء الأربع، أو أضف صورتك الخاصة لتصبح خلفية البطاقة المُشارَكة',
           style: theme.textTheme.bodySmall
               ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
         ),
@@ -595,8 +648,25 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
                 onTap: () => setState(
                     () => _cardBackground = kObituaryCardBackgroundKeys[i]),
               ),
+            if (_customBackground != null)
+              _BackgroundOption(
+                keyName: 'card-bg-custom',
+                label: 'خلفيتي',
+                imageUrl: _customBackground!,
+                selected: _cardBackground == _customBackground,
+                onTap: () => setState(
+                    () => _cardBackground = _customBackground!),
+              ),
+            _BackgroundAddOption(
+              busy: _bgUploading,
+              onTap: _bgUploading ? null : _pickAndUploadBackground,
+            ),
           ],
         ),
+        if (_bgError != null) ...[
+          const SizedBox(height: 12),
+          _FormErrorLine(message: _bgError!, keyName: 'obituary-bg-error'),
+        ],
       ],
     );
   }
@@ -942,25 +1012,29 @@ class _RelativeGroupEditorState extends State<_RelativeGroupEditor> {
   }
 }
 
-/// اختيار خلفية البطاقة: مصغّرة من أصل azaa مع تحديد واضح للخيار المختار.
+/// اختيار خلفية البطاقة: مصغّرة من أصل azaa أو من صورة رفعها المستخدم، مع
+/// تحديد واضح للخيار المختار.
 class _BackgroundOption extends StatelessWidget {
   const _BackgroundOption({
     required this.keyName,
     required this.label,
-    required this.assetPath,
+    this.assetPath,
+    this.imageUrl,
     required this.selected,
     required this.onTap,
   });
 
   final String keyName;
   final String label;
-  final String assetPath;
+  final String? assetPath;
+  final String? imageUrl;
   final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final link = imageUrl;
     return GestureDetector(
       key: Key(keyName),
       onTap: onTap,
@@ -988,17 +1062,33 @@ class _BackgroundOption extends StatelessWidget {
             ClipRRect(
               borderRadius:
                   const BorderRadius.vertical(top: Radius.circular(11)),
-              child: Image.asset(
-                assetPath,
+              child: SizedBox(
                 height: 84,
                 width: double.infinity,
-                fit: BoxFit.cover,
-                cacheWidth: 258,
+                child: link == null
+                    ? Image.asset(assetPath!,
+                        fit: BoxFit.cover, cacheWidth: 258)
+                    : CachedNetworkImage(
+                        imageUrl: link,
+                        fit: BoxFit.cover,
+                        memCacheWidth: 258,
+                        placeholder: (context, _) => ColoredBox(
+                            color:
+                                theme.colorScheme.surfaceContainerHighest),
+                        errorWidget: (context, _, __) => ColoredBox(
+                            color:
+                                theme.colorScheme.surfaceContainerHighest,
+                            child: Icon(Icons.broken_image_rounded,
+                                size: 20,
+                                color: theme.colorScheme.onSurfaceVariant)),
+                      ),
               ),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: Text(label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                       fontSize: 11,
@@ -1006,6 +1096,55 @@ class _BackgroundOption extends StatelessWidget {
                       color: selected
                           ? theme.colorScheme.primary
                           : theme.colorScheme.onSurfaceVariant)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// بلاطة «أضف خلفيتك» في نهاية القائمة: تفتح المعرض وترفع الصورة، فتصير
+/// اختيارًا مثل الصور الأربع.
+class _BackgroundAddOption extends StatelessWidget {
+  const _BackgroundAddOption({required this.busy, required this.onTap});
+
+  final bool busy;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return GestureDetector(
+      key: const Key('card-bg-add'),
+      onTap: onTap,
+      child: Container(
+        width: 86,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+              color: theme.colorScheme.primary.withValues(alpha: 0.55)),
+          color: theme.colorScheme.primary.withValues(alpha: 0.06),
+        ),
+        child: Column(
+          children: [
+            SizedBox(
+              height: 84,
+              width: double.infinity,
+              child: Center(
+                child: busy
+                    ? const CircularProgressIndicator(strokeWidth: 2)
+                    : Icon(Icons.add_a_photo_rounded,
+                        size: 26, color: theme.colorScheme.primary),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Text(busy ? 'جاري الرفع' : 'أضف صورة',
+                  style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: theme.colorScheme.primary)),
             ),
           ],
         ),

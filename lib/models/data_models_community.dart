@@ -7,6 +7,8 @@ part of 'data_models.dart';
 enum RelativeType {
   children('والد كلاً من', 'والدة كلاً من', Icons.child_care_rounded,
       'أسماء أبناء المتوفى وبناته', 'أسماء أبنائها وبناتها'),
+  siblings('شقيق كلاً من', 'شقيقة كلاً من', Icons.diversity_3_rounded,
+      'أسماء أشقائه', 'أسماء شقيقاتها'),
   grandchildren('جد كلاً من', 'جدة كلاً من', Icons.elderly_rounded,
       'أسماء أحفاده', 'أسماء أحفادها'),
   paternalUncles('عم كلاً من', 'عمّة كلاً من', Icons.man_rounded,
@@ -59,9 +61,11 @@ enum RelativeType {
   bool get isEditableGroup => feminineLabel != null;
 }
 
-/// المجموعات التسع التي يعرضها نموذج الإضافة والتفاصيل بالترتيب المطلوب.
+/// المجموعات العشر التي يعرضها نموذج الإضافة والتفاصيل بالترتيب المطلوب؛
+/// «شقيق كلاً من» تأتي مباشرة بعد «والد كلاً من».
 const List<RelativeType> kObituaryRelativeGroups = [
   RelativeType.children,
+  RelativeType.siblings,
   RelativeType.grandchildren,
   RelativeType.paternalUncles,
   RelativeType.maternalUncles,

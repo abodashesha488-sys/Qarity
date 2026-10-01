@@ -446,10 +446,19 @@ void main() {
       await tester.pumpAndSettle();
     }
 
+    /// كارت البحث والمرشّحات مطويّ افتراضيًا لتوفير مساحة العرض؛
+    /// يفتحه الاختبار قبل اللمس على أي مرشّح.
+    Future<void> openFilters(WidgetTester tester) async {
+      await tester.tap(find.byKey(const Key('filters-toggle')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('provider-search')), findsOneWidget);
+    }
+
     testWidgets('السجل متعدد المراحل يظهر مرة واحدة مع رقائقه',
         (tester) async {
       bigScreen(tester);
       await pumpScreen(tester, await seed());
+      await openFilters(tester);
 
       expect(find.text('أ. منى'), findsOneWidget);
       expect(find.text('مدرسة النور'), findsOneWidget,
@@ -474,6 +483,7 @@ void main() {
     testWidgets('تصفية الصفة: مدرسة فقط ثم الكل', (tester) async {
       bigScreen(tester);
       await pumpScreen(tester, await seed());
+      await openFilters(tester);
 
       await tester.tap(find.byKey(const Key('filter-kind-مدرسة')));
       await tester.pumpAndSettle();
@@ -490,6 +500,7 @@ void main() {
     testWidgets('مفتاح «تدريس خاص فقط»', (tester) async {
       bigScreen(tester);
       await pumpScreen(tester, await seed());
+      await openFilters(tester);
 
       await tester.tap(find.byKey(const Key('filter-private-only')));
       await tester.pumpAndSettle();
@@ -502,6 +513,7 @@ void main() {
         (tester) async {
       bigScreen(tester);
       await pumpScreen(tester, await seed());
+      await openFilters(tester);
 
       await tester.tap(find.byKey(const Key('filter-subject')));
       await tester.pumpAndSettle();
@@ -575,6 +587,7 @@ void main() {
     testWidgets('تصفية المرحلة تطابق السجل متعدد المراحل', (tester) async {
       bigScreen(tester);
       await pumpScreen(tester, await seed());
+      await openFilters(tester);
 
       await tester.tap(find.byKey(const Key('filter-stage')));
       await tester.pumpAndSettle();
@@ -590,6 +603,7 @@ void main() {
         (tester) async {
       bigScreen(tester);
       await pumpScreen(tester, await seed());
+      await openFilters(tester);
 
       await tester.tap(find.byKey(const Key('filter-edu-type')));
       await tester.pumpAndSettle();
@@ -602,10 +616,66 @@ void main() {
 
       await tester.tap(find.byKey(const Key('filter-kind-all')));
       await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextField).first, 'فيزياء');
+      await tester.enterText(
+          find.byKey(const Key('provider-search')), 'فيزياء');
       await tester.pumpAndSettle();
       expect(find.text('أ. منى'), findsOneWidget);
       expect(find.text('أ. سالم'), findsNothing);
+    });
+
+    testWidgets(
+        'كارت «بحث وتصفية» مطويّ أول الفتح: السجلات ظاهرة والمرشّحات مخفية',
+        (tester) async {
+      bigScreen(tester);
+      await pumpScreen(tester, await seed());
+
+      expect(find.byKey(const Key('provider-search')), findsNothing);
+      expect(find.byKey(const Key('filter-kind-مدرسة')), findsNothing);
+      expect(find.text('أ. منى'), findsOneWidget,
+          reason: 'الطيّ للمرشّحات لا للمحتوى');
+
+      await tester.tap(find.byKey(const Key('filters-toggle')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('provider-search')), findsOneWidget);
+      expect(find.byKey(const Key('filter-stage')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('filters-toggle')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('provider-search')), findsNothing);
+    });
+
+    testWidgets('المرشّح المفعّل لا يختفي بالطيّ: شارة العدد + الملخص + المسح',
+        (tester) async {
+      bigScreen(tester);
+      await pumpScreen(tester, await seed());
+      await openFilters(tester);
+
+      await tester.tap(find.byKey(const Key('filter-private-only')));
+      await tester.pumpAndSettle();
+      expect(find.text('مدرسة النور'), findsNothing);
+
+      await tester.tap(find.byKey(const Key('filters-toggle')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('filters-count')), findsOneWidget);
+      expect(
+          find.descendant(
+              of: find.byKey(const Key('filters-count')),
+              matching: find.text('1')),
+          findsOneWidget);
+      expect(
+          find.descendant(
+              of: find.byKey(const Key('filters-toggle')),
+              matching: find.text('تدريس خاص')),
+          findsOneWidget,
+          reason: 'الملخص يلصق الكارت مطويًا');
+      expect(find.text('أ. منى'), findsOneWidget,
+          reason: 'التصفية سارية والكارت مطويّ');
+
+      await tester.tap(find.byKey(const Key('filters-clear')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('filters-count')), findsNothing);
+      expect(find.text('مدرسة النور'), findsOneWidget);
     });
   });
 

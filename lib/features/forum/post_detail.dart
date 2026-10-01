@@ -36,7 +36,7 @@ class _ForumPostDetailScreenState extends State<ForumPostDetailScreen> {
   String _currentUserName = '';
   bool _isSendingComment = false;
   bool _viewCounted = false;
-  // الأدمن العام أو الأدمن المساعد فقط يستطيع حذف التعليقات.
+  // حذف التعليق: الأدمن/الأدمن المساعد لأي تعليق، وصاحب التعليق لتعليقه.
   bool _canModerate = false;
 
   @override
@@ -430,6 +430,10 @@ class _ForumPostDetailScreenState extends State<ForumPostDetailScreen> {
             final data = doc.data() as Map<String, dynamic>? ?? <String, dynamic>{};
             final photo = (data['userPhotoUrl'] as String? ?? '').trim();
             final commentText = data['text'] as String? ?? '';
+            final commentAuthor = (data['userId'] as String? ?? '').trim();
+            // صاحب التعليق يحذف تعليقه، والأدمن/الأدمن المساعد يحذفان أي تعليق.
+            final canDelete = _canModerate ||
+                (_currentUserId.isNotEmpty && commentAuthor == _currentUserId);
             return InfoListCard(
               padding: const EdgeInsets.all(14),
               leading: CircleAvatar(
@@ -451,8 +455,9 @@ class _ForumPostDetailScreenState extends State<ForumPostDetailScreen> {
                 // نص التعليق: أسود بحجم واضح (تنسيق موحّد لكل التعليقات)
                 Text(commentText, style: CommentStyle.body),
               ],
-              trailing: _canModerate
+              trailing: canDelete
                   ? IconButton(
+                      key: ValueKey('forum-comment-delete-${doc.id}'),
                       tooltip: 'حذف التعليق',
                       icon: Icon(Icons.delete_outline_rounded,
                           size: 20, color: theme.colorScheme.error),

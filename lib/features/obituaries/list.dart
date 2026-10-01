@@ -301,10 +301,8 @@ class _ObituariesListScreenState extends State<ObituariesListScreen> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        if (obituary.gender.isNotEmpty) ...[
-                          const SizedBox(width: 6),
-                          _GenderBadge(isFemale: obituary.isFemale),
-                        ],
+                        // لا تُعرض «رجل/امرأة» في مخرجات الإدخال: النوع يُسأل
+                        // في النموذج وحده لأنه يحسم تسميات مجموعات القرابة.
                         if (isNew) ...[
                           const SizedBox(width: 6),
                           Container(
@@ -426,37 +424,6 @@ class _ObituariesListScreenState extends State<ObituariesListScreen> {
             borderRadius: BorderRadius.circular(16),
           ),
         ).animate().fadeIn(delay: (index * 100).ms),
-      ),
-    );
-  }
-}
-
-class _GenderBadge extends StatelessWidget {
-  const _GenderBadge({required this.isFemale});
-
-  final bool isFemale;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final color = theme.colorScheme.primary;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.25)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(isFemale ? Icons.female_rounded : Icons.male_rounded,
-              size: 12, color: color),
-          const SizedBox(width: 4),
-          Text(isFemale ? 'امرأة' : 'رجل',
-              style: theme.textTheme.labelSmall?.copyWith(
-                  color: color, fontWeight: FontWeight.w800)),
-        ],
       ),
     );
   }
