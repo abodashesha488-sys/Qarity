@@ -70,6 +70,39 @@ void main() {
       expect(routes, contains('category: ServiceCategory.educational'));
     });
 
+    test('ترتيب بلاطات الشبكة الرئيسية وأسمائها حرفيًا', () {
+      final home = src('lib/features/home/home.dart');
+      final start = home.indexOf('static const _services = [');
+      expect(start, greaterThan(-1), reason: 'الشبكة تبنى من قائمة واحدة ثابتة');
+      final block = home.substring(start, home.indexOf('];', start));
+      final tiles = RegExp(r"_ServiceItem\('([^']+)',\s*AppRoutes\.(\w+)")
+          .allMatches(block)
+          .map((m) => '${m.group(2)}|${m.group(1)}')
+          .toList();
+      expect(
+        tiles,
+        const <String>[
+          'about|تعرف على القرية',
+          'newsList|أخبار القرية',
+          'forumPosts|مندرة القرية',
+          'marketProducts|سوق القرية',
+          'techniciansDirectory|فنيين القرية',
+          'legalAdvisor|مستشار القرية',
+          'medical|الخدمات الطبية',
+          'educationalServices|الخدمات التعليمية',
+          'farmerServices|خدمات المزارع',
+          'villageAds|إعلانات القرية',
+          'lostItems|المفقودات',
+          'phoneDirectory|دليل الهاتف',
+          'occasionsList|المناسبات',
+          'obituariesList|سجل العزاء',
+          'children|ركن الأطفال',
+          'aboutApp|حول التطبيق',
+        ],
+      );
+      expect(tiles.toSet().length, tiles.length, reason: 'لا صفحة تتكرر ولا تُفقد');
+    });
+
     test('لوحة الإدارة تسمّي الصفحة التي سيظهر فيها السجل', () {
       expect(src('lib/features/admin/admin_detail.dart'),
           contains('ServiceCategory.label(value)'));

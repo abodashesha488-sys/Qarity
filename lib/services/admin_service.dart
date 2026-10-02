@@ -146,6 +146,9 @@ class AdminService {
       'phone_directory',
       'service_providers',
       'lost_items',
+      'village_ads',
+      'lawyers',
+      'legal_consultations',
       'medical_center_clinics',
       'village_clinics',
       'pharmacies',
@@ -541,6 +544,9 @@ class AdminService {
     'optical_shops': 'submittedBy',
     'service_providers': 'submittedBy',
     'lost_items': 'userId',
+    'village_ads': 'userId',
+    'lawyers': 'submittedBy',
+    'legal_consultations': 'userId',
     'blood_requests': 'userId',
     'blood_donors': 'userId',
     'service_requests': 'userId',
@@ -613,6 +619,11 @@ class AdminService {
         return '/services/technicians';
       case 'lost_items':
         return '/services/lost-items';
+      case 'village_ads':
+        return '/ads';
+      case 'lawyers':
+      case 'legal_consultations':
+        return '/legal';
       case 'village_clinics':
       case 'pharmacies':
       case 'medical_labs':
@@ -661,6 +672,12 @@ class AdminService {
         return 'الإضافة في دليل الخدمات';
       case 'lost_items':
         return 'إعلان المفقودات';
+      case 'village_ads':
+        return 'إعلان القرية';
+      case 'lawyers':
+        return 'تسجيل المحامي';
+      case 'legal_consultations':
+        return 'الاستشارة القانونية';
       case 'pharmacies':
         return 'الصيدلية';
       case 'blood_requests':
@@ -723,6 +740,13 @@ class AdminService {
           '/services/lost-items'
         ),
       'shops' => ('🏬 محل جديد في السوق', preview, '/market'),
+      'village_ads' => ('📢 إعلان جديد في القرية', preview, '/ads'),
+      'lawyers' => ('⚖️ محامٍ جديد في السجل', preview, '/legal'),
+      'legal_consultations' => (
+          '⚖️ استشارة قانونية جديدة',
+          preview,
+          '/legal'
+        ),
       'medical_center_clinics' => (
           '🏥 عيادة جديدة بالمركز الطبي الخيري',
           preview,
@@ -857,6 +881,9 @@ class AdminService {
       _pendingCountOnce('medical_labs'),
       _pendingCountOnce('lost_items'),
       _pendingCountOnce('optical_shops'),
+      _pendingCountOnce('village_ads'),
+      _pendingCountOnce('lawyers'),
+      _pendingCountOnce('legal_consultations'),
     ]);
     return {
       'news': results[0],
@@ -876,6 +903,9 @@ class AdminService {
       'medical_labs': results[14],
       'lost_items': results[15],
       'optical_shops': results[16],
+      'village_ads': results[17],
+      'lawyers': results[18],
+      'legal_consultations': results[19],
     };
   }
 

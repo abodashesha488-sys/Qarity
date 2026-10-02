@@ -275,6 +275,36 @@ class _AdminEditScreenState extends State<AdminEditScreen> {
           _FieldSpec('userName', 'اسم صاحب الإعلان'),
           _FieldSpec('isResolved', 'تم التسليم (مغلق)', boolean: true),
         ];
+      case 'village_ads':
+        return const [
+          _FieldSpec('title', 'عنوان الإعلان', required: true),
+          _FieldSpec('kind', 'النوع (تجارية / خدمية / إنشائية)'),
+          _FieldSpec('businessName', 'اسم النشاط'),
+          _FieldSpec('description', 'نص الإعلان', multiline: true),
+          _FieldSpec('location', 'المكان'),
+          _FieldSpec('phone', 'هاتف التواصل'),
+          _FieldSpec('userName', 'اسم صاحب الإعلان'),
+        ];
+      case 'lawyers':
+        return const [
+          _FieldSpec('name', 'اسم المحامي', required: true),
+          _FieldSpec('phone', 'الهاتف'),
+          _FieldSpec('specializations', 'التخصصات (افصل بينها بفاصلة)',
+              list: true),
+          _FieldSpec('office', 'المكتب / العنوان'),
+          _FieldSpec('workingHours', 'مواعيد العمل'),
+          _FieldSpec('photoUrl', 'رابط صورة السجل (https://…)'),
+          _FieldSpec('bio', 'نبذة', multiline: true),
+          _FieldSpec('submittedByName', 'اسم مقدّم التسجيل'),
+        ];
+      case 'legal_consultations':
+        return const [
+          _FieldSpec('question', 'نص السؤال', required: true, multiline: true),
+          _FieldSpec('details', 'تفاصيل إضافية', multiline: true),
+          _FieldSpec('category', 'التصنيف (أحوال شخصية / قضايا جنائية / …)'),
+          _FieldSpec('answer', 'رد المستشار (يظهر للقرية)', multiline: true),
+          _FieldSpec('userName', 'اسم صاحب السؤال'),
+        ];
       case 'medical_center_clinics':
         return const [
           _FieldSpec('name', 'اسم العيادة', required: true),

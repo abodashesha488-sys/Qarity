@@ -1,0 +1,401 @@
+import 'dart:io';
+
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:qurity/core/constants/legal_reference_egypt.dart';
+import 'package:qurity/core/constants/promo_placements.dart';
+import 'package:qurity/models/legal_models.dart';
+import 'package:qurity/models/village_ad_model.dart';
+import 'package:qurity/routes/app_routes.dart';
+import 'package:qurity/services/legal_service.dart';
+import 'package:qurity/services/remote_push_service.dart';
+import 'package:qurity/services/village_ad_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+/// صفحتا «إعلانات القرية» و«مستشار القرية»: نماذجها وخدماتها وعقود ربطها
+/// بالقواعد ولوحة الإدارة والإشعارات، ومرجعها القانوني الثابت.
+void main() {
+  String src(String path) => File(path).readAsStringSync();
+
+  // `cloud_firestore` يثبّت مصنع FieldValue عند أول استخدام له في الـisolate
+  // (`static final _factory = FieldValueFactoryPlatform.instance`). بناء Fake
+  // هنا قبل أي اختبار يقرأ `toJson()` (الذي يحمل serverTimestamp) يُجبر ذلك
+  // المصنع على النسخة الوهمية، وإلا انفصلت الكتابة عن fakeCloudFirestore.
+  setUpAll(() => FakeFirebaseFirestore());
+
+  setUp(() => SharedPreferences.setMockInitialValues({}));
+
+  group('VillageAd', () {
+    test('سجل قديم أو ناقص لا يكسر القراءة', () {
+      final ad = VillageAd.fromJson({'title': 'محل أعواد'}, 'a1');
+      expect(ad.kind, 'تجارية');
+      expect(ad.isApproved, false);
+      expect(ad.imageUrl, '');
+      expect(ad.createdAt, isNull);
+    });
+
+    test('نوع مجهول يرتد للتجارية والصور الفارغة تُهمّش', () {
+      final ad = VillageAd.fromJson({
+        'kind': 'سيارات',
+        'imageUrls': ['https://x/1.jpg', '', null],
+      }, 'a2');
+      expect(ad.kind, 'تجارية');
+      expect(ad.imageUrls, ['https://x/1.jpg']);
+      expect(ad.imageUrl, 'https://x/1.jpg');
+    });
+
+    test('أنواع الإعلان الثلاثة لها تسمية وأيقونة', () {
+      expect(villageAdKindLabel('تجارية'), 'إعلان تجاري');
+      expect(villageAdKindLabel('خدمية'), 'إعلان خدمي');
+      expect(villageAdKindLabel('إنشائية'), 'إعلان إنشائي');
+      expect(kVillageAdKinds, ['تجارية', 'خدمية', 'إنشائية']);
+      expect(villageAdKindIcon('خدمية'), Icons.handyman_rounded);
+      expect(villageAdKindIcon('إنشائية'), Icons.construction_rounded);
+      expect(villageAdKindIcon('تجارية'), Icons.storefront_rounded);
+    });
+
+    test('كتابة المالك لا تحمل الموافقة ولا التاريخ', () {
+      final ad = VillageAd.fromJson({
+        'title': 'ورشة',
+        'isApproved': true,
+      }, 'a3');
+      expect(ad.toWriteMap().containsKey('isApproved'), false);
+      expect(ad.toWriteMap().containsKey('createdAt'), false);
+      // الحفظ الكامل (الإنشاء) هو وحده من يكتب الموافقة، وتبدأ معلّقة.
+      expect(const VillageAd(title: 'ورشة').toJson()['isApproved'], false);
+    });
+  });
+
+  group('VillageAdService', () {
+    test('الإنشاء يبدأ غير معتمد ومنسوب لصاحبه', () async {
+      final fake = FakeFirebaseFirestore();
+      final svc = VillageAdService(fake);
+      await svc.create(const VillageAd(
+        title: 'معرض أدوات منزلية',
+        kind: 'إنشائية',
+        businessName: 'معرض النور',
+        userId: 'u1',
+        userName: 'أحمد',
+      ));
+      final doc = (await fake.collection('village_ads').get()).docs.single;
+      expect(doc.data()['isApproved'], false);
+      expect(doc.data()['kind'], 'إنشائية');
+      expect(doc.data()['userId'], 'u1');
+      expect(doc.data()['businessName'], 'معرض النور');
+    });
+
+    test('دليل القرية يخفي المعلّق ويرتّب الأحدث أولًا', () async {
+      final fake = FakeFirebaseFirestore();
+      final svc = VillageAdService(fake);
+      final now = DateTime(2026, 10);
+      await fake.collection('village_ads').add({
+        'title': 'قديم معتمد',
+        'isApproved': true,
+        'createdAt': now.subtract(const Duration(days: 5)),
+      });
+      await fake.collection('village_ads').add({
+        'title': 'جديد معتمد',
+        'isApproved': true,
+        'createdAt': now,
+      });
+      await fake.collection('village_ads')
+          .add({'title': 'معلّق', 'isApproved': false});
+      final ads = await svc.watchApproved().first;
+      expect(ads.map((a) => a.title).toList(), ['جديد معتمد', 'قديم معتمد']);
+    });
+
+    test('وثيقة بلا createdAt لا تختفي من الدليل', () async {
+      final fake = FakeFirebaseFirestore();
+      await fake.collection('village_ads')
+          .add({'title': 'بلا تاريخ', 'isApproved': true});
+      final ads = await VillageAdService(fake).watchApproved().first;
+      expect(ads.single.title, 'بلا تاريخ');
+    });
+
+    test('إعلاناتي ترى معلّقي، ودليل القرية لا يراه', () async {
+      final fake = FakeFirebaseFirestore();
+      final svc = VillageAdService(fake);
+      await fake
+          .collection('village_ads')
+          .add({'title': 'معلّق لي', 'isApproved': false, 'userId': 'u1'});
+      await fake
+          .collection('village_ads')
+          .add({'title': 'معتمد لغيري', 'isApproved': true, 'userId': 'u2'});
+      final mine = await svc.watchMine('u1').first;
+      expect(mine.map((a) => a.title), ['معلّق لي']);
+      final feed = await svc.watchApproved().first;
+      expect(feed.map((a) => a.title), ['معتمد لغيري']);
+    });
+
+    test('تعديل المالك لا يمسّ موافقة إعلان معتمد', () async {
+      final fake = FakeFirebaseFirestore();
+      final svc = VillageAdService(fake);
+      final ref = await fake.collection('village_ads').add({
+        'title': 'محل',
+        'isApproved': true,
+        'userId': 'u1',
+        'description': 'نبذة قديمة',
+      });
+      final stored = (await ref.get()).data()!;
+      await svc.update(
+          ref.id, VillageAd.fromJson(stored, ref.id).copyWith(description: 'نبذة جديدة'));
+      final data = (await ref.get()).data()!;
+      expect(data['description'], 'نبذة جديدة');
+      expect(data['isApproved'], true);
+    });
+
+    test('getById بمعرّف فارغ لا يلمس Firestore', () async {
+      expect(await VillageAdService(FakeFirebaseFirestore()).getById(''), isNull);
+    });
+  });
+
+  group('Lawyer وLegalConsultation', () {
+    test('سجل المحامي: التسامح مع الناقص ومرآة التخصصات', () {
+      final l = Lawyer.fromJson({'name': 'م/سمير'}, 'l1');
+      expect(l.specializations, isEmpty);
+      expect(l.specializationsLine, '');
+      expect(l.isApproved, false);
+      final full = Lawyer.fromJson({
+        'name': 'م/سمير',
+        'specializations': ['أحوال شخصية', '', 'تنفيذ أحكام'],
+      }, 'l2');
+      expect(full.specializationsLine, 'أحوال شخصية، تنفيذ أحكام');
+    });
+
+    test('كتابة المالك بلا الموافقة، والصورة تُكتب دائمًا لتُرمَّم', () {
+      final w = const Lawyer(name: 'م/سمير', submittedBy: 'u1').toWriteMap();
+      expect(w.containsKey('isApproved'), false);
+      expect(w['photoUrl'], '');
+      expect(w['submittedBy'], 'u1');
+    });
+
+    test('الاستشارة: المالك لا يعتمد نفسه ولا يكتب رد المستشار', () {
+      const c = LegalConsultation(
+        question: 'ما مدة دعوى الجبابة؟',
+        answer: 'رد.try',
+        isApproved: true,
+      );
+      // الإنشاء يمر بـtoJson: الموافقة قسرًا false والرد يُرسَل ليقرأه المالك فقط.
+      expect(c.toJson()['isApproved'], false);
+      // وتعديله يمر بـtoWriteMap: لا answer ولا isApproved ولا createdAt.
+      expect(c.toWriteMap().containsKey('answer'), false);
+      expect(c.toWriteMap().containsKey('isApproved'), false);
+      expect(c.hasAnswer, true);
+    });
+
+    test('تصنيف مجهول أو قديم يرتد للاستشارات العامة', () {
+      final c = LegalConsultation.fromJson(
+          {'question': 'س', 'category': 'قضايا بحر'}, 'c1');
+      expect(c.category, 'استشارات عامة');
+      final ok = LegalConsultation.fromJson(
+          {'question': 'س', 'category': 'قضايا جنائية'}, 'c2');
+      expect(ok.category, 'قضايا جنائية');
+    });
+  });
+
+  group('LegalConsultationService وLawyerService', () {
+    test('إنشاء الاستشارة يبدأ معلّقًا ومنسوبًا لصاحبه', () async {
+      final fake = FakeFirebaseFirestore();
+      await LegalConsultationService(fake).create(const LegalConsultation(
+        question: 'حكم بيع المال المشترك',
+        userId: 'u1',
+        userName: 'حسن',
+      ));
+      final doc =
+          (await fake.collection('legal_consultations').get()).docs.single;
+      expect(doc.data()['isApproved'], false);
+      expect(doc.data()['userId'], 'u1');
+    });
+
+    test('الاستشارات المعتمدة فقط للقرية، والأحدث أولًا', () async {
+      final fake = FakeFirebaseFirestore();
+      final svc = LegalConsultationService(fake);
+      final now = DateTime(2026, 10);
+      await fake.collection('legal_consultations').add({
+        'question': 'قديمة',
+        'isApproved': true,
+        'createdAt': now.subtract(const Duration(days: 3)),
+      });
+      await fake.collection('legal_consultations').add({
+        'question': 'حديثة',
+        'isApproved': true,
+        'createdAt': now,
+      });
+      await fake
+          .collection('legal_consultations')
+          .add({'question': 'معلّقة', 'isApproved': false});
+      final list = await svc.watchApproved().first;
+      expect(list.map((c) => c.question).toList(), ['حديثة', 'قديمة']);
+    });
+
+    test('سجل المحامين: المحامي بلا تاريخ تسجيل يبقى ظاهرًا', () async {
+      final fake = FakeFirebaseFirestore();
+      await fake
+          .collection('lawyers')
+          .add({'name': 'م/كرم', 'isApproved': true});
+      final list = await LawyerService(fake).watchApproved().first;
+      expect(list.single.name, 'م/كرم');
+    });
+
+    test('getById يعيد null للمعرّف الفارغ والوثيقة المحذوفة', () async {
+      final svc = LawyerService(FakeFirebaseFirestore());
+      expect(await svc.getById(''), isNull);
+      expect(await svc.getById('محو'), isNull);
+    });
+  });
+
+  group('المرجع القانوني الثابت', () {
+    test('كل موضوع له عنوان وملخّص ونقاط مقروءة', () {
+      expect(kLegalReferenceTopics.length, greaterThanOrEqualTo(10));
+      for (final t in kLegalReferenceTopics) {
+        expect(t.title.trim(), isNotEmpty);
+        expect(t.summary.trim().length, greaterThan(40));
+        expect(t.points.length, greaterThanOrEqualTo(3));
+        for (final p in t.points) {
+          expect(p.trim().length, greaterThan(20), reason: t.title);
+        }
+      }
+      expect(kLegalReferenceTopics.map((t) => t.title).toSet().length,
+          kLegalReferenceTopics.length,
+          reason: 'لا موضوع يتكرر');
+    });
+
+    test('افتتاحيته خريطة نظم القضاء المصري، والتنبيه صريح', () {
+      expect(kLegalReferenceTopics.first.title, contains('نظم القضاء المصري'));
+      expect(kLegalReferenceDisclaimer, contains('ليست بديلًا'));
+      expect(kLegalReferenceDisclaimer, contains('محامٍ'));
+    });
+
+    test('المرجع بيانات مضمّنة: لا Firestore ولا شبكة فيه', () {
+      final file = src('lib/core/constants/legal_reference_egypt.dart');
+      expect(file, isNot(contains('cloud_firestore')));
+      expect(file, isNot(contains('http')));
+    });
+  });
+
+  group('عقود الربط', () {
+    test('القواعد: العامة تقرأ، والكتابة تبدأ معلّقة، والرد إداري', () {
+      final rules = src('firestore.rules');
+      String blockOf(String collection) {
+        final start = rules.indexOf('match /$collection/{docId}');
+        expect(start, greaterThan(-1), reason: 'كتلة $collection موجودة');
+        final next = rules.indexOf('    match /', start + 8);
+        return rules.substring(start, next == -1 ? rules.length : next);
+      }
+
+      for (final c in ['village_ads', 'lawyers', 'legal_consultations']) {
+        final block = blockOf(c);
+        expect(block, contains('request.resource.data.isApproved == false'),
+            reason: '$c لا يُنشأ معتمدًا');
+        expect(block, contains('accountActive()'),
+            reason: '$c يتطلب حسابًا مفعّلًا');
+        expect(block, contains('isAdmin()'));
+      }
+      // إعلانات القرية وسجل المحامين عامان بلا حجب، والاستشارة محجوبة حتى الاعتماد.
+      expect(blockOf('village_ads'), contains('allow list, get: if true;'));
+      expect(blockOf('lawyers'), contains('allow list, get: if true;'));
+      final consult = blockOf('legal_consultations');
+      expect(consult, contains('resource.data.isApproved == true'));
+      expect(consult, contains("hasAny(['isApproved', 'answer', 'userId'])"),
+          reason: 'الرد والمالك والموافقة حقول إدارية');
+    });
+
+    test('قراءات الدليل بلا orderBy على حقل قد يغيب', () {
+      for (final f in [
+        'lib/services/village_ad_service.dart',
+        'lib/services/legal_service.dart',
+      ]) {
+        final code = src(f)
+            .split('\n')
+            .where((l) => !l.trim().startsWith('//'))
+            .join('\n');
+        expect(code, isNot(contains('orderBy(')), reason: f);
+      }
+    });
+
+    test('المسارات الأربعة مسجّلة وثابتة بلا وسائط فئة', () {
+      expect(AppRoutes.villageAds, '/ads');
+      expect(AppRoutes.villageAdDetail, '/ads/detail');
+      expect(AppRoutes.legalAdvisor, '/legal');
+      expect(AppRoutes.lawyerDetail, '/legal/lawyer');
+      expect(
+        AppRoutes.routes.keys,
+        containsAll(<String>[
+          AppRoutes.villageAds,
+          AppRoutes.villageAdDetail,
+          AppRoutes.legalAdvisor,
+          AppRoutes.lawyerDetail,
+        ]),
+      );
+    });
+
+    test('الشاشة الرئيسية: المستشار بعد الفنيين والإعلانات بعد المزارع', () {
+      final home = src('lib/features/home/home.dart');
+      final start = home.indexOf('static const _services = [');
+      final block = home.substring(start, home.indexOf('];', start));
+      final tiles = RegExp(
+              r"_ServiceItem\('([^']+)',\s*AppRoutes\.(\w+),\s*'([^']+)'\)")
+          .allMatches(block)
+          .map((m) => '${m.group(2)}|${m.group(1)}|${m.group(3)}')
+          .toList();
+      expect(tiles.length, 16);
+      expect(tiles[5], 'legalAdvisor|مستشار القرية|assets/images/low.jpg');
+      expect(tiles[9], 'villageAds|إعلانات القرية|assets/images/ealan.jpg');
+      expect(tiles[4], startsWith('techniciansDirectory|'));
+      expect(tiles[10], startsWith('lostItems|'));
+    });
+
+    test('الإشعارات: الثلاثة تُبلّغ الإدارة، والاستشارة لا تُبث للقرية', () {
+      expect(
+        kAdminNotifyCollections,
+        containsAll(<String>[
+          'village_ads',
+          'lawyers',
+          'legal_consultations',
+        ]),
+      );
+      expect(kPushTopicForCollection['village_ads'], 'village_market');
+      expect(kPushTopicForCollection['lawyers'], 'village_services');
+      // نص السؤال القانوني حسّاس: لا موضوع عام له، تُقرأ داخل التبويب فقط.
+      expect(kPushTopicForCollection.containsKey('legal_consultations'), false);
+    });
+
+    test('لوحة الإدارة تعرف المجموعات الثلاث', () {
+      final cats = src('lib/features/admin/admin_dashboard.dart');
+      expect(cats, contains("_Cat('village_ads'"));
+      expect(cats, contains("_Cat('lawyers'"));
+      expect(cats, contains("_Cat('legal_consultations'"));
+      final svc = src('lib/services/admin_service.dart');
+      expect(svc, contains("'village_ads': 'userId'"));
+      expect(svc, contains("'lawyers': 'submittedBy'"));
+      expect(svc, contains("case 'village_ads':"));
+      expect(svc, contains("case 'legal_consultations':"));
+      expect(svc, contains("('📢 إعلان جديد في القرية', preview, '/ads')"));
+      final worker = src('api/push.js');
+      for (final c in ['village_ads', 'lawyers', 'legal_consultations']) {
+        expect(worker, contains(c), reason: 'PENDING_KINDS في العامل');
+      }
+    });
+
+    test('ممرّيف الإشعار يفتح الإعلان والمحامي مباشرة', () {
+      final open = src('lib/features/notifications/notification_open_screen.dart');
+      expect(open, contains("case 'village_ads'"));
+      expect(open, contains('AppRoutes.villageAdDetail'));
+      expect(open, contains("case 'lawyers'"));
+      expect(open, contains('AppRoutes.lawyerDetail'));
+      // الاستشارة بلا حالة عمدًا: تسقط لمسار القائمة /legal.
+      expect(open, isNot(contains("case 'legal_consultations'")));
+    });
+
+    test('أماكن الإعلانات للدليلين الجديدين', () {
+      expect(kPromoPlacements.map((p) => p.key),
+          containsAll(<String>['village_ads', 'legal']));
+      expect(promoKeyForRoute(AppRoutes.villageAds, null), 'village_ads');
+      expect(promoKeyForRoute(AppRoutes.legalAdvisor, null), 'legal');
+      expect(promoKeyForRoute(AppRoutes.villageAdDetail, null), '');
+      expect(kPromoInternalLinks.map((l) => l.route),
+          containsAll(<String>[AppRoutes.villageAds, AppRoutes.legalAdvisor]));
+    });
+  });
+}

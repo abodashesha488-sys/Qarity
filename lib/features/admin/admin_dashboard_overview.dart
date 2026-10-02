@@ -101,7 +101,8 @@ class _QuickStatsGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final content = (stats['news'] ?? 0) +
         (stats['market_products'] ?? 0) +
-        (stats['forum_posts'] ?? 0);
+        (stats['forum_posts'] ?? 0) +
+        (stats['village_ads'] ?? 0);
     final medical = (stats['village_clinics'] ?? 0) +
         (stats['pharmacies'] ?? 0) +
         (stats['medical_labs'] ?? 0) +
@@ -215,6 +216,9 @@ class _PendingReviewSection extends StatelessWidget {
     'phone_directory': 'دليل الهاتف',
     'service_providers': 'دليل الخدمات',
     'lost_items': 'المفقودات',
+    'village_ads': 'إعلانات القرية',
+    'lawyers': 'سجل المحامين',
+    'legal_consultations': 'الاستشارات',
     'medical_center_clinics': 'عيادات المركز',
     'village_clinics': 'عيادات القرية',
     'pharmacies': 'الصيدليات',

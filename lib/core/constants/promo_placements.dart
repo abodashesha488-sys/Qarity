@@ -36,6 +36,8 @@ const List<PromoPlacement> kPromoPlacements = [
   PromoPlacement('med_pharmacies', 'المركز الطبي — الصيدليات', 'المركز الطبي'),
   PromoPlacement('med_labs', 'المركز الطبي — معامل التحاليل', 'المركز الطبي'),
   PromoPlacement('med_optical', 'المركز الطبي — نظارات طبية', 'المركز الطبي'),
+  PromoPlacement('village_ads', 'إعلانات القرية', 'الأقسام الخدمية'),
+  PromoPlacement('legal', 'مستشار القرية', 'الأقسام الخدمية'),
   PromoPlacement('agri_fertilizers', 'خدمات المزارع — الأسمدة', 'خدمات المزارع'),
   PromoPlacement('agri_pesticides', 'خدمات المزارع — المبيدات', 'خدمات المزارع'),
   PromoPlacement('agri_both', 'خدمات المزارع — الأسمدة والمبيدات', 'خدمات المزارع'),
@@ -80,6 +82,10 @@ String promoKeyForRoute(String name, Object? args) {
       return 'lost_items';
     case AppRoutes.phoneDirectory:
       return 'phone_directory';
+    case AppRoutes.villageAds:
+      return 'village_ads';
+    case AppRoutes.legalAdvisor:
+      return 'legal';
     case AppRoutes.medical:
       return 'medical';
     case AppRoutes.medicalSection:
@@ -137,6 +143,8 @@ const List<PromoInternalLink> kPromoInternalLinks = [
   PromoInternalLink('دليل الهاتف', AppRoutes.phoneDirectory),
   PromoInternalLink('المفقودات', AppRoutes.lostItems),
   PromoInternalLink('المركز الطبي', AppRoutes.medical),
+  PromoInternalLink('إعلانات القرية', AppRoutes.villageAds),
+  PromoInternalLink('مستشار القرية', AppRoutes.legalAdvisor),
   PromoInternalLink('المركز الطبي — المركز الخيري', AppRoutes.medicalSection, '0'),
   PromoInternalLink('المركز الطبي — بنك الدم', AppRoutes.medicalSection, '1'),
   PromoInternalLink('المركز الطبي — عيادات القرية', AppRoutes.medicalSection, '2'),

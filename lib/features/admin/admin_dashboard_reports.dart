@@ -143,6 +143,21 @@ class _ReportsPageState extends State<_ReportsPage> {
               icon: Icons.local_hospital_rounded,
               color: const Color(0xFF00897B),
             ),
+            _SummaryCard(
+              title: 'إعلانات القرية',
+              value: '${stats['village_ads'] ?? 0}',
+              subtitle: 'تجارية + خدمية + إنشائية',
+              icon: Icons.campaign_rounded,
+              color: const Color(0xFF311B92),
+            ),
+            _SummaryCard(
+              title: 'مستشار القرية',
+              value:
+                  '${(stats['lawyers'] ?? 0) + (stats['legal_consultations'] ?? 0)}',
+              subtitle: 'سجل المحامين + الاستشارات',
+              icon: Icons.gavel_rounded,
+              color: const Color(0xFF006064),
+            ),
           ],
         ),
       ],
@@ -172,6 +187,12 @@ class _ReportsPageState extends State<_ReportsPage> {
           Icons.phone_rounded, Colors.cyan),
       _StatItem('المفقودات', '${stats['lost_items'] ?? 0}',
           Icons.search_rounded, const Color(0xFF5E35B1)),
+      _StatItem('إعلانات القرية', '${stats['village_ads'] ?? 0}',
+          Icons.campaign_rounded, const Color(0xFF311B92)),
+      _StatItem('سجل المحامين', '${stats['lawyers'] ?? 0}',
+          Icons.gavel_rounded, const Color(0xFF006064)),
+      _StatItem('الاستشارات', '${stats['legal_consultations'] ?? 0}',
+          Icons.help_center_rounded, const Color(0xFF00838F)),
     ];
 
     return _buildSection(
@@ -547,6 +568,9 @@ class _ReportsPageState extends State<_ReportsPage> {
       'service_providers': 'دليل الخدمات',
       'phone_directory': 'دليل الهاتف',
       'lost_items': 'المفقودات',
+      'village_ads': 'إعلانات القرية',
+      'lawyers': 'سجل المحامين',
+      'legal_consultations': 'الاستشارات القانونية',
       'village_clinics': 'عيادات القرية',
       'pharmacies': 'الصيدليات',
       'medical_labs': 'معامل التحاليل',

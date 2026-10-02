@@ -636,6 +636,9 @@ class _ReviewCard extends StatelessWidget {
             _ => 'سجل في صفحة دليل الحرفيين',
           },
         'lost_items' => 'إعلان مفقودات',
+        'village_ads' => 'إعلان تجاري/خدمي في القرية',
+        'lawyers' => 'تسجيل في سجل المحامين',
+        'legal_consultations' => 'سؤال استشارة قانونية',
         'medical_center_clinics' => 'عيادة المركز الطبي الخيري',
         'village_clinics' => 'عيادة من الخدمات الطبية',
         'pharmacies' => 'صيدلية من الخدمات الطبية',
@@ -653,6 +656,7 @@ class _ReviewCard extends StatelessWidget {
         item['patientName'] ??
         item['requesterName'] ??
         item['content'] ??
+        item['question'] ??
         item['providerName'] ??
         'بدون عنوان';
     return t.toString();
@@ -661,6 +665,7 @@ class _ReviewCard extends StatelessWidget {
   String get _subtitle {
     return item['description'] ??
         item['content'] ??
+        item['question'] ??
         item['userName'] ??
         item['authorName'] ??
         item['shopName'] ??

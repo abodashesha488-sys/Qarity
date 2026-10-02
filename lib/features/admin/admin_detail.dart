@@ -47,7 +47,11 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final item = widget.item;
-    final title = item['title'] ?? item['name'] ?? item['content'] ?? 'بدون عنوان';
+    final title = item['title'] ??
+        item['name'] ??
+        item['question'] ??
+        item['content'] ??
+        'بدون عنوان';
     final isApproved = item['isApproved'] == true;
 
     final visualEntries = item.entries.where((e) {
@@ -427,6 +431,12 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
         return Icons.category_rounded;
       case 'lost_items':
         return Icons.search_rounded;
+      case 'village_ads':
+        return Icons.campaign_rounded;
+      case 'lawyers':
+        return Icons.gavel_rounded;
+      case 'legal_consultations':
+        return Icons.help_center_rounded;
       case 'medical_labs':
         return Icons.science_rounded;
       case 'optical_shops':
@@ -458,6 +468,12 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
         return 'بيان في دليل الخدمات';
       case 'lost_items':
         return 'إعلان مفقودات';
+      case 'village_ads':
+        return 'إعلان في القرية';
+      case 'lawyers':
+        return 'تسجيل محامٍ';
+      case 'legal_consultations':
+        return 'استشارة قانونية';
       case 'medical_labs':
         return 'معمل تحاليل';
       case 'optical_shops':

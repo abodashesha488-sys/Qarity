@@ -360,6 +360,60 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // ───────────────── إعلانات القرية (تجارية / خدمية / إنشائية) ─────────────────
+    match /village_ads/{docId} {
+      allow list, get: if true;
+      // كل إعلان يبدأ غير معتمد، ومن صاحبه نفسه — فلا يمر عبر المراجعة إعلان
+      // منسوب لغير كاتبه.
+      allow create: if accountActive()
+                    && request.auth.uid == request.resource.data.userId
+                    && request.resource.data.isApproved == false;
+      // الأدمن والأدمن المساعد: مراجعة كاملة (موافقة/رفض/تعديل).
+      // المالك: يعدّل بيانات إعلانه قبل الاعتماد وبعده، ما دام لا يمسّ
+      // حالة الموافقة ولا ينقل ملكية الوثيقة إلى غيره.
+      allow update: if isAdmin()
+                    || (accountActive() && resource.data.userId == request.auth.uid
+                        && !request.resource.data.diff(resource.data)
+                             .affectedKeys().hasAny(['isApproved', 'userId']));
+      allow delete: if isAdmin()
+                    || (accountActive() && resource.data.userId == request.auth.uid);
+    }
+
+    // ─────────────────────── مستشار القرية: سجل المحامين ───────────────────────
+    match /lawyers/{docId} {
+      allow list, get: if true;
+      allow create: if accountActive()
+                    && request.auth.uid == request.resource.data.submittedBy
+                    && request.resource.data.isApproved == false;
+      allow update: if isAdmin()
+                    || (accountActive() && resource.data.submittedBy == request.auth.uid
+                        && !request.resource.data.diff(resource.data)
+                             .affectedKeys().hasAny(['isApproved', 'submittedBy']));
+      allow delete: if isAdmin()
+                    || (accountActive() && resource.data.submittedBy == request.auth.uid);
+    }
+
+    // ────────────────── مستشار القرية: استشارات الأهالي القانونية ──────────────────
+    // السؤال القانوني حسّاس: المعتمد فقط يُقرأ للعموم، وصاحب السؤال يرى
+    // معلّقه، والرد (`answer`) يكتبه الأدمن وحده حتى لا يُنسب زورًا لمستشار.
+    match /legal_consultations/{docId} {
+      allow get: if isAdmin() || resource.data.isApproved == true
+                 || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow list: if isAdmin() || resource.data.isApproved == true
+                  || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if accountActive()
+                    && request.auth.uid == request.resource.data.userId
+                    && request.resource.data.isApproved == false;
+      // المالك: يصوغ سؤاله ما دام معلّقًا، دون المساس بالموافقة أو الرد أو المالك.
+      allow update: if isAdmin()
+                    || (accountActive() && resource.data.userId == request.auth.uid
+                        && resource.data.isApproved == false
+                        && !request.resource.data.diff(resource.data)
+                             .affectedKeys().hasAny(['isApproved', 'answer', 'userId']));
+      allow delete: if isAdmin()
+                    || (accountActive() && resource.data.userId == request.auth.uid);
+    }
+
     // محلات القرية — الإنشاء لصاحب المحل (يبدأ غير معتمد)، والتعديل لصاحبه أو الأدمن
     match /shops/{docId} {
       allow list, get: if true;

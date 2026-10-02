@@ -2,9 +2,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/data_models.dart';
+import '../../models/legal_models.dart';
 import '../../models/lost_item_model.dart';
 import '../../models/medical_models.dart';
 import '../../models/service_provider_model.dart';
+import '../../models/village_ad_model.dart';
 import '../../routes/app_routes.dart';
 import '../../widgets/qurity_logo.dart';
 
@@ -91,6 +93,16 @@ class _NotificationOpenScreenState extends State<NotificationOpenScreen> {
             case 'lost_items':
               model = LostItem.fromJson(data, id);
               route = AppRoutes.lostItemDetail;
+              break;
+            // `legal_consultations` بلا حالة عمدًا: السؤال ليس شاشة تفاصيل
+            // مستقلة، فيرجع للممرّف إلى تبويب الاستشارات في «مستشار القرية».
+            case 'village_ads':
+              model = VillageAd.fromJson(data, id);
+              route = AppRoutes.villageAdDetail;
+              break;
+            case 'lawyers':
+              model = Lawyer.fromJson(data, id);
+              route = AppRoutes.lawyerDetail;
               break;
           }
           if (route != null && mounted) {

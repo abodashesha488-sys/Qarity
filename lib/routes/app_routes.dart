@@ -5,6 +5,8 @@ import '../core/constants/app_config.dart';
 import '../features/admin/admin_dashboard.dart';
 import '../features/admin/admin_detail.dart';
 import '../features/admin/admin_edit.dart';
+import '../features/ads/village_ad_detail_screen.dart';
+import '../features/ads/village_ads_screen.dart';
 import '../features/auth/complete_profile.dart';
 import '../features/auth/login.dart';
 import '../features/children/children_screen.dart';
@@ -15,6 +17,8 @@ import '../features/forum/posts.dart';
 import '../features/home/about_app.dart';
 import '../features/home/home.dart';
 import '../features/home/splash.dart';
+import '../features/legal/lawyer_detail_screen.dart';
+import '../features/legal/legal_advisor_screen.dart';
 import '../features/market/add_product.dart';
 import '../features/market/market_tabs_screen.dart';
 import '../features/market/product_detail.dart';
@@ -157,6 +161,12 @@ static const String marketProducts = '/market';
   static const String serviceProviderDetail = '/services/detail';
   static const String lostItems = '/services/lost-items';
   static const String lostItemDetail = '/services/lost-item-detail';
+  /// إعلانات القرية (تجارية/خدمية/إنشائية) — صفحة مستقلة بمسار ثابت.
+  static const String villageAds = '/ads';
+  static const String villageAdDetail = '/ads/detail';
+  /// مستشار القرية: سجل المحامين + الاستشارات القانونية + المعلومات القانونية.
+  static const String legalAdvisor = '/legal';
+  static const String lawyerDetail = '/legal/lawyer';
   static const String medicalClinicDetail = '/medical/clinic-detail';
   static const String medicalPharmacyDetail = '/medical/pharmacy-detail';
   static const String medicalLabDetail = '/medical/lab-detail';
@@ -241,6 +251,10 @@ obituariesAdd: (_) => const AddObituaryScreen(),
         const ProviderCategoryScreen(category: ServiceCategory.educational),
     lostItems: (_ ) => const LostItemsScreen(),
     lostItemDetail: (_ ) => const LostItemDetailScreen(),
+    villageAds: (_ ) => const VillageAdsScreen(),
+    villageAdDetail: (_ ) => const VillageAdDetailScreen(),
+    legalAdvisor: (_ ) => const LegalAdvisorScreen(),
+    lawyerDetail: (_ ) => const LawyerDetailScreen(),
     farmerServices: (_ ) => const FarmerServicesScreen(),
     farmerWorkersEquipment: (_ ) => const WorkersEquipmentScreen(),
     farmerAdvisor: (_ ) => const AgriculturalAdvisorScreen(),

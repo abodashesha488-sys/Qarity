@@ -215,6 +215,9 @@ const Set<String> kAdminNotifyCollections = {
   'phone_directory',
   'service_providers',
   'lost_items',
+  'village_ads',
+  'lawyers',
+  'legal_consultations',
   'seller_requests',
   'village_clinics',
   'pharmacies',
@@ -243,6 +246,10 @@ const Map<String, String> kPushTopicForCollection = {
   'service_requests': 'village_services',
   'service_providers': 'village_services',
   'lost_items': 'village_services',
+  'village_ads': 'village_market',
+  'lawyers': 'village_services',
+  // `legal_consultations` عمدًا بلا موضوع: نص السؤال يصل القرية كاملة في
+  // الإشعار، والاستشارة قد تحمل تفاصيل شخصية — تُنشر داخل التبويب فقط.
   'shops': 'village_market',
   'village_clinics': 'village_medical',
   'pharmacies': 'village_medical',
