@@ -120,8 +120,10 @@ class _AdminEditScreenState extends State<AdminEditScreen> {
           _FieldSpec('dateOfDeath', 'تاريخ الوفاة'),
           _FieldSpec('funeralDate', 'تاريخ صلاة الجنازة'),
           _FieldSpec('funeralLocation', 'مكان صلاة الجنازة'),
+          _FieldSpec('funeralTime', 'موعد صلاة الجنازة (مثال: 10:30 ص)'),
           _FieldSpec('burialLocation', 'مكان الدفن'),
           _FieldSpec('condolenceLocation', 'مكان العزاء'),
+          _FieldSpec('condolenceTime', 'موعد العزاء (مثال: 8 م)'),
           _FieldSpec('cardBackground',
               'خلفية البطاقة (azaa1 / azaa2 / azaa3 / azaa4 أو رابط صورة)'),
           _FieldSpec('age', 'العمر (حقل قديم)'),
@@ -566,6 +568,9 @@ class _AdminEditScreenState extends State<AdminEditScreen> {
         return Icons.menu_book_rounded;
       case 'eduTypes':
         return Icons.category_rounded;
+      case 'funeralTime':
+      case 'condolenceTime':
+        return Icons.schedule_rounded;
       case 'date':
       case 'dateOfDeath':
       case 'funeralDate':

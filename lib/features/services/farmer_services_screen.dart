@@ -78,10 +78,10 @@ class FarmerServicesScreen extends StatelessWidget {
                 childCount: _services.length,
               ),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                mainAxisSpacing: 14,
-                crossAxisSpacing: 14,
-                childAspectRatio: 0.95,
+                crossAxisCount: 2,
+                mainAxisSpacing: 16,
+                crossAxisSpacing: 16,
+                childAspectRatio: 0.9,
               ),
             ),
           ),
@@ -99,15 +99,15 @@ class _ServiceTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final radius = BorderRadius.circular(18);
+    final radius = BorderRadius.circular(22);
     return Container(
       decoration: BoxDecoration(
         borderRadius: radius,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.26),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            blurRadius: 12,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
@@ -122,7 +122,8 @@ class _ServiceTile extends StatelessWidget {
             width: double.infinity,
             height: double.infinity,
             fit: BoxFit.cover,
-            cacheWidth: 280,
+            // بلاطتان في السطر: العرض الفعلي ~172dp ⇒ ~520px عند DPR 3
+            cacheWidth: 520,
             semanticLabel: '${service.title}: ${service.description}',
             errorBuilder: (context, error, stackTrace) => Center(
               child: Text(service.title, textAlign: TextAlign.center),

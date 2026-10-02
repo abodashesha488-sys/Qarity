@@ -195,27 +195,47 @@ class ObituaryShareCard extends StatelessWidget {
     );
   }
 
-  bool _hasPlaces(Obituary o) =>
-      o.funeralLocation.isNotEmpty ||
-      o.burialLocation.isNotEmpty ||
-      o.mosque.isNotEmpty ||
-      o.condolenceLocation.isNotEmpty;
+  bool _hasPlaces(Obituary o) => _placeEntries(o).isNotEmpty;
+
+  /// الأعمدة الثلاثة في سطر واحد: كل بيان وتحتَه معلوماته وموعده.
+  /// السجل الذي لا يملك مكانًا ولا موعدًا لقسمه لا يأخذ عمودًا، فلا يظهر
+  /// عمود فارغ داخل البطاقة.
+  List<_PlaceData> _placeEntries(Obituary o) {
+    // السجلات القديمة كانت تسأل عن المسجد وحده، فلا مكان دفن لها.
+    final burial =
+        o.burialLocation.isNotEmpty ? o.burialLocation : o.mosque;
+    return [
+      for (final e in <_PlaceData>[
+        _PlaceData('مكان صلاة الجنازة', o.funeralLocation, o.funeralTime),
+        // السجل القديم لا يملك مكان دفن، فيه «المسجد» هو المدخول وحده.
+        _PlaceData(
+            o.burialLocation.isNotEmpty ? 'مكان الدفن' : 'المسجد', burial, ''),
+        _PlaceData('مكان العزاء', o.condolenceLocation, o.condolenceTime),
+      ])
+        if (e.value.isNotEmpty || e.time.isNotEmpty) e,
+    ];
+  }
 
   Widget _places(Obituary o) {
+    final entries = _placeEntries(o);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const _SectionTitle('الصلوات والأماكن'),
+        const _SectionTitle('مكان الصلاة والدفن والعزاء'),
         const SizedBox(height: 10),
-        if (o.funeralLocation.isNotEmpty)
-          _PlaceLine(label: 'مكان صلاة الجنازة', value: o.funeralLocation),
-        if (o.burialLocation.isNotEmpty)
-          _PlaceLine(label: 'مكان الدفن', value: o.burialLocation),
-        // السجلات القديمة كانت تسأل عن المسجد وحده، فلا مكان دفن لها
-        if (o.burialLocation.isEmpty && o.mosque.isNotEmpty)
-          _PlaceLine(label: 'المسجد', value: o.mosque),
-        if (o.condolenceLocation.isNotEmpty)
-          _PlaceLine(label: 'مكان العزاء', value: o.condolenceLocation),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (var i = 0; i < entries.length; i++) ...[
+              if (i > 0)
+                Container(
+                    width: 1,
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    color: gold.withValues(alpha: 0.3)),
+              Expanded(child: _PlaceColumn(data: entries[i])),
+            ],
+          ],
+        ),
       ],
     );
   }
@@ -594,33 +614,55 @@ class _GoldRule extends StatelessWidget {
       );
 }
 
-class _PlaceLine extends StatelessWidget {
-  const _PlaceLine({required this.label, required this.value});
+/// بيان واحد في سطر الأماكن: عنوانه، موقعه، وموعده — وقد يغيب الموعد.
+class _PlaceData {
+  const _PlaceData(this.label, this.value, this.time);
 
   final String label;
   final String value;
+  final String time;
+}
+
+/// عمود بيان واحد: العنوان، وتحته الموقع، وتحته الموعد — داخل سطر الأماكن
+/// الثلاثة في بطاقة المشاركة.
+class _PlaceColumn extends StatelessWidget {
+  const _PlaceColumn({required this.data});
+
+  final _PlaceData data;
 
   @override
   Widget build(BuildContext context) {
+    final value = data.value.isEmpty ? '—' : data.value;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 6),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(label,
+          Text(data.label,
               textAlign: TextAlign.center,
               style: const TextStyle(
                   color: ObituaryShareCard.soft,
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w700)),
-          const SizedBox(height: 2),
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  height: 1.35)),
+          const SizedBox(height: 4),
           Text(value,
               textAlign: TextAlign.center,
               style: const TextStyle(
                   color: ObituaryShareCard.ivory,
-                  fontSize: 13.5,
+                  fontSize: 12,
                   fontWeight: FontWeight.w800,
                   height: 1.45)),
+          if (data.time.isNotEmpty) ...[
+            const SizedBox(height: 3),
+            Text(data.time,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    color: ObituaryShareCard.gold,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    height: 1.4)),
+          ],
         ],
       ),
     );

@@ -40,6 +40,11 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
 
   DateTime? _selectedDeathDate;
   DateTime? _selectedFuneralDate;
+
+  /// مواعيد تُختار بالساعة والدقيقة وتُخزَّن نصًا مقروءًا، فلا هجرة ولا طابع
+  /// زمني يفسد السجلات القديمة.
+  TimeOfDay? _funeralTime;
+  TimeOfDay? _condolenceTime;
   String? _imageUrl;
   String? _photoError;
   bool _isUploading = false;
@@ -110,6 +115,24 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
     if (picked != null && mounted) {
       setState(() => _selectedFuneralDate = picked);
     }
+  }
+
+  Future<void> _pickFuneralTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _funeralTime ?? const TimeOfDay(hour: 10, minute: 0),
+      helpText: 'موعد صلاة الجنازة',
+    );
+    if (picked != null && mounted) setState(() => _funeralTime = picked);
+  }
+
+  Future<void> _pickCondolenceTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _condolenceTime ?? const TimeOfDay(hour: 17, minute: 0),
+      helpText: 'موعد العزاء',
+    );
+    if (picked != null && mounted) setState(() => _condolenceTime = picked);
   }
 
   Future<void> _pickAndUploadImage() async {
@@ -260,8 +283,13 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
             ? DateFormat('yyyy/MM/dd').format(_selectedFuneralDate!)
             : '',
         funeralLocation: _funeralLocationController.text.trim(),
+        funeralTime:
+            _funeralTime != null ? obituaryTimeLabel(_funeralTime!) : '',
         burialLocation: _burialLocationController.text.trim(),
         condolenceLocation: _condolenceLocationController.text.trim(),
+        condolenceTime: _condolenceTime != null
+            ? obituaryTimeLabel(_condolenceTime!)
+            : '',
         cardBackground: _cardBackground,
         imageUrl: _imageUrl,
         description: _descriptionController.text.trim(),
@@ -297,8 +325,13 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
           ? DateFormat('yyyy/MM/dd').format(_selectedFuneralDate!)
           : '',
       funeralLocation: _funeralLocationController.text.trim(),
+      funeralTime:
+          _funeralTime != null ? obituaryTimeLabel(_funeralTime!) : '',
       burialLocation: _burialLocationController.text.trim(),
       condolenceLocation: _condolenceLocationController.text.trim(),
+      condolenceTime: _condolenceTime != null
+          ? obituaryTimeLabel(_condolenceTime!)
+          : '',
       cardBackground: _cardBackground,
       imageUrl: _imageUrl,
       description: _descriptionController.text.trim(),
@@ -558,6 +591,14 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
           hint: 'مثال: مسجد القرية الكبير',
           icon: Icons.mosque_rounded,
         ),
+        const SizedBox(height: 12),
+        _buildTimeField(
+          theme: theme,
+          keyName: 'funeral-time-field',
+          label: 'موعد صلاة الجنازة',
+          value: _funeralTime,
+          onTap: _pickFuneralTime,
+        ),
         const SizedBox(height: 16),
         _buildTextField(
           controller: _burialLocationController,
@@ -572,7 +613,47 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
           hint: 'مثال: منزل العائلة، شارع الملك فهد',
           icon: Icons.home_rounded,
         ),
+        const SizedBox(height: 12),
+        _buildTimeField(
+          theme: theme,
+          keyName: 'condolence-time-field',
+          label: 'موعد العزاء',
+          value: _condolenceTime,
+          onTap: _pickCondolenceTime,
+        ),
       ],
+    );
+  }
+
+  /// حقل وقت لا كتابة فيه: الضغط يفتح `showTimePicker` والقيمة تُخزَّن نصًا.
+  Widget _buildTimeField({
+    required ThemeData theme,
+    required String keyName,
+    required String label,
+    required TimeOfDay? value,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      key: Key(keyName),
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon:
+              Icon(Icons.schedule_rounded, color: theme.colorScheme.primary),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        ),
+        child: Text(
+          value == null ? 'اختر الوقت' : obituaryTimeLabel(value),
+          style: theme.textTheme.bodyLarge?.copyWith(
+            color: value == null
+                ? theme.colorScheme.onSurfaceVariant
+                : theme.colorScheme.onSurface,
+          ),
+        ),
+      ),
     );
   }
 
@@ -807,6 +888,16 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
       ),
     );
   }
+}
+
+/// توقيت عربي مستقل عن إعدادات اللغة: «10 ص»، «10:30 ص»، «12 ص» لمنتصف الليل.
+String obituaryTimeLabel(TimeOfDay t) {
+  final suffix = t.hour < 12 ? 'ص' : 'م';
+  var h12 = t.hour % 12;
+  if (h12 == 0) h12 = 12;
+  return t.minute == 0
+      ? '$h12 $suffix'
+      : '$h12:${t.minute.toString().padLeft(2, '0')} $suffix';
 }
 
 class _ObituaryGenderOption extends StatelessWidget {

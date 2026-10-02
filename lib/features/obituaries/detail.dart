@@ -13,6 +13,7 @@ import '../../services/obituary_service.dart';
 import '../../services/share_service.dart';
 import '../../services/user_service.dart';
 import '../../widgets/app_card.dart';
+import '../../widgets/full_fit_image.dart';
 import '../../widgets/qurity_app_bar.dart';
 
 class ObituaryDetailScreen extends StatefulWidget {
@@ -203,23 +204,30 @@ class _ObituaryDetailContent extends StatelessWidget {
           ],
         ),
         if (obituary.funeralLocation.isNotEmpty ||
+            obituary.funeralTime.isNotEmpty ||
             obituary.burialLocation.isNotEmpty ||
             obituary.mosque.isNotEmpty ||
-            obituary.condolenceLocation.isNotEmpty) ...[
+            obituary.condolenceLocation.isNotEmpty ||
+            obituary.condolenceTime.isNotEmpty) ...[
           const SizedBox(height: 20),
           AppCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('أماكن الدفن والعزاء',
+                Text('مكان الصلاة والدفن والعزاء',
                     style: theme.textTheme.titleSmall
                         ?.copyWith(fontWeight: FontWeight.w800)),
                 const SizedBox(height: 12),
                 if (obituary.funeralLocation.isNotEmpty)
                   _InfoRow(
                       icon: Icons.mosque_rounded,
-                      label: 'صلاة الجنازة',
+                      label: 'مكان صلاة الجنازة',
                       value: obituary.funeralLocation),
+                if (obituary.funeralTime.isNotEmpty)
+                  _InfoRow(
+                      icon: Icons.schedule_rounded,
+                      label: 'موعد صلاة الجنازة',
+                      value: obituary.funeralTime),
                 if (obituary.burialLocation.isNotEmpty)
                   _InfoRow(
                       icon: Icons.terrain_rounded,
@@ -237,6 +245,11 @@ class _ObituaryDetailContent extends StatelessWidget {
                       icon: Icons.home_rounded,
                       label: 'مكان العزاء',
                       value: obituary.condolenceLocation),
+                if (obituary.condolenceTime.isNotEmpty)
+                  _InfoRow(
+                      icon: Icons.schedule_rounded,
+                      label: 'موعد العزاء',
+                      value: obituary.condolenceTime),
               ],
             ),
           ),
@@ -379,40 +392,33 @@ class _HeroImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final url = imageUrl;
+    final url = (imageUrl ?? '').trim();
 
     // بلا صورة — أو عند فشل تحميل رابطها — تظهر صورة العزاء الافتراضية azaa 0
-    final fallback = ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: Image.asset(
-        kObituaryDeceasedFallbackAsset,
-        fit: BoxFit.cover,
-        width: double.infinity,
-        height: double.infinity,
-        cacheWidth: 1170,
-        errorBuilder: (context, _, __) => ColoredBox(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-          child: Icon(Icons.person_rounded,
-              size: 72, color: Theme.of(context).colorScheme.onSurfaceVariant),
-        ),
+    final fallback = Image.asset(
+      kObituaryDeceasedFallbackAsset,
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: double.infinity,
+      cacheWidth: 1170,
+      errorBuilder: (context, _, __) => ColoredBox(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        child: Icon(Icons.person_rounded,
+            size: 72, color: Theme.of(context).colorScheme.onSurfaceVariant),
       ),
     );
 
-    return AspectRatio(
-      aspectRatio: 16 / 10,
-      child: url == null || url.isEmpty
-          ? fallback
-          : ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: CachedNetworkImage(
-                imageUrl: url,
-                fit: BoxFit.cover,
-                width: double.infinity,
-                memCacheWidth: 1170,
-                placeholder: (context, _) => fallback,
-                errorWidget: (context, _, __) => fallback,
-              ),
-            ),
+    // الصورة كاملة في مساحتها: الارتفاع يُقاس من نسبة الصورة الحقيقية
+    // (FullFitImage) فلا تُقتطع أطراف وجه المتوفى ولا ذيل المشهد.
+    return LayoutBuilder(
+      builder: (context, constraints) => FullFitImage(
+        imageUrl: url,
+        width: constraints.maxWidth,
+        radius: 20,
+        minRatio: 0.6,
+        maxRatio: 1.6,
+        fallback: fallback,
+      ),
     );
   }
 }

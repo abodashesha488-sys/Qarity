@@ -48,10 +48,10 @@ class MedicalHomeScreen extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
         itemCount: _sections.length,
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            mainAxisSpacing: 14,
-            crossAxisSpacing: 14,
-            childAspectRatio: 0.95),
+            crossAxisCount: 2,
+            mainAxisSpacing: 16,
+            crossAxisSpacing: 16,
+            childAspectRatio: 0.9),
         itemBuilder: (context, index) => _MedicalSectionTile(
           index: index,
           label: _sections[index].$1,
@@ -71,15 +71,15 @@ class _MedicalSectionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final radius = BorderRadius.circular(18);
+    final radius = BorderRadius.circular(22);
     return Container(
       decoration: BoxDecoration(
         borderRadius: radius,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.26),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            blurRadius: 12,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
@@ -95,7 +95,8 @@ class _MedicalSectionTile extends StatelessWidget {
             width: double.infinity,
             height: double.infinity,
             fit: BoxFit.cover,
-            cacheWidth: 280,
+            // بلاطتان في السطر: العرض الفعلي ~172dp ⇒ ~520px عند DPR 3
+            cacheWidth: 520,
             semanticLabel: label,
             errorBuilder: (context, error, stackTrace) => Center(
               child: Text(label, textAlign: TextAlign.center),

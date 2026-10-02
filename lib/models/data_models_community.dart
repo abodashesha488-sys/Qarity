@@ -19,6 +19,10 @@ enum RelativeType {
       'أسماء أبناء عمومته', 'أسماء بنات عمومتها'),
   maternalCousins('ابن خال كلاً من', 'ابنة خال كلاً من', Icons.people_alt_rounded,
       'أسماء أبناء خالته', 'أسماء بنات خالتها'),
+  paternalAuntCousins('ابن عمة كلاً من', 'ابنة عمة كلاً من',
+      Icons.people_alt_rounded, 'أسماء أبناء عمّته', 'أسماء بنات عمّتها'),
+  maternalAuntCousins('ابن خالة كلاً من', 'ابنة خالة كلاً من',
+      Icons.people_alt_rounded, 'أسماء أبناء خالته', 'أسماء بنات خالتها'),
   inLaws('نسيب كلاً من', 'نسيبة كلاً من', Icons.family_restroom_rounded,
       'أسماء النسايب', 'أسماء النسايب'),
   families('قريب عائلات', 'قريبة عائلات', Icons.location_city_rounded,
@@ -61,8 +65,9 @@ enum RelativeType {
   bool get isEditableGroup => feminineLabel != null;
 }
 
-/// المجموعات العشر التي يعرضها نموذج الإضافة والتفاصيل بالترتيب المطلوب؛
-/// «شقيق كلاً من» تأتي مباشرة بعد «والد كلاً من».
+/// المجموعات الاثنتا عشرة التي يعرضها نموذج الإضافة والتفاصيل بالترتيب المطلوب؛
+/// «شقيق كلاً من» تأتي مباشرة بعد «والد كلاً من»، وأبناء العم والخال والعمّة
+/// والخالة متجاورون.
 const List<RelativeType> kObituaryRelativeGroups = [
   RelativeType.children,
   RelativeType.siblings,
@@ -71,6 +76,8 @@ const List<RelativeType> kObituaryRelativeGroups = [
   RelativeType.maternalUncles,
   RelativeType.paternalCousins,
   RelativeType.maternalCousins,
+  RelativeType.paternalAuntCousins,
+  RelativeType.maternalAuntCousins,
   RelativeType.inLaws,
   RelativeType.families,
   RelativeType.friends,
@@ -162,8 +169,15 @@ class Obituary implements BaseModel {
   final String dateOfDeath;
   final String funeralDate;
   final String funeralLocation;
+
+  /// موعد صلاة الجنازة نصًا مقروءًا («10:30 ص») لا طابع زمني، فالنموذج يسأل
+  /// وقتًا فقط والسجل القديم بلا الحقل يبقى صحيح العرض.
+  final String funeralTime;
   final String burialLocation;
   final String condolenceLocation;
+
+  /// موعد العزاء نصًا مقروءًا، يُعرض تحت مكان العزاء في البطاقة والتفاصيل.
+  final String condolenceTime;
   final String mosque;
   final String cardBackground;
   final String? imageUrl;
@@ -184,8 +198,10 @@ class Obituary implements BaseModel {
     this.gender = '',
     this.funeralDate = '',
     this.funeralLocation = '',
+    this.funeralTime = '',
     this.burialLocation = '',
     this.condolenceLocation = '',
+    this.condolenceTime = '',
     this.mosque = '',
     this.cardBackground = '',
     this.imageUrl,
@@ -209,8 +225,10 @@ class Obituary implements BaseModel {
       funeralDate: json['funeralDate'] as String? ?? '',
       funeralLocation:
           json['funeralLocation'] as String? ?? json['place'] as String? ?? '',
+      funeralTime: json['funeralTime'] as String? ?? '',
       burialLocation: json['burialLocation'] as String? ?? '',
       condolenceLocation: json['condolenceLocation'] as String? ?? '',
+      condolenceTime: json['condolenceTime'] as String? ?? '',
       mosque: json['mosque'] as String? ?? '',
       cardBackground: json['cardBackground'] as String? ?? '',
       imageUrl: json['imageUrl'] as String?,
@@ -238,8 +256,10 @@ class Obituary implements BaseModel {
       'dateOfDeath': dateOfDeath,
       'funeralDate': funeralDate,
       'funeralLocation': funeralLocation,
+      'funeralTime': funeralTime,
       'burialLocation': burialLocation,
       'condolenceLocation': condolenceLocation,
+      'condolenceTime': condolenceTime,
       'mosque': mosque,
       'cardBackground': cardBackground,
       'imageUrl': imageUrl,

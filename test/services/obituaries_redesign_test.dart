@@ -9,9 +9,9 @@ import 'package:qurity/features/obituaries/add.dart';
 import 'package:qurity/models/data_models.dart';
 import 'package:qurity/widgets/obituary_share_card.dart';
 
-/// إعادة تصميم «سجل العزاء»: النوع يصرف تسميات القرابة ولا يُعرض، الأماكن ثلاثة،
-/// المجموعات عشر تقبل أسماء متعددة، الخلفية من صور azaa أو من صورة المستخدم،
-/// وبلا سؤال عن العمر. السجلات القديمة تظل تُقرأ كما هي.
+/// إعادة تصميم «سجل العزاء»: النوع يصرف تسميات القرابة ولا يُعرض، الأماكن ثلاثة
+/// لكلٍّ موعده، المجموعات اثنتا عشرة تقبل أسماء متعددة، الخلفية من صور azaa أو من
+/// صورة المستخدم، وبلا سؤال عن العمر. السجلات القديمة تظل تُقرأ كما هي.
 void main() {
   Relative relOf(String name, RelativeType type, {int order = 0}) =>
       Relative(id: 'id_$name', name: name, type: type, order: order);
@@ -21,6 +21,8 @@ void main() {
     String age = '',
     String mosque = '',
     String burialLocation = '',
+    String funeralTime = '',
+    String condolenceTime = '',
     List<Relative> relatives = const [],
   }) =>
       Obituary(
@@ -31,8 +33,10 @@ void main() {
         dateOfDeath: '2026-09-28',
         funeralDate: '2026-09-29',
         funeralLocation: 'مسجد القرية الكبير',
+        funeralTime: funeralTime,
         burialLocation: burialLocation,
         condolenceLocation: 'منزل العائلة',
+        condolenceTime: condolenceTime,
         mosque: mosque,
         cardBackground: 'azaa2',
         relatives: relatives,
@@ -61,8 +65,8 @@ void main() {
       );
 
   group('تسميات القرابة المصروفة حسب النوع', () {
-    test('العشر مجموعات لها مذكر ومؤنث مختلفان لكل عنوان', () {
-      expect(kObituaryRelativeGroups, hasLength(10));
+    test('الاثنتا عشرة مجموعة لها مذكر ومؤنث مختلفان لكل عنوان', () {
+      expect(kObituaryRelativeGroups, hasLength(12));
       for (final group in kObituaryRelativeGroups) {
         expect(group.isEditableGroup, isTrue, reason: group.name);
         expect(group.labelFor(kObituaryGenderMale), group.label);
@@ -83,11 +87,13 @@ void main() {
         RelativeType.maternalUncles: ('خال كلاً من', 'خالة كلاً من'),
         RelativeType.paternalCousins: ('ابن عم كلاً من', 'ابنة عم كلاً من'),
         RelativeType.maternalCousins: ('ابن خال كلاً من', 'ابنة خال كلاً من'),
+        RelativeType.paternalAuntCousins: ('ابن عمة كلاً من', 'ابنة عمة كلاً من'),
+        RelativeType.maternalAuntCousins: ('ابن خالة كلاً من', 'ابنة خالة كلاً من'),
         RelativeType.inLaws: ('نسيب كلاً من', 'نسيبة كلاً من'),
         RelativeType.families: ('قريب عائلات', 'قريبة عائلات'),
         RelativeType.friends: ('صديق كلاً من', 'صديقة كلاً من'),
       };
-      expect(expected.keys, hasLength(10));
+      expect(expected.keys, hasLength(12));
       expected.forEach((group, pair) {
         expect(group.label, pair.$1);
         expect(group.feminineLabel, pair.$2);
@@ -95,6 +101,14 @@ void main() {
       // «شقيق كلاً من» يأتي مباشرة بعد «والد كلاً من» في النموذج والبطاقة.
       expect(kObituaryRelativeGroups.take(2).toList(),
           [RelativeType.children, RelativeType.siblings]);
+      // وأبناء العمّة والخالة يجاورون أبناء العمّ والخال بنفس الترتيب.
+      expect(kObituaryRelativeGroups,
+          containsAllInOrder([
+            RelativeType.paternalCousins,
+            RelativeType.maternalCousins,
+            RelativeType.paternalAuntCousins,
+            RelativeType.maternalAuntCousins,
+          ]));
     });
 
     test('التسميات التراثية تُقرأ ولا تُعرض للإدخال', () {
@@ -104,6 +118,8 @@ void main() {
         RelativeType.values.length,
       );
       expect(RelativeType.son.labelFor(kObituaryGenderFemale), 'أبناء');
+      // اثنتا عشرة editable + عشر تراثية = 22 قيمة، فلا نوع يُنسى.
+      expect(RelativeType.values.length, 22);
     });
 
     test('relativeSections: الترتيب والتصرف وترتيب الأسماء كما أُدخلت', () {
@@ -136,6 +152,25 @@ void main() {
       expect(json['gender'], 'امرأة');
       expect(json['burialLocation'], '');
       expect(json['cardBackground'], 'azaa2');
+    });
+
+    test('المواعيد نصوص مقروءة تُكتب دائمًا وتُقرأ بصفح عن الغائب', () {
+      final withTimes = obitOf(funeralTime: '10:30 ص', condolenceTime: '8 م');
+      final json = withTimes.toJson();
+      expect(json['funeralTime'], '10:30 ص');
+      expect(json['condolenceTime'], '8 م');
+
+      // سجل حُفظ قبل المواعيد: لا طابع زمني ولا ترميم، النص فارغ فقط.
+      final legacy = Obituary.fromJson({'name': 'قديم'}, 'legacy0');
+      expect(legacy.funeralTime, '');
+      expect(legacy.condolenceTime, '');
+      expect(legacy.toJson()['funeralTime'], '');
+
+      // صيغة وقت مقروءة، لا ساعة رقمية خام.
+      expect(obituaryTimeLabel(const TimeOfDay(hour: 0, minute: 0)), '12 ص');
+      expect(obituaryTimeLabel(const TimeOfDay(hour: 9, minute: 30)), '9:30 ص');
+      expect(obituaryTimeLabel(const TimeOfDay(hour: 12, minute: 0)), '12 م');
+      expect(obituaryTimeLabel(const TimeOfDay(hour: 17, minute: 5)), '5:05 م');
     });
 
     test('سجل قديم بلا الحقول الثلاثة يُقرأ ويحتفظ بعمره ومسجده', () {
@@ -237,6 +272,57 @@ void main() {
       expect(find.text('امرأة'), findsNothing);
     });
 
+    testWidgets('سطر الأماكن: عنوان جديد وثلاثة أعمدة ومواعيد تحت كل بيان',
+        (tester) async {
+      await tester.pumpWidget(cardOf(obitOf(
+        burialLocation: 'مقابر القرية',
+        funeralTime: '10:30 ص',
+        condolenceTime: '8 م',
+      )));
+      expect(tester.takeException(), isNull);
+      expect(find.text('مكان الصلاة والدفن والعزاء'), findsOne);
+      expect(find.text('الصلوات والأماكن'), findsNothing);
+      expect(find.text('10:30 ص'), findsOne);
+      expect(find.text('8 م'), findsOne);
+
+      // الأعمدة الثلاثة في صفٍّ واحد لا في أسطر: كل عنوان داخل Expanded،
+      // والثلاثة أطفال في Row واحدة.
+      Expanded columnOf(String label) => tester.widget<Expanded>(find.ancestor(
+          of: find.text(label), matching: find.byType(Expanded)));
+      final places = [
+        columnOf('مكان صلاة الجنازة'),
+        columnOf('مكان الدفن'),
+        columnOf('مكان العزاء'),
+      ];
+      final rows = tester.widgetList<Row>(find.byType(Row)).toList();
+      expect(
+          rows.any((r) =>
+              r.children.where((c) => places.contains(c as Object?)).length ==
+              3),
+          isTrue,
+          reason: 'ليست الأعمدة الثلاثة في سطر واحد');
+    });
+
+    testWidgets('الموعد وحده يكفي لإظهار عمود، وغياب الاثنين يُخفيه',
+        (tester) async {
+      await tester.pumpWidget(cardOf(const Obituary(
+        id: 'o2',
+        name: 'فلان',
+        age: '',
+        dateOfDeath: '2026-09-28',
+        funeralLocation: 'مسجد القرية الكبير',
+        funeralTime: '10:30 ص',
+        condolenceTime: 'بعد المغرب',
+      )));
+      expect(tester.takeException(), isNull);
+      // لا مكان دفن ولا مسجد: لا عمود له.
+      expect(find.text('مكان الدفن'), findsNothing);
+      // مكان العزاء غائب لكن موعده موجود: يبقى العمود ب«—» تحت عنوانه.
+      expect(find.text('مكان العزاء'), findsOne);
+      expect(find.text('بعد المغرب'), findsOne);
+      expect(find.text('—'), findsOne);
+    });
+
     testWidgets('أسماء كثيرة وعناوين طويلة تلتف بلا فيضان', (tester) async {
       final relatives = <Relative>[];
       for (final group in kObituaryRelativeGroups) {
@@ -319,7 +405,34 @@ void main() {
       expect(find.textContaining('اختر نوع المتوفى أولًا'), findsOne);
     });
 
-    testWidgets('اختيار امرأة يصرف عناوين المجموعات العشر فورًا',
+    testWidgets('موعد صلاة الجنازة بعد مكانها، وموعد العزاء بعد مكانه',
+        (tester) async {
+      await openForm(tester);
+
+      expect(find.byKey(const Key('funeral-time-field')), findsOne);
+      expect(find.byKey(const Key('condolence-time-field')), findsOne);
+      expect(find.text('موعد صلاة الجنازة'), findsOne);
+      expect(find.text('موعد العزاء'), findsOne);
+      // لا وقت محدد بعد: الحقلان ينتظران الاختيار لا النص المكتوب.
+      expect(find.text('اختر الوقت'), findsNWidgets(2));
+
+      // الترتيب المطلوب حرفيًا: الموعد يلي مكانه في نفس الكارت.
+      double y(Finder f) => tester.getTopLeft(f).dy;
+      expect(y(find.byKey(const Key('funeral-time-field'))),
+          greaterThan(y(find.text('صلاة الجنازة'))));
+      expect(y(find.byKey(const Key('funeral-time-field'))),
+          lessThan(y(find.text('مكان الدفن'))));
+      expect(y(find.byKey(const Key('condolence-time-field'))),
+          greaterThan(y(find.text('مكان العزاء'))));
+
+      // اختيار وقت لا كتابة: حقلُا الموعد ليسا TextField.
+      final src = File('lib/features/obituaries/add.dart').readAsStringSync();
+      expect(src, contains('await showTimePicker('));
+      expect(src, contains("helpText: 'موعد صلاة الجنازة'"));
+      expect(src, contains("helpText: 'موعد العزاء'"));
+    });
+
+    testWidgets('اختيار امرأة يصرف عناوين المجموعات الاثنتي عشرة فورًا',
         (tester) async {
       await openForm(tester);
 
@@ -480,13 +593,38 @@ void main() {
       }
     });
 
-    test('الأماكن الثلاثة في التفاصيل، ولا «مكان الصلاة» القديمة', () {
+    test('سطر الأماكن في البطاقة والتفاصيل، ولا «مكان الصلاة» القديمة', () {
       expect(detail, contains('صلاة الجنازة'));
       expect(detail, contains('مكان الدفن'));
       expect(detail, contains('مكان العزاء'));
-      expect(detail, isNot(contains('مكان الصلاة')));
-      expect(card, contains("label: 'مكان صلاة الجنازة'"));
-      expect(card, contains("label: 'مكان الدفن'"));
+      // العنوان الجديد في الموضعين، والتسمية القديمة («مكان الصلاة» كثافرة
+      // مفردة) لا تعود: الحارس هو صيغة التسمية كاملة لا substrings.
+      expect(detail, isNot(contains("label: 'مكان الصلاة'")));
+      expect(card, isNot(contains(" 'الصلوات والأماكن'")));
+      expect(card, contains("const _SectionTitle('مكان الصلاة والدفن والعزاء')"));
+      expect(detail, contains("Text('مكان الصلاة والدفن والعزاء'"));
+      expect(card, contains("_PlaceData('مكان صلاة الجنازة', o.funeralLocation, o.funeralTime)"));
+      expect(card, contains("_PlaceData('مكان العزاء', o.condolenceLocation, o.condolenceTime)"));
+      // المواعيد لا تُطبع في سطر مستقل: لكل بيان عموده، وتحته مواعيده.
+      expect(card, contains('Expanded(child: _PlaceColumn(data: entries[i]))'));
+      expect(card, isNot(contains('_PlaceLine')));
+      // والسجل القديم: موضع دفنه هو المسجد المحفوظ، بلا عمود مفبرك.
+      expect(card, contains("o.burialLocation.isNotEmpty ? 'مكان الدفن' : 'المسجد'"));
+    });
+
+    test('صورة المتوفى في التفاصيل تُعرض كاملة، لا مقتصوصة', () {
+      // نفس درس «صورة المدرّس كاملة»: FullFitImage يقيس النسبة ويرسم contain.
+      expect(detail, contains("import '../../widgets/full_fit_image.dart'"));
+      final heroStart = detail.indexOf('class _HeroImage');
+      final heroEnd = detail.indexOf('class ', heroStart + 6);
+      final hero = detail.substring(heroStart, heroEnd < 0 ? detail.length : heroEnd);
+      expect(hero, contains('FullFitImage('));
+      expect(hero, contains('width: constraints.maxWidth'));
+      // لا إطار بارتفاع ثابت حول الصورة: الارتفاع من نسبتها المقاسة.
+      expect(hero, isNot(contains('SizedBox(height:')));
+      // و«cover» بقيت لصورة الرجوع azaa 0 المربعة وحدها، أي قبل البلاطة.
+      expect(hero.indexOf('BoxFit.cover'), lessThan(hero.indexOf('FullFitImage(')),
+          reason: 'اقتصاص cover لا يكون إلا في البدائل، لا في صورة المتوفى');
     });
 
     test('azaa 0 هي الرجوع في المواضع الثلاثة', () {
@@ -585,10 +723,17 @@ void main() {
           File('lib/features/admin/admin_detail.dart').readAsStringSync();
       expect(edit, contains("_FieldSpec('gender', 'نوع المتوفى (رجل أو امرأة)')"));
       expect(edit, contains("_FieldSpec('burialLocation', 'مكان الدفن')"));
+      expect(edit, contains("_FieldSpec('funeralTime', 'موعد صلاة الجنازة"));
+      expect(edit, contains("_FieldSpec('condolenceTime', 'موعد العزاء"));
+      // أيقونة الساعة لهما، لا أيقونة التقويم التي لل تاريخين.
+      expect(edit, contains("case 'funeralTime':"));
+      expect(edit, contains("case 'condolenceTime':"));
       expect(edit, contains('خلفية البطاقة (azaa1 / azaa2 / azaa3 / azaa4'));
       expect(edit, contains('أو رابط صورة'));
       expect(adminDetail, contains("widget.collection == 'obituaries'"));
       expect(adminDetail, contains("'cardBackground': 'خلفية بطاقة المشاركة'"));
+      expect(adminDetail, contains("'funeralTime': 'موعد صلاة الجنازة'"));
+      expect(adminDetail, contains("'condolenceTime': 'موعد العزاء'"));
       expect(adminDetail, contains('group.first.labelFor(gender)'));
       // قيمة الخلفية قد تكون رابطًا من صور المستخدم، فلا تُسمّى مفتاحًا مجهولًا
       expect(adminDetail, contains("'خلفية مضافة (\$raw)'"));

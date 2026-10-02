@@ -242,6 +242,21 @@ void main() {
           reason: 'المواعيد والأيام والأجر صارت وسومًا تلتفّ بدل أن تفيض');
       expect(src.contains('Wrap('), isTrue);
     });
+
+    test('بوابة الأقسام: بلاطتان في السطر بصور أكبر، والمحتوى كما هو', () {
+      final src = File('lib/features/medical/medical_home_screen.dart')
+          .readAsStringSync();
+      // تنسيق عرض فقط: عمودان بدل ثلاثة، والصورة تُفكّ بمقاسها الفعلي.
+      expect(src.contains('crossAxisCount: 2'), isTrue);
+      expect(src.contains('crossAxisCount: 3'), isFalse,
+          reason: 'لاعودة لشبكة الثلاثة أعمدة');
+      expect(src.contains('cacheWidth: 520'), isTrue,
+          reason: 'بلاطة بعرض ~172dp تحتاج ~520px عند DPR 3 لا 280');
+      // والأقسام الستة بمساراتها وصورها لم تمسّ.
+      expect(RegExp(r"\('([^']+)', 'assets/images/[^']+'\)", multiLine: true)
+          .allMatches(src)
+          .length, 6);
+    });
   });
 
   group('عقد صلاحيات مدير المركز الطبي', () {

@@ -70,6 +70,31 @@ void main() {
       expect(routes, contains('category: ServiceCategory.educational'));
     });
 
+    test('بوابة المزارع: بلاطتان في السطر بصور أكبر، والست كما هي', () {
+      final farmer = src('lib/features/services/farmer_services_screen.dart');
+      expect(farmer, contains('crossAxisCount: 2'));
+      expect(farmer, isNot(contains('crossAxisCount: 3')),
+          reason: 'لاعودة لشبكة الثلاثة أعمدة');
+      expect(farmer, contains('cacheWidth: 520'));
+      // الخدمات الست ومساراتها لم تتغيّر — التنسيق وحده.
+      final start = farmer.indexOf('static const _services = [');
+      expect(start, greaterThan(-1), reason: 'البوابة تبنى من قائمة واحدة ثابتة');
+      final block = farmer.substring(start, farmer.indexOf('];', start));
+      final tiles =
+          RegExp(r"title: '([^']+)'").allMatches(block).map((m) => m.group(1)!).toList();
+      expect(tiles, hasLength(6));
+      expect(
+          tiles,
+          containsAll([
+            'عمال ومعدات',
+            'خدمات زراعية',
+            'مستشارك الزراعي',
+            'المحاصيل',
+            'الأسمدة والمبيدات',
+            'أحوال الطقس'
+          ]));
+    });
+
     test('ترتيب بلاطات الشبكة الرئيسية وأسمائها حرفيًا', () {
       final home = src('lib/features/home/home.dart');
       final start = home.indexOf('static const _services = [');
