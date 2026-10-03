@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/lost_item_model.dart';
 import 'notification_inbox_service.dart';
 import 'notification_service.dart';
+import 'owner_content_service.dart';
 import 'remote_push_service.dart';
 
 /// خدمة المفقودات — نشر الأشياء المفقودة/الموجودة في القرية (موافقة مطلوبة).
@@ -72,4 +73,18 @@ class LostItemService {
 
   Future<void> setResolved(String id, bool value) =>
       _col.doc(id).update({'isResolved': value});
+
+  /// تعديل صاحب الإعلان لإعلانه في أي وقت: يعود إلى المراجعة، و«تم التسليم»
+  /// تبقى كما هي (تبديلها حالة لا مضمون)، ولا يلمس نسبه (`userId`/`userName`).
+  Future<void> update(LostItem item) => OwnerContentService.edit(
+        _firestore,
+        'lost_items',
+        item.id,
+        item.toJson(),
+        label: item.title,
+      );
+
+  /// حذف فوري لصاحب الإعلان (صورته على ImgBB ثم الوثيقة).
+  Future<void> delete(String itemId) =>
+      OwnerContentService.remove(_firestore, 'lost_items', itemId);
 }

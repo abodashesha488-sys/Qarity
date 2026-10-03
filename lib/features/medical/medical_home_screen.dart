@@ -2,7 +2,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/medical_models.dart';
@@ -12,6 +11,8 @@ import '../../services/medical_service.dart';
 import '../../services/share_service.dart';
 import '../../services/user_service.dart';
 import '../../widgets/clinic_photo_tile.dart';
+import '../../widgets/document_field_editor.dart';
+import '../../widgets/owner_actions.dart';
 import '../../widgets/qurity_app_bar.dart';
 import 'medical_admin_screen.dart';
 import 'optical_shop_detail_screen.dart';
@@ -241,7 +242,7 @@ class _MedicalSectionScreenState extends State<MedicalSectionScreen> {
     final res = await showModalBottomSheet<VillageClinic>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => _VillageClinicForm(userName: _userName(), userId: uid),
+      builder: (_) => VillageClinicFormSheet(userName: _userName(), userId: uid),
     );
     if (res == null || !mounted) return;
     try {
@@ -261,7 +262,7 @@ class _MedicalSectionScreenState extends State<MedicalSectionScreen> {
     final res = await showModalBottomSheet<Pharmacy>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => _PharmacyForm(userName: _userName(), userId: uid),
+      builder: (_) => PharmacyFormSheet(userName: _userName(), userId: uid),
     );
     if (res == null || !mounted) return;
     try {
@@ -281,7 +282,7 @@ class _MedicalSectionScreenState extends State<MedicalSectionScreen> {
     final res = await showModalBottomSheet<MedicalLab>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => _LabForm(userName: _userName(), userId: uid),
+      builder: (_) => LabFormSheet(userName: _userName(), userId: uid),
     );
     if (res == null || !mounted) return;
     try {
@@ -301,7 +302,7 @@ class _MedicalSectionScreenState extends State<MedicalSectionScreen> {
     final res = await showModalBottomSheet<OpticalShop>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => _OpticalForm(userName: _userName(), userId: uid),
+      builder: (_) => OpticalFormSheet(userName: _userName(), userId: uid),
     );
     if (res == null || !mounted) return;
     try {
@@ -581,9 +582,17 @@ class _BloodBankTabState extends State<_BloodBankTab> {
       _service.getApprovedDonorsStream();
   String? _filterType;
 
+  String get _currentUid {
+    try {
+      return FirebaseAuth.instance.currentUser?.uid ?? '';
+    } catch (_) {
+      return '';
+    }
+  }
+
   Future<void> _showDonorDialog() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) {
+    final uid = _currentUid;
+    if (uid.isEmpty) {
       widget.snackbar('سجّل الدخول أولاً');
       return;
     }
@@ -591,7 +600,7 @@ class _BloodBankTabState extends State<_BloodBankTab> {
     final res = await showModalBottomSheet<BloodDonor>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => _DonorForm(userId: uid, userName: name),
+      builder: (_) => DonorFormSheet(userId: uid, userName: name),
     );
     if (res == null || !mounted) return;
     try {
@@ -602,9 +611,36 @@ class _BloodBankTabState extends State<_BloodBankTab> {
     }
   }
 
+  /// تعديل صاحب المتبرع لبياناته: تعود إلى المراجعة (البند ٨).
+  Future<void> _openDonorEdit(BloodDonor donor) async {
+    final name = widget.userNameProvider();
+    final res = await showModalBottomSheet<BloodDonor>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) =>
+          DonorFormSheet(userId: donor.userId, userName: name, existing: donor),
+    );
+    if (res == null || !mounted) return;
+    try {
+      await _service.updateDonor(res);
+      widget.snackbar('تم حفظ التعديلات — عاد المتبرع للمراجعة');
+    } catch (e) {
+      widget.snackbar('تعذّر حفظ التعديل — تحقّق من الصلاحيات أو من الاتصال ($e)');
+    }
+  }
+
+  Future<bool> _deleteDonor(BloodDonor donor) async {
+    try {
+      await _service.deleteDonor(donor.id);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> _showRequestDialog() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) {
+    final uid = _currentUid;
+    if (uid.isEmpty) {
       widget.snackbar('سجّل الدخول أولاً');
       return;
     }
@@ -612,7 +648,7 @@ class _BloodBankTabState extends State<_BloodBankTab> {
     final res = await showModalBottomSheet<BloodRequest>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => _BloodRequestForm(userId: uid, requesterName: name),
+      builder: (_) => BloodRequestFormSheet(userId: uid, requesterName: name),
     );
     if (res == null || !mounted) return;
     try {
@@ -697,7 +733,12 @@ class _BloodBankTabState extends State<_BloodBankTab> {
                   icon: Icons.bloodtype_rounded,
                   message: 'لا يوجد متبرعون متاحون لهذه الفصيلة بعد')
             else
-              ...donors.map((d) => _DonorCard(donor: d)),
+              ...donors.map((d) => _DonorCard(
+                    donor: d,
+                    currentUserId: _currentUid,
+                    onEdit: () => _openDonorEdit(d),
+                    onDelete: () => _deleteDonor(d),
+                  )),
             const SizedBox(height: 18),
             Text('طلبات الدم المفتوحة',
                 style: theme.textTheme.titleMedium
@@ -717,17 +758,49 @@ class _OpenRequestsList extends StatelessWidget {
   // Stream واحد يُبنى lazily مرة فقط — لا يُعاد الاشتراك مع كل rebuild للأب.
   static final Stream<List<BloodRequest>> _requestsStream =
       BloodBankService().getOpenApprovedRequestsStream();
+  static final BloodBankService _service = BloodBankService();
 
   Future<void> _call(String phone) async {
     final uri = Uri(scheme: 'tel', path: phone);
     if (await canLaunchUrl(uri)) await launchUrl(uri);
   }
 
+  /// تعديل صاحب الطلب لبياناته: يعود إلى المراجعة (البند ٨).
+  Future<void> _openEdit(BuildContext context, BloodRequest r) async {
+    final uid = r.userId;
+    final res = await showModalBottomSheet<BloodRequest>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) =>
+          BloodRequestFormSheet(userId: uid, requesterName: r.requesterName, existing: r),
+    );
+    if (res == null || !context.mounted) return;
+    try {
+      await _service.updateRequest(res);
+      onSnackbar('تم حفظ التعديلات — عاد الطلب للمراجعة');
+    } catch (_) {
+      onSnackbar('تعذّر حفظ التعديل — تحقّق من الصلاحيات أو من الاتصال');
+    }
+  }
+
+  Future<bool> _delete(BloodRequest r) async {
+    try {
+      await _service.deleteRequest(r.id);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final service = BloodBankService();
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    String uid = '';
+    try {
+      uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    } catch (_) {
+      uid = '';
+    }
     return StreamBuilder<List<BloodRequest>>(
       stream: _requestsStream,
       builder: (context, snapshot) {
@@ -744,7 +817,7 @@ class _OpenRequestsList extends StatelessWidget {
         }
         return Column(
           children: list.map((r) {
-            final mine = r.userId == uid;
+            final mine = uid.isNotEmpty && r.userId == uid;
             return Card(
               elevation: 0,
               margin: const EdgeInsets.only(bottom: 10),
@@ -840,8 +913,12 @@ class _OpenRequestsList extends StatelessWidget {
                           if (mine)
                             TextButton.icon(
                               onPressed: () async {
-                                await service.closeRequest(r.id);
-                                onSnackbar('تم إغلاق الطلب');
+                                try {
+                                  await _service.closeRequest(r.id);
+                                  onSnackbar('تم إغلاق الطلب');
+                                } catch (_) {
+                                  onSnackbar('تعذّر إغلاق الطلب — تحقّق من الصلاحيات أو من الاتصال');
+                                }
                               },
                               icon: const Icon(Icons.check_circle_outline_rounded,
                                   size: 16),
@@ -850,6 +927,20 @@ class _OpenRequestsList extends StatelessWidget {
                         ],
                       ),
                     ),
+                    if (mine) ...[
+                      const SizedBox(height: 10),
+                      OwnerActions(
+                        keyTag: 'blood-request',
+                        ownerId: r.userId,
+                        currentUserId: uid,
+                        itemName:
+                            'طلب ${r.patientName.isNotEmpty ? r.patientName : 'لمريض'}',
+                        editLabel: 'تعديل الطلب',
+                        deleteLabel: 'حذف الطلب',
+                        onEdit: () => _openEdit(context, r),
+                        onDelete: () => _delete(r),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -871,11 +962,21 @@ class _OpenRequestsList extends StatelessWidget {
 }
 
 class _DonorCard extends StatelessWidget {
-  const _DonorCard({required this.donor});
+  const _DonorCard({
+    required this.donor,
+    required this.currentUserId,
+    required this.onEdit,
+    required this.onDelete,
+  });
   final BloodDonor donor;
+  final String currentUserId;
+  final VoidCallback onEdit;
+  final Future<bool> Function() onDelete;
 
   @override
   Widget build(BuildContext context) {
+    final owner = donor.userId;
+    final isOwner = currentUserId.isNotEmpty && currentUserId == owner;
     return Card(
       elevation: 0,
       margin: const EdgeInsets.only(bottom: 10),
@@ -885,32 +986,50 @@ class _DonorCard extends StatelessWidget {
             color:
                 Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4)),
       ),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: Colors.red.withValues(alpha: 0.12),
-          child: Text(donor.bloodType.code,
-              style:
-                  const TextStyle(color: Colors.red, fontWeight: FontWeight.w900)),
-        ),
-        title:
-            Text(donor.name, style: const TextStyle(fontWeight: FontWeight.w800)),
-        subtitle: Text(
-            [
-              donor.gender,
-              donor.age > 0 ? '${donor.age} سنة' : '',
-              donor.address,
-            ].where((e) => e.isNotEmpty).join(' • '),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis),
-        trailing: donor.phone.isNotEmpty
-            ? IconButton(
-                icon: const Icon(Icons.call_rounded, color: Color(0xFF00897B)),
-                onPressed: () async {
-                  final uri = Uri(scheme: 'tel', path: donor.phone);
-                  if (await canLaunchUrl(uri)) await launchUrl(uri);
-                },
-              )
-            : null,
+      child: Column(
+        children: [
+          ListTile(
+            leading: CircleAvatar(
+              backgroundColor: Colors.red.withValues(alpha: 0.12),
+              child: Text(donor.bloodType.code,
+                  style:
+                      const TextStyle(color: Colors.red, fontWeight: FontWeight.w900)),
+            ),
+            title: Text(donor.name,
+                style: const TextStyle(fontWeight: FontWeight.w800)),
+            subtitle: Text(
+                [
+                  donor.gender,
+                  donor.age > 0 ? '${donor.age} سنة' : '',
+                  donor.address,
+                ].where((e) => e.isNotEmpty).join(' • '),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis),
+            trailing: donor.phone.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.call_rounded, color: Color(0xFF00897B)),
+                    onPressed: () async {
+                      final uri = Uri(scheme: 'tel', path: donor.phone);
+                      if (await canLaunchUrl(uri)) await launchUrl(uri);
+                    },
+                  )
+                : null,
+          ),
+          if (isOwner)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              child: OwnerActions(
+                keyTag: 'donor-card',
+                ownerId: owner,
+                currentUserId: currentUserId,
+                itemName: donor.name,
+                editLabel: 'تعديل بياناتي',
+                deleteLabel: 'حذف سجلّي',
+                onEdit: onEdit,
+                onDelete: onDelete,
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -1463,35 +1582,60 @@ class _LabCard extends StatelessWidget {
   }
 }
 
-class _LabForm extends StatefulWidget {
-  const _LabForm({required this.userName, required this.userId});
+/// نموذج معمل التحاليل — للإنشاء ولتعديل صاحب المعمل سجله (البند ٨).
+class LabFormSheet extends StatefulWidget {
+  const LabFormSheet(
+      {super.key, required this.userName, required this.userId, this.existing});
   final String userName;
   final String userId;
+
+  /// معمل يملكه المستخدم الحالي — الورقة تحفظ فوقه بدل إنشاء جديد.
+  final MedicalLab? existing;
   @override
-  State<_LabForm> createState() => _LabFormState();
+  State<LabFormSheet> createState() => _LabFormSheetState();
 }
 
-class _LabFormState extends State<_LabForm> {
-  final _nameC = TextEditingController();
-  final _ownerC = TextEditingController();
-  final _phoneC = TextEditingController();
-  final _addressC = TextEditingController();
-  final _hoursC = TextEditingController();
-  final _descC = TextEditingController();
-  String _category = 'غير ذلك';
-  bool _home = false;
-  final List<String> _images = [];
+class _LabFormSheetState extends State<LabFormSheet> {
+  late final _nameC = TextEditingController(text: widget.existing?.name ?? '');
+  late final _ownerC =
+      TextEditingController(text: widget.existing?.ownerName ?? '');
+  late final _phoneC = TextEditingController(text: widget.existing?.phone ?? '');
+  late final _addressC =
+      TextEditingController(text: widget.existing?.address ?? '');
+  late final _hoursC =
+      TextEditingController(text: widget.existing?.workingHours ?? '');
+  late final _descC =
+      TextEditingController(text: widget.existing?.description ?? '');
+  late bool _home = widget.existing?.homeCollection ?? false;
+  late final List<String> _images =
+      List.of(widget.existing?.imageUrls ?? const <String>[]);
+
+  bool get _isEdit => widget.existing != null;
+
+  /// نوع التحاليل المحفوظ قد يكون كُتب يدويًا من لوحة الإدارة، فلو لم يكن في
+  /// القائمة لألقى `DropdownButtonFormField` «There should be exactly one item…».
+  List<String> get _categoryOptions {
+    final saved = widget.existing?.category.trim() ?? '';
+    if (saved.isEmpty || kLabCategories.contains(saved)) return kLabCategories;
+    return [saved, ...kLabCategories];
+  }
+
+  late String _category =
+      _categoryOptions.contains(widget.existing?.category)
+          ? widget.existing!.category
+          : 'غير ذلك';
 
   @override
   Widget build(BuildContext context) {
     return _SheetScaffold(
-      title: 'إضافة معمل تحاليل',
+      title: _isEdit ? 'تعديل المعمل' : 'إضافة معمل تحاليل',
       onSubmitted: () {
         if (_nameC.text.trim().isEmpty) return;
+        final editing = widget.existing;
         Navigator.pop(
           context,
           MedicalLab(
-            id: '',
+            id: editing?.id ?? '',
             name: _nameC.text.trim(),
             category: _category,
             ownerName: _ownerC.text.trim(),
@@ -1501,8 +1645,10 @@ class _LabFormState extends State<_LabForm> {
             homeCollection: _home,
             description: _descC.text.trim(),
             imageUrls: List.from(_images),
-            submittedBy: widget.userId,
-            submittedByName: widget.userName,
+            isApproved: editing?.isApproved ?? false,
+            submittedBy: editing?.submittedBy ?? widget.userId,
+            submittedByName: editing?.submittedByName ?? widget.userName,
+            createdAt: editing?.createdAt,
           ),
         );
       },
@@ -1511,6 +1657,7 @@ class _LabFormState extends State<_LabForm> {
         children: [
           MedicalImageField(
               maxImages: 3,
+              initial: _images,
               onChanged: (l) {
                 _images
                   ..clear()
@@ -1521,7 +1668,7 @@ class _LabFormState extends State<_LabForm> {
           DropdownButtonFormField<String>(
             initialValue: _category,
             decoration: const InputDecoration(labelText: 'نوع التحاليل'),
-            items: kLabCategories
+            items: _categoryOptions
                 .map((s) => DropdownMenuItem(value: s, child: Text(s)))
                 .toList(),
             onChanged: (v) => setState(() => _category = v ?? _category),
@@ -1869,35 +2016,48 @@ class _OpticalCard extends StatelessWidget {
   }
 }
 
-class _OpticalForm extends StatefulWidget {
-  const _OpticalForm({required this.userName, required this.userId});
+/// نموذج محل النظارات — للإنشاء ولتعديل صاحب المحل سجله (البند ٨).
+class OpticalFormSheet extends StatefulWidget {
+  const OpticalFormSheet(
+      {super.key, required this.userName, required this.userId, this.existing});
   final String userName;
   final String userId;
 
+  /// محل يملكه المستخدم الحالي — الورقة تحفظ فوقه بدل إنشاء جديد.
+  final OpticalShop? existing;
+
   @override
-  State<_OpticalForm> createState() => _OpticalFormState();
+  State<OpticalFormSheet> createState() => _OpticalFormSheetState();
 }
 
-class _OpticalFormState extends State<_OpticalForm> {
-  final _nameC = TextEditingController();
-  final _ownerC = TextEditingController();
-  final _phoneC = TextEditingController();
-  final _addressC = TextEditingController();
-  final _hoursC = TextEditingController();
-  final _descC = TextEditingController();
-  final Set<String> _categories = <String>{};
-  final List<String> _images = [];
+class _OpticalFormSheetState extends State<OpticalFormSheet> {
+  late final _nameC = TextEditingController(text: widget.existing?.name ?? '');
+  late final _ownerC =
+      TextEditingController(text: widget.existing?.ownerName ?? '');
+  late final _phoneC = TextEditingController(text: widget.existing?.phone ?? '');
+  late final _addressC =
+      TextEditingController(text: widget.existing?.address ?? '');
+  late final _hoursC =
+      TextEditingController(text: widget.existing?.workingHours ?? '');
+  late final _descC =
+      TextEditingController(text: widget.existing?.description ?? '');
+  late final Set<String> _categories = {...widget.existing?.categories ?? const <String>[]};
+  late final List<String> _images =
+      List.of(widget.existing?.imageUrls ?? const <String>[]);
+
+  bool get _isEdit => widget.existing != null;
 
   @override
   Widget build(BuildContext context) {
     return _SheetScaffold(
-      title: 'إضافة محل نظارات',
+      title: _isEdit ? 'تعديل محل النظارات' : 'إضافة محل نظارات',
       onSubmitted: () {
         if (_nameC.text.trim().isEmpty) return;
+        final editing = widget.existing;
         Navigator.pop(
           context,
           OpticalShop(
-            id: '',
+            id: editing?.id ?? '',
             name: _nameC.text.trim(),
             description: _descC.text.trim(),
             categories: _categories.toList(),
@@ -1906,8 +2066,13 @@ class _OpticalFormState extends State<_OpticalForm> {
             address: _addressC.text.trim(),
             workingHours: _hoursC.text.trim(),
             imageUrls: List.from(_images),
-            submittedBy: widget.userId,
-            submittedByName: widget.userName,
+            // نافذة العرض المميز قرار إداري/تجديد من صفحة المحل، فلا يمسّها الحفظ.
+            adType: editing?.adType ?? kOpticalAdNormal,
+            featuredUntil: editing?.featuredUntil,
+            isApproved: editing?.isApproved ?? false,
+            submittedBy: editing?.submittedBy ?? widget.userId,
+            submittedByName: editing?.submittedByName ?? widget.userName,
+            createdAt: editing?.createdAt,
           ),
         );
       },
@@ -1917,6 +2082,7 @@ class _OpticalFormState extends State<_OpticalForm> {
         children: [
           MedicalImageField(
               maxImages: 3,
+              initial: _images,
               onChanged: (l) {
                 _images
                   ..clear()
@@ -1988,45 +2154,57 @@ class _MedEmpty extends StatelessWidget {
 }
 
 // ═══════════════════════ النماذج (Forms) ═══════════════════════
-class _DonorForm extends StatefulWidget {
-  const _DonorForm({required this.userId, required this.userName});
+/// نموذج تسجيل المتبرع — للإنشاء ولتعديل صاحب التسجيل سجله (البند ٨).
+class DonorFormSheet extends StatefulWidget {
+  const DonorFormSheet(
+      {super.key, required this.userId, required this.userName, this.existing});
   final String userId;
   final String userName;
+
+  /// تسجيل يملكه المستخدم الحالي — الورقة تحفظ فوقه بدل تسجيل جديد.
+  final BloodDonor? existing;
   @override
-  State<_DonorForm> createState() => _DonorFormState();
+  State<DonorFormSheet> createState() => _DonorFormSheetState();
 }
 
-class _DonorFormState extends State<_DonorForm> {
-  late final _nameC = TextEditingController(text: widget.userName);
-  final _phoneC = TextEditingController();
-  final _ageC = TextEditingController();
-  final _addressC = TextEditingController();
-  BloodType _blood = BloodType.oPos;
-  String _gender = 'ذكر';
+class _DonorFormSheetState extends State<DonorFormSheet> {
+  late final _nameC =
+      TextEditingController(text: widget.existing?.name ?? widget.userName);
+  late final _phoneC = TextEditingController(
+      text: widget.existing?.phone ??
+          FirebaseAuth.instance.currentUser?.phoneNumber ??
+          '');
+  late final _ageC = TextEditingController(
+      text: (widget.existing?.age ?? 0) > 0 ? '${widget.existing!.age}' : '');
+  late final _addressC =
+      TextEditingController(text: widget.existing?.address ?? '');
+  late BloodType _blood = widget.existing?.bloodType ?? BloodType.oPos;
+  late String _gender = widget.existing?.gender ?? 'ذكر';
 
-  @override
-  void initState() {
-    super.initState();
-    _phoneC.text = FirebaseAuth.instance.currentUser?.phoneNumber ?? '';
-  }
+  bool get _isEdit => widget.existing != null;
 
   @override
   Widget build(BuildContext context) {
     return _SheetScaffold(
-      title: 'التسجيل كمتبرع بالدم',
+      title: _isEdit ? 'تعديل تسجيل التبرع' : 'التسجيل كمتبرع بالدم',
       onSubmitted: () {
         if (_nameC.text.trim().isEmpty || _phoneC.text.trim().isEmpty) return;
+        final editing = widget.existing;
         Navigator.pop(
           context,
           BloodDonor(
-            id: '',
-            userId: widget.userId,
+            id: editing?.id ?? '',
+            userId: editing?.userId ?? widget.userId,
             name: _nameC.text.trim(),
             phone: _phoneC.text.trim(),
             bloodType: _blood,
             age: int.tryParse(_ageC.text) ?? 0,
             gender: _gender,
             address: _addressC.text.trim(),
+            lastDonation: editing?.lastDonation,
+            isAvailable: editing?.isAvailable ?? true,
+            isApproved: editing?.isApproved ?? false,
+            createdAt: editing?.createdAt,
           ),
         );
       },
@@ -2072,41 +2250,52 @@ class _DonorFormState extends State<_DonorForm> {
   }
 }
 
-class _BloodRequestForm extends StatefulWidget {
-  const _BloodRequestForm({required this.userId, required this.requesterName});
+/// نموذج طلب التبرع — للإنشاء ولتعديل صاحب الطلب طلبه (البند ٨).
+class BloodRequestFormSheet extends StatefulWidget {
+  const BloodRequestFormSheet(
+      {super.key,
+      required this.userId,
+      required this.requesterName,
+      this.existing});
   final String userId;
   final String requesterName;
+
+  /// طلب يملكه المستخدم الحالي — الورقة تحفظ فوقه بدل طلب جديد.
+  final BloodRequest? existing;
   @override
-  State<_BloodRequestForm> createState() => _BloodRequestFormState();
+  State<BloodRequestFormSheet> createState() => _BloodRequestFormSheetState();
 }
 
-class _BloodRequestFormState extends State<_BloodRequestForm> {
-  final _patientC = TextEditingController();
-  final _phoneC = TextEditingController();
-  final _hospitalC = TextEditingController();
-  final _unitsC = TextEditingController(text: '1');
-  final _notesC = TextEditingController();
-  BloodType _blood = BloodType.oPos;
-  String _urgency = 'عادي';
+class _BloodRequestFormSheetState extends State<BloodRequestFormSheet> {
+  late final _patientC =
+      TextEditingController(text: widget.existing?.patientName ?? '');
+  late final _phoneC = TextEditingController(
+      text: widget.existing?.phone ??
+          FirebaseAuth.instance.currentUser?.phoneNumber ??
+          '');
+  late final _hospitalC =
+      TextEditingController(text: widget.existing?.hospital ?? '');
+  late final _unitsC =
+      TextEditingController(text: '${widget.existing?.units ?? 1}');
+  late final _notesC = TextEditingController(text: widget.existing?.notes ?? '');
+  late BloodType _blood = widget.existing?.bloodType ?? BloodType.oPos;
+  late String _urgency = widget.existing?.urgency ?? 'عادي';
 
-  @override
-  void initState() {
-    super.initState();
-    _phoneC.text = FirebaseAuth.instance.currentUser?.phoneNumber ?? '';
-  }
+  bool get _isEdit => widget.existing != null;
 
   @override
   Widget build(BuildContext context) {
     return _SheetScaffold(
-      title: 'طلب تبرع بالدم',
+      title: _isEdit ? 'تعديل طلب التبرع' : 'طلب تبرع بالدم',
       onSubmitted: () {
         if (_phoneC.text.trim().isEmpty) return;
+        final editing = widget.existing;
         Navigator.pop(
           context,
           BloodRequest(
-            id: '',
-            userId: widget.userId,
-            requesterName: widget.requesterName,
+            id: editing?.id ?? '',
+            userId: editing?.userId ?? widget.userId,
+            requesterName: editing?.requesterName ?? widget.requesterName,
             phone: _phoneC.text.trim(),
             patientName: _patientC.text.trim(),
             bloodType: _blood,
@@ -2114,6 +2303,9 @@ class _BloodRequestFormState extends State<_BloodRequestForm> {
             hospital: _hospitalC.text.trim(),
             urgency: _urgency,
             notes: _notesC.text.trim(),
+            status: editing?.status ?? 'open',
+            isApproved: editing?.isApproved ?? false,
+            createdAt: editing?.createdAt,
           ),
         );
       },
@@ -2167,34 +2359,64 @@ class _BloodRequestFormState extends State<_BloodRequestForm> {
   }
 }
 
-class _VillageClinicForm extends StatefulWidget {
-  const _VillageClinicForm({required this.userName, required this.userId});
+/// نموذج عيادة القرية — للإنشاء ولتعديل صاحب العيادة سجلها (البند ٨).
+class VillageClinicFormSheet extends StatefulWidget {
+  const VillageClinicFormSheet(
+      {super.key, required this.userName, required this.userId, this.existing});
   final String userName;
   final String userId;
+
+  /// عيادة يملكها المستخدم الحالي — الورقة تحفظ فوقها بدل إنشاء جديدة.
+  final VillageClinic? existing;
   @override
-  State<_VillageClinicForm> createState() => _VillageClinicFormState();
+  State<VillageClinicFormSheet> createState() => _VillageClinicFormSheetState();
 }
 
-class _VillageClinicFormState extends State<_VillageClinicForm> {
-  final _nameC = TextEditingController();
-  final _ownerC = TextEditingController();
-  final _phoneC = TextEditingController();
-  final _addressC = TextEditingController();
-  final _hoursC = TextEditingController();
-  final _descC = TextEditingController();
-  String _specialty = 'غير ذلك';
-  final List<String> _images = [];
+class _VillageClinicFormSheetState extends State<VillageClinicFormSheet> {
+  late final _nameC = TextEditingController(text: widget.existing?.name ?? '');
+  late final _ownerC =
+      TextEditingController(text: widget.existing?.ownerName ?? '');
+  late final _phoneC = TextEditingController(text: widget.existing?.phone ?? '');
+  late final _addressC =
+      TextEditingController(text: widget.existing?.address ?? '');
+  late final _hoursC =
+      TextEditingController(text: widget.existing?.workingHours ?? '');
+  late final _descC =
+      TextEditingController(text: widget.existing?.description ?? '');
+  late final List<String> _images =
+      List.of(widget.existing?.imageUrls ?? const <String>[]);
+
+  bool get _isEdit => widget.existing != null;
+
+  /// تخصص العيادة المحفوظ قد يكون كُتب يدويًا من لوحة الإدارة، فلو لم يكن في
+  /// القائمة لألقى `DropdownButtonFormField` «There should be exactly one item…»
+  /// ولأبدّل تخصص عيادة صاحبها عند أول حفظ تعديل.
+  List<String> get _specialtyOptions {
+    final saved = widget.existing?.specialty.trim() ?? '';
+    if (saved.isEmpty || kClinicSpecialties.contains(saved)) {
+      return kClinicSpecialties;
+    }
+    return [saved, ...kClinicSpecialties];
+  }
+
+  late String _specialty =
+      _specialtyOptions.contains(widget.existing?.specialty)
+          ? widget.existing!.specialty
+          : 'غير ذلك';
 
   @override
   Widget build(BuildContext context) {
     return _SheetScaffold(
-      title: 'إضافة عيادة',
+      title: _isEdit ? 'تعديل العيادة' : 'إضافة عيادة',
       onSubmitted: () {
         if (_nameC.text.trim().isEmpty) return;
+        final editing = widget.existing;
         Navigator.pop(
           context,
           VillageClinic(
-            id: '',
+            // التعديل يبقي النسب والموافقة كما هي: `OwnerContentService.edit`
+            // هو من يعيدها إلى طابور المراجعة، ولا يلمس `submittedBy`.
+            id: editing?.id ?? '',
             name: _nameC.text.trim(),
             specialty: _specialty,
             ownerName: _ownerC.text.trim(),
@@ -2203,8 +2425,10 @@ class _VillageClinicFormState extends State<_VillageClinicForm> {
             workingHours: _hoursC.text.trim(),
             description: _descC.text.trim(),
             imageUrls: List.from(_images),
-            submittedBy: widget.userId,
-            submittedByName: widget.userName,
+            isApproved: editing?.isApproved ?? false,
+            submittedBy: editing?.submittedBy ?? widget.userId,
+            submittedByName: editing?.submittedByName ?? widget.userName,
+            createdAt: editing?.createdAt,
           ),
         );
       },
@@ -2213,6 +2437,7 @@ class _VillageClinicFormState extends State<_VillageClinicForm> {
         children: [
           MedicalImageField(
               maxImages: 3,
+              initial: _images,
               onChanged: (l) {
                 _images
                   ..clear()
@@ -2223,7 +2448,7 @@ class _VillageClinicFormState extends State<_VillageClinicForm> {
           DropdownButtonFormField<String>(
             initialValue: _specialty,
             decoration: const InputDecoration(labelText: 'التخصص'),
-            items: kClinicSpecialties
+            items: _specialtyOptions
                 .map((s) => DropdownMenuItem(value: s, child: Text(s)))
                 .toList(),
             onChanged: (v) => setState(() => _specialty = v ?? _specialty),
@@ -2246,34 +2471,47 @@ class _VillageClinicFormState extends State<_VillageClinicForm> {
   }
 }
 
-class _PharmacyForm extends StatefulWidget {
-  const _PharmacyForm({required this.userName, required this.userId});
+/// نموذج صيدلية القرية — للإنشاء ولتعديل صاحب الصيدلية سجلها (البند ٨).
+class PharmacyFormSheet extends StatefulWidget {
+  const PharmacyFormSheet(
+      {super.key, required this.userName, required this.userId, this.existing});
   final String userName;
   final String userId;
+
+  /// صيدلية يملكها المستخدم الحالي — الورقة تحفظ فوقها بدل إنشاء جديدة.
+  final Pharmacy? existing;
   @override
-  State<_PharmacyForm> createState() => _PharmacyFormState();
+  State<PharmacyFormSheet> createState() => _PharmacyFormSheetState();
 }
 
-class _PharmacyFormState extends State<_PharmacyForm> {
-  final _nameC = TextEditingController();
-  final _ownerC = TextEditingController();
-  final _phoneC = TextEditingController();
-  final _addressC = TextEditingController();
-  final _hoursC = TextEditingController();
-  final _descC = TextEditingController();
-  bool _is24 = false;
-  final List<String> _images = [];
+class _PharmacyFormSheetState extends State<PharmacyFormSheet> {
+  late final _nameC = TextEditingController(text: widget.existing?.name ?? '');
+  late final _ownerC =
+      TextEditingController(text: widget.existing?.ownerName ?? '');
+  late final _phoneC = TextEditingController(text: widget.existing?.phone ?? '');
+  late final _addressC =
+      TextEditingController(text: widget.existing?.address ?? '');
+  late final _hoursC =
+      TextEditingController(text: widget.existing?.workingHours ?? '');
+  late final _descC =
+      TextEditingController(text: widget.existing?.description ?? '');
+  late bool _is24 = widget.existing?.is24Hours ?? false;
+  late final List<String> _images =
+      List.of(widget.existing?.imageUrls ?? const <String>[]);
+
+  bool get _isEdit => widget.existing != null;
 
   @override
   Widget build(BuildContext context) {
     return _SheetScaffold(
-      title: 'إضافة صيدلية',
+      title: _isEdit ? 'تعديل الصيدلية' : 'إضافة صيدلية',
       onSubmitted: () {
         if (_nameC.text.trim().isEmpty) return;
+        final editing = widget.existing;
         Navigator.pop(
           context,
           Pharmacy(
-            id: '',
+            id: editing?.id ?? '',
             name: _nameC.text.trim(),
             ownerName: _ownerC.text.trim(),
             phone: _phoneC.text.trim(),
@@ -2282,8 +2520,10 @@ class _PharmacyFormState extends State<_PharmacyForm> {
             is24Hours: _is24,
             description: _descC.text.trim(),
             imageUrls: List.from(_images),
-            submittedBy: widget.userId,
-            submittedByName: widget.userName,
+            isApproved: editing?.isApproved ?? false,
+            submittedBy: editing?.submittedBy ?? widget.userId,
+            submittedByName: editing?.submittedByName ?? widget.userName,
+            createdAt: editing?.createdAt,
           ),
         );
       },
@@ -2292,6 +2532,7 @@ class _PharmacyFormState extends State<_PharmacyForm> {
         children: [
           MedicalImageField(
               maxImages: 3,
+              initial: _images,
               onChanged: (l) {
                 _images
                   ..clear()
@@ -2379,141 +2620,58 @@ Widget _field(TextEditingController c, String label, IconData icon,
   );
 }
 
-/// حقل صور متعددة يستخدم خدمة ImgBB الخاصة بالتطبيق.
-/// [initial] يعرض الصور المحفوظة مسبقاً عند التعديل، و[onError] يبلّغ فشل الرفع
-/// بدل ابتلاعه — صورة تُفقد بصمتًا أسوأ من صورة بلا رفع.
+/// حقل صور طبي يستخدم المحرّر المشترك `ImageListEditor` — لا picker ولا uploader
+/// خاصين به. [initial] يعرض الصور المحفوظة مسبقاً عند التعديل، و[onError] يبلّغ
+/// فشل الرفع بدل ابتلاعه — صورة تُفقد بصمتًا أسوأ من صورة بلا رفع.
 class MedicalImageField extends StatefulWidget {
   final int maxImages;
   final ValueChanged<List<String>> onChanged;
   final List<String> initial;
   final ValueChanged<String>? onError;
+  final ValueChanged<bool>? onBusyChanged;
+
+  /// اختياري لاختبار الحقل بلا معرض جهاز ولا شبكة.
+  final ImageUploadService? uploader;
+  final ImageBytesSource? bytesSource;
   const MedicalImageField(
       {super.key,
       required this.maxImages,
       required this.onChanged,
       this.initial = const [],
-      this.onError});
+      this.onError,
+      this.onBusyChanged,
+      this.uploader,
+      this.bytesSource});
 
   @override
   State<MedicalImageField> createState() => _MedicalImageFieldState();
 }
 
 class _MedicalImageFieldState extends State<MedicalImageField> {
-  final ImagePicker _picker = ImagePicker();
-  final ImageUploadService _uploader = ImageUploadService();
   late final List<String> _urls = List.of(widget.initial);
-  bool _uploading = false;
-
-  bool get _atMax => _urls.length >= widget.maxImages;
-
-  Future<void> _add() async {
-    if (_atMax) return;
-    setState(() => _uploading = true);
-    try {
-      final file = await _picker.pickImage(
-          source: ImageSource.gallery,
-          imageQuality: 85,
-          maxWidth: 1200,
-          maxHeight: 1200);
-      if (file == null) return;
-      final bytes = await file.readAsBytes();
-      final url = await _uploader.uploadImage(bytes);
-      setState(() => _urls.add(url));
-      widget.onChanged(List.of(_urls));
-    } catch (e) {
-      widget.onError?.call(e.toString().replaceFirst('Exception: ', ''));
-    } finally {
-      if (mounted) setState(() => _uploading = false);
-    }
-  }
-
-  void _remove(int i) {
-    setState(() => _urls.removeAt(i));
-    widget.onChanged(List.of(_urls));
-  }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(Icons.photo_library_rounded,
-                size: 16, color: theme.colorScheme.primary),
-            const SizedBox(width: 6),
-            Text('الصور (${_urls.length}/${widget.maxImages})',
-                style: theme.textTheme.labelLarge
-                    ?.copyWith(fontWeight: FontWeight.w800)),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            ...List.generate(_urls.length, (i) => _thumb(theme, i)),
-            if (!_atMax)
-              InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: _uploading ? null : _add,
-                child: Container(
-                  width: 68,
-                  height: 68,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainerHighest
-                        .withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                        color: theme.colorScheme.outlineVariant
-                            .withValues(alpha: 0.5)),
-                  ),
-                  child: Center(
-                    child: _uploading
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2))
-                        : Icon(Icons.add_a_photo_rounded,
-                            color: theme.colorScheme.primary),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _thumb(ThemeData theme, int i) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: CachedNetworkImage(
-            imageUrl: _urls[i],
-            width: 68,
-            height: 68,
-            fit: BoxFit.cover,
-          ),
-        ),
-        Positioned(
-          top: -6,
-          right: -6,
-          child: GestureDetector(
-            onTap: () => _remove(i),
-            child: Container(
-              decoration: BoxDecoration(
-                  color: theme.colorScheme.error, shape: BoxShape.circle),
-              padding: const EdgeInsets.all(2),
-              child:
-                  const Icon(Icons.close_rounded, size: 14, color: Colors.white),
-            ),
-          ),
-        ),
-      ],
+    return ImageListEditor(
+      label: 'الصور',
+      fieldKey: 'medicalImages',
+      urls: _urls,
+      maxImages: widget.maxImages,
+      single: widget.maxImages == 1,
+      uploader: widget.uploader,
+      bytesSource: widget.bytesSource,
+      // المقاس نفسه الذي كان الحقل يلتقط به: معالج أصغر قبل الرفع.
+      maxSide: 1200,
+      onError: widget.onError,
+      onBusyChanged: widget.onBusyChanged,
+      onChanged: (urls) {
+        setState(() {
+          _urls
+            ..clear()
+            ..addAll(urls);
+        });
+        widget.onChanged(urls);
+      },
     );
   }
 }

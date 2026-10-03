@@ -560,13 +560,17 @@ void main() {
       expect(find.byKey(const Key('obituary-bg-error')), findsNothing);
     });
 
-    test('الإرسال يكتب age فارغًا ولا يكتب المسجد', () {
+    test('الإرسال لا يسأل العمر ولا المسجد ويحفظ قيمة السجل القديم', () {
       final src = File('lib/features/obituaries/add.dart').readAsStringSync();
-      expect(src, contains("age: '',"));
+      // النموذج لا يسألهما إطلاقًا: يكتب السجل الجديد فارغين، ويُبقي ما كان
+      // محفوظًا عند تعديله (البند ٨) فلا يُمحى عمرٌ قديم بلمسة مالك.
+      expect(src, contains("age: editing?.age ?? ''"));
+      expect(src, contains("mosque: editing?.mosque ?? ''"));
+      expect(src, isNot(contains('_ageController')));
+      expect(src, isNot(contains('_mosqueController')));
       expect(src, contains("'يجب اختيار نوع المتوفى (رجل أو امرأة)'"));
       expect(src, contains('cardBackground: _cardBackground'));
       expect(src, contains('burialLocation: _burialLocationController'));
-      expect(src, isNot(contains('mosque:')));
     });
   });
 
@@ -719,17 +723,22 @@ void main() {
     test('لوحة الإدارة تعرف الحقول الثلاثة وتسميها للعزاء وحده', () {
       final edit =
           File('lib/features/admin/admin_edit.dart').readAsStringSync();
+      final editor = File('lib/widgets/document_field_editor.dart')
+          .readAsStringSync();
       final adminDetail =
           File('lib/features/admin/admin_detail.dart').readAsStringSync();
-      expect(edit, contains("_FieldSpec('gender', 'نوع المتوفى (رجل أو امرأة)')"));
-      expect(edit, contains("_FieldSpec('burialLocation', 'مكان الدفن')"));
-      expect(edit, contains("_FieldSpec('funeralTime', 'موعد صلاة الجنازة"));
-      expect(edit, contains("_FieldSpec('condolenceTime', 'موعد العزاء"));
+      expect(edit,
+          contains("DocFieldSpec('gender', 'نوع المتوفى (رجل أو امرأة)')"));
+      expect(edit, contains("DocFieldSpec('burialLocation', 'مكان الدفن')"));
+      expect(edit, contains("DocFieldSpec('funeralTime', 'موعد صلاة الجنازة"));
+      expect(edit, contains("DocFieldSpec('condolenceTime', 'موعد العزاء"));
       // أيقونة الساعة لهما، لا أيقونة التقويم التي لل تاريخين.
-      expect(edit, contains("case 'funeralTime':"));
-      expect(edit, contains("case 'condolenceTime':"));
+      expect(editor, contains("case 'funeralTime':"));
+      expect(editor, contains("case 'condolenceTime':"));
       expect(edit, contains('خلفية البطاقة (azaa1 / azaa2 / azaa3 / azaa4'));
       expect(edit, contains('أو رابط صورة'));
+      // حقل الخلفية يبقى نصًا حرًا: قيمته قد تكون مفتاح azaa لا رابط صورة.
+      expect(editor, contains("if (k == 'cardbackground') return false;"));
       expect(adminDetail, contains("widget.collection == 'obituaries'"));
       expect(adminDetail, contains("'cardBackground': 'خلفية بطاقة المشاركة'"));
       expect(adminDetail, contains("'funeralTime': 'موعد صلاة الجنازة'"));

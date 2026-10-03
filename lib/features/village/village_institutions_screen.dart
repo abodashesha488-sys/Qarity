@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/village_content_models.dart';
 import '../../services/village_content_service.dart';
+import '../../widgets/image_gallery_wrap.dart';
 import '../../widgets/qurity_app_bar.dart';
 import '../../widgets/village_ornament.dart';
 import 'village_content_admin.dart';
@@ -273,28 +274,12 @@ class _InstitutionCard extends StatelessWidget {
             padding: const EdgeInsets.all(18),
             children: [
               if (item.imageUrls.isNotEmpty)
-                SizedBox(
-                  height: 200,
-                  child: PageView(
-                    children: [
-                      for (final u in item.imageUrls)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: CachedNetworkImage(
-                                imageUrl: u,
-                                fit: BoxFit.cover,
-                                errorWidget: (_, __, ___) => ColoredBox(
-                                    color: color.withValues(alpha: 0.08),
-                                    child: const Center(
-                                        child: Icon(Icons.broken_image_rounded,
-                                            color: Colors.black26)))),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
+                LayoutBuilder(builder: (context, box) => ImageGalleryWrap(
+                      urls: item.imageUrls,
+                      tileWidth: box.maxWidth.isFinite ? box.maxWidth : 340.0,
+                      radius: 16,
+                      fallbackColor: color.withValues(alpha: 0.08),
+                    )),
               const SizedBox(height: 12),
               Row(
                 children: [

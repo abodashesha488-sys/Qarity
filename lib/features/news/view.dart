@@ -12,7 +12,9 @@ import '../../models/data_models.dart';
 import '../../services/news_service.dart';
 import '../../services/share_service.dart';
 import '../../services/user_service.dart';
+import '../../widgets/owner_actions.dart';
 import '../../widgets/qurity_app_bar.dart';
+import 'add.dart';
 
 /// Full article reader. Opened with a [NewsItem] as route argument
 /// (see `AppRoutes.newsView`).
@@ -369,10 +371,38 @@ class _NewsViewScreenState extends State<NewsViewScreen> {
             ),
           ],
         ),
+        OwnerActions(
+          keyTag: 'news-detail',
+          ownerId: item.authorId ?? '',
+          currentUserId: _currentUserId,
+          itemName: item.title,
+          editLabel: 'تعديل الخبر',
+          deleteLabel: 'حذف الخبر',
+          onEdit: () => _openEdit(item),
+          onDelete: () => _delete(item),
+        ),
         const SizedBox(height: 20),
         _buildCommentsSection(theme, item),
       ],
     );
+  }
+
+  /// تعديل صاحبه لخبره: نفس شاشة الإضافة بـ`existing`، والنجاح يُغلق المقال لأن
+  /// الخبر عاد للمراجعة فلم يعد ما يُعرض هنا هو المنشور.
+  Future<void> _openEdit(NewsItem item) async {
+    final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(
+        builder: (_) => AddNewsScreen(existing: item)));
+    if (saved == true && mounted) Navigator.pop(context);
+  }
+
+  Future<bool> _delete(NewsItem item) async {
+    try {
+      await _newsService.deleteNews(item.id);
+      if (mounted) Navigator.pop(context);
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   Widget _buildLikeButton(ThemeData theme, NewsItem item) {

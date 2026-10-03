@@ -317,6 +317,25 @@ class _HomeContentState extends State<HomeContent> {
   late final Stream<List<ForumPost>> _postsStream =
       ForumService().getPostsStream(limit: 5);
 
+  // منتجات الرئيسية تعرض الخصم من نفس الوثيقة التي لا تتغيّر عند انتهاء العرض،
+  // فنبض الدقيقة يعيد الرسم فقط ليختفي الشارة والسعر المخفّض تلقائيًا.
+  Timer? _offerTicker;
+
+  @override
+  void initState() {
+    super.initState();
+    _offerTicker =
+        Timer.periodic(const Duration(minutes: 1), (_) {
+          if (mounted) setState(() {});
+        });
+  }
+
+  @override
+  void dispose() {
+    _offerTicker?.cancel();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(

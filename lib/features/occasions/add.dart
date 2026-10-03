@@ -1,6 +1,4 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/network/network_info.dart';
@@ -9,10 +7,27 @@ import '../../models/data_models.dart';
 import '../../services/image_upload_service.dart';
 import '../../services/occasion_service.dart';
 import '../../widgets/app_card.dart';
+import '../../widgets/document_field_editor.dart';
 import '../../widgets/qurity_app_bar.dart';
 
 class AddOccasionScreen extends StatefulWidget {
-  const AddOccasionScreen({super.key});
+  const AddOccasionScreen({
+    super.key,
+    this.uploader,
+    this.bytesSource,
+    this.service,
+    this.existing,
+  });
+
+  /// اختياري لاختبار المحرّر المشترك بلا شبكة ولا معرض جهاز.
+  final ImageUploadService? uploader;
+  final ImageBytesSource? bytesSource;
+
+  /// اختياري للحقن في الاختبارات — الإنتاج يبني الخادم الحقيقي كسولًا كما كان.
+  final OccasionService? service;
+
+  /// مناسبة صاحبه يريد تعديلها: النموذج يمتلئ بها ويُحفظ في نفس المعرّف.
+  final Occasion? existing;
 
   @override
   State<AddOccasionScreen> createState() => _AddOccasionScreenState();
@@ -20,17 +35,38 @@ class AddOccasionScreen extends StatefulWidget {
 
 class _AddOccasionScreenState extends State<AddOccasionScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _titleController = TextEditingController();
-  final _descriptionController = TextEditingController();
-  final _locationController = TextEditingController();
-  final _organizerController = TextEditingController();
-  final OccasionService _occasionService = OccasionService();
-  final ImagePicker _picker = ImagePicker();
+  late final _titleController =
+      TextEditingController(text: widget.existing?.title ?? '');
+  late final _descriptionController =
+      TextEditingController(text: widget.existing?.description ?? '');
+  late final _locationController =
+      TextEditingController(text: widget.existing?.location ?? '');
+  late final _organizerController =
+      TextEditingController(text: widget.existing?.organizer ?? '');
+  late final OccasionService _occasionService =
+      widget.service ?? OccasionService();
 
   DateTime? _selectedDate;
   String? _imageUrl;
   bool _isUploading = false;
   bool _isSaving = false;
+
+  bool get _isEdit => widget.existing != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final e = widget.existing;
+    if (e == null) return;
+    _imageUrl = e.imageUrl;
+    if (e.date.trim().isNotEmpty) {
+      try {
+        _selectedDate = DateFormat('yyyy/MM/dd').parseStrict(e.date.trim());
+      } catch (_) {
+        _selectedDate = DateTime.tryParse(e.date.trim());
+      }
+    }
+  }
 
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
@@ -42,29 +78,6 @@ class _AddOccasionScreenState extends State<AddOccasionScreen> {
     );
     if (picked != null) setState(() => _selectedDate = picked);
   }
-
-  Future<void> _pickAndUploadImage() async {
-    setState(() => _isUploading = true);
-    try {
-      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-      if (image == null) {
-        if (mounted) setState(() => _isUploading = false);
-        return;
-      }
-      final bytes = await image.readAsBytes();
-      final url = await ImageUploadService().uploadImage(bytes);
-      if (!mounted) return;
-      setState(() => _imageUrl = url);
-      AppHelpers.showSnackBar(context, 'تم رفع الصورة بنجاح', isSuccess: true);
-    } catch (e) {
-      if (!mounted) return;
-      AppHelpers.showSnackBar(context, 'خطأ في رفع الصورة: $e', isError: true);
-    } finally {
-      if (mounted) setState(() => _isUploading = false);
-    }
-  }
-
-  void _removeImage() => setState(() => _imageUrl = null);
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
@@ -81,20 +94,33 @@ class _AddOccasionScreenState extends State<AddOccasionScreen> {
 
     setState(() => _isSaving = true);
     try {
+      final editing = widget.existing;
       final occasion = Occasion(
-        id: '',
+        id: editing?.id ?? '',
         title: _titleController.text.trim(),
         date: DateFormat('yyyy/MM/dd').format(_selectedDate!),
         description: _descriptionController.text.trim(),
         location: _locationController.text.trim(),
         organizer: _organizerController.text.trim().isEmpty ? null : _organizerController.text.trim(),
         imageUrl: _imageUrl,
-        createdAt: DateTime.now(),
+        // التعديل لا يرفع موافقة ولا يغيّر تاريخ الإنشاء ولا ينسب المناسبة لغير
+        // صاحبها: تُقرأ من السجل نفسه وتُمرَّر كما هي.
+        isApproved: editing?.isApproved ?? false,
+        submittedBy: editing?.submittedBy,
+        createdAt: editing?.createdAt,
       );
-      await _occasionService.addOccasion(occasion);
+      if (editing != null) {
+        await _occasionService.updateOccasion(occasion);
+      } else {
+        await _occasionService.addOccasion(occasion);
+      }
       if (!mounted) return;
-      AppHelpers.showSnackBar(context, 'تم إرسال المناسبة للمراجعة', isSuccess: true);
-      Navigator.pop(context);
+      AppHelpers.showSnackBar(context,
+          editing == null
+              ? 'تم إرسال المناسبة للمراجعة'
+              : 'تم حفظ التعديلات — أُعيدت المناسبة للمراجعة',
+          isSuccess: true);
+      Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
       AppHelpers.showSnackBar(context, 'خطأ: $e', isError: true);
@@ -116,7 +142,7 @@ class _AddOccasionScreenState extends State<AddOccasionScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: const QurityAppBar(title: 'إضافة مناسبة'),
+      appBar: QurityAppBar(title: _isEdit ? 'تعديل المناسبة' : 'إضافة مناسبة'),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
@@ -210,53 +236,20 @@ class _AddOccasionScreenState extends State<AddOccasionScreen> {
                   title: 'صورة (اختياري)',
                   icon: Icons.image_rounded,
                   children: [
-                    if (_imageUrl != null)
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: CachedNetworkImage(
-                              imageUrl: _imageUrl!,
-                              height: 180,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                              placeholder: (context, url) => Container(
-                                height: 180,
-                                color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
-                                child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                              ),
-                              errorWidget: (context, url, error) => Container(
-                                height: 180,
-                                color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
-                                child: Icon(
-                                  Icons.broken_image_rounded,
-                                  size: 40,
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          OutlinedButton.icon(
-                            onPressed: _removeImage,
-                            icon: const Icon(Icons.delete_outline_rounded),
-                            label: const Text('إزالة الصورة'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: theme.colorScheme.error,
-                              side: BorderSide(color: theme.colorScheme.error.withValues(alpha: 0.5), width: 1.5),
-                            ),
-                          ),
-                        ],
-                      )
-                    else
-                      OutlinedButton.icon(
-                        onPressed: _isUploading ? null : _pickAndUploadImage,
-                        icon: _isUploading
-                            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                            : const Icon(Icons.add_photo_alternate_outlined),
-                        label: Text(_isUploading ? 'جاري الرفع...' : 'إضافة صورة'),
-                      ),
+                    ImageListEditor(
+                      label: 'صورة المناسبة',
+                      fieldKey: 'imageUrl',
+                      single: true,
+                      urls: _imageUrl == null
+                          ? const <String>[]
+                          : <String>[_imageUrl!],
+                      uploader: widget.uploader,
+                      bytesSource: widget.bytesSource,
+                      onBusyChanged:
+                          (busy) => setState(() => _isUploading = busy),
+                      onChanged: (urls) => setState(
+                          () => _imageUrl = urls.isEmpty ? null : urls.first),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 24),
@@ -264,7 +257,7 @@ class _AddOccasionScreenState extends State<AddOccasionScreen> {
                   width: double.infinity,
                   height: 52,
                   child: ElevatedButton.icon(
-                    onPressed: _isSaving ? null : _submit,
+                    onPressed: _isSaving || _isUploading ? null : _submit,
                     icon: _isSaving
                         ? const SizedBox(
                             width: 20,
@@ -273,7 +266,9 @@ class _AddOccasionScreenState extends State<AddOccasionScreen> {
                           )
                         : const Icon(Icons.send_rounded),
                     label: Text(
-                      _isSaving ? 'جاري الإرسال...' : 'إرسال للمراجعة',
+                      _isSaving
+                          ? (_isEdit ? 'جاري الحفظ...' : 'جاري الإرسال...')
+                          : (_isEdit ? 'حفظ التعديلات' : 'إرسال للمراجعة'),
                       style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                   ),

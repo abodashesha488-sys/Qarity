@@ -1,7 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../../core/utils/relative_time.dart';
 import '../../models/village_ad_model.dart';
@@ -9,6 +8,7 @@ import '../../routes/app_routes.dart';
 import '../../services/image_upload_service.dart';
 import '../../services/user_service.dart';
 import '../../services/village_ad_service.dart';
+import '../../widgets/document_field_editor.dart';
 import '../../widgets/full_fit_image.dart';
 import '../../widgets/qurity_app_bar.dart';
 
@@ -509,12 +509,18 @@ class VillageAdFormSheet extends StatefulWidget {
     this.userName = '',
     this.existing,
     this.service,
+    this.uploader,
+    this.bytesSource,
   });
 
   final String userId;
   final String userName;
   final VillageAd? existing;
   final VillageAdService? service;
+
+  /// اختياري لاختبار المحرّر المشترك بلا شبكة ولا معرض جهاز.
+  final ImageUploadService? uploader;
+  final ImageBytesSource? bytesSource;
 
   @override
   State<VillageAdFormSheet> createState() => _VillageAdFormSheetState();
@@ -532,7 +538,6 @@ class _VillageAdFormSheetState extends State<VillageAdFormSheet> {
       TextEditingController(text: widget.existing?.location ?? '');
   late final TextEditingController _phone =
       TextEditingController(text: widget.existing?.phone ?? '');
-  late final ImagePicker _picker = ImagePicker();
   late final VillageAdService _service =
       widget.service ?? VillageAdService();
 
@@ -552,47 +557,8 @@ class _VillageAdFormSheetState extends State<VillageAdFormSheet> {
     super.dispose();
   }
 
-  Future<void> _pickImages() async {
-    final remaining = kVillageAdMaxImages - _images.length;
-    if (remaining <= 0) {
-      setState(() => _uploadError =
-          'الحد الأقصى $kVillageAdMaxImages صور — امسح صورة لإضافة غيرها.');
-      return;
-    }
-    setState(() {
-      _uploading = true;
-      _uploadError = '';
-    });
-    try {
-      final picked = await _picker.pickMultiImage(
-          imageQuality: 82, maxWidth: 1280, limit: remaining);
-      for (final x in picked) {
-        final url =
-            await ImageUploadService().uploadImage(await x.readAsBytes());
-        _images.add(url);
-      }
-      if (mounted) setState(() => _uploading = false);
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _uploading = false;
-          _uploadError = '$e'.replaceFirst('Exception: ', '');
-        });
-      }
-    }
-  }
-
-  void _removeImage(int index) => setState(() {
-        _images.removeAt(index);
-        _uploadError = '';
-      });
-
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_uploading) {
-      setState(() => _uploadError = 'الصورة ما زالت تُرفع… انتظر ثم احفظ.');
-      return;
-    }
     setState(() => _saving = true);
     final base = VillageAd(
       id: widget.existing?.id ?? '',
@@ -718,7 +684,18 @@ class _VillageAdFormSheetState extends State<VillageAdFormSheet> {
                     : null,
               ),
               const SizedBox(height: 12),
-              _imagesBlock(theme),
+              ImageListEditor(
+                label: 'صور الإعلان (حتى $kVillageAdMaxImages)',
+                fieldKey: 'imageUrls',
+                urls: _images,
+                maxImages: kVillageAdMaxImages,
+                uploader: widget.uploader,
+                bytesSource: widget.bytesSource,
+                maxSide: 1280,
+                onBusyChanged: (busy) => setState(() => _uploading = busy),
+                onChanged: (urls) =>
+                    setState(() => _images..clear()..addAll(urls)),
+              ),
               if (_uploadError.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Text(
@@ -760,86 +737,6 @@ class _VillageAdFormSheetState extends State<VillageAdFormSheet> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _imagesBlock(ThemeData theme) {
-    const side = 88.0;
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        for (var i = 0; i < _images.length; i++)
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  _images[i],
-                  width: side,
-                  height: side,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    width: side,
-                    height: side,
-                    color: kVillageAdsColor.withValues(alpha: 0.10),
-                    child: const Icon(Icons.broken_image_rounded,
-                        color: kVillageAdsColor),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: -4,
-                right: -4,
-                child: InkWell(
-                  key: Key('ad-image-remove-$i'),
-                  onTap: _uploading ? null : () => _removeImage(i),
-                  child: const DecoratedBox(
-                    decoration: BoxDecoration(
-                        color: Colors.black, shape: BoxShape.circle),
-                    child: Icon(Icons.close_rounded,
-                        size: 14, color: Colors.white),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        if (_images.length < kVillageAdMaxImages)
-          InkWell(
-            key: const Key('ad-image-add'),
-            onTap: _uploading ? null : _pickImages,
-            child: Container(
-              width: side,
-              height: side,
-              decoration: BoxDecoration(
-                  color: kVillageAdsColor.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                      color: kVillageAdsColor.withValues(alpha: 0.4))),
-              child: _uploading
-                  ? const Center(
-                      child: SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2.4, color: kVillageAdsColor)))
-                  : Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.add_a_photo_rounded,
-                            size: 20, color: kVillageAdsColor),
-                        const SizedBox(height: 4),
-                        Text('صورة ${_images.length + 1}',
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 10.5,
-                                color: kVillageAdsColor)),
-                      ],
-                    ),
-            ),
-          ),
-      ],
     );
   }
 

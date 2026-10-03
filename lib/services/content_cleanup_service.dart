@@ -65,6 +65,40 @@ class ContentCleanupService {
                 .where('occasionId', isEqualTo: docId),
             'occasion_attendees');
         break;
+      case 'shops':
+        // منتجات المحل وثائق مستقلة في market_products تحمل shopId؛ حذف المحل
+        // يمسحها هي الأخرى مع أيتامها، فلا تبقى تُعرض في السوق بلا محل.
+        await _deleteShopProducts(fs, docId);
+        break;
+    }
+  }
+
+  static Future<void> _deleteShopProducts(
+      FirebaseFirestore fs, String shopId) async {
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> docs;
+    try {
+      final snap = await fs
+          .collection('market_products')
+          .where('shopId', isEqualTo: shopId)
+          .get();
+      docs = snap.docs;
+    } catch (e) {
+      debugPrint('shop products lookup ($shopId) failed: $e');
+      return;
+    }
+    for (final d in docs) {
+      await cleanupForDeleted(fs, 'market_products', d.id);
+    }
+    for (var i = 0; i < docs.length; i += 400) {
+      final batch = fs.batch();
+      for (final d in docs.skip(i).take(400)) {
+        batch.delete(d.reference);
+      }
+      try {
+        await batch.commit();
+      } catch (e) {
+        debugPrint('shop products delete ($shopId) failed: $e');
+      }
     }
   }
 

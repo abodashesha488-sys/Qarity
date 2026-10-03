@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -21,6 +20,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/promo_placements.dart';
 import '../../core/utils/file_export.dart';
 import '../../core/utils/firebase_ts.dart';
+import '../../core/utils/user_gender_groups.dart';
+import '../../core/utils/xlsx_export.dart';
 import '../../models/data_models.dart';
 import '../../models/promo_model.dart';
 import '../../models/service_provider_model.dart';
@@ -64,6 +65,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   bool _isLoadingStats = true;
   Map<String, int> _stats = {};
   Map<String, int> _pendingCounts = {};
+
+  /// عدّادات أعادت الإذاعة قراءتها بعد قرار واحد. تُدمج فوق نتيجة
+  /// `fetchPendingCounts` الكاملة لأن تلك القراءة قد تكون انطلقت قبل القرار
+  /// فترجع بعدَه برقم قدمه.
+  final Map<String, int> _recounted = {};
+  StreamSubscription<String>? _pendingSub;
+  final Set<String> _recountInFlight = {};
+  final Set<String> _recountAgain = {};
+  bool _statsInFlight = false;
+  bool _statsAgain = false;
   final Set<String> _busyActions = {};
   String? _selectedCat;
 
@@ -112,6 +123,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     _tabController.addListener(_onTabChanged);
     _loadStats();
     _loadPendingCounts();
+    // كل قرار إداري — هنا أو في شاشة التفاصيل/التعديل — ينشر مجموعته على هذه
+    // الإذاعة، فتُعاد قراءة عدّها وحدها بدل `fetchPendingCounts` العشرين.
+    _pendingSub = AdminService.pendingCountEvents.listen(_applyPendingCount);
     unawaited(_backfillSellerTypesOnce());
   }
 
@@ -135,6 +149,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
 
   @override
   void dispose() {
+    _pendingSub?.cancel();
     _tabController.dispose();
     super.dispose();
   }
@@ -157,16 +172,66 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     try {
       final counts = await _adminService.fetchPendingCounts();
       if (!mounted) return;
+      counts.addAll(_recounted);
       setState(() => _pendingCounts = counts);
     } catch (_) {}
   }
 
-  Future<void> _refreshAll() async {
-    await Future.wait([_loadStats(), _loadPendingCounts()]);
+  /// قرار واحد ⇒ عدّ مجموعة واحدة: الشريط العلوي ورقائق التبويب وبطاقات
+  /// النظرة العامة كلها تقرأ `_pendingCounts` نفسها فتنعّم جميعها بـ`setState`
+  /// واحد. تُعاد القراءة مرة أخرة إن وصل قرار أثناء الجري (إجراء جماعي على
+  /// عناصر من نفس المجموعة) وإلا بقي الرقم الذي قرأ قبل آخر قرار.
+  Future<void> _applyPendingCount(String collection) async {
+    if (!_cats.any((c) => c.collection == collection)) return;
+    if (!_recountInFlight.add(collection)) {
+      _recountAgain.add(collection);
+      return;
+    }
+    do {
+      _recountAgain.remove(collection);
+      final int count;
+      try {
+        count = await _adminService.recountPending(collection);
+      } catch (_) {
+        // لا صفر زائف في شارة حيّة — «صفر» تعني «لا معلّقات» فيمضي المراجع دون
+        // أن ينظر. يبقى آخر رقم معروف، و«تحديث» السحب أو زر التحديث في المراجعة
+        // هو ممرّ الاستعادة لأنه يعيد العدّادات العشرين كاملة.
+        if (!mounted) return;
+        _recountInFlight.remove(collection);
+        return;
+      }
+      if (!mounted) return;
+      _recounted[collection] = count;
+      if (_pendingCounts[collection] != count) {
+        setState(() => _pendingCounts = {..._pendingCounts, collection: count});
+      }
+    } while (_recountAgain.contains(collection));
+    _recountInFlight.remove(collection);
+  }
+
+  /// الإحصاءات وحدها بعد قرار: عدد المعلّقات تجلبه إذاعة `pendingCountEvents`،
+  /// فاستدعاء `fetchPendingCounts` الكامل هنا كان يكلّف عشرين عدًّا لكل ضغطة.
+  ///
+  /// الدمج ضروري في الإجراء الجماعي: الحلقة تنادي هذه الدالة لكل عنصر، فبدون
+  /// الحارس تدفع ثلاثاً وعشرين عدّة لكل عنصر بدل واحدة للدفعة كلها.
+  Future<void> _refreshStats() async {
+    if (_statsInFlight) {
+      _statsAgain = true;
+      return;
+    }
+    _statsInFlight = true;
+    try {
+      do {
+        _statsAgain = false;
+        await _loadStats();
+      } while (_statsAgain);
+    } finally {
+      _statsInFlight = false;
+    }
   }
 
   Future<void> _refreshDashboard() async {
-    await _refreshAll();
+    await Future.wait([_loadStats(), _loadPendingCounts()]);
     if (!mounted) return;
     setState(() => _reviewNav++);
   }
@@ -272,7 +337,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                 ),
               ],
             ),
-            ),
+          ),
         ),
       ),
       body: TabBarView(
@@ -303,13 +368,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             onSelect: (c) => setState(() => _selectedCat = c),
             onAction: _handleAction,
             busyActions: _busyActions,
-            onItemChanged: _refreshAll,
+            onItemChanged: _refreshStats,
             notesProvider: _showAdminNotesDialog,
           ),
           _UsersPage(
             adminService: _adminService,
             currentUid: _auth.currentUser?.uid,
-            onUpdated: _refreshAll,
+            onUpdated: _refreshStats,
           ),
           const _ReportsPage(),
           _PromosPage(currentUid: _auth.currentUser?.uid),
@@ -360,7 +425,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           backgroundColor: const Color(0xFF6F4E37),
         ),
       );
-      _refreshAll();
+      _refreshStats();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.maybeOf(context)?.showSnackBar(

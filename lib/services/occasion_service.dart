@@ -7,10 +7,15 @@ import '../models/data_models.dart';
 import 'cache_service.dart';
 import 'notification_inbox_service.dart';
 import 'notification_service.dart';
+import 'owner_content_service.dart';
 import 'remote_push_service.dart';
 
 class OccasionService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  /// قابل للحقن كما في بقية خدمات المشروع حتى تُختبر شاشات المناسبات بلا Firebase.
+  OccasionService([FirebaseFirestore? firestore])
+      : _firestore = firestore ?? FirebaseFirestore.instance;
+
+  final FirebaseFirestore _firestore;
   Future<List<Occasion>> getOccasionsList({bool forceRefresh = false}) async {
     if (!forceRefresh) {
       final cached = await CacheService.getOccasions();
@@ -69,4 +74,19 @@ class OccasionService {
       ));
     }
   }
+
+  /// تعديل صاحب المناسبة لمناسبته في أي وقت — يعود إلى المراجعة (قاعدة عامة في
+  /// `firestore.rules`)؛ قائمة الحضور مجموعة مستقلة (`occasion_attendees`) فلا
+  /// يمسّها حفظ المناسبة.
+  Future<void> updateOccasion(Occasion occasion) => OwnerContentService.edit(
+        _firestore,
+        'occasions',
+        occasion.id,
+        occasion.toJson(),
+        label: occasion.title,
+      );
+
+  /// حذف فوري لصاحب المناسبة: قائمة الحضور ثم الصورة ثم الوثيقة.
+  Future<void> deleteOccasion(String occasionId) =>
+      OwnerContentService.remove(_firestore, 'occasions', occasionId);
 }

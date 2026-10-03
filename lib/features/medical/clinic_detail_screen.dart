@@ -1,12 +1,17 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/medical_models.dart';
+import '../../services/medical_service.dart';
 import '../../services/share_service.dart';
 import '../../widgets/common_appbar_actions.dart';
 import '../../widgets/header_action_buttons.dart';
+import '../../widgets/image_gallery_wrap.dart';
+import '../../widgets/owner_actions.dart';
 import '../../widgets/qurity_app_bar.dart';
+import 'medical_home_screen.dart';
 
 /// صف معلومة (أيقونة + عنوان + قيمة) — مشترك بين شاشات التفاصيل الطبية.
 class MedInfoRow extends StatelessWidget {
@@ -189,18 +194,91 @@ class MedDetailHeader extends StatelessWidget {
       );
 }
 
-/// شاشة تفاصيل عيادة القرية — عرض احترافي كامل مع الاتصال والمشاركة.
-class VillageClinicDetailScreen extends StatelessWidget {
+/// شاشة تفاصيل عيادة القرية — عرض احترافي كامل مع الاتصال والمشاركة،
+/// و«عدّل/احذف» لصاحب العيادة وحده على بياناته (البند ٨).
+class VillageClinicDetailScreen extends StatefulWidget {
   const VillageClinicDetailScreen({super.key});
 
+  @override
+  State<VillageClinicDetailScreen> createState() =>
+      _VillageClinicDetailScreenState();
+}
+
+class _VillageClinicDetailScreenState extends State<VillageClinicDetailScreen> {
   static const _teal = Color(0xFF00897B);
   static const _tealDark = Color(0xFF00695C);
+
+  /// نسخة محفوظة بعد حفظ التعديل — الشاشة تعرض بالوسائط لا بتدفّق، فلو لم
+  /// تُستبدل لظلّت تعرض البيانات القديمة حتى يغلقها المستخدم ويعيد فتحها.
+  VillageClinic? _saved;
+
+  /// مبني عند أول استخدام فقط: بلا جلسة اختبار لا يمس Firestore.
+  late final VillageClinicService _service = VillageClinicService();
+
+  String get _currentUid {
+    try {
+      return FirebaseAuth.instance.currentUser?.uid ?? '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  Future<void> _openEdit(VillageClinic clinic) async {
+    final res = await showModalBottomSheet<VillageClinic>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => VillageClinicFormSheet(
+        userName: clinic.submittedByName ?? '',
+        userId: _currentUid,
+        existing: clinic,
+      ),
+    );
+    if (res == null || !mounted) return;
+    try {
+      await _service.update(res);
+      if (!mounted) return;
+      setState(() => _saved = res);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('تم حفظ التعديلات — عادت العيادة للمراجعة')));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('تعذّر حفظ التعديل — تحقّق من الصلاحيات أو من الاتصال')));
+    }
+  }
+
+  Future<bool> _deleteRecord(VillageClinic clinic) async {
+    try {
+      await _service.delete(clinic.id);
+      if (mounted) Navigator.pop(context);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Widget? _ownerActions(VillageClinic clinic) {
+    final owner = clinic.submittedBy ?? '';
+    if (_currentUid.isEmpty || _currentUid != owner) return null;
+    return OwnerActions(
+      keyTag: 'clinic-detail',
+      ownerId: owner,
+      currentUserId: _currentUid,
+      itemName: clinic.name,
+      editLabel: 'تعديل العيادة',
+      deleteLabel: 'حذف العيادة',
+      onEdit: () => _openEdit(clinic),
+      onDelete: () => _deleteRecord(clinic),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final clinic = ModalRoute.of(context)!.settings.arguments as VillageClinic? ??
-        const VillageClinic(id: '', name: '');
+    final clinic = _saved ??
+        ModalRoute.of(context)!.settings.arguments as VillageClinic? ??
+            const VillageClinic(id: '', name: '');
+    final ownerRow = _ownerActions(clinic);
 
     return Scaffold(
       body: CustomScrollView(
@@ -298,28 +376,7 @@ class VillageClinicDetailScreen extends StatelessWidget {
                     MedSection(
                       title: 'صور العيادة',
                       accent: _teal,
-                      child: SizedBox(
-                        height: 130,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: clinic.imageUrls.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(width: 10),
-                          itemBuilder: (_, i) => ClipRRect(
-                            borderRadius: BorderRadius.circular(14),
-                            child: CachedNetworkImage(
-                                imageUrl: clinic.imageUrls[i],
-                                width: 180,
-                                fit: BoxFit.cover,
-                                errorWidget: (_, __, ___) => Container(
-                                    width: 180,
-                                    color: theme
-                                        .colorScheme.surfaceContainerHighest,
-                                    child: const Icon(
-                                        Icons.broken_image_rounded))),
-                          ),
-                        ),
-                      ),
+                      child: ImageGalleryWrap(urls: clinic.imageUrls, tileWidth: 180),
                     ),
                   ],
                   const SizedBox(height: 22),
@@ -336,6 +393,10 @@ class VillageClinicDetailScreen extends StatelessWidget {
                       label: const Text('اتصال بالعيادة',
                           style: TextStyle(fontWeight: FontWeight.w800)),
                     ),
+                  if (ownerRow != null) ...[
+                    const SizedBox(height: 12),
+                    ownerRow,
+                  ],
                 ],
               ),
             ),
@@ -346,18 +407,85 @@ class VillageClinicDetailScreen extends StatelessWidget {
   }
 }
 
-/// شاشة تفاصيل صيدلية القرية.
-class PharmacyDetailScreen extends StatelessWidget {
+/// شاشة تفاصيل صيدلية القرية — مع «عدّل/احذف» لصاحب الصيدلية وحده (البند ٨).
+class PharmacyDetailScreen extends StatefulWidget {
   const PharmacyDetailScreen({super.key});
 
+  @override
+  State<PharmacyDetailScreen> createState() => _PharmacyDetailScreenState();
+}
+
+class _PharmacyDetailScreenState extends State<PharmacyDetailScreen> {
   static const _green = Color(0xFF6F4E37);
   static const _greenDark = Color(0xFF6F4E37);
+
+  Pharmacy? _saved;
+  late final PharmacyService _service = PharmacyService();
+
+  String get _currentUid {
+    try {
+      return FirebaseAuth.instance.currentUser?.uid ?? '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  Future<void> _openEdit(Pharmacy pharmacy) async {
+    final res = await showModalBottomSheet<Pharmacy>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => PharmacyFormSheet(
+        userName: pharmacy.submittedByName ?? '',
+        userId: _currentUid,
+        existing: pharmacy,
+      ),
+    );
+    if (res == null || !mounted) return;
+    try {
+      await _service.update(res);
+      if (!mounted) return;
+      setState(() => _saved = res);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('تم حفظ التعديلات — عادت الصيدلية للمراجعة')));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('تعذّر حفظ التعديل — تحقّق من الصلاحيات أو من الاتصال')));
+    }
+  }
+
+  Future<bool> _deleteRecord(Pharmacy pharmacy) async {
+    try {
+      await _service.delete(pharmacy.id);
+      if (mounted) Navigator.pop(context);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Widget? _ownerActions(Pharmacy pharmacy) {
+    final owner = pharmacy.submittedBy ?? '';
+    if (_currentUid.isEmpty || _currentUid != owner) return null;
+    return OwnerActions(
+      keyTag: 'pharmacy-detail',
+      ownerId: owner,
+      currentUserId: _currentUid,
+      itemName: pharmacy.name,
+      editLabel: 'تعديل الصيدلية',
+      deleteLabel: 'حذف الصيدلية',
+      onEdit: () => _openEdit(pharmacy),
+      onDelete: () => _deleteRecord(pharmacy),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final pharmacy = ModalRoute.of(context)!.settings.arguments as Pharmacy? ??
-        const Pharmacy(id: '', name: '');
+    final pharmacy = _saved ??
+        ModalRoute.of(context)!.settings.arguments as Pharmacy? ??
+            const Pharmacy(id: '', name: '');
+    final ownerRow = _ownerActions(pharmacy);
 
     return Scaffold(
       body: CustomScrollView(
@@ -461,28 +589,7 @@ class PharmacyDetailScreen extends StatelessWidget {
                     MedSection(
                       title: 'صور الصيدلية',
                       accent: _green,
-                      child: SizedBox(
-                        height: 130,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: pharmacy.imageUrls.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(width: 10),
-                          itemBuilder: (_, i) => ClipRRect(
-                            borderRadius: BorderRadius.circular(14),
-                            child: CachedNetworkImage(
-                                imageUrl: pharmacy.imageUrls[i],
-                                width: 180,
-                                fit: BoxFit.cover,
-                                errorWidget: (_, __, ___) => Container(
-                                    width: 180,
-                                    color: theme
-                                        .colorScheme.surfaceContainerHighest,
-                                    child: const Icon(
-                                        Icons.broken_image_rounded))),
-                          ),
-                        ),
-                      ),
+                      child: ImageGalleryWrap(urls: pharmacy.imageUrls, tileWidth: 180),
                     ),
                   ],
                   const SizedBox(height: 22),
@@ -499,6 +606,10 @@ class PharmacyDetailScreen extends StatelessWidget {
                       label: const Text('اتصال بالصيدلية',
                           style: TextStyle(fontWeight: FontWeight.w800)),
                     ),
+                  if (ownerRow != null) ...[
+                    const SizedBox(height: 12),
+                    ownerRow,
+                  ],
                 ],
               ),
             ),
@@ -509,18 +620,85 @@ class PharmacyDetailScreen extends StatelessWidget {
   }
 }
 
-/// شاشة تفاصيل معمل التحاليل.
-class MedicalLabDetailScreen extends StatelessWidget {
+/// شاشة تفاصيل معمل التحاليل — مع «عدّل/احذف» لصاحب المعمل وحده (البند ٨).
+class MedicalLabDetailScreen extends StatefulWidget {
   const MedicalLabDetailScreen({super.key});
 
+  @override
+  State<MedicalLabDetailScreen> createState() => _MedicalLabDetailScreenState();
+}
+
+class _MedicalLabDetailScreenState extends State<MedicalLabDetailScreen> {
   static const _purple = Color(0xFF6A1B9A);
   static const _purpleDark = Color(0xFF4A148C);
+
+  MedicalLab? _saved;
+  late final MedicalLabService _service = MedicalLabService();
+
+  String get _currentUid {
+    try {
+      return FirebaseAuth.instance.currentUser?.uid ?? '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  Future<void> _openEdit(MedicalLab lab) async {
+    final res = await showModalBottomSheet<MedicalLab>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => LabFormSheet(
+        userName: lab.submittedByName ?? '',
+        userId: _currentUid,
+        existing: lab,
+      ),
+    );
+    if (res == null || !mounted) return;
+    try {
+      await _service.update(res);
+      if (!mounted) return;
+      setState(() => _saved = res);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('تم حفظ التعديلات — عاد المعمل للمراجعة')));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('تعذّر حفظ التعديل — تحقّق من الصلاحيات أو من الاتصال')));
+    }
+  }
+
+  Future<bool> _deleteRecord(MedicalLab lab) async {
+    try {
+      await _service.delete(lab.id);
+      if (mounted) Navigator.pop(context);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Widget? _ownerActions(MedicalLab lab) {
+    final owner = lab.submittedBy ?? '';
+    if (_currentUid.isEmpty || _currentUid != owner) return null;
+    return OwnerActions(
+      keyTag: 'lab-detail',
+      ownerId: owner,
+      currentUserId: _currentUid,
+      itemName: lab.name,
+      editLabel: 'تعديل المعمل',
+      deleteLabel: 'حذف المعمل',
+      onEdit: () => _openEdit(lab),
+      onDelete: () => _deleteRecord(lab),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final lab = ModalRoute.of(context)?.settings.arguments as MedicalLab? ??
-        const MedicalLab(id: '', name: '');
+    final lab = _saved ??
+        ModalRoute.of(context)?.settings.arguments as MedicalLab? ??
+            const MedicalLab(id: '', name: '');
+    final ownerRow = _ownerActions(lab);
 
     return Scaffold(
       body: CustomScrollView(
@@ -630,28 +808,7 @@ class MedicalLabDetailScreen extends StatelessWidget {
                     MedSection(
                       title: 'صور المعمل',
                       accent: _purple,
-                      child: SizedBox(
-                        height: 130,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: lab.imageUrls.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(width: 10),
-                          itemBuilder: (_, i) => ClipRRect(
-                            borderRadius: BorderRadius.circular(14),
-                            child: CachedNetworkImage(
-                                imageUrl: lab.imageUrls[i],
-                                width: 180,
-                                fit: BoxFit.cover,
-                                errorWidget: (_, __, ___) => Container(
-                                    width: 180,
-                                    color: theme
-                                        .colorScheme.surfaceContainerHighest,
-                                    child: const Icon(
-                                        Icons.broken_image_rounded))),
-                          ),
-                        ),
-                      ),
+                      child: ImageGalleryWrap(urls: lab.imageUrls, tileWidth: 180),
                     ),
                   ],
                   const SizedBox(height: 22),
@@ -669,6 +826,10 @@ class MedicalLabDetailScreen extends StatelessWidget {
                       label: const Text('اتصال بالمعمل',
                           style: TextStyle(fontWeight: FontWeight.w800)),
                     ),
+                  if (ownerRow != null) ...[
+                    const SizedBox(height: 12),
+                    ownerRow,
+                  ],
                 ],
               ),
             ),

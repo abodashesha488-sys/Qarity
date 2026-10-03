@@ -7,10 +7,15 @@ import '../models/data_models.dart';
 import 'cache_service.dart';
 import 'notification_inbox_service.dart';
 import 'notification_service.dart';
+import 'owner_content_service.dart';
 import 'remote_push_service.dart';
 
 class ObituaryService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  /// قابل للحقن كما في بقية خدمات المشروع حتى تُختبر شاشة العزاء بلا Firebase.
+  ObituaryService([FirebaseFirestore? firestore])
+      : _firestore = firestore ?? FirebaseFirestore.instance;
+
+  final FirebaseFirestore _firestore;
 
   Future<List<Obituary>> getObituariesList({bool forceRefresh = false}) async {
     if (!forceRefresh) {
@@ -70,4 +75,19 @@ class ObituaryService {
       ));
     }
   }
+
+  /// تعديل صاحب النعوة لنعوته في أي وقت؛ تعود إلى المراجعة (`firestore.rules`)
+  /// ولا تلمس نسبه (`submittedBy`). التعازي مجموعة مستقلة (`condolences`) فلا
+  /// يمسّها حفظ النعوة.
+  Future<void> updateObituary(Obituary obituary) => OwnerContentService.edit(
+        _firestore,
+        'obituaries',
+        obituary.id,
+        obituary.toJson(),
+        label: obituary.name,
+      );
+
+  /// حذف فوري لصاحب النعوة: التعازي المرتبطة بها ثم صورتها ثم الوثيقة.
+  Future<void> deleteObituary(String obituaryId) =>
+      OwnerContentService.remove(_firestore, 'obituaries', obituaryId);
 }

@@ -7,6 +7,7 @@ import '../models/data_models.dart';
 import 'cache_service.dart';
 import 'notification_inbox_service.dart';
 import 'notification_service.dart';
+import 'owner_content_service.dart';
 import 'remote_push_service.dart';
 
 class PhoneDirectoryService {
@@ -80,4 +81,19 @@ class PhoneDirectoryService {
       ));
     }
   }
+
+  /// تعديل مقدّم البيان لبيانه في أي وقت — يعود إلى المراجعة، ولا يلمس
+  /// `submittedBy` (تجرّده طبقة المالك المشتركة).
+  Future<void> updatePhoneDirectoryEntry(PhoneDirectoryEntry entry) =>
+      OwnerContentService.edit(
+        _firestore,
+        'phone_directory',
+        entry.id,
+        entry.toJson(),
+        label: entry.name,
+      );
+
+  /// حذف فوري لمقدّم البيان.
+  Future<void> deletePhoneDirectoryEntry(String entryId) =>
+      OwnerContentService.remove(_firestore, 'phone_directory', entryId);
 }

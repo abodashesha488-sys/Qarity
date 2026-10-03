@@ -30,6 +30,34 @@ class AdminService {
 
   Stream<firebase_auth.User?> get authStateChanges => _auth.authStateChanges();
 
+  /// إذاعة «تغيّر عدد معلّقات هذه المجموعة»: تَنشرها كل قرارات الإدارة
+  /// (موافقة/رفض/حذف/نشر وقرارات طلبات المتاجر)، وكل شاشة إدارية تشترك فيه
+  /// وتُلغي اشتراكها في `dispose`. بدونها يبقى قرارٌ أُخذ في شاشة التفاصيل أو
+  /// في إجراء جماعي غيرَ معلوم للوحة، فتعرض شارة «بانتظار المراجعة» وترويسة
+  /// اللوحة ورقائق التبويب عدًّا قدمه قرار واحد أمام المراجع.
+  static final StreamController<String> _pendingCountEvents =
+      StreamController<String>.broadcast();
+
+  /// اسم المجموعة التي تغيّر عدد معلّقاتها.
+  static Stream<String> get pendingCountEvents => _pendingCountEvents.stream;
+
+  static void _emitPendingCountEvent(String collection) {
+    if (collection.isEmpty || _pendingCountEvents.isClosed) return;
+    _pendingCountEvents.add(collection);
+  }
+
+  /// عدّ مجموعة واحدة — المسار الرخيص الذي تستعمله الشاشات المشترِكة بدل
+  /// `fetchPendingCounts` الكاملة (عشرون عدًّا لكل ضغطة). طلبات المتاجر هي
+  /// الوحيدة التي تُعدّ بـ`status` لا بـ`isApproved`.
+  ///
+  /// `strict`: هنا يُرمي الفشل ولا يُبدَّل بصفر، لأن المتلقي سيكتب الرقم في
+  /// شارة حيّة؛ صفر زائف يعني «لا معلّقات» فيمضي المراجع دون أن ينظر. يترك
+  /// المشترِك الرقم القديم كما هو ويستعيد بالسحب للتحديث.
+  Future<int> recountPending(String collection) =>
+      collection == 'seller_requests'
+          ? _statusPendingCount(collection, strict: true)
+          : _pendingCountOnce(collection, strict: true);
+
   Future<bool> isAdminUser(String uid) async {
     try {
       final doc = await _firestore.collection('users').doc(uid).get();
@@ -65,7 +93,8 @@ class AdminService {
 
   /// عدّ لحظي رخيص عبر count() aggregation (يقرأ مداخل الفهرس فقط ولا
   /// يحمّل المستندات) — كان كل عدّ يحمّل كل مستندات المجموعة المؤجلة.
-  Future<int> _pendingCountOnce(String collection) async {
+  Future<int> _pendingCountOnce(String collection,
+      {bool strict = false}) async {
     try {
       final snap = await _firestore
           .collection(collection)
@@ -74,6 +103,7 @@ class AdminService {
           .get();
       return snap.count ?? 0;
     } catch (_) {
+      if (strict) rethrow;
       return 0;
     }
   }
@@ -249,6 +279,7 @@ class AdminService {
       'approvedBy': _auth.currentUser?.uid,
     });
     _invalidateContentCache(collection);
+    _emitPendingCountEvent(collection);
     final title = (data['title'] ?? data['name'] ?? ref.id).toString();
     await _logActivity(
       action: 'publish',
@@ -415,6 +446,9 @@ class AdminService {
   Future<void> _update(
       String collection, String docId, Map<String, dynamic> data) async {
     await _firestore.collection(collection).doc(docId).update(data);
+    // محرر الإدارة قد يقلب `isApproved` (سحب الموافقة أو نشر مباشر من شاشة
+    // التعديل)، فالعدّ المعلَّق لهذا التبويب تغيّر ولو لم يكن هناك قرار صريح.
+    _emitPendingCountEvent(collection);
   }
 
   Stream<List<Map<String, dynamic>>> _allStream(String collection) {
@@ -514,6 +548,7 @@ class AdminService {
       'approvedBy': _auth.currentUser?.uid,
     });
     _invalidateContentCache(collection);
+    _emitPendingCountEvent(collection);
     try {
       await _logActivity(
         action: 'approve',
@@ -742,11 +777,7 @@ class AdminService {
       'shops' => ('🏬 محل جديد في السوق', preview, '/market'),
       'village_ads' => ('📢 إعلان جديد في القرية', preview, '/ads'),
       'lawyers' => ('⚖️ محامٍ جديد في السجل', preview, '/legal'),
-      'legal_consultations' => (
-          '⚖️ استشارة قانونية جديدة',
-          preview,
-          '/legal'
-        ),
+      'legal_consultations' => ('⚖️ استشارة قانونية جديدة', preview, '/legal'),
       'medical_center_clinics' => (
           '🏥 عيادة جديدة بالمركز الطبي الخيري',
           preview,
@@ -774,6 +805,7 @@ class AdminService {
       'rejectedBy': _auth.currentUser?.uid,
     });
     _invalidateContentCache(collection);
+    _emitPendingCountEvent(collection);
     try {
       await _logActivity(
         action: 'reject',
@@ -815,6 +847,7 @@ class AdminService {
       }
     }
     _invalidateContentCache(collection);
+    _emitPendingCountEvent(collection);
     try {
       await _logActivity(
         action: 'delete',
@@ -909,7 +942,8 @@ class AdminService {
     };
   }
 
-  Future<int> _statusPendingCount(String collection) async {
+  Future<int> _statusPendingCount(String collection,
+      {bool strict = false}) async {
     try {
       final snap = await _firestore
           .collection(collection)
@@ -918,6 +952,7 @@ class AdminService {
           .get();
       return snap.count ?? 0;
     } catch (_) {
+      if (strict) rethrow;
       return 0;
     }
   }
@@ -990,6 +1025,7 @@ class AdminService {
       targetDocId: docId,
       targetTitle: 'طلب متجر',
     );
+    _emitPendingCountEvent('seller_requests');
   }
 
   Future<void> rejectSellerRequest(String docId, {String? notes}) async {
@@ -1009,6 +1045,7 @@ class AdminService {
       targetDocId: docId,
       targetTitle: 'طلب متجر',
     );
+    _emitPendingCountEvent('seller_requests');
     _notifySellerRequest(reqSnap.data()?['userId'] as String?, approved: false);
   }
 

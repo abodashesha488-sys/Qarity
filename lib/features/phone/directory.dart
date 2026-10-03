@@ -7,7 +7,9 @@ import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
 import '../../services/admin_service.dart';
 import '../../services/phone_directory_service.dart';
+import '../../widgets/owner_actions.dart';
 import '../../widgets/qurity_app_bar.dart';
+import 'add_directory.dart';
 
 class PhoneDirectoryScreen extends StatefulWidget {
   const PhoneDirectoryScreen({super.key, this.embedded = false});
@@ -448,11 +450,57 @@ class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
                 ),
               ],
               const SizedBox(height: 20),
+              if (_isOwnerOf(entry))
+                OwnerActions(
+                  keyTag: 'phone-detail',
+                  ownerId: entry.submittedBy ?? '',
+                  currentUserId: _currentUid(),
+                  itemName: entry.name,
+                  editLabel: 'تعديل البيان',
+                  deleteLabel: 'حذف البيان',
+                  onEdit: () {
+                    Navigator.pop(ctx);
+                    _openEdit(entry);
+                  },
+                  onDelete: () => _deleteEntry(ctx, entry),
+                ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  String _currentUid() {
+    try {
+      return FirebaseAuth.instance.currentUser?.uid ?? '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  bool _isOwnerOf(PhoneDirectoryEntry entry) {
+    final uid = _currentUid();
+    final owner = entry.submittedBy ?? '';
+    return uid.isNotEmpty && uid == owner;
+  }
+
+  /// تعديل صاحب البيان له: نفس النموذج بـ`existing`، والنجاح يعيد البيان للمراجعة.
+  Future<void> _openEdit(PhoneDirectoryEntry entry) async {
+    final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(
+        builder: (_) => AddPhoneDirectoryScreen(existing: entry)));
+    if (saved == true) _refresh();
+  }
+
+  Future<bool> _deleteEntry(BuildContext dialogContext, PhoneDirectoryEntry entry) async {
+    try {
+      await _service.deletePhoneDirectoryEntry(entry.id);
+      if (dialogContext.mounted) Navigator.pop(dialogContext);
+      _refresh();
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<String?> _getWhatsAppUrl(String phone) async {

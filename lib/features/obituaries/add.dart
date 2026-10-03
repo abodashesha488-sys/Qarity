@@ -16,11 +16,15 @@ import '../../widgets/obituary_share_card.dart';
 import '../../widgets/qurity_app_bar.dart';
 
 class AddObituaryScreen extends StatefulWidget {
-  const AddObituaryScreen({super.key, this.service});
+  const AddObituaryScreen({super.key, this.service, this.existing});
 
   /// حقن اختياري وفق نمط المشروع: فتح النموذج في اختبار بلا Firebase
   /// لا يجب أن يهيّئFirestore عند بناء الشاشة.
   final ObituaryService? service;
+
+  /// سجل القائمة نفسه عند تعديله من صاحبه — النموذج يمتلئ به ويُحفظ بالمسار
+  /// المالك (البند ٨) بدل إنشاء سجل جديد.
+  final Obituary? existing;
 
   @override
   State<AddObituaryScreen> createState() => _AddObituaryScreenState();
@@ -28,11 +32,22 @@ class AddObituaryScreen extends StatefulWidget {
 
 class _AddObituaryScreenState extends State<AddObituaryScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _descriptionController = TextEditingController();
-  final _funeralLocationController = TextEditingController();
-  final _burialLocationController = TextEditingController();
-  final _condolenceLocationController = TextEditingController();
+  late final _nameController =
+      TextEditingController(text: widget.existing?.name ?? '');
+  late final _descriptionController =
+      TextEditingController(text: widget.existing?.description ?? '');
+  late final _funeralLocationController =
+      TextEditingController(text: widget.existing?.funeralLocation ?? '');
+  late final _burialLocationController =
+      TextEditingController(text: widget.existing?.burialLocation ?? '');
+  late final _condolenceLocationController =
+      TextEditingController(text: widget.existing?.condolenceLocation ?? '');
+
+  bool get _isEdit => widget.existing != null;
+
+  /// موعد محفوظ لا يُعاد اختياره: يبقى نصه كما هو حتى يلمس المستخدم المنتقي.
+  String _savedFuneralTime = '';
+  String _savedCondolenceTime = '';
 
   late final ObituaryService _obituaryService =
       widget.service ?? ObituaryService();
@@ -72,6 +87,37 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
   void initState() {
     super.initState();
     _loadSubmitter();
+    _seedFromExisting();
+  }
+
+  /// امتلاء النموذج بالسجل عند تعديله. الموعدان محفوظان كنص مقروء لا طابع،
+  /// فيبقى النص المحفوظ كما هو ما لم يلمس المستخدم المنتقي.
+  void _seedFromExisting() {
+    final e = widget.existing;
+    if (e == null) return;
+    _gender = e.gender;
+    _cardBackground = e.cardBackground.isEmpty
+        ? kDefaultObituaryCardBackground
+        : e.cardBackground;
+    if (_cardBackground.startsWith('http')) _customBackground = _cardBackground;
+    _imageUrl = e.imageUrl;
+    _savedFuneralTime = e.funeralTime;
+    _savedCondolenceTime = e.condolenceTime;
+    _selectedDeathDate = _parseObituaryDate(e.dateOfDeath);
+    _selectedFuneralDate = _parseObituaryDate(e.funeralDate);
+    _relatives
+      ..clear()
+      ..addAll(e.relatives);
+    _relativeSeq = _relatives.length;
+  }
+
+  static DateTime? _parseObituaryDate(String raw) {
+    if (raw.trim().isEmpty) return null;
+    try {
+      return DateFormat('yyyy/MM/dd').parseStrict(raw.trim());
+    } catch (_) {
+      return DateTime.tryParse(raw.trim());
+    }
   }
 
   @override
@@ -273,34 +319,47 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
     }
     setState(() => _isSaving = true);
     try {
+      final editing = widget.existing;
       final obituary = Obituary(
-        id: '',
+        id: editing?.id ?? '',
         name: _nameController.text.trim(),
-        age: '',
+        age: editing?.age ?? '',
         gender: _gender,
         dateOfDeath: DateFormat('yyyy/MM/dd').format(_selectedDeathDate!),
         funeralDate: _selectedFuneralDate != null
             ? DateFormat('yyyy/MM/dd').format(_selectedFuneralDate!)
             : '',
         funeralLocation: _funeralLocationController.text.trim(),
-        funeralTime:
-            _funeralTime != null ? obituaryTimeLabel(_funeralTime!) : '',
+        funeralTime: _funeralTime != null
+            ? obituaryTimeLabel(_funeralTime!)
+            : (editing?.funeralTime ?? _savedFuneralTime),
         burialLocation: _burialLocationController.text.trim(),
         condolenceLocation: _condolenceLocationController.text.trim(),
         condolenceTime: _condolenceTime != null
             ? obituaryTimeLabel(_condolenceTime!)
-            : '',
+            : (editing?.condolenceTime ?? _savedCondolenceTime),
+        mosque: editing?.mosque ?? '',
         cardBackground: _cardBackground,
         imageUrl: _imageUrl,
         description: _descriptionController.text.trim(),
         relatives: _relatives,
-        submittedBy: _submittedBy,
+        isApproved: editing?.isApproved ?? false,
+        submittedBy: editing?.submittedBy ?? _submittedBy,
+        createdAt: editing?.createdAt,
       );
-      await _obituaryService.addObituary(obituary);
+      if (editing != null) {
+        await _obituaryService.updateObituary(obituary);
+      } else {
+        await _obituaryService.addObituary(obituary);
+      }
       if (!mounted) return;
-      AppHelpers.showSnackBar(context, 'تم إرسال التعزية للمراجعة',
+      AppHelpers.showSnackBar(
+          context,
+          editing == null
+              ? 'تم إرسال التعزية للمراجعة'
+              : 'تم حفظ التعديلات — أُعيدت النعوة للمراجعة',
           isSuccess: true);
-      Navigator.pop(context);
+      Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
         AppHelpers.showSnackBar(context, 'خطأ: $e', isError: true);
@@ -325,13 +384,14 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
           ? DateFormat('yyyy/MM/dd').format(_selectedFuneralDate!)
           : '',
       funeralLocation: _funeralLocationController.text.trim(),
-      funeralTime:
-          _funeralTime != null ? obituaryTimeLabel(_funeralTime!) : '',
+      funeralTime: _funeralTime != null
+          ? obituaryTimeLabel(_funeralTime!)
+          : _savedFuneralTime,
       burialLocation: _burialLocationController.text.trim(),
       condolenceLocation: _condolenceLocationController.text.trim(),
       condolenceTime: _condolenceTime != null
           ? obituaryTimeLabel(_condolenceTime!)
-          : '',
+          : _savedCondolenceTime,
       cardBackground: _cardBackground,
       imageUrl: _imageUrl,
       description: _descriptionController.text.trim(),
@@ -343,7 +403,7 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: const QurityAppBar(title: 'إضافة تعزية'),
+      appBar: QurityAppBar(title: _isEdit ? 'تعديل النعوة' : 'إضافة تعزية'),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -598,6 +658,7 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
           label: 'موعد صلاة الجنازة',
           value: _funeralTime,
           onTap: _pickFuneralTime,
+          savedLabel: _savedFuneralTime,
         ),
         const SizedBox(height: 16),
         _buildTextField(
@@ -620,19 +681,24 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
           label: 'موعد العزاء',
           value: _condolenceTime,
           onTap: _pickCondolenceTime,
+          savedLabel: _savedCondolenceTime,
         ),
       ],
     );
   }
 
   /// حقل وقت لا كتابة فيه: الضغط يفتح `showTimePicker` والقيمة تُخزَّن نصًا.
+  /// `savedLabel` هو الموعد المحفوظ في السجل عند التعديل — يعرض ويُحفظ كما هو
+  /// ما لم يختر المستخدم وقتًا جديدًا.
   Widget _buildTimeField({
     required ThemeData theme,
     required String keyName,
     required String label,
     required TimeOfDay? value,
     required VoidCallback onTap,
+    String savedLabel = '',
   }) {
+    final shown = value != null ? obituaryTimeLabel(value) : savedLabel;
     return InkWell(
       key: Key(keyName),
       onTap: onTap,
@@ -646,9 +712,9 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
               const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         ),
         child: Text(
-          value == null ? 'اختر الوقت' : obituaryTimeLabel(value),
+          shown.isEmpty ? 'اختر الوقت' : shown,
           style: theme.textTheme.bodyLarge?.copyWith(
-            color: value == null
+            color: shown.isEmpty
                 ? theme.colorScheme.onSurfaceVariant
                 : theme.colorScheme.onSurface,
           ),
@@ -820,7 +886,9 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
             : const Icon(Icons.send_rounded, size: 24),
         // بدون لون مخصص: النص يرث لون الزر (أبيض) لا لون الثيم البني
         label: Text(
-            _isSaving ? 'جاري الإرسال...' : 'إرسال التعزية للمراجعة',
+            _isSaving
+                ? (_isEdit ? 'جاري الحفظ...' : 'جاري الإرسال...')
+                : (_isEdit ? 'حفظ التعديلات' : 'إرسال التعزية للمراجعة'),
             style: const TextStyle(
                 fontWeight: FontWeight.w800, fontSize: 16, color: Colors.white)),
         style: FilledButton.styleFrom(

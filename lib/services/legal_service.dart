@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/legal_models.dart';
 import 'notification_inbox_service.dart';
 import 'notification_service.dart';
+import 'owner_content_service.dart';
 import 'remote_push_service.dart';
 
 String? _currentUid() {
@@ -58,10 +59,17 @@ class LawyerService {
     return ref.id;
   }
 
-  Future<void> update(String id, Lawyer lawyer) =>
-      _col.doc(id).set(lawyer.toWriteMap(), SetOptions(merge: true));
+  /// تعديل صاحب السجل لبياناته: يعود إلى المراجعة (البند ٨).
+  Future<void> update(String id, Lawyer lawyer) => OwnerContentService.edit(
+        _firestore,
+        'lawyers',
+        id,
+        lawyer.toWriteMap(),
+        label: lawyer.name,
+      );
 
-  Future<void> delete(String id) => _col.doc(id).delete();
+  Future<void> delete(String id) =>
+      OwnerContentService.remove(_firestore, 'lawyers', id);
 
   /// المحامون المعتمدون — الأحدث أولاً. الشرط على الخادم يوفّر القراءة،
   /// والترتيب كلاينت لأن `orderBy('createdAt')` يُسقط أي وثيقة بلا الحقل.
@@ -122,10 +130,18 @@ class LegalConsultationService {
     return ref.id;
   }
 
+  /// تعديل صاحب السؤال لسؤاله: يعود للمراجعة ويُفرَّغ الرد (البند ٨).
   Future<void> update(String id, LegalConsultation c) =>
-      _col.doc(id).set(c.toWriteMap(), SetOptions(merge: true));
+      OwnerContentService.edit(
+        _firestore,
+        'legal_consultations',
+        id,
+        c.toWriteMap(),
+        label: c.question,
+      );
 
-  Future<void> delete(String id) => _col.doc(id).delete();
+  Future<void> delete(String id) =>
+      OwnerContentService.remove(_firestore, 'legal_consultations', id);
 
   /// الاستشارات المعتمدة — الأحدث أولاً (المرشَّح على الخادم حتى لا تُقرأ
   /// الأسئلة المعلّقة لغير أصحابها).

@@ -4,13 +4,12 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:shimmer/shimmer.dart';
 
 import '../../models/service_provider_model.dart';
 import '../../routes/app_routes.dart';
-import '../../services/image_upload_service.dart';
 import '../../services/service_provider_service.dart';
+import '../../widgets/document_field_editor.dart';
 import '../../widgets/qurity_app_bar.dart';
 
 const kFarmerWorkersEquipmentServices = [
@@ -235,6 +234,7 @@ class _WorkersEquipmentScreenState extends State<WorkersEquipmentScreen> {
     var specialty = kFarmerWorkersEquipmentServices.first;
     final images = <String>[];
     final maxImages = 3;
+    var uploading = false;
 
     final bool? ok = await showDialog<bool>(
       context: context,
@@ -266,11 +266,17 @@ class _WorkersEquipmentScreenState extends State<WorkersEquipmentScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _ImageField(
-                    maxImages: maxImages,
-                    onChanged: (l) => setSt(() => images
-                      ..clear()
-                      ..addAll(l))),
+                ImageListEditor(
+                  label: 'الصور (حتى $maxImages)',
+                  fieldKey: 'photoUrl',
+                  urls: images,
+                  maxImages: maxImages,
+                  maxSide: 600,
+                  onChanged: (l) => setSt(() => images
+                    ..clear()
+                    ..addAll(l)),
+                  onBusyChanged: (b) => setSt(() => uploading = b),
+                ),
                 const SizedBox(height: 12),
                 TextField(
                     controller: nameC,
@@ -319,8 +325,8 @@ class _WorkersEquipmentScreenState extends State<WorkersEquipmentScreen> {
             FilledButton(
               style: FilledButton.styleFrom(
                   backgroundColor: const Color(0xFFEF6C00)),
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('نشر'),
+              onPressed: uploading ? null : () => Navigator.pop(ctx, true),
+              child: Text(uploading ? 'الصورة ما زالت تُرفع…' : 'نشر'),
             ),
           ],
         ),
@@ -382,127 +388,6 @@ class _WorkersEquipmentScreenState extends State<WorkersEquipmentScreen> {
       return null;
     }
     return user.uid;
-  }
-}
-
-class _ImageField extends StatefulWidget {
-  final int maxImages;
-  final void Function(List<String>) onChanged;
-  const _ImageField({required this.maxImages, required this.onChanged});
-
-  @override
-  State<_ImageField> createState() => _ImageFieldState();
-}
-
-class _ImageFieldState extends State<_ImageField> {
-  final ImagePicker _picker = ImagePicker();
-  final List<String> _images = [];
-  bool _uploading = false;
-
-  Future<void> _pick() async {
-    if (_images.length >= widget.maxImages) return;
-    setState(() => _uploading = true);
-    try {
-      final XFile? image = await _picker.pickImage(
-          source: ImageSource.gallery, imageQuality: 80);
-      if (image == null) return;
-      final bytes = await image.readAsBytes();
-      final url = await ImageUploadService().uploadImage(bytes);
-      if (!mounted) return;
-      setState(() => _images.add(url));
-      widget.onChanged(_images);
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ: $e'), backgroundColor: Colors.red));
-    } finally {
-      if (mounted) setState(() => _uploading = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('الصور (حتى ${widget.maxImages})',
-            style: theme.textTheme.labelLarge
-                ?.copyWith(fontWeight: FontWeight.w700)),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: [
-            ...List.generate(
-                _images.length,
-                (i) => Stack(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: CachedNetworkImage(
-                            imageUrl: _images[i],
-                            width: 90,
-                            height: 90,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                        Positioned(
-                          top: 2,
-                          right: 2,
-                          child: CircleAvatar(
-                            radius: 10,
-                            backgroundColor: Colors.black54,
-                            child: IconButton(
-                              padding: EdgeInsets.zero,
-                              icon: const Icon(Icons.close_rounded,
-                                  color: Colors.white, size: 14),
-                              onPressed: () => setState(() {
-                                _images.removeAt(i);
-                                widget.onChanged(_images);
-                              }),
-                            ),
-                          ),
-                        ),
-                      ],
-                    )),
-            if (_images.length < widget.maxImages)
-              InkWell(
-                onTap: _uploading ? null : _pick,
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  width: 90,
-                  height: 90,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainerHighest
-                        .withValues(alpha: 0.6),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                        color: theme.colorScheme.outlineVariant
-                            .withValues(alpha: 0.4)),
-                  ),
-                  child: _uploading
-                      ? const Center(
-                          child: CircularProgressIndicator(strokeWidth: 2))
-                      : Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.add_photo_alternate_outlined,
-                                size: 28, color: theme.colorScheme.primary),
-                            const SizedBox(height: 4),
-                            Text('إضافة',
-                                style: TextStyle(
-                                    fontSize: 11,
-                                    color: theme.colorScheme.primary,
-                                    fontWeight: FontWeight.w700)),
-                          ],
-                        ),
-                ),
-              ),
-          ],
-        ),
-      ],
-    );
   }
 }
 

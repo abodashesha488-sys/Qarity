@@ -244,6 +244,11 @@ class NewsItem implements BaseModel {
 // ═══════════════════════════════════════════════════════════════
 // MARKET PRODUCT MODEL
 // ═══════════════════════════════════════════════════════════════
+
+/// المدة الافتراضية لأي عرض يُفعَّل: تُحفظ كنقطة انتهاء وقت الكتابة، فلا يبقى
+/// أي عرض حيًا إلى الأبد لأن أحدًا لم يضبط تاريخًا.
+const Duration kDefaultOfferDuration = Duration(days: 30);
+
 class MarketProduct implements BaseModel {
   @override
   final String id;
@@ -258,8 +263,17 @@ class MarketProduct implements BaseModel {
   final String sellerPhone;
   final String? sellerId;
   final String? sellerType; // SellerType enum name — لألوان الاسم والإطارات
+
+  /// المحل الذي يُعرض هذا المنتج داخله. الرابط بالمالك وحده كان يُظهر منتجات
+  /// البائع في كل محلاته، فمَن أضاف منتجًا من صفحة محل يُخزَّن محلُّه صراحةً.
+  final String? shopId;
   final bool isOnOffer;
   final double? offerPrice;
+
+  /// بداية نافذة العرض ونهايتها — اختياريان تمامًا: المستند القديم الذي لا
+  /// يحملهما يبقى ساريًا كما كان، فالانتهاء قرار كتابة لا إعادة حساب للتاريخ.
+  final DateTime? offerStartsAt;
+  final DateTime? offerEndsAt;
   final String productStatus;
   @override
   final DateTime? createdAt;
@@ -283,8 +297,11 @@ class MarketProduct implements BaseModel {
     required this.sellerPhone,
     this.sellerId,
     this.sellerType,
+    this.shopId,
     this.isOnOffer = false,
     this.offerPrice,
+    this.offerStartsAt,
+    this.offerEndsAt,
     this.productStatus = 'regular',
     this.createdAt,
     this.stock = 0,
@@ -310,8 +327,15 @@ class MarketProduct implements BaseModel {
       sellerPhone: json['sellerPhone'] as String? ?? '',
       sellerId: json['sellerId'] as String?,
       sellerType: json['sellerType'] as String?,
+      shopId: json['shopId'] as String?,
       isOnOffer: json['isOnOffer'] as bool? ?? false,
-      offerPrice: _parseDouble(json['offerPrice']),
+      offerPrice: _parseNullableDouble(json['offerPrice']),
+      offerStartsAt: json['offerStartsAt'] != null
+          ? _parseTimestamp(json['offerStartsAt'])
+          : null,
+      offerEndsAt: json['offerEndsAt'] != null
+          ? _parseTimestamp(json['offerEndsAt'])
+          : null,
       productStatus: json['productStatus'] as String? ?? 'regular',
       createdAt:
           json['createdAt'] != null ? _parseTimestamp(json['createdAt']) : null,
@@ -329,6 +353,15 @@ class MarketProduct implements BaseModel {
     if (value is num) return value.toDouble();
     if (value is String) return double.tryParse(value) ?? 0.0;
     return 0.0;
+  }
+
+  /// سعر العرض حالة «موجود/غير موجود» لا صفر: وثيقة مرفوع عليها علم العرض
+  /// بلا سعر مكتوب يجب ألا تُعرض ببلاش ولا بخصم ١٠٠٪.
+  static double? _parseNullableDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value);
+    return null;
   }
 
   static int _parseInt(dynamic value) {
@@ -352,8 +385,12 @@ class MarketProduct implements BaseModel {
       'sellerPhone': sellerPhone,
       'sellerId': sellerId,
       if (sellerType != null) 'sellerType': sellerType,
+      if (shopId != null && shopId!.isNotEmpty) 'shopId': shopId,
       'isOnOffer': isOnOffer,
       'offerPrice': offerPrice,
+      if (offerStartsAt != null)
+        'offerStartsAt': Timestamp.fromDate(offerStartsAt!),
+      if (offerEndsAt != null) 'offerEndsAt': Timestamp.fromDate(offerEndsAt!),
       'productStatus': productStatus,
       'createdAt': createdAt != null
           ? Timestamp.fromDate(createdAt!)
@@ -381,8 +418,11 @@ class MarketProduct implements BaseModel {
       sellerPhone: sellerPhone,
       sellerId: sellerId,
       sellerType: sellerType,
+      shopId: shopId,
       isOnOffer: isOnOffer,
       offerPrice: offerPrice,
+      offerStartsAt: offerStartsAt,
+      offerEndsAt: offerEndsAt,
       createdAt: createdAt,
       stock: stock,
       rating: rating,
@@ -393,15 +433,55 @@ class MarketProduct implements BaseModel {
     );
   }
 
-  /// ✅ عرض سارٍ فعليًا: مفعّل وسعره موجب وأقل من السعر الأصلي.
-  bool get hasActiveOffer =>
-      isOnOffer && offerPrice != null && price > 0 && offerPrice! < price;
+  /// هل يُعدّ هذا المنتج من معروضات محلٍّ بعينه؟ المرتبط بمحل لا يظهر في سواه
+  /// ولو كان لنفس البائع — وإلا تكررت منتجاته في كل محلاته. والقديم بلا ربط
+  /// يبقى ملكًا لبائعه في كل محلاته كما كان قبل الربط.
+  bool belongsToShop({required String ownerUid, required String shopId}) {
+    final linked = this.shopId;
+    if (linked != null && linked.isNotEmpty) return linked == shopId;
+    return sellerId == ownerUid;
+  }
 
-  double get effectivePrice => hasActiveOffer ? offerPrice! : price;
+  /// ✅ عرض سارٍ فعليًا: مفعّل وسعره موجب وأقل من السعر الأصلي، ولم تنقضِ
+  /// نافذته المحفوظة. المستند القديم بلا `offerEndsAt` يبقى ساريًا كما كان —
+  /// الانتهاء يُكتب وقت التفعيل، لا يُشتق من `createdAt` عند القراءة.
+  bool get hasActiveOffer => hasActiveOfferAt(DateTime.now());
 
-  double get discountPercent => hasActiveOffer
+  bool hasActiveOfferAt(DateTime now) =>
+      isOnOffer &&
+      offerPrice != null &&
+      offerPrice! > 0 &&
+      price > 0 &&
+      offerPrice! < price &&
+      (offerEndsAt == null || !now.isAfter(offerEndsAt!));
+
+  /// مضبوط متى بلغت نافذة العرض أجلها — للشارة المنفصلة «انتهى العرض».
+  bool get isExpiredOffer =>
+      offerEndsAt != null && DateTime.now().isAfter(offerEndsAt!);
+
+  bool isExpiredOfferAt(DateTime now) =>
+      offerEndsAt != null && now.isAfter(offerEndsAt!);
+
+  double effectivePriceAt(DateTime now) => hasActiveOfferAt(now) ? offerPrice! : price;
+
+  double get effectivePrice => effectivePriceAt(DateTime.now());
+
+  double discountPercentAt(DateTime now) => hasActiveOfferAt(now)
       ? ((price - offerPrice!) / price * 100).clamp(0, 100).roundToDouble()
       : 0.0;
+
+  double get discountPercent => discountPercentAt(DateTime.now());
+
+  /// وزن الفرز الموحد: عرض سارٍ الآن أولًا، فالباقي كما هو. كل مواضع فرز
+  /// «العروض» تمرّ من هنا فلا تتفارق القائمة عن البطاقة عن الرئيسية.
+  int sortWeightAt(DateTime now) => hasActiveOfferAt(now) ? 1 : 0;
+
+  /// يُستعمل وقت كتابة تفعيل العرض: `offerEndsAt` يُحسب ويُخزَّن، لا يُقدَّر
+  /// عند كل قراءة — فإعادة الحفظ لا تُجدّد المدة ولا تُسقط الوثيقة.
+  static Map<String, dynamic> offerWindow(DateTime now, {Duration? window}) => {
+        'offerStartsAt': Timestamp.fromDate(now),
+        'offerEndsAt': Timestamp.fromDate(now.add(window ?? kDefaultOfferDuration)),
+      };
 
   bool get isInStock => stock > 0;
 }

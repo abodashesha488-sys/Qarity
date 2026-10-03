@@ -1,7 +1,5 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/network/network_info.dart';
@@ -10,10 +8,29 @@ import '../../models/data_models.dart';
 import '../../services/image_upload_service.dart';
 import '../../services/news_service.dart';
 import '../../services/user_service.dart';
+import '../../widgets/document_field_editor.dart';
 import '../../widgets/qurity_app_bar.dart';
 
 class AddNewsScreen extends StatefulWidget {
-  const AddNewsScreen({super.key});
+  const AddNewsScreen({
+    super.key,
+    this.uploader,
+    this.bytesSource,
+    this.newsService,
+    this.userService,
+    this.existing,
+  });
+
+  /// اختياري لحقن محرّك الرفع ومصدر Bytes في الاختبارات (الإنتاج يتركهما فارغين).
+  final ImageUploadService? uploader;
+  final ImageBytesSource? bytesSource;
+
+  /// اختياري للحقن في الاختبارات — الإنتاج يبني الخادم الحقيقي كسولًا كما كان.
+  final NewsService? newsService;
+  final UserService? userService;
+
+  /// الخبر المحرَّر — عند وجوده يحفظ النموذج بتعديل صاحبه (البند ٨).
+  final NewsItem? existing;
 
   @override
   State<AddNewsScreen> createState() => _AddNewsScreenState();
@@ -21,28 +38,48 @@ class AddNewsScreen extends StatefulWidget {
 
 class _AddNewsScreenState extends State<AddNewsScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _titleController = TextEditingController();
-  final _subtitleController = TextEditingController();
-  final NewsService _newsService = NewsService();
-  final UserService _userService = UserService();
-  final ImagePicker _picker = ImagePicker();
+  late final _titleController =
+      TextEditingController(text: widget.existing?.title ?? '');
+  late final _subtitleController =
+      TextEditingController(text: widget.existing?.subtitle ?? '');
+  late final NewsService _newsService = widget.newsService ?? NewsService();
+  late final UserService _userService = widget.userService ?? UserService();
 
   static const List<String> _categories = ['عام', 'ثقافة', 'رياضة', 'مجتمع', 'تعليم', 'اقتصاد'];
 
-  String _selectedCategory = 'عام';
+  late String _selectedCategory = widget.existing?.category ?? 'عام';
   final List<String> _imageUrls = [];
   static const int _maxImages = 3;
-  bool _isUploading = false;
   bool _isSaving = false;
   String? _authorId;
   String? _authorName;
   String? _authorRole;
   String? _authorSellerType;
 
+  bool get _isEdit => widget.existing != null;
+
+  /// المحرر المشترك يرفع ويحذف ويعرض؛ الباقي هنا مرآة القائمة التي تُكتب في الخبر.
+  void _onImagesChanged(List<String> urls) {
+    setState(() {
+      _imageUrls
+        ..clear()
+        ..addAll(urls);
+    });
+  }
+
   @override
   void initState() {
     super.initState();
+    _imageUrls.addAll(_existingImages);
     _loadAuthor();
+  }
+
+  /// صور الخبر المحرَّر: `imageUrls` إن وُجدت وإفالصورة الأولى المفردة.
+  List<String> get _existingImages {
+    final e = widget.existing;
+    if (e == null) return const [];
+    if (e.imageUrls.isNotEmpty) return e.imageUrls.take(_maxImages).toList();
+    return e.imageUrl.isEmpty ? const <String>[] : [e.imageUrl];
   }
 
   @override
@@ -53,8 +90,9 @@ class _AddNewsScreenState extends State<AddNewsScreen> {
   }
 
   Future<void> _loadAuthor() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
       final model = await _userService.getUser(user.uid);
       if (!mounted) return;
       setState(() {
@@ -63,184 +101,9 @@ class _AddNewsScreenState extends State<AddNewsScreen> {
         _authorRole = model?.role;
         _authorSellerType = model?.sellerType?.name;
       });
+    } catch (_) {
+      // بلا تهيئة Firebase (اختبارات الواجهة) يبقى التوقيع فارغًا ولا تسقط الشاشة
     }
-  }
-
-  Future<void> _pickAndUploadImages() async {
-    final remaining = _maxImages - _imageUrls.length;
-    if (remaining <= 0) {
-      AppHelpers.showSnackBar(context, 'الحد الأقصى $_maxImages صور', isError: true);
-      return;
-    }
-    setState(() => _isUploading = true);
-    try {
-      final List<XFile> images =
-          await _picker.pickMultiImage(imageQuality: 85);
-      if (images.isEmpty) {
-        if (mounted) setState(() => _isUploading = false);
-        return;
-      }
-      // لا نتعدّى الحد الأقصى المسموح
-      final picked = images.take(remaining).toList();
-      final uploaded = <String>[];
-      for (final image in picked) {
-        final bytes = await image.readAsBytes();
-        uploaded.add(await ImageUploadService().uploadImage(bytes));
-      }
-      if (!mounted) return;
-      setState(() => _imageUrls.addAll(uploaded));
-      final skipped = images.length - picked.length;
-      AppHelpers.showSnackBar(
-        context,
-        skipped > 0
-            ? 'تم رفع ${picked.length} صورة (تجاوزت الحد الأقصى $_maxImages)'
-            : 'تم رفع ${picked.length} صورة بنجاح',
-        isSuccess: true,
-      );
-    } catch (e) {
-      if (!mounted) return;
-      AppHelpers.showSnackBar(context, 'خطأ في رفع الصور: $e', isError: true);
-    } finally {
-      if (mounted) setState(() => _isUploading = false);
-    }
-  }
-
-  void _removeImage(int index) => setState(() => _imageUrls.removeAt(index));
-
-  void _showFullScreenImage(BuildContext context, String imageUrl) {
-    showDialog<void>(
-      context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.9),
-      builder: (ctx) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: EdgeInsets.zero,
-        child: Stack(
-          children: [
-            InteractiveViewer(
-              maxScale: 4,
-              minScale: 1,
-              child: Center(
-                child: CachedNetworkImage(
-                  imageUrl: imageUrl,
-                  fit: BoxFit.contain,
-                  placeholder: (context, url) => const Center(
-                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                  ),
-                  errorWidget: (context, url, error) => const Center(
-                    child: Icon(Icons.broken_image_rounded, color: Colors.white, size: 40),
-                  ),
-                ),
-              ),
-            ),
-            SafeArea(
-              child: Align(
-                alignment: Alignment.topRight,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Material(
-                    color: Colors.black.withValues(alpha: 0.5),
-                    shape: const CircleBorder(),
-                    child: InkWell(
-                      customBorder: const CircleBorder(),
-                      onTap: () => Navigator.pop(ctx),
-                      child: const Padding(
-                        padding: EdgeInsets.all(12),
-                        child: Icon(Icons.close_rounded, color: Colors.white, size: 24),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _imageTile(BuildContext context, String url, int index) {
-    return Stack(
-      children: [
-        GestureDetector(
-          onTap: () => _showFullScreenImage(context, url),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: CachedNetworkImage(
-              imageUrl: url,
-              width: 108,
-              height: 108,
-              fit: BoxFit.cover,
-              placeholder: (context, url) => Container(
-                width: 108,
-                height: 108,
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-              ),
-              errorWidget: (context, url, error) => Container(
-                width: 108,
-                height: 108,
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                child: const Icon(Icons.broken_image_rounded, color: Colors.grey),
-              ),
-            ),
-          ),
-        ),
-        Positioned(
-          top: 6,
-          right: 6,
-          child: Material(
-            color: Colors.black.withValues(alpha: 0.65),
-            shape: const CircleBorder(),
-            child: InkWell(
-              customBorder: const CircleBorder(),
-              onTap: _isSaving ? null : () => _removeImage(index),
-              child: const Padding(
-                padding: EdgeInsets.all(5),
-                child: Icon(Icons.close_rounded, size: 16, color: Colors.white),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _addImageTile(ThemeData theme) {
-    return SizedBox(
-      width: 108,
-      height: 108,
-      child: OutlinedButton(
-        onPressed: _isUploading || _isSaving ? null : _pickAndUploadImages,
-        style: OutlinedButton.styleFrom(
-          padding: EdgeInsets.zero,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
-          side: BorderSide(
-              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6)),
-        ),
-        child: _isUploading
-            ? const SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(strokeWidth: 2))
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.add_photo_alternate_rounded,
-                      color: theme.colorScheme.primary, size: 26),
-                  const SizedBox(height: 4),
-                  Text(
-                    'إضافة',
-                    style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        color: theme.colorScheme.primary),
-                  ),
-                ],
-              ),
-      ),
-    );
   }
 
   Future<void> _submit() async {
@@ -251,25 +114,33 @@ class _AddNewsScreenState extends State<AddNewsScreen> {
       return;
     }
     setState(() => _isSaving = true);
+    final editing = widget.existing;
     try {
       final news = NewsItem(
-        id: '',
+        id: editing?.id ?? '',
         title: _titleController.text.trim(),
         subtitle: _subtitleController.text.trim(),
         imageUrl: _imageUrls.isNotEmpty ? _imageUrls.first : '',
         imageUrls: List<String>.of(_imageUrls),
-        date: DateFormat('yyyy/MM/dd').format(DateTime.now()),
+        // تاريخ الخبر ونسبته يبقى كما هو: فالتعديل مضمون لا إصدار جديد.
+        date: editing?.date ?? DateFormat('yyyy/MM/dd').format(DateTime.now()),
         category: _selectedCategory,
-        authorId: _authorId,
-        authorName: _authorName,
-        authorRole: _authorRole,
-        authorSellerType: _authorSellerType,
-        createdAt: DateTime.now(),
+        authorId: editing?.authorId ?? _authorId,
+        authorName: editing?.authorName ?? _authorName,
+        authorRole: editing?.authorRole ?? _authorRole,
+        authorSellerType: editing?.authorSellerType ?? _authorSellerType,
+        createdAt: editing?.createdAt,
       );
-      await _newsService.addNews(news);
+      if (editing == null) {
+        await _newsService.addNews(news);
+      } else {
+        await _newsService.updateNews(news);
+      }
       if (!mounted) return;
-      AppHelpers.showSnackBar(context, 'تم إرسال الخبر للمراجعة', isSuccess: true);
-      Navigator.pop(context);
+      AppHelpers.showSnackBar(context,
+          editing == null ? 'تم إرسال الخبر للمراجعة' : 'تم حفظ التعديلات — أُعيد الخبر للمراجعة',
+          isSuccess: true);
+      Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
       AppHelpers.showSnackBar(context, 'خطأ: $e', isError: true);
@@ -282,7 +153,8 @@ class _AddNewsScreenState extends State<AddNewsScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: const QurityAppBar(title: 'إضافة خبر'),
+      appBar: QurityAppBar(
+          title: _isEdit ? 'تعديل الخبر' : 'إضافة خبر'),
       body: AbsorbPointer(
         absorbing: _isSaving,
         child: SingleChildScrollView(
@@ -336,15 +208,14 @@ class _AddNewsScreenState extends State<AddNewsScreen> {
                   title: 'صور الخبر (حتى $_maxImages صور)',
                   icon: Icons.image_rounded,
                   children: [
-                    Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
-                      children: [
-                        for (int i = 0; i < _imageUrls.length; i++)
-                          _imageTile(context, _imageUrls[i], i),
-                        if (_imageUrls.length < _maxImages)
-                          _addImageTile(theme),
-                      ],
+                    ImageListEditor(
+                      label: 'صور الخبر',
+                      fieldKey: 'imageUrls',
+                      urls: _imageUrls,
+                      maxImages: _maxImages,
+                      uploader: widget.uploader,
+                      bytesSource: widget.bytesSource,
+                      onChanged: _onImagesChanged,
                     ),
                   ],
                 ),
@@ -376,7 +247,11 @@ class _AddNewsScreenState extends State<AddNewsScreen> {
                     icon: _isSaving
                         ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                         : const Icon(Icons.send_rounded),
-                    label: Text(_isSaving ? 'جاري الإرسال...' : 'إرسال للمراجعة'),
+                    label: Text(_isSaving
+                        ? 'جاري الإرسال...'
+                        : (_isEdit
+                            ? 'حفظ التعديلات — يعاد للمراجعة'
+                            : 'إرسال للمراجعة')),
                     style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
                   ),
                 ),

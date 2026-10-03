@@ -57,6 +57,28 @@ class _MarketGalleryState extends State<_MarketGallery> {
   final PageController _pager = PageController();
   int _page = 0;
 
+  /// نسبة كل صورة تُقاس مرة واحدة عبر المحرّك المشترك للعرض، فيأخذ الشريط
+  /// ارتفاع الصورة نفسها بدل قصّها في إطار ثابت.
+  @override
+  void initState() {
+    super.initState();
+    _measureAll();
+  }
+
+  void _measureAll() {
+    for (final url in widget.urls) {
+      FullFitImage.measure(url, onResult: (_) {
+        if (mounted) setState(() {});
+      });
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _MarketGallery oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.urls != widget.urls) _measureAll();
+  }
+
   @override
   void dispose() {
     _pager.dispose();
@@ -66,49 +88,56 @@ class _MarketGalleryState extends State<_MarketGallery> {
   @override
   Widget build(BuildContext context) {
     if (widget.urls.isEmpty) return const SizedBox.shrink();
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(18),
-      child: SizedBox(
-        height: 240,
-        width: double.infinity,
-        child: Stack(
-          children: [
-            PageView.builder(
-              controller: _pager,
-              itemCount: widget.urls.length,
-              onPageChanged: (i) => setState(() => _page = i),
-              itemBuilder: (context, i) => CachedNetworkImage(
-                imageUrl: widget.urls[i],
-                fit: BoxFit.cover,
-                errorWidget: (_, __, ___) => ColoredBox(
-                  color: widget.accent.withValues(alpha: 0.08),
-                  child: const Center(
-                      child: Icon(Icons.broken_image_rounded,
-                          size: 40, color: Colors.black26)),
+    return LayoutBuilder(builder: (context, constraints) {
+      final width = constraints.maxWidth.isFinite
+          ? constraints.maxWidth
+          : 360.0;
+      final current = widget.urls[_page.clamp(0, widget.urls.length - 1)];
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: SizedBox(
+          height: FullFitImage.heightFor(current, width),
+          width: double.infinity,
+          child: Stack(
+            children: [
+              PageView.builder(
+                controller: _pager,
+                itemCount: widget.urls.length,
+                onPageChanged: (i) => setState(() => _page = i),
+                itemBuilder: (context, i) => FullFitImage(
+                  imageUrl: widget.urls[i],
+                  width: width,
+                  radius: 0,
+                  fallback: ColoredBox(
+                    color: widget.accent.withValues(alpha: 0.08),
+                    child: const Center(
+                        child: Icon(Icons.broken_image_rounded,
+                            size: 40, color: Colors.black26)),
+                  ),
                 ),
               ),
-            ),
-            if (widget.urls.length > 1)
-              Positioned(
-                bottom: 10,
-                left: 12,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                  decoration: BoxDecoration(
-                      color: Colors.black54,
-                      borderRadius: BorderRadius.circular(10)),
-                  child: Text('${_page + 1} / ${widget.urls.length}',
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w800)),
+              if (widget.urls.length > 1)
+                Positioned(
+                  bottom: 10,
+                  left: 12,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                    decoration: BoxDecoration(
+                        color: Colors.black54,
+                        borderRadius: BorderRadius.circular(10)),
+                    child: Text('${_page + 1} / ${widget.urls.length}',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w800)),
+                  ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    });
   }
 }
 

@@ -10,8 +10,11 @@ import '../../routes/app_routes.dart';
 import '../../services/market_service.dart';
 import '../../services/medical_service.dart';
 import '../../services/share_service.dart';
+import '../../widgets/image_gallery_wrap.dart';
+import '../../widgets/owner_actions.dart';
 import '../market/add_product.dart';
 import 'clinic_detail_screen.dart';
+import 'medical_home_screen.dart';
 
 /// ألوان قسم النظارات — مصدر واحد تستعمله البوابة والتبويب وشاشة التفاصيل.
 const Color kOpticalAccent = Color(0xFF3949AB);
@@ -42,10 +45,59 @@ class _OpticalShopDetailScreenState extends State<OpticalShopDetailScreen> {
     }
   }
 
-  Stream<List<MarketProduct>> _productsFor(String? sellerId) {
+  /// نسخة محفوظة بعد حفظ التعديل — الشاشة تعرض بالوسائط لا بتدفّق.
+  OpticalShop? _saved;
+
+  Future<void> _openEdit(OpticalShop shop) async {
+    final res = await showModalBottomSheet<OpticalShop>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => OpticalFormSheet(
+        userName: shop.submittedByName ?? '',
+        userId: _uid ?? '',
+        existing: shop,
+      ),
+    );
+    if (res == null || !mounted) return;
+    try {
+      await _service.update(res);
+      if (!mounted) return;
+      setState(() => _saved = res);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('تم حفظ التعديلات — عاد المحل للمراجعة')));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('تعذّر حفظ التعديل — تحقّق من الصلاحيات أو من الاتصال')));
+    }
+  }
+
+  Future<bool> _deleteRecord(OpticalShop shop) async {
+    try {
+      await _service.delete(shop.id);
+      if (mounted) Navigator.pop(context);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Widget _ownerActions(OpticalShop shop) => OwnerActions(
+        keyTag: 'optical-detail',
+        ownerId: shop.submittedBy ?? '',
+        currentUserId: _uid ?? '',
+        itemName: shop.name,
+        editLabel: 'تعديل المحل',
+        deleteLabel: 'حذف المحل',
+        onEdit: () => _openEdit(shop),
+        onDelete: () => _deleteRecord(shop),
+      );
+
+  Stream<List<MarketProduct>> _productsFor(String? sellerId, String shopId) {
     final id = sellerId;
     if (id == null || id.isEmpty) return Stream<List<MarketProduct>>.value(const []);
-    return _productsStream ??= _market.getSellerProductsStream(id);
+    return _productsStream ??=
+        _market.getShopProductsStream(ownerUid: id, shopId: shopId);
   }
 
   Future<void> _renew(OpticalShop shop) async {
@@ -81,9 +133,11 @@ class _OpticalShopDetailScreenState extends State<OpticalShopDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final shop = ModalRoute.of(context)?.settings.arguments is OpticalShop
-        ? ModalRoute.of(context)!.settings.arguments as OpticalShop
-        : const OpticalShop(id: '', name: '');
+    final args = ModalRoute.of(context)?.settings.arguments;
+    final shop = _saved ??
+        (args is OpticalShop
+            ? args
+            : const OpticalShop(id: '', name: ''));
     final uid = _uid;
     final isOwner = uid != null && shop.submittedBy == uid;
     final now = DateTime.now();
@@ -92,7 +146,7 @@ class _OpticalShopDetailScreenState extends State<OpticalShopDetailScreen> {
 
     return Scaffold(
       body: StreamBuilder<List<MarketProduct>>(
-        stream: _productsFor(shop.submittedBy),
+        stream: _productsFor(shop.submittedBy, shop.id),
         builder: (context, snapshot) {
           final products = (snapshot.data ?? [])
               .where((p) => p.isApproved && p.isInStock)
@@ -111,6 +165,7 @@ class _OpticalShopDetailScreenState extends State<OpticalShopDetailScreen> {
                         AppRoutes.marketAdd,
                         arguments: <String, dynamic>{
                           kCategoryOptionsArgKey: kOpticalCategories,
+                          kShopIdArgKey: shop.id,
                         },
                       )
                     : null,
@@ -244,28 +299,8 @@ class _OpticalShopDetailScreenState extends State<OpticalShopDetailScreen> {
                         MedSection(
                           title: 'صور المحل',
                           accent: kOpticalAccent,
-                          child: SizedBox(
-                            height: 130,
-                            child: ListView.separated(
-                              scrollDirection: Axis.horizontal,
-                              itemCount: shop.imageUrls.length,
-                              separatorBuilder: (_, __) =>
-                                  const SizedBox(width: 10),
-                              itemBuilder: (_, i) => ClipRRect(
-                                borderRadius: BorderRadius.circular(14),
-                                child: CachedNetworkImage(
-                                    imageUrl: shop.imageUrls[i],
-                                    width: 180,
-                                    fit: BoxFit.cover,
-                                    errorWidget: (_, __, ___) => Container(
-                                        width: 180,
-                                        color: theme
-                                            .colorScheme.surfaceContainerHighest,
-                                        child: const Icon(
-                                            Icons.broken_image_rounded))),
-                              ),
-                            ),
-                          ),
+                          child: ImageGalleryWrap(
+                              urls: shop.imageUrls, tileWidth: 180),
                         ),
                       ],
                       const SizedBox(height: 20),
@@ -335,6 +370,8 @@ class _OpticalShopDetailScreenState extends State<OpticalShopDetailScreen> {
                               style:
                                   const TextStyle(fontWeight: FontWeight.w800)),
                         ),
+                        const SizedBox(height: 12),
+                        _ownerActions(shop),
                       ],
                     ],
                   ),

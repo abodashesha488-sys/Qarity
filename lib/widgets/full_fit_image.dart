@@ -37,13 +37,57 @@ class FullFitImage extends StatefulWidget {
   /// لون الخلفية أثناء القياس وللحواف حين تُقصّ النسبة.
   final Color tint;
 
+  static final Map<String, double> _ratioCache = {};
+  static final Set<String> _inFlight = {};
+
+  /// نسبة الصورة إن كانت مقيسة، و null إن لم تُقَس بعد. المعارض متعددة الصور
+  /// (منتج/طلب شراء/تبرع/لوحة الإدارة) تحتاجها لضبط ارتفاع الشريط **قبل** الرسم،
+  /// فتقيس عبر [measure] نفسها بدل نسخ منطق فكّ الصورة في كل شاشة.
+  static double? ratioOf(String url) => _ratioCache[url];
+
+  /// يقيس نسبة [url] ويخزّنها مرة واحدة لكل رابط. إن كانت النسبة محفوظة فعلًا
+  /// لا يحدث شيء ولا يُستدعى [onResult] (لا استدعاء متزامن داخل البناء أو
+  /// initState)، وإلا يُستدعى بالنسبة حين تكتمل — فيعيد المُضيف حساب ارتفاعه.
+  static void measure(String url, {required void Function(double ratio) onResult}) {
+    if (url.isEmpty || _ratioCache.containsKey(url) || _inFlight.contains(url)) {
+      return;
+    }
+    _inFlight.add(url);
+    void done(double ratio) {
+      _inFlight.remove(url);
+      _ratioCache[url] = ratio;
+      onResult(ratio);
+    }
+    try {
+      CachedNetworkImageProvider(url)
+          .resolve(ImageConfiguration.empty)
+          .addListener(ImageStreamListener((info, _) {
+        final h = info.image.height;
+        if (h <= 0) {
+          _inFlight.remove(url);
+          return;
+        }
+        done(info.image.width / h);
+      }, onError: (Object _, StackTrace? __) => done(1.0)));
+    } catch (_) {
+      // بلا شبكة/بلا Firebase في اختبارات الواجهة: الإطار المربّع يكفي.
+      done(1.0);
+    }
+  }
+
+  /// ارتفاع إطار بعرض [width] يستوعب [url] كاملة — نفس حساب الوست بالضبط،
+  /// فيبقى الشريط والمصغّرة على مقاس واحد.
+  static double heightFor(String url, double width,
+      {double minRatio = 0.72, double maxRatio = 1.5, double fallbackRatio = 1.0}) {
+    final ratio = (_ratioCache[url] ?? fallbackRatio).clamp(minRatio, maxRatio);
+    return width / ratio;
+  }
+
   @override
   State<FullFitImage> createState() => _FullFitImageState();
 }
 
 class _FullFitImageState extends State<FullFitImage> {
-  static final Map<String, double> _ratioCache = {};
-  bool _probing = false;
   bool _failed = false;
 
   @override
@@ -56,7 +100,6 @@ class _FullFitImageState extends State<FullFitImage> {
   void didUpdateWidget(covariant FullFitImage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.imageUrl != widget.imageUrl) {
-      _probing = false;
       _failed = false;
       _probe();
     }
@@ -64,32 +107,15 @@ class _FullFitImageState extends State<FullFitImage> {
 
   /// يقيس النسبة من الصورة المفكوكة فعليًا؛ والفشل يترك الإطار مربعًا.
   void _probe() {
-    final url = widget.imageUrl;
-    if (url.isEmpty || _probing || _ratioCache.containsKey(url)) return;
-    _probing = true;
-    try {
-      CachedNetworkImageProvider(url)
-          .resolve(ImageConfiguration.empty)
-          .addListener(ImageStreamListener((info, _) {
-        final h = info.image.height;
-        if (h <= 0) return;
-        _ratioCache[url] = info.image.width / h;
-        if (mounted) setState(() {});
-      }, onError: (Object _, StackTrace? __) {
-        _ratioCache[url] = 1.0;
-        if (mounted) setState(() {});
-      }));
-    } catch (_) {
-      // بلا شبكة/بلا Firebase في اختبارات الواجهة: الإطار المربّع يكفي.
-      _ratioCache[url] = 1.0;
-    }
+    FullFitImage.measure(widget.imageUrl, onResult: (_) {
+      if (mounted) setState(() {});
+    });
   }
 
   double get _height {
     if (widget.imageUrl.isEmpty || _failed) return widget.width;
-    final ratio = (_ratioCache[widget.imageUrl] ?? 1.0)
-        .clamp(widget.minRatio, widget.maxRatio);
-    return widget.width / ratio;
+    return FullFitImage.heightFor(widget.imageUrl, widget.width,
+        minRatio: widget.minRatio, maxRatio: widget.maxRatio);
   }
 
   @override

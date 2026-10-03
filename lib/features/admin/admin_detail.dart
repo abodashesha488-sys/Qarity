@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/constants/app_colors.dart';
@@ -10,6 +9,7 @@ import '../../models/medical_models.dart';
 import '../../models/service_provider_model.dart';
 import '../../routes/app_routes.dart';
 import '../../services/admin_service.dart';
+import '../../widgets/image_gallery_wrap.dart';
 import '../../widgets/qurity_app_bar.dart';
 
 class AdminDetailScreen extends StatefulWidget {
@@ -240,24 +240,7 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
       }
     }
     if (urls.isEmpty) return const SizedBox.shrink();
-    return SizedBox(
-      height: 160,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: urls.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 10),
-        itemBuilder: (context, index) => ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: CachedNetworkImage(
-            imageUrl: urls[index],
-            fit: BoxFit.cover,
-            width: 160,
-            placeholder: (c, u) => Container(width: 160, color: theme.colorScheme.surfaceContainerHighest),
-            errorWidget: (c, u, e) => Container(width: 160, color: theme.colorScheme.surfaceContainerHighest, child: const Icon(Icons.broken_image_rounded)),
-          ),
-        ),
-      ),
-    );
+    return ImageGalleryWrap(urls: urls, tileWidth: 160, radius: 16);
   }
 
   Widget _buildDetailRow(ThemeData theme, String key, dynamic value) {

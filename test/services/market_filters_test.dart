@@ -12,6 +12,8 @@ Map<String, dynamic> _product({
   bool isApproved = true,
   bool isFeatured = false,
   bool isOnOffer = false,
+  double? offerPrice,
+  DateTime? offerEndsAt,
   String productStatus = 'regular',
   int stock = 5,
   DateTime? createdAt,
@@ -28,6 +30,9 @@ Map<String, dynamic> _product({
     'isApproved': isApproved,
     'isFeatured': isFeatured,
     'isOnOffer': isOnOffer,
+    'offerPrice': offerPrice,
+    'offerEndsAt':
+        offerEndsAt == null ? null : Timestamp.fromDate(offerEndsAt),
     'productStatus': productStatus,
     'stock': stock,
     'createdAt': createdAt == null
@@ -48,6 +53,7 @@ void main() {
           sellerId: 's1',
           price: 30,
           isOnOffer: true,
+          offerPrice: 24,
           createdAt: DateTime(2026, 9)),
       _product(
           name: 'جبنة',

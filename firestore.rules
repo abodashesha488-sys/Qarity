@@ -62,6 +62,30 @@ service cloud.firestore {
            .hasOnly(['likes', 'likedBy', 'comments', 'views', 'rating', 'reviewCount']);
     }
 
+    // ─────────────── تعديل المالك وحذفه لإضافته (قاعدة عامة) ───────────────
+    // المستخدم يعدّل إضافاته ويحذفها في أي وقت، قبل الاعتماد وبعده. تعديل
+    // المالك يمرّ من هنا بشروط ثلاثة، وكلها محسوبة على **الوثيقة الناتجة**
+    // بعد الكتابة (لا على الرقعة المرسلة)، فلا يمكن التحايل بحذف الحقل:
+    //   (١) الوثيقة له، وتظل له: معرّف المالك في المستند الحالي وفي الناتج
+    //       هو معرّف الطلب نفسه — فاستحالت نقل ملكية إضافة إلى شخص آخر.
+    //   (٢) النتيجة غير معتمدة: فكل تعديل يُرجع المحتوى إلى طابور المراجعة
+    //       تلقائيًا، ولا يملك أي مستخدم أن يمنح نفسه اعتمادًا (هذا هو وجه
+    //       «منع isApproved» — المالك لا يكتب الموافقة، بل يفقدها).
+    // الحذف لا يحتاج مراجعة: لا محتوى يبقى ليُنظَر فيه، فهو فوري للمالك.
+    // تُضاف إلى هذا الشرط في كل مجموعة رُخصةُ تفاعل المالك (اسمه/صورته
+    // المطبّقة من ملفه) أو رُخصة حالة خاصة به (إغلاق طلب، تم التسليم، تجديد
+    // عرض مميز) لأن هذه الكتابات لا تعدّل المحتوى ولا تستحق إعادة مراجعة.
+    function ownerEdit(ownerId, incomingOwnerId) {
+      return accountActive()
+        && ownerId == request.auth.uid
+        && incomingOwnerId == request.auth.uid
+        && request.resource.data.isApproved == false;
+    }
+
+    function ownerDelete(ownerId) {
+      return accountActive() && ownerId == request.auth.uid;
+    }
+
     // ───────────────────────── المستخدمون ─────────────────────────
     match /users/{userId} {
       // القراءة الفردية مسموحة للمسجّلين (عرض اسم/هاتف البائع في الطلبات والمراجعات)
@@ -104,11 +128,16 @@ service cloud.firestore {
       allow list, get: if true;
       // كل خبر جديد يجب أن يبدأ غير موافق عليه
       allow create: if accountActive() && request.resource.data.isApproved == false;
-      // المالك يستطيع مزامنة اسمه المعروض فقط (cascade تغيير الملف الشخصي)
+      // المالك: (أ) مزامنة اسمه المعروض فقط (cascade تغيير الملف الشخصي — يبقى
+      // الخبر معتمدًا لأنه لا يعدّل مضمونه)، و(ب) تعديل خبره في أي وقت فيعود
+      // إلى المراجعة، دون لمس اسمه. والحذف فوري له.
       allow update: if isAdmin() || interactionOnly()
         || (accountActive() && resource.data.authorId == request.auth.uid
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['authorName']));
-      allow delete: if isAdmin();
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['authorName']))
+        || (ownerEdit(resource.data.authorId, request.resource.data.authorId)
+            && !request.resource.data.diff(resource.data)
+                 .affectedKeys().hasAny(['authorName']));
+      allow delete: if isAdmin() || ownerDelete(resource.data.authorId);
 
       match /comments/{commentId} {
         allow read: if true;
@@ -121,11 +150,15 @@ service cloud.firestore {
     match /market_products/{docId} {
       allow list, get: if true;
       allow create: if accountActive() && request.resource.data.isApproved == false;
-      // البائع: تفاعل + مزامنة اسمه المعروض
+      // البائع: تفاعل + مزامنة اسمه/رتبته المعروضة (لا تعدّل مضمون المنتج)
+      // + تعديل منتجه في أي وقت فيعود للمراجعة، وحذفه فورًا.
       allow update: if isAdmin() || interactionOnly()
         || (accountActive() && resource.data.sellerId == request.auth.uid
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['sellerName','sellerType']));
-      allow delete: if isAdmin();
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['sellerName','sellerType']))
+        || (ownerEdit(resource.data.sellerId, request.resource.data.sellerId)
+            && !request.resource.data.diff(resource.data)
+                 .affectedKeys().hasAny(['sellerName','sellerType']));
+      allow delete: if isAdmin() || ownerDelete(resource.data.sellerId);
 
       match /likes/{userId} {
         allow read: if true;
@@ -140,29 +173,40 @@ service cloud.firestore {
     }
 
     // ───────────────────────── العزاء ─────────────────────────
+    // نعوة المستخدم له: يعيد تحريرها في أي وقت (فتعود للمراجعة) ويحذفها فورًا.
+    // حقل المالك `submittedBy` تكتبه الخدمة وقت الإنشاء.
     match /obituaries/{docId} {
       allow list, get: if true;
       allow create: if accountActive() && request.resource.data.isApproved == false;
-      allow update: if isAdmin() || interactionOnly();
-      allow delete: if isAdmin();
+      allow update: if isAdmin() || interactionOnly()
+                    || ownerEdit(resource.data.submittedBy,
+                                 request.resource.data.submittedBy);
+      allow delete: if isAdmin() || ownerDelete(resource.data.submittedBy);
     }
 
     // ───────────────────────── المناسبات ─────────────────────────
     match /occasions/{docId} {
       allow list, get: if true;
       allow create: if accountActive() && request.resource.data.isApproved == false;
-      allow update: if isAdmin() || interactionOnly();
-      allow delete: if isAdmin();
+      allow update: if isAdmin() || interactionOnly()
+                    || ownerEdit(resource.data.submittedBy,
+                                 request.resource.data.submittedBy);
+      allow delete: if isAdmin() || ownerDelete(resource.data.submittedBy);
     }
 
     // ───────────────────────── المنتدى ─────────────────────────
     match /forum_posts/{docId} {
       allow list, get: if true;
       allow create: if accountActive() && request.resource.data.isApproved == false;
+      // الكاتب: مزامنة اسمه/صورته من ملفه (يبقى المنشور معتمدًا)، أو تعديل
+      // منشوره في أي وقت فيعود للمراجعة دون لمس نسبه، أو حذفه فورًا.
       allow update: if isAdmin() || interactionOnly()
         || (accountActive() && resource.data.userId == request.auth.uid
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['userName','userPhotoUrl']));
-      allow delete: if isAdmin();
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['userName','userPhotoUrl']))
+        || (ownerEdit(resource.data.userId, request.resource.data.userId)
+            && !request.resource.data.diff(resource.data)
+                 .affectedKeys().hasAny(['userName','userPhotoUrl']));
+      allow delete: if isAdmin() || ownerDelete(resource.data.userId);
 
       match /comments/{commentId} {
         allow read: if true;
@@ -304,13 +348,11 @@ service cloud.firestore {
       allow create: if isAdmin() || (accountActive()
           && request.resource.data.isApproved == false
           && request.auth.uid == request.resource.data.submittedBy);
-      // مقدّم البيان يعدّل إدخاله غير المعتمد فقط دون المساس بالموافقة
+      // مقدّم البيان يعدّل إدخاله في أي وقت (فيعود للمراجعة) ويحذفه فورًا.
       allow update: if isAdmin()
-          || (accountActive() && resource.data.submittedBy == request.auth.uid
-              && resource.data.isApproved == false
-              && !request.resource.data.diff(resource.data)
-                   .affectedKeys().hasAny(['isApproved']));
-      allow delete: if isAdmin();
+          || ownerEdit(resource.data.submittedBy,
+                       request.resource.data.submittedBy);
+      allow delete: if isAdmin() || ownerDelete(resource.data.submittedBy);
     }
 
     // ───────────────────────── دليل الخدمات (فنيون/زراعية/تعليمية) ─────────────────────────
@@ -320,17 +362,20 @@ service cloud.firestore {
       allow create: if accountActive()
                     && request.auth.uid == request.resource.data.submittedBy
                     && request.resource.data.isApproved == false;
-      // الأدمن: مراجعة كاملة (موافقة/تمييز). المالك: تعديل مدخلاته غير المعتمدة فقط دون المساس بحالة الموافقة.
+      // الأدمن: مراجعة كاملة (موافقة/تمييز). المالك: يعدّل سجله في أي وقت
+      // فيعود إلى المراجعة، دون لمس اسمه المطبّق من ملفه.
       // أي مستخدم مسجّل: تحديث إحصاءات التقييم فقط (rating/ratingCount) عند التعليق.
       allow update: if isAdmin()
                     || (accountActive() && resource.data.submittedBy == request.auth.uid
-                        && resource.data.isApproved == false
-                        && !request.resource.data.diff(resource.data)
-                             .affectedKeys().hasAny(['isApproved']))
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['submittedByName']))
                     || (accountActive()
                         && request.resource.data.diff(resource.data)
-                             .affectedKeys().hasOnly(['rating', 'ratingCount']));
-      allow delete: if isAdmin();
+                             .affectedKeys().hasOnly(['rating', 'ratingCount']))
+                    || (ownerEdit(resource.data.submittedBy,
+                                  request.resource.data.submittedBy)
+                        && !request.resource.data.diff(resource.data)
+                             .affectedKeys().hasAny(['submittedByName']));
+      allow delete: if isAdmin() || ownerDelete(resource.data.submittedBy);
 
       // تقييمات وتعليقات المستخدمين على البيانات
       match /comments/{commentId} {
@@ -347,17 +392,17 @@ service cloud.firestore {
       allow create: if accountActive()
                     && request.auth.uid == request.resource.data.userId
                     && request.resource.data.isApproved == false;
-      // الأدمن: مراجعة كاملة. المالك: يبدّل حالة «تم التسليم» فقط بعد الاعتماد،
-      // أو يعدّل إعلانَه غير المعتمد دون المساس بالموافقة.
+      // الأدمن: مراجعة كاملة. المالك: يبدّل حالة «تم التسليم» بعد الاعتماد
+      // (حالة لا تعدّل المضمون فلا تستحق مراجعة)، أو يعدّل إعلانَه في أي وقت
+      // فيعود للمراجعة دون لمس نسبه، أو يحذفه فورًا.
       allow update: if isAdmin()
                     || (accountActive() && resource.data.userId == request.auth.uid
                         && request.resource.data.diff(resource.data)
                              .affectedKeys().hasOnly(['isResolved']))
-                    || (accountActive() && resource.data.userId == request.auth.uid
-                        && resource.data.isApproved == false
+                    || (ownerEdit(resource.data.userId, request.resource.data.userId)
                         && !request.resource.data.diff(resource.data)
-                             .affectedKeys().hasAny(['isApproved']));
-      allow delete: if isAdmin();
+                             .affectedKeys().hasAny(['userName']));
+      allow delete: if isAdmin() || ownerDelete(resource.data.userId);
     }
 
     // ───────────────── إعلانات القرية (تجارية / خدمية / إنشائية) ─────────────────
@@ -369,14 +414,14 @@ service cloud.firestore {
                     && request.auth.uid == request.resource.data.userId
                     && request.resource.data.isApproved == false;
       // الأدمن والأدمن المساعد: مراجعة كاملة (موافقة/رفض/تعديل).
-      // المالك: يعدّل بيانات إعلانه قبل الاعتماد وبعده، ما دام لا يمسّ
-      // حالة الموافقة ولا ينقل ملكية الوثيقة إلى غيره.
+      // المالك: يعدّل بيانات إعلانه قبل الاعتماد وبعده — والتعديل يعيده إلى
+      // طابور المراجعة بأمر القواعد — دون لمس نسبه (معرّفه واسمه المطبّق).
       allow update: if isAdmin()
-                    || (accountActive() && resource.data.userId == request.auth.uid
+                    || (ownerEdit(resource.data.userId, request.resource.data.userId)
                         && !request.resource.data.diff(resource.data)
-                             .affectedKeys().hasAny(['isApproved', 'userId']));
+                             .affectedKeys().hasAny(['userName']));
       allow delete: if isAdmin()
-                    || (accountActive() && resource.data.userId == request.auth.uid);
+                    || ownerDelete(resource.data.userId);
     }
 
     // ─────────────────────── مستشار القرية: سجل المحامين ───────────────────────
@@ -386,11 +431,12 @@ service cloud.firestore {
                     && request.auth.uid == request.resource.data.submittedBy
                     && request.resource.data.isApproved == false;
       allow update: if isAdmin()
-                    || (accountActive() && resource.data.submittedBy == request.auth.uid
+                    || (ownerEdit(resource.data.submittedBy,
+                                  request.resource.data.submittedBy)
                         && !request.resource.data.diff(resource.data)
-                             .affectedKeys().hasAny(['isApproved', 'submittedBy']));
+                             .affectedKeys().hasAny(['submittedByName']));
       allow delete: if isAdmin()
-                    || (accountActive() && resource.data.submittedBy == request.auth.uid);
+                    || ownerDelete(resource.data.submittedBy);
     }
 
     // ────────────────── مستشار القرية: استشارات الأهالي القانونية ──────────────────
@@ -404,14 +450,16 @@ service cloud.firestore {
       allow create: if accountActive()
                     && request.auth.uid == request.resource.data.userId
                     && request.resource.data.isApproved == false;
-      // المالك: يصوغ سؤاله ما دام معلّقًا، دون المساس بالموافقة أو الرد أو المالك.
+      // المالك: يصوغ سؤاله في أي وقت — فيعود للمراجعة — دون لمس نسبه أو الرد،
+      // ودون أن يبقى عليه ردٌّ قديم: فبعد إعادة الصياغة يكون الرد السابق
+      // إجابةً عن سؤالٍ لم يعد موجودًا، والخدمة تفرّغه والقواعد تثبت ذلك.
       allow update: if isAdmin()
-                    || (accountActive() && resource.data.userId == request.auth.uid
-                        && resource.data.isApproved == false
+                    || (ownerEdit(resource.data.userId, request.resource.data.userId)
+                        && request.resource.data.answer == ''
                         && !request.resource.data.diff(resource.data)
-                             .affectedKeys().hasAny(['isApproved', 'answer', 'userId']));
+                             .affectedKeys().hasAny(['userName']));
       allow delete: if isAdmin()
-                    || (accountActive() && resource.data.userId == request.auth.uid);
+                    || ownerDelete(resource.data.userId);
     }
 
     // محلات القرية — الإنشاء لصاحب المحل (يبدأ غير معتمد)، والتعديل لصاحبه أو الأدمن
@@ -421,12 +469,14 @@ service cloud.firestore {
           || (accountActive()
               && request.auth.uid == request.resource.data.ownerUid
               && request.resource.data.isApproved == false);
-      // المالك يحدّث بيانات محله دون المساس بحالة الموافقة
+      // المالك: يحدّث بيانات محله في أي وقت (فتعود للمراجعة) أو يزامن اسمه
+      // المطبّق من ملفه، ويحذف محله فورًا.
       allow update: if isAdmin()
-          || (resource.data.ownerUid == request.auth.uid
-              && !request.resource.data.diff(resource.data)
-                   .affectedKeys().hasAny(['isApproved']));
-      allow delete: if isAdmin();
+          || (accountActive() && resource.data.ownerUid == request.auth.uid
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ownerName']))
+          || (ownerEdit(resource.data.ownerUid, request.resource.data.ownerUid)
+              && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['ownerName']));
+      allow delete: if isAdmin() || ownerDelete(resource.data.ownerUid);
     }
 
     // سلع مطلوبة
@@ -454,71 +504,88 @@ service cloud.firestore {
     // ───────────────────────── الخدمات الطبية ─────────────────────────
     // عيادات المركز الطبي الخيري: العام للقراءة؛ يديرها مدير المركز الطبي
     // (وهي الصلاحية الوحيدة لهذا الدور) أو أي من المديرين العام/المساعد.
+    // لا مالك للوثيقة: نموذج MedicalCenterClinic لا يحمل حقل مقدّم، والمركز
+    // جهة لا فرد — فليست إضافة مستخدم تعدّل وتحذف نفسها، والإدارة هنا هي
+    // صاحبها الوحيد عن قصد (لا يُفتعل حقل مالك لإعطائه صلاحية).
     match /medical_center_clinics/{docId} {
       allow list, get: if true;
       allow create, update, delete: if isCenterAdmin();
     }
 
     // عيادات القرية: مدخلات مستخدمين (تبدأ غير موافق عليها) + موافقة الأدمن.
+    // مقدّم العيادة يعدّلها في أي وقت (فتعود للمراجعة) ويحذفها فورًا.
     match /village_clinics/{docId} {
       allow list, get: if true;
       allow create: if accountActive() && request.resource.data.isApproved == false;
-      allow update, delete: if isAdmin()
-                            || (accountActive() && resource.data.submittedBy == request.auth.uid
-                                && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isApproved']) == false
-                                && resource.data.isApproved == false);
-      // المتابعة: المستخدم يستطيع تعديل مدخلاته غير المعتمدة فقط
+      allow update: if isAdmin()
+                    || (accountActive() && resource.data.submittedBy == request.auth.uid
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['submittedByName']))
+                    || (ownerEdit(resource.data.submittedBy,
+                                  request.resource.data.submittedBy)
+                        && !request.resource.data.diff(resource.data)
+                             .affectedKeys().hasAny(['submittedByName']));
+      allow delete: if isAdmin() || ownerDelete(resource.data.submittedBy);
     }
 
     // صيدليات القرية: نفس نهج العيادات.
     match /pharmacies/{docId} {
       allow list, get: if true;
       allow create: if accountActive() && request.resource.data.isApproved == false;
-      allow update, delete: if isAdmin()
-                            || (accountActive() && resource.data.submittedBy == request.auth.uid
-                                && resource.data.isApproved == false);
+      allow update: if isAdmin()
+                    || (accountActive() && resource.data.submittedBy == request.auth.uid
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['submittedByName']))
+                    || (ownerEdit(resource.data.submittedBy,
+                                  request.resource.data.submittedBy)
+                        && !request.resource.data.diff(resource.data)
+                             .affectedKeys().hasAny(['submittedByName']));
+      allow delete: if isAdmin() || ownerDelete(resource.data.submittedBy);
     }
 
     // معامل التحاليل: مدخلات مستخدمين (تبدأ غير موافق عليها) + موافقة الأدمن.
     match /medical_labs/{docId} {
       allow list, get: if true;
       allow create: if accountActive() && request.resource.data.isApproved == false;
-      allow update, delete: if isAdmin()
-                            || (accountActive() && resource.data.submittedBy == request.auth.uid
-                                && resource.data.isApproved == false);
+      allow update: if isAdmin()
+                    || (accountActive() && resource.data.submittedBy == request.auth.uid
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['submittedByName']))
+                    || (ownerEdit(resource.data.submittedBy,
+                                  request.resource.data.submittedBy)
+                        && !request.resource.data.diff(resource.data)
+                             .affectedKeys().hasAny(['submittedByName']));
+      allow delete: if isAdmin() || ownerDelete(resource.data.submittedBy);
     }
 
     // بصريات القرية: مدخلات مستخدمين (تبدأ غير موافق عليها) + موافقة الأدمن.
-    // المالك: يعدّل محله غير المعتمد بالكامل، وبعد الاعتماد يجدّد نافذة عرضه
-    // المميز فقط (adType/featuredUntil) دون أي مساس بحالة الموافقة أو البيانات.
+    // المالك: يعدّل محله في أي وقت (فيعود إلى المراجعة)، ويجدّد نافذة عرضه
+    // المميز وحدها (adType/featuredUntil) لأن التجديد ليس تعديل مضمون.
     match /optical_shops/{docId} {
       allow list, get: if true;
       allow create: if accountActive() && request.resource.data.isApproved == false;
       allow update: if isAdmin()
                     || (accountActive() && resource.data.submittedBy == request.auth.uid
-                        && resource.data.isApproved == false)
-                    || (accountActive() && resource.data.submittedBy == request.auth.uid
                         && request.resource.data.diff(resource.data).affectedKeys()
-                             .hasOnly(['adType', 'featuredUntil']));
-      allow delete: if isAdmin();
+                             .hasOnly(['adType', 'featuredUntil']))
+                    || (accountActive() && resource.data.submittedBy == request.auth.uid
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['submittedByName']))
+                    || ownerEdit(resource.data.submittedBy,
+                                 request.resource.data.submittedBy);
+      allow delete: if isAdmin() || ownerDelete(resource.data.submittedBy);
     }
 
-    // متبرعو الدم: إضافة من المالك، ظهور عام بعد الموافقة، تعديل المالك لبياناته.
+    // متبرعو الدم: إضافة من المالك، ظهور عام بعد الموافقة، تعديل المالك لبياناته
+    // في أي وقت (فيعود سجله إلى المراجعة)، وحذف فوري.
     match /blood_donors/{docId} {
       allow get: if true;
       allow list: if isSignedIn();
       allow create: if accountActive()
                     && request.auth.uid == request.resource.data.userId
                     && request.resource.data.isApproved == false;
-      // غير المعتمد: تعديله كامل. المعتمد: صاحبُه يحدّث بياناته الشخصية فقط (بما فيها الاسم).
+      // اسم المتبرِّع نسبه المطبّق من ملفه: يزامن وحده بلا إعادة مراجعة.
       allow update: if isAdmin()
                     || (accountActive() && resource.data.userId == request.auth.uid
-                        && request.resource.data.isApproved == false)
-                    || (accountActive() && resource.data.userId == request.auth.uid
-                        && request.resource.data.diff(resource.data).affectedKeys()
-                             .hasOnly(['name','phone','age','gender','address','isAvailable','lastDonation','bloodType']));
-      allow delete: if isAdmin()
-                    || (accountActive() && resource.data.userId == request.auth.uid);
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name']))
+                    || ownerEdit(resource.data.userId, request.resource.data.userId);
+      allow delete: if isAdmin() || ownerDelete(resource.data.userId);
     }
 
     // طلبات التبرع بالدم: المالك ينشئ/يغلق/يحدّث بيانات طلبه، والموافقة والنشر للأدمن.
@@ -527,12 +594,14 @@ service cloud.firestore {
       allow create: if accountActive()
                     && request.auth.uid == request.resource.data.userId
                     && request.resource.data.isApproved == false;
-      // المالك: الإغلاق (status) أو مزامنة اسم مقدم الطلب؛ ولا يلمس isApproved.
+      // المالك: إغلاق طلبه أو مزامنة اسمه (حالات لا تعدّل المضمون فلا تخرج
+      // من الظهور)، أو تعديل طلبه في أي وقت فيعود للمراجعة. والحذف فوري.
       allow update: if isAdmin()
                     || (accountActive() && resource.data.userId == request.auth.uid
                         && request.resource.data.diff(resource.data).affectedKeys()
-                             .hasOnly(['status','requesterName','phone']));
-      allow delete: if isAdmin();
+                             .hasOnly(['status','requesterName','phone']))
+                    || ownerEdit(resource.data.userId, request.resource.data.userId);
+      allow delete: if isAdmin() || ownerDelete(resource.data.userId);
     }
 
     // ───────────────────────── محتوى «تعرف على القرية» ─────────────────────────

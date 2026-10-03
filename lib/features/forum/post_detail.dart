@@ -11,7 +11,9 @@ import '../../models/data_models.dart';
 import '../../services/forum_service.dart';
 import '../../services/share_service.dart';
 import '../../services/user_service.dart';
+import '../../widgets/owner_actions.dart';
 import '../../widgets/qurity_app_bar.dart';
+import 'create_post.dart';
 
 /// Forum post reader. Opened with a [ForumPost] as route argument
 /// (see `AppRoutes.forumPostDetail`).
@@ -159,6 +161,43 @@ class _ForumPostDetailScreenState extends State<ForumPostDetailScreen> {
     }
   }
 
+  /// تعديل صاحب منشوره: نفس نموذج الإنشاء بـ`existing`، والنجاح يُغلق الصفحة
+  /// لأن المنشور عاد إلى طابور المراجعة.
+  Future<void> _openEdit(ForumPost post) async {
+    final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(
+        builder: (_) => CreatePostScreen(
+              existing: post,
+              forumService: widget.forumService,
+            )));
+    if (saved == true && mounted) Navigator.pop(context);
+  }
+
+  Future<bool> _deletePost(ForumPost post) async {
+    try {
+      await _forumService.deletePost(post.id);
+      if (mounted) Navigator.pop(context);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// صفا «تعديل/حذف» لصاحب المنشور فقط — الإدارة تعدّل وتحذف من لوحة التحكم،
+  /// لأن قواعد البند ٨ تجيز تعديل المالك لسجله العائد إلى المراجعة وحده.
+  Widget? _ownerActions(ForumPost post) {
+    if (_currentUserId.isEmpty || _currentUserId != post.userId) return null;
+    return OwnerActions(
+      keyTag: 'forum-detail',
+      ownerId: post.userId,
+      currentUserId: _currentUserId,
+      itemName: post.title,
+      editLabel: 'تعديل المنشور',
+      deleteLabel: 'حذف المنشور',
+      onEdit: () => _openEdit(post),
+      onDelete: () => _deletePost(post),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -196,6 +235,7 @@ class _ForumPostDetailScreenState extends State<ForumPostDetailScreen> {
                   : _forumService.getPostStream(passedPost.id),
               builder: (context, snapshot) {
                 final post = snapshot.data ?? passedPost;
+                final ownerRow = _ownerActions(post);
                 return Column(
                   children: [
                     Expanded(
@@ -226,6 +266,10 @@ class _ForumPostDetailScreenState extends State<ForumPostDetailScreen> {
                             ),
                             const SizedBox(height: 12),
                             _buildComments(theme, post),
+                            if (ownerRow != null) ...[
+                              const SizedBox(height: 20),
+                              ownerRow,
+                            ],
                           ],
                         ),
                       ),

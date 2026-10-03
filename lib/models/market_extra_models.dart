@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import '../core/utils/firebase_ts.dart';
 
 // ═══════════════════════ SHOP (محلات القرية) ═══════════════════════
-/// المتجر هو منصة تسويقية لصاحبها؛ منتجاته تُربط عبر ownerUid (نفس sellerId).
+/// المتجر هو منصة تسويقية لصاحبها؛ منتجاته تُربط بـ shopId في market_products،
+/// وما لا ربط فيه من منتجات البائع يبقى ظاهرًا في محلاته كلها (سجلّ قديم).
 class Shop {
   final String id;
   final String ownerUid;

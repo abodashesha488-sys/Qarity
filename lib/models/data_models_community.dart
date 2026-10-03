@@ -368,6 +368,10 @@ class Occasion implements BaseModel {
   final String? imageUrl;
   final bool isApproved;
   final String? organizer;
+
+  /// صاحب المناسبة — الحقل يُكتب في الوثيقة وقت الإنشاء (`submittedBy`)، وكان
+  /// النموذج يهمله فلا تعرف شاشة التفاصيل مَنْ يملكها (البند ٨).
+  final String? submittedBy;
   @override
   final DateTime? createdAt;
 
@@ -380,6 +384,7 @@ class Occasion implements BaseModel {
     this.imageUrl,
     this.isApproved = false,
     this.organizer,
+    this.submittedBy,
     this.createdAt,
   });
 
@@ -393,6 +398,7 @@ class Occasion implements BaseModel {
       imageUrl: json['imageUrl'] as String?,
       isApproved: json['isApproved'] as bool? ?? false,
       organizer: json['organizer'] as String?,
+      submittedBy: json['submittedBy'] as String?,
       createdAt:
           json['createdAt'] != null ? _parseTimestamp(json['createdAt']) : null,
     );
@@ -408,6 +414,7 @@ class Occasion implements BaseModel {
       'imageUrl': imageUrl,
       'isApproved': isApproved,
       'organizer': organizer,
+      'submittedBy': submittedBy,
       'createdAt': createdAt != null
           ? Timestamp.fromDate(createdAt!)
           : FieldValue.serverTimestamp(),

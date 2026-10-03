@@ -18,11 +18,25 @@ class _MarketTabState extends State<_MarketTab> {
       _service.getProductsStream();
   late final Future<List<Map<String, dynamic>>?> _cacheFuture =
       CacheService.getProducts();
+  // العرض ينتهي بوقت لا بتغيير في الوثيقة، فالستريم وحده لا يُعيد شيئًا عند
+  // بلوغ `offerEndsAt`. نبض دقيقة واحدة يعيد الرسم فتختفي الشارة والخصم
+  // تلقائيًا — بلا إعادة اشتراك وبلا قراءة جديدة.
+  Timer? _offerTicker;
 
   static const _cats = ['الكل', ...kProductCategories];
 
   @override
+  void initState() {
+    super.initState();
+    _offerTicker =
+        Timer.periodic(const Duration(minutes: 1), (_) {
+          if (mounted) setState(() {});
+        });
+  }
+
+  @override
   void dispose() {
+    _offerTicker?.cancel();
     _search.dispose();
     super.dispose();
   }

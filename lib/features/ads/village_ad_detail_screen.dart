@@ -8,6 +8,7 @@ import '../../models/village_ad_model.dart';
 import '../../services/share_service.dart';
 import '../../services/village_ad_service.dart';
 import '../../widgets/full_fit_image.dart';
+import '../../widgets/owner_actions.dart';
 import '../../widgets/qurity_app_bar.dart';
 import 'village_ads_screen.dart';
 
@@ -59,34 +60,13 @@ class _VillageAdDetailScreenState extends State<VillageAdDetailScreen> {
     _snack('تم حفظ التعديلات');
   }
 
-  Future<void> _confirmDelete(VillageAd ad) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('حذف الإعلان'),
-        content: Text('سيُحذف «${ad.title}» نهائيًا ولن يظهر لأحد.'),
-        actions: [
-          TextButton(
-            key: const Key('ad-detail-delete-cancel'),
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('إلغاء'),
-          ),
-          FilledButton(
-            key: const Key('ad-detail-delete-confirm'),
-            style: FilledButton.styleFrom(backgroundColor: kAdsDeleteRed),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('حذف'),
-          ),
-        ],
-      ),
-    );
-    if (ok != true) return;
+  Future<bool> _delete(VillageAd ad) async {
     try {
       await _service.delete(ad.id);
       if (mounted) Navigator.pop(context);
-      _snack('تم حذف «${ad.title}»');
+      return true;
     } catch (_) {
-      _snack('تعذّر الحذف — تحقّق من الصلاحيات ثم أعد المحاولة.', error: true);
+      return false;
     }
   }
 
@@ -130,7 +110,6 @@ class _VillageAdDetailScreenState extends State<VillageAdDetailScreen> {
     } catch (_) {
       uid = null;
     }
-    final isOwner = uid != null && uid.isNotEmpty && uid == ad.userId;
 
     return Scaffold(
       appBar: QurityAppBar(
@@ -240,34 +219,17 @@ class _VillageAdDetailScreenState extends State<VillageAdDetailScreen> {
               ],
             ),
           ],
-          if (isOwner) ...[
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              key: const Key('ad-detail-edit'),
-              onPressed: () => _edit(ad),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: kVillageAdsColor,
-                side: const BorderSide(color: kVillageAdsColor, width: 1.4),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-              ),
-              icon: const Icon(Icons.edit_rounded, size: 18),
-              label: const Text('تعديل إعلاني',
-                  style: TextStyle(fontWeight: FontWeight.w800)),
-            ),
-            const SizedBox(height: 8),
-            OutlinedButton.icon(
-              key: const Key('ad-detail-delete'),
-              onPressed: () => _confirmDelete(ad),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: kAdsDeleteRed,
-                side: const BorderSide(color: kAdsDeleteRed, width: 1.4),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-              ),
-              icon: const Icon(Icons.delete_outline_rounded, size: 18),
-              label: const Text('حذف إعلاني',
-                  style: TextStyle(fontWeight: FontWeight.w800)),
-            ),
-          ],
+          const SizedBox(height: 12),
+          OwnerActions(
+            keyTag: 'ad-detail',
+            ownerId: ad.userId,
+            currentUserId: uid ?? '',
+            itemName: ad.title,
+            editLabel: 'تعديل إعلاني',
+            deleteLabel: 'حذف إعلاني',
+            onEdit: () => _edit(ad),
+            onDelete: () => _delete(ad),
+          ),
         ],
       ),
     );

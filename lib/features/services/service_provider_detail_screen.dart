@@ -12,7 +12,9 @@ import '../../services/share_service.dart';
 import '../../services/user_service.dart';
 import '../../widgets/edu_kind_mark.dart';
 import '../../widgets/full_fit_image.dart';
+import '../../widgets/owner_actions.dart';
 import '../medical/clinic_detail_screen.dart';
+import 'service_directory_screen.dart';
 
 /// شاشة تفاصيل بيان في دليل الخدمات — عرض منسق + تقييم 5 نجوم + تعليقات.
 class ServiceProviderDetailScreen extends StatefulWidget {
@@ -160,6 +162,63 @@ class _ServiceProviderDetailScreenState
     ));
   }
 
+  /// تعديل صاحب السجل: نفس ورقة الإضافة بـ`existing`، والحفظ يمرّ بـ`update`
+  /// الذي يفرض العودة إلى المراجعة ولا يمسّ النسبة.
+  Future<void> _openEdit(ServiceProvider provider) async {
+    String authorName = '';
+    try {
+      authorName = (await UserService().resolveAuthor()).name;
+    } catch (_) {
+      // بلا جلسة (اختبارات) يبقى الاسم كما هو في السجل.
+    }
+    if (!mounted) return;
+    final res = await showModalBottomSheet<ServiceProvider>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      builder: (_) => ProviderFormSheet(
+        category: provider.category,
+        userId: _currentUid,
+        userName: authorName.isEmpty ? (provider.submittedByName ?? '') : authorName,
+        existing: provider,
+      ),
+    );
+    if (res == null) return;
+    try {
+      await _service.update(res);
+      _snack('تم حفظ التعديلات — عاد السجل إلى المراجعة');
+    } catch (e) {
+      _snack('تعذّر حفظ التعديل — تحقّق من الصلاحيات أو من الاتصال', error: true);
+    }
+  }
+
+  Future<bool> _deleteRecord(ServiceProvider provider) async {
+    try {
+      await _service.delete(provider.id);
+      if (mounted) Navigator.pop(context);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// صفا «تعديل/حذف» لصاحب السجل فقط — الإدارة تعدّل وتميّز من لوحة التحكم،
+  /// لأن قواعد البند ٨ تجيز تعديل المالك لسجله وحده.
+  Widget? _ownerActions(ServiceProvider provider) {
+    final owner = provider.submittedBy ?? '';
+    if (_currentUid.isEmpty || _currentUid != owner) return null;
+    return OwnerActions(
+      keyTag: 'provider-detail',
+      ownerId: owner,
+      currentUserId: _currentUid,
+      itemName: provider.name,
+      editLabel: 'تعديل السجل',
+      deleteLabel: 'حذف السجل',
+      onEdit: () => _openEdit(provider),
+      onDelete: () => _deleteRecord(provider),
+    );
+  }
+
   Future<void> _call(String phone) async {
     final uri = Uri(scheme: 'tel', path: phone);
     if (await canLaunchUrl(uri)) await launchUrl(uri);
@@ -178,6 +237,7 @@ class _ServiceProviderDetailScreenState
             ? const Color(0xFFB8860B)
             : ServiceCategory.color(provider.category);
         final imageUrl = provider.photoUrl ?? '';
+        final ownerRow = _ownerActions(provider);
 
         return Scaffold(
           body: CustomScrollView(
@@ -240,6 +300,10 @@ class _ServiceProviderDetailScreenState
                       ],
                       const SizedBox(height: 10),
                       _contactCard(theme, provider, accent),
+                      if (ownerRow != null) ...[
+                        const SizedBox(height: 10),
+                        ownerRow,
+                      ],
                       const SizedBox(height: 10),
                       _myRatingCard(theme, accent),
                       const SizedBox(height: 10),

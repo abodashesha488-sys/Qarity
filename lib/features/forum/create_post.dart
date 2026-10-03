@@ -1,18 +1,39 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../../core/utils/helpers.dart';
 import '../../models/data_models.dart';
 import '../../services/forum_service.dart';
 import '../../services/image_upload_service.dart';
 import '../../services/user_service.dart';
+import '../../widgets/document_field_editor.dart';
 import '../../widgets/qurity_app_bar.dart';
 
 /// Creates a forum post. The post is stored unapproved (`isApproved: false`)
 /// so it goes through the admin review flow before appearing in the feed.
+///
+/// تمرّ الشاشة نفسها للتعديل حين يُمرَّر [existing] (البند ٨): الحقول تُملأ من
+/// المنشور، والحفظ يكتب عبر `updatePost` الذي يفرض العودة إلى المراجعة.
 class CreatePostScreen extends StatefulWidget {
-  const CreatePostScreen({super.key});
+  const CreatePostScreen({
+    super.key,
+    this.existing,
+    this.uploader,
+    this.bytesSource,
+    this.forumService,
+    this.userService,
+  });
+
+  /// منشور قائم يملكه المستخدم الحالي — للتعديل لا للإنشاء.
+  final ForumPost? existing;
+
+  /// اختياري لاختبار المحرّر المشترك بلا شبكة ولا معرض جهاز.
+  final ImageUploadService? uploader;
+  final ImageBytesSource? bytesSource;
+
+  /// اختياري للحقن في الاختبارات.
+  final ForumService? forumService;
+  final UserService? userService;
 
   @override
   State<CreatePostScreen> createState() => _CreatePostScreenState();
@@ -20,12 +41,13 @@ class CreatePostScreen extends StatefulWidget {
 
 class _CreatePostScreenState extends State<CreatePostScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _titleController = TextEditingController();
-  final _contentController = TextEditingController();
-  final ForumService _forumService = ForumService();
-  final UserService _userService = UserService();
-  final ImagePicker _picker = ImagePicker();
-  final ImageUploadService _imageUploadService = ImageUploadService();
+  late final TextEditingController _titleController =
+      TextEditingController(text: widget.existing?.title ?? '');
+  late final TextEditingController _contentController =
+      TextEditingController(text: widget.existing?.content ?? '');
+  late final ForumService _forumService =
+      widget.forumService ?? ForumService();
+  late final UserService _userService = widget.userService ?? UserService();
 
   static const List<String> _topics = [
     'عام',
@@ -46,9 +68,17 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   String? _userSellerType;
   String? _uploadedImageUrl;
 
+  bool get _isEdit => widget.existing != null;
+
   @override
   void initState() {
     super.initState();
+    final editing = widget.existing;
+    if (editing != null) {
+      _category = _topics.contains(editing.category) ? editing.category : 'عام';
+      final link = editing.imageUrl;
+      _uploadedImageUrl = (link == null || link.isEmpty) ? null : link;
+    }
     _loadUser();
   }
 
@@ -71,31 +101,10 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         _isLoadingUser = false;
       });
     } catch (_) {
+      // بلا تهيئة Firebase (اختبارات الواجهة) يبقى الاسم فارغًا ولا تسقط
+      // الشاشة — لذا هنا لا نعيد قراءة المصادقة مرة ثانية.
       if (!mounted) return;
-      setState(() {
-        _userName = _userService.currentUser?.displayName ?? 'مستخدم';
-        _isLoadingUser = false;
-      });
-    }
-  }
-
-  Future<void> _pickImage() async {
-    setState(() => _isUploading = true);
-    try {
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-    if (image == null) {
-      if (mounted) setState(() => _isUploading = false);
-      return;
-    }
-    final bytes = await image.readAsBytes();
-    final url = await _imageUploadService.uploadImage(bytes);
-    if (!mounted) return;
-    setState(() => _uploadedImageUrl = url);
-    AppHelpers.showSnackBar(context, 'تم رفع الصورة بنجاح', isSuccess: true);
-    } catch (e) {
-      if (mounted) AppHelpers.showSnackBar(context, 'خطأ في اختيار الصورة: $e', isError: true);
-    } finally {
-      if (mounted) setState(() => _isUploading = false);
+      setState(() => _isLoadingUser = false);
     }
   }
 
@@ -108,26 +117,35 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     }
     setState(() => _isPosting = true);
     try {
+      final editing = widget.existing;
       final post = ForumPost(
-        id: '',
-        userId: authUser.uid,
+        id: editing?.id ?? '',
+        userId: editing?.userId ?? authUser.uid,
         userName: _userName.isEmpty ? (authUser.displayName ?? 'مستخدم') : _userName,
         userPhotoUrl: _userPhoto,
         title: _titleController.text.trim(),
         category: _category,
         content: _contentController.text.trim(),
         imageUrl: _uploadedImageUrl ?? '',
-        createdAt: DateTime.now(),
+        createdAt: editing?.createdAt ?? DateTime.now(),
         userRole: _userRole,
         userSellerType: _userSellerType,
-        // Posts always enter the admin review queue first.
-        // ignore: avoid_redundant_argument_values
-        isApproved: false,
+        // `isApproved` يبقى false (الافتراضي): والإنشاء يدخل طابور المراجعة،
+        // والتعديل يمرّ بـ`OwnerContentService.edit` الذي يفرض false أيضًا.
       );
-      await _forumService.addPost(post);
+      if (editing != null) {
+        await _forumService.updatePost(post);
+      } else {
+        await _forumService.addPost(post);
+      }
       if (!mounted) return;
-      AppHelpers.showSnackBar(context, 'تم إرسال المنشور للمراجعة', isSuccess: true);
-      Navigator.pop(context);
+      AppHelpers.showSnackBar(
+          context,
+          editing == null
+              ? 'تم إرسال المنشور للمراجعة'
+              : 'تم حفظ التعديلات — أُعيد المنشور للمراجعة',
+          isSuccess: true);
+      Navigator.pop(context, true);
     } catch (e) {
       if (mounted) AppHelpers.showSnackBar(context, 'خطأ: $e', isError: true);
     } finally {
@@ -140,7 +158,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: const QurityAppBar(title: 'إنشاء منشور'),
+      appBar: QurityAppBar(title: _isEdit ? 'تعديل المنشور' : 'إنشاء منشور'),
       body: _isLoadingUser
           ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
           : AbsorbPointer(
@@ -285,76 +303,20 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                                 ],
                               ),
                               const SizedBox(height: 16),
-                              if (_uploadedImageUrl != null)
-                                Stack(
-                                  children: [
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(14),
-                                      child: CachedNetworkImage(
-                                        imageUrl: _uploadedImageUrl!,
-                                        height: 180,
-                                        width: double.infinity,
-                                        fit: BoxFit.cover,
-                                        placeholder: (context, url) => Container(
-                                          height: 180,
-                                          color: theme.colorScheme.surfaceContainerHighest,
-                                          child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                                        ),
-                                        errorWidget: (context, url, error) => Container(
-                                          height: 180,
-                                          color: theme.colorScheme.surfaceContainerHighest,
-                                          child: Icon(
-                                            Icons.broken_image_rounded,
-                                            color: theme.colorScheme.onSurfaceVariant,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    Positioned(
-                                      top: 8,
-                                      right: 8,
-                                      child: Material(
-                                        color: theme.colorScheme.surface.withValues(alpha: 0.9),
-                                        shape: const CircleBorder(),
-                                        child: InkWell(
-                                          customBorder: const CircleBorder(),
-                                          onTap: _isPosting
-                                              ? null
-                                              : () => setState(() => _uploadedImageUrl = null),
-                                          child: Padding(
-                                            padding: const EdgeInsets.all(6),
-                                            child: Icon(
-                                              Icons.close_rounded,
-                                              size: 18,
-                                              color: theme.colorScheme.error,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              else
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: OutlinedButton.icon(
-                                    onPressed: _isUploading || _isPosting ? null : _pickImage,
-                                    icon: _isUploading
-                                        ? const SizedBox(
-                                            width: 18,
-                                            height: 18,
-                                            child: CircularProgressIndicator(strokeWidth: 2),
-                                          )
-                                        : const Icon(Icons.add_photo_alternate_rounded),
-                                    label: Text(_isUploading ? 'جاري الرفع...' : 'إضافة صورة'),
-                                    style: OutlinedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(vertical: 20),
-                                      side: BorderSide(
-                                        color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6),
-                                      ),
-                                    ),
-                                  ),
-                                ),
+                              ImageListEditor(
+                                label: 'صورة المنشور',
+                                fieldKey: 'imageUrl',
+                                single: true,
+                                urls: _uploadedImageUrl == null
+                                    ? const <String>[]
+                                    : <String>[_uploadedImageUrl!],
+                                uploader: widget.uploader,
+                                bytesSource: widget.bytesSource,
+                                onBusyChanged:
+                                    (busy) => setState(() => _isUploading = busy),
+                                onChanged: (urls) => setState(() => _uploadedImageUrl =
+                                    urls.isEmpty ? null : urls.first),
+                              ),
                             ],
                           ),
                         ),
@@ -383,11 +345,13 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                       SizedBox(
                         width: double.infinity,
                         child: FilledButton.icon(
-                          onPressed: _isPosting ? null : _post,
+                          onPressed: _isPosting || _isUploading ? null : _post,
                           icon: _isPosting
                               ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                               : const Icon(Icons.send_rounded),
-                          label: Text(_isPosting ? 'جاري النشر...' : 'نشر'),
+                          label: Text(_isPosting
+                              ? (_isEdit ? 'جاري الحفظ...' : 'جاري النشر...')
+                              : (_isEdit ? 'حفظ التعديلات' : 'نشر')),
                           style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
                         ),
                       ),

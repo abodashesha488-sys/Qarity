@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/medical_models.dart';
 import 'notification_inbox_service.dart';
 import 'notification_service.dart';
+import 'owner_content_service.dart';
 import 'remote_push_service.dart';
 
 /// خدمة المركز الطبي الخيري — عيادات بأجور رمزية مع المواعيد.
@@ -226,6 +227,18 @@ class VillageClinicService {
         .map((d) => VillageClinic.fromJson(d.data(), d.id))
         .toList();
   }
+
+  /// تعديل صاحب العيادة لبياناتها: تعود إلى المراجعة (البند ٨).
+  Future<void> update(VillageClinic clinic) => OwnerContentService.edit(
+        _firestore,
+        'village_clinics',
+        clinic.id,
+        clinic.toJson(),
+        label: clinic.name,
+      );
+
+  Future<void> delete(String clinicId) =>
+      OwnerContentService.remove(_firestore, 'village_clinics', clinicId);
 }
 
 /// خدمة صيدليات القرية — مدخلات مستخدمين تحتاج موافقة الأدمن.
@@ -279,6 +292,18 @@ class PharmacyService {
     final snap = await _col.where('submittedBy', isEqualTo: userId).get();
     return snap.docs.map((d) => Pharmacy.fromJson(d.data(), d.id)).toList();
   }
+
+  /// تعديل صاحب الصيدلية لبياناتها: تعود إلى المراجعة (البند ٨).
+  Future<void> update(Pharmacy pharmacy) => OwnerContentService.edit(
+        _firestore,
+        'pharmacies',
+        pharmacy.id,
+        pharmacy.toJson(),
+        label: pharmacy.name,
+      );
+
+  Future<void> delete(String pharmacyId) =>
+      OwnerContentService.remove(_firestore, 'pharmacies', pharmacyId);
 }
 
 /// خدمة معامل التحاليل — مدخلات مستخدمين تحتاج موافقة الأدمن.
@@ -333,6 +358,18 @@ class MedicalLabService {
     final snap = await _col.where('submittedBy', isEqualTo: userId).get();
     return snap.docs.map((d) => MedicalLab.fromJson(d.data(), d.id)).toList();
   }
+
+  /// تعديل صاحب المعمل لبياناته: تعود إلى المراجعة (البند ٨).
+  Future<void> update(MedicalLab lab) => OwnerContentService.edit(
+        _firestore,
+        'medical_labs',
+        lab.id,
+        lab.toJson(),
+        label: lab.name,
+      );
+
+  Future<void> delete(String labId) =>
+      OwnerContentService.remove(_firestore, 'medical_labs', labId);
 }
 
 /// خدمة نظارات القرية — محلات نظارات طبية يضيفها أصحابها وتحتاج موافقة الإدارة.
@@ -413,6 +450,19 @@ class OpticalShopService {
       'featuredUntil': Timestamp.fromDate(until),
     });
   }
+
+  /// تعديل صاحب المحل لبياناته: تعود إلى المراجعة (البند ٨). نافذة العرض
+  /// المميز لا تلمسها — لها إجراؤها المستقل فوق.
+  Future<void> update(OpticalShop shop) => OwnerContentService.edit(
+        _firestore,
+        'optical_shops',
+        shop.id,
+        shop.toJson(),
+        label: shop.name,
+      );
+
+  Future<void> delete(String shopId) =>
+      OwnerContentService.remove(_firestore, 'optical_shops', shopId);
 }
 
 /// خدمة بنك الدم — متبرعون وطلبات تبرع (تحتاج موافقة الأدمن للظهور العام).
@@ -452,9 +502,16 @@ class BloodBankService {
     return ref.id;
   }
 
-  Future<void> updateDonor(String id, Map<String, dynamic> data) async {
-    await _donors.doc(id).update(data);
-  }
+  Future<void> updateDonor(BloodDonor donor) => OwnerContentService.edit(
+        _firestore,
+        'blood_donors',
+        donor.id,
+        donor.toJson(),
+        label: donor.name,
+      );
+
+  Future<void> deleteDonor(String donorId) =>
+      OwnerContentService.remove(_firestore, 'blood_donors', donorId);
 
   Stream<List<BloodDonor>> getApprovedDonorsStream() {
     return _donors.where('isApproved', isEqualTo: true).snapshots().map((s) {
@@ -538,4 +595,19 @@ class BloodBankService {
   Future<void> closeRequest(String id) async {
     await _requests.doc(id).update({'status': 'closed'});
   }
+
+  /// تعديل صاحب الطلب لبياناته: يعود إلى المراجعة (البند ٨). الحالة رخصة
+  /// حالة مستقلة (إغلاق/فتح) فلا يلمسها هذا المسار.
+  Future<void> updateRequest(BloodRequest request) => OwnerContentService.edit(
+        _firestore,
+        'blood_requests',
+        request.id,
+        request.toJson(),
+        label: request.patientName.isNotEmpty
+            ? request.patientName
+            : request.requesterName,
+      );
+
+  Future<void> deleteRequest(String requestId) =>
+      OwnerContentService.remove(_firestore, 'blood_requests', requestId);
 }

@@ -61,7 +61,11 @@ void main() {
       expect(src, contains('errorWidget: (_, __, ___) {'));
       expect(src, contains('return widget.fallback;'),
           reason: 'الرابط الميت يُبدَّل بالبديل المربّع');
-      expect(src, contains('.clamp(widget.minRatio, widget.maxRatio)'));
+      expect(src, contains('.clamp(minRatio, maxRatio)'),
+          reason: 'الحصر باقٍ — انتقل إلى دالة الارتفاع المشتركة');
+      expect(src,
+          contains('minRatio: widget.minRatio, maxRatio: widget.maxRatio'),
+          reason: 'الوست يمرّ حدَّيه فلا يفقدهما بالتحويل إلى الدالة العامة');
     });
 
     test('النسب المتطرفة مقصوصة بين الحدَّين', () {

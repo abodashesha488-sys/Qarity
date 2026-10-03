@@ -128,7 +128,7 @@ void main() {
       expect(feed.map((a) => a.title), ['معتمد لغيري']);
     });
 
-    test('تعديل المالك لا يمسّ موافقة إعلان معتمد', () async {
+    test('تعديل المالك يعيد الإعلان إلى المراجعة', () async {
       final fake = FakeFirebaseFirestore();
       final svc = VillageAdService(fake);
       final ref = await fake.collection('village_ads').add({
@@ -142,7 +142,9 @@ void main() {
           ref.id, VillageAd.fromJson(stored, ref.id).copyWith(description: 'نبذة جديدة'));
       final data = (await ref.get()).data()!;
       expect(data['description'], 'نبذة جديدة');
-      expect(data['isApproved'], true);
+      // البند ٨: التعديل محتوى جديد فلا يُنشر بلا مراجعة الأدمن.
+      expect(data['isApproved'], false);
+      expect(data['userId'], 'u1');
     });
 
     test('getById بمعرّف فارغ لا يلمس Firestore', () async {
@@ -297,8 +299,14 @@ void main() {
       expect(blockOf('lawyers'), contains('allow list, get: if true;'));
       final consult = blockOf('legal_consultations');
       expect(consult, contains('resource.data.isApproved == true'));
-      expect(consult, contains("hasAny(['isApproved', 'answer', 'userId'])"),
-          reason: 'الرد والمالك والموافقة حقول إدارية');
+      // البند ٨: المالك يصوغ سؤاله في أي وقت فيعود للمراجعة، والرد والمالك
+      // والموافقة حقول إدارية — فالتعديل يمرّ بـ ownerEdit (التي تمنع
+      // isApproved وuserId) ويُفرغ الرد لأنه صار إجابة عن سؤال لم يعد موجودًا.
+      expect(consult, contains('ownerEdit(resource.data.userId'),
+          reason: 'تعديل المالك محروس بالمراجعة لا بلمس الموافقة');
+      expect(consult, contains("request.resource.data.answer == ''"));
+      expect(consult, contains("affectedKeys().hasAny(['userName'])"));
+      expect(consult, contains('ownerDelete(resource.data.userId)'));
     });
 
     test('قراءات الدليل بلا orderBy على حقل قد يغيب', () {

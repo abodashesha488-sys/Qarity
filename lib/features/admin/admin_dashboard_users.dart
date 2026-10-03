@@ -20,6 +20,10 @@ class _UsersPageState extends State<_UsersPage> {
   String _filter = 'all';
   String _sortBy = 'newest'; // newest, oldest, name, email
 
+  /// مرشّح النوع مستقل عن مرشّح الدور: كلٌّ منهما يضيّق القائمة على حدة، فتولّد
+  /// «الرجال + البائعون» ضغطة من كل شريط بلا حالة مركّبة لكل احتمال.
+  String _genderFilter = 'all'; // all, male, female
+
   /// دور المستخدم الحالي من نفس سترة المستخدمين (يُحدّث في build).
   /// يحدد ما إذا كان حساب المدير العام محمياً من إجراءاته: الأدمن المساعد
   /// لا يستطيع حذف أو تنحية المدير العام (انظر _isProtectedGeneralAdmin).
@@ -39,11 +43,7 @@ class _UsersPageState extends State<_UsersPage> {
       Color(0xFF558B2F),
       Icons.agriculture_rounded
     ),
-    'assistant_admin': (
-      'أدمن مساعد',
-      Color(0xFF6A1B9A),
-      Icons.shield_rounded
-    ),
+    'assistant_admin': ('أدمن مساعد', Color(0xFF6A1B9A), Icons.shield_rounded),
     'admin': (
       'مدير عام',
       Color(0xFF1565C0),
@@ -63,6 +63,13 @@ class _UsersPageState extends State<_UsersPage> {
     ('disabled', 'معطّلون'),
   ];
 
+  /// شرائط النوع الثلاثة — «الكل» يعني بلا تضييق، لا نوعًا رابعًا.
+  static const _genderChips = <(String, String)>[
+    ('all', 'الكل'),
+    (kGenderGroupMale, 'رجل'),
+    (kGenderGroupFemale, 'امرأة'),
+  ];
+
   late final Stream<List<Map<String, dynamic>>> _usersStream =
       widget.adminService.getAllUsersStream();
 
@@ -70,25 +77,17 @@ class _UsersPageState extends State<_UsersPage> {
   /// فيكون مخرَج التصدير مطابقاً لما تراه العين.
   List<Map<String, dynamic>> _visible = const [];
 
-  /// رتبة الدور للترتيب: الأدمن بمختلف أنواعه أولاً، ثم البائعون، ثم المستخدمون.
-  static const Map<String, int> _roleRank = {
-    'admin': 0,
-    'assistant_admin': 1,
-    'medical_admin': 2,
-    'agricultural_admin': 3,
-    'moderator': 4,
-    'seller': 5,
-  };
-
-  static int _rankOf(String role) => _roleRank[role] ?? 6;
-
   /// مقارنة ضمن نفس الرتبة حسب الترتيب المختار.
   int _compareWithinRank(Map<String, dynamic> a, Map<String, dynamic> b) {
     switch (_sortBy) {
       case 'name':
-        return (a['name'] ?? '').toString().compareTo((b['name'] ?? '').toString());
+        return (a['name'] ?? '')
+            .toString()
+            .compareTo((b['name'] ?? '').toString());
       case 'email':
-        return (a['email'] ?? '').toString().compareTo((b['email'] ?? '').toString());
+        return (a['email'] ?? '')
+            .toString()
+            .compareTo((b['email'] ?? '').toString());
       case 'oldest':
         return _compareJoin(a, b, newestFirst: false);
       default:
@@ -170,10 +169,19 @@ class _UsersPageState extends State<_UsersPage> {
             .length;
         final disabled = all.where((u) => u['isActive'] == false).length;
 
+        // عدّادات النوع على القائمة كاملة لا على المرشّحة: المراجع يحتاج أن يرى
+        // حجم كل مجموعة وهو يبدّل الشرائط، لا أن يراها تتساوى دائمًا مع الظاهر.
+        final men =
+            all.where((u) => genderGroupOf(u) == kGenderGroupMale).length;
+        final women =
+            all.where((u) => genderGroupOf(u) == kGenderGroupFemale).length;
+        final noGender = all.length - men - women;
+
         final q = _search.text.trim().toLowerCase();
         final filtered = all.where((u) {
           final role = (u['role'] ?? 'user').toString();
           final off = u['isActive'] == false;
+          if (!genderFilterMatches(_genderFilter, u)) return false;
           if (_filter == 'disabled' && !off) return false;
           if (_filter != 'all' && _filter != 'disabled' && role != _filter) {
             return false;
@@ -184,15 +192,11 @@ class _UsersPageState extends State<_UsersPage> {
               (u['phone']?.toString().toLowerCase().contains(q) ?? false);
         }).toList();
 
-        // الترتيب: الأدمن بمختلف أنواعه أولاً، ثم البائعون، ثم المستخدمون،
-        // وداخل كل مجموعة الترتيب المختار (الأحدث/الأقدم/الاسم/البريد).
-        filtered.sort((a, b) {
-          final rank = _rankOf((a['role'] ?? 'user').toString())
-              .compareTo(_rankOf((b['role'] ?? 'user').toString()));
-          if (rank != 0) return rank;
-          return _compareWithinRank(a, b);
-        });
+        // الترتيب: النوع أولًا (الرجال ⇒ النساء ⇒ بلا نوع)، ثم رتبة الدور داخل
+        // النوع، ثم المفتاح المختار (الأحدث/الأقدم/الاسم/البريد).
+        filtered.sort((a, b) => compareUsersForList(a, b, _compareWithinRank));
         _visible = filtered;
+        final rows = _listRows(filtered);
 
         return Column(
           children: [
@@ -208,16 +212,42 @@ class _UsersPageState extends State<_UsersPage> {
             // ── إحصائيات سريعة ──────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Row(
+              child: Column(
                 children: [
-                  _miniStat(theme, 'الكل', '${all.length}', Colors.teal),
-                  const SizedBox(width: 8),
-                  _miniStat(theme, 'البائعون', '$sellers', Colors.deepPurple),
-                  const SizedBox(width: 8),
-                  _miniStat(theme, 'المسؤولون', '$managers', const Color(0xFF1565C0)),
-                  const SizedBox(width: 8),
-                  _miniStat(theme, 'معطّل', '$disabled',
-                      disabled > 0 ? Colors.red : Colors.grey.shade400),
+                  Row(
+                    children: [
+                      _miniStat(theme, 'الكل', '${all.length}', Colors.teal),
+                      const SizedBox(width: 8),
+                      _miniStat(
+                          theme, 'البائعون', '$sellers', Colors.deepPurple),
+                      const SizedBox(width: 8),
+                      _miniStat(theme, 'المسؤولون', '$managers',
+                          const Color(0xFF1565C0)),
+                      const SizedBox(width: 8),
+                      _miniStat(theme, 'معطّل', '$disabled',
+                          disabled > 0 ? Colors.red : Colors.grey.shade400),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  // عدّادات النوع مجمّعة على القائمة كاملة، ورابعة تقول كم صمد
+                  // أمام المرشّحات الحالية — فلا يُحسب صفرٌ على أنه «لا نساء في
+                  // القرية» بينما المرشّح هو الذي أخفاهن.
+                  Row(
+                    key: const Key('gender-counters'),
+                    children: [
+                      _miniStat(
+                          theme, 'الرجال', '$men', const Color(0xFF1565C0)),
+                      const SizedBox(width: 8),
+                      _miniStat(
+                          theme, 'النساء', '$women', const Color(0xFFAD1457)),
+                      const SizedBox(width: 8),
+                      _miniStat(theme, 'بلا نوع', '$noGender',
+                          noGender > 0 ? Colors.orange : Colors.grey.shade400),
+                      const SizedBox(width: 8),
+                      _miniStat(
+                          theme, 'الظاهر', '${filtered.length}', Colors.brown),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -442,13 +472,42 @@ class _UsersPageState extends State<_UsersPage> {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 10),
+                  // شريط النوع مستقل عن قائمة الأدوار: الضغطة هنا تضيّق داخل
+                  // مجموعة الدور المختارة، وقائمة الدور تضيّق داخل النوع.
+                  Wrap(
+                    key: const Key('gender-filter-row'),
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final g in _genderChips)
+                        ChoiceChip(
+                          key: Key('gender-filter-${g.$1}'),
+                          label: Text(g.$2),
+                          selected: _genderFilter == g.$1,
+                          avatar: Icon(
+                            g.$1 == 'all'
+                                ? Icons.filter_alt_rounded
+                                : g.$1 == kGenderGroupMale
+                                    ? Icons.male_rounded
+                                    : Icons.female_rounded,
+                            size: 18,
+                            color: _genderFilter == g.$1
+                                ? theme.colorScheme.onSecondaryContainer
+                                : theme.colorScheme.onSurfaceVariant,
+                          ),
+                          onSelected: (_) =>
+                              setState(() => _genderFilter = g.$1),
+                        ),
+                    ],
+                  ),
                 ],
               ),
             ),
 
             // ── قائمة المستخدمين ────────────────────────────────
             Expanded(
-              child: filtered.isEmpty
+              child: rows.isEmpty
                   ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -467,12 +526,19 @@ class _UsersPageState extends State<_UsersPage> {
                         ],
                       ),
                     )
-                  : ListView.separated(
+                  : ListView.builder(
                       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                      itemCount: filtered.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 10),
-                      itemBuilder: (context, i) =>
-                          _userCard(theme, filtered[i], i),
+                      itemCount: rows.length,
+                      itemBuilder: (context, i) {
+                        final row = rows[i];
+                        if (row.isHeader) {
+                          return _genderHeader(theme, row.label!, row.count!);
+                        }
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _userCard(theme, row.user!, row.cardIndex),
+                        );
+                      },
                     ),
             ),
           ],
@@ -481,7 +547,63 @@ class _UsersPageState extends State<_UsersPage> {
     );
   }
 
+  /// صفوف القائمة: رأس لكل نوع له مستخدمون ثم بطاقاتهم بالترتيب الجاري داخله.
+  /// المجموعة الفارغة لا رأس لها — رأس بلا تحته شيء يوحي بأن القسم «مقصوم» لا
+  /// أن القرية لا تملكه.
+  List<_UserRow> _listRows(List<Map<String, dynamic>> sorted) {
+    final rows = <_UserRow>[];
+    var cardIndex = 0;
+    for (final group in genderGroupsOf(sorted)) {
+      rows.add(_UserRow.header(group.label, group.members.length));
+      for (final m in group.members) {
+        rows.add(_UserRow.card(m, cardIndex++));
+      }
+    }
+    return rows;
+  }
+
+  Widget _genderHeader(ThemeData theme, String label, int count) {
+    return Padding(
+      key: Key('gender-header-$label'),
+      padding: const EdgeInsets.only(top: 6, bottom: 8),
+      child: Row(
+        children: [
+          Container(
+            width: 4,
+            height: 18,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(label,
+              style: TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w900,
+                  color: theme.colorScheme.onSurface)),
+          const SizedBox(width: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text('$count',
+                style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w800,
+                    color: theme.colorScheme.onSurface)),
+          ),
+        ],
+      ),
+    );
+  }
+
   String get _filterLabel {
+    // مجموعة الأدوار «الكل» تصبح جنسيةً حين يُختار نوع: نفس الضغطة تعني
+    // «كل الرجال» أو «كل النساء»، والاسم يقول ذلك بدل أن يُفهم ضمناً.
+    if (_filter == 'all') return genderAwareAllLabel(_genderFilter);
     for (final f in _filters) {
       if (f.$1 == _filter) return f.$2;
     }
@@ -541,73 +663,49 @@ class _UsersPageState extends State<_UsersPage> {
     try {
       if (type == 'json') {
         final jsonStr = const JsonEncoder.withIndent('  ').convert(rows);
-        await exportFile(
-          fileName: 'qarity_users_$_stamp.json',
-          mimeType: 'application/json',
-          bytes: utf8.encode(jsonStr),
+        _report(
+          await exportFile(
+            fileName: 'qarity_users_$_stamp.json',
+            mimeType: 'application/json',
+            bytes: utf8.encode(jsonStr),
+          ),
+          rows.length,
+          'JSON',
         );
-        _snack('تم تصدير ${rows.length} مستخدم (JSON)');
       } else if (type == 'excel') {
-        final bytes = _buildUsersXlsx(rows);
-        await exportFile(
-          fileName: 'qarity_users_$_stamp.xlsx',
-          mimeType:
-              'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-          bytes: bytes,
+        _report(
+          await exportFile(
+            fileName: 'qarity_users_$_stamp.xlsx',
+            mimeType:
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            bytes: buildTableXlsx(sheetName: 'المستخدمون', rows: rows),
+          ),
+          rows.length,
+          'Excel',
         );
-        _snack('تم تصدير ${rows.length} مستخدم (Excel)');
       } else if (type == 'csv') {
-        // BOM في أول الملف: بدونه يفتح Excel العربية كمربعات/حروف مكسورة.
-        final csv = StringBuffer('﻿');
-        final headers = rows.first.keys.toList();
-        csv.writeln(headers.join(','));
-        for (final row in rows) {
-          csv.writeln(headers
-              .map((h) =>
-                  '"${row[h]?.toString().replaceAll('"', '""') ?? ''}"')
-              .join(','));
-        }
-        await exportFile(
-          fileName: 'qarity_users_$_stamp.csv',
-          mimeType: 'text/csv',
-          bytes: utf8.encode(csv.toString()),
+        _report(
+          await exportFile(
+            fileName: 'qarity_users_$_stamp.csv',
+            mimeType: 'text/csv',
+            bytes: utf8.encode(buildCsv(rows)),
+          ),
+          rows.length,
+          'CSV',
         );
-        _snack('تم تصدير ${rows.length} مستخدم (CSV)');
       }
+    } on ExportException catch (e) {
+      _snack(e.message);
     } catch (e) {
       _snack('تعذّر التصدير: $e');
     }
   }
 
-  Uint8List _buildUsersXlsx(List<Map<String, dynamic>> rows) {
-    final excel = Excel.createExcel();
-    final sheet = excel['المستخدمون'];
-    final headers = rows.first.keys.toList();
-
-    for (int i = 0; i < headers.length; i++) {
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: i, rowIndex: 0))
-        ..value = TextCellValue(headers[i])
-        ..cellStyle = CellStyle(
-          bold: true,
-          fontColorHex: ExcelColor.white,
-          backgroundColorHex: ExcelColor.fromInt(0xFF6F4E37),
-          horizontalAlign: HorizontalAlign.Center,
-        );
-    }
-    for (int r = 0; r < rows.length; r++) {
-      for (int c = 0; c < headers.length; c++) {
-        sheet
-            .cell(CellIndex.indexByColumnRow(columnIndex: c, rowIndex: r + 1))
-          ..value = TextCellValue(rows[r][headers[c]]?.toString() ?? '')
-          ..cellStyle = CellStyle(horizontalAlign: HorizontalAlign.Center);
-      }
-    }
-    for (int i = 0; i < headers.length; i++) {
-      sheet.setColumnWidth(i, 22.0);
-    }
-    final bytes = excel.encode();
-    if (bytes == null) throw Exception('فشل إنشاء ملف Excel');
-    return Uint8List.fromList(bytes);
+  /// `exportFile` يعيد `false` حين يلغي المستخدم نافذة الحفظ على الويب — فلا
+  /// تُقرأ الرحلة كلها كنجاح وهو لم يحصل على ملف.
+  void _report(bool saved, int count, String kind) {
+    _snack(
+        saved ? 'تم تصدير $count مستخدم ($kind)' : kExportCancelledMessageAr);
   }
 
   /// تاريخ + ساعة مقروء (`2026/09/26 · 14:05`)، أو null عند غياب التاريخ.
@@ -616,13 +714,6 @@ class _UsersPageState extends State<_UsersPage> {
     String two(int v) => v.toString().padLeft(2, '0');
     return '${date.year}/${two(date.month)}/${two(date.day)} · '
         '${two(date.hour)}:${two(date.minute)}';
-  }
-
-  /// يوم واحد فقط — لسطر البطاقة المدمج.
-  String _formatDay(DateTime? date) {
-    if (date == null) return 'بلا تاريخ';
-    String two(int v) => v.toString().padLeft(2, '0');
-    return '${date.year}/${two(date.month)}/${two(date.day)}';
   }
 
   Widget _miniStat(ThemeData theme, String label, String value, Color color) {
@@ -658,15 +749,20 @@ class _UsersPageState extends State<_UsersPage> {
     );
   }
 
+  /// بطاقة مستخدم في **سطر واحد مدمج**: رقم القسم، الصورة، الاسم والبريد في
+  /// عمود بسطر واحد لكلٍّ، شارة النوع والرتبة، ثم زر إدارة واحد مضغوط. التاريخ
+  /// ونوع البائع وكل بيان يقرؤه المراجع بقي في `_showUserDetail` التي يفتحها
+  /// النقر على البطاقة — فسطر ثانٍ تحتها كان يضاعف ارتفاع القائمة ويجعل عمود
+  /// التاريخ يفيض على عرض الهاتف.
   Widget _userCard(ThemeData theme, Map<String, dynamic> u, int index) {
     final uid = u['id'] as String;
     final role = (u['role'] ?? 'user').toString();
-    final sellerType = (u['sellerType'] ?? '').toString();
     final disabled = u['isActive'] == false;
     final isSelf = uid == widget.currentUid;
     final opt = _roleOptions[role] ?? _roleOptions['user']!;
     final serial = u['_serial'] as int? ?? index + 1;
     final photoUrl = (u['photoUrl'] ?? '').toString();
+    final protected = _isProtectedGeneralAdmin(role);
 
     return Card(
       elevation: 0,
@@ -682,113 +778,82 @@ class _UsersPageState extends State<_UsersPage> {
         onTap: () => _showUserDetail(u),
         borderRadius: BorderRadius.circular(16),
         child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
             children: [
-              Row(
-                children: [
-                  // الرقم التسلسلي
-                  Container(
-                    width: 28,
-                    height: 28,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '$serial',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 11,
-                        color: theme.colorScheme.primary,
-                      ),
-                    ),
+              // رقم القسم — أول الـRow تحت RTL فيظهر يمين البطاقة
+              Container(
+                width: 28,
+                height: 28,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '$serial',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 11,
+                    color: theme.colorScheme.primary,
                   ),
-                  const SizedBox(width: 8),
-                  // صورة المستخدم
-                  CircleAvatar(
-                    radius: 22,
-                    backgroundColor: opt.$2.withValues(alpha: 0.14),
-                    backgroundImage:
-                        photoUrl.isNotEmpty ? NetworkImage(photoUrl) : null,
-                    child: photoUrl.isEmpty
-                        ? Icon(opt.$3, color: opt.$2, size: 20)
-                        : null,
-                  ),
-                  const SizedBox(width: 10),
-                  // الاسم والإيميل
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                            '${u['name']?.toString() ?? 'بدون اسم'}${isSelf ? ' (أنت)' : ''}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w800, fontSize: 14)),
-                        Text(u['email']?.toString() ?? '',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                                fontSize: 11,
-                                color: theme.colorScheme.onSurfaceVariant)),
-                      ],
-                    ),
-                  ),
-                  // زر الإدارة + السهم (معطّل لحساب المدير العام إذا لم
-                  // يكن المستخدم الحالي مديراً عاماً)
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: Icon(Icons.shield_rounded,
-                            color: theme.colorScheme.primary, size: 20),
-                        tooltip: _isProtectedGeneralAdmin(role)
-                            ? 'محمي — للمدير العام فقط'
-                            : 'إدارة الحساب',
-                        onPressed: _isProtectedGeneralAdmin(role)
-                            ? null
-                            : () => _manage(context, u),
-                      ),
-                      Icon(Icons.chevron_left_rounded,
-                          color: theme.colorScheme.onSurfaceVariant),
-                    ],
-                  ),
-                ],
+                ),
               ),
-              const SizedBox(height: 8),
-              // معلومات إضافية في السطر الثاني
-              Row(
-                children: [
-                  const SizedBox(width: 36), // محاذاة مع الرقم التسلسلي
-                  const SizedBox(width: 8),
-                  Container(
-                    width: 44,
-                    alignment: Alignment.centerRight,
-                    child: Text(
-                      _formatDay(signupAt(u)),
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Wrap(
-                      spacing: 4,
-                      runSpacing: 4,
-                      children: [
-                        _badge(opt.$1, opt.$2),
-                        if (role == 'seller' && sellerType.isNotEmpty)
-                          _badge(_typeLabel(sellerType), Colors.brown),
-                        if (disabled) _badge('معطّل', theme.colorScheme.error),
-                      ],
-                    ),
-                  ),
-                ],
+              const SizedBox(width: 8),
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: opt.$2.withValues(alpha: 0.14),
+                backgroundImage:
+                    photoUrl.isNotEmpty ? NetworkImage(photoUrl) : null,
+                child: photoUrl.isEmpty
+                    ? Icon(opt.$3, color: opt.$2, size: 20)
+                    : null,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                        '${u['name']?.toString() ?? 'بدون اسم'}${isSelf ? ' (أنت)' : ''}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w800, fontSize: 14)),
+                    Text(u['email']?.toString() ?? '',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: theme.colorScheme.onSurfaceVariant)),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 6),
+              // النوع والرتبة في شارة واحدة. `Flexible` + ellipsis لأن أطول
+              // تسمية دور («مدير الخدمات الزراعية») فوق أطول اسم لا يجوز أن
+              // ترفعا البطاقة إلى فيضان في منتصف القائمة.
+              Flexible(
+                child: _badge(
+                  '${userGenderBadgeLabel(u)} · ${opt.$1}',
+                  opt.$2,
+                ),
+              ),
+              if (disabled) ...[
+                const SizedBox(width: 4),
+                _badge('معطّل', theme.colorScheme.error),
+              ],
+              // زر الإدارة (معطّل لحساب المدير العام إذا لم يكن المستخدم
+              // الحالي مديراً عاماً)
+              IconButton(
+                icon: Icon(Icons.shield_rounded,
+                    color: theme.colorScheme.primary, size: 20),
+                tooltip: protected ? 'محمي — للمدير العام فقط' : 'إدارة الحساب',
+                onPressed: protected ? null : () => _manage(context, u),
+                visualDensity: VisualDensity.compact,
+                style: IconButton.styleFrom(
+                    minimumSize: const Size(36, 36), padding: EdgeInsets.zero),
               ),
             ],
           ),
@@ -798,14 +863,16 @@ class _UsersPageState extends State<_UsersPage> {
   }
 
   Widget _badge(String text, Color color) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         decoration: BoxDecoration(
             color: color.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: color.withValues(alpha: 0.3))),
         child: Text(text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
-                fontSize: 9, fontWeight: FontWeight.w800, color: color)),
+                fontSize: 9.5, fontWeight: FontWeight.w800, color: color)),
       );
 
   static String _typeLabel(String t) {
@@ -865,9 +932,8 @@ class _UsersPageState extends State<_UsersPage> {
                       child: CircleAvatar(
                         radius: 78,
                         backgroundColor: opt.$2.withValues(alpha: 0.14),
-                        backgroundImage: photoUrl.isNotEmpty
-                            ? NetworkImage(photoUrl)
-                            : null,
+                        backgroundImage:
+                            photoUrl.isNotEmpty ? NetworkImage(photoUrl) : null,
                         child: photoUrl.isEmpty
                             ? Icon(opt.$3, color: opt.$2, size: 64)
                             : null,
@@ -914,10 +980,14 @@ class _UsersPageState extends State<_UsersPage> {
               _buildDetailRow(theme, 'الحالة', disabled ? 'معطّل' : 'مفعّل',
                   disabled ? Icons.block_rounded : Icons.check_circle_rounded,
                   color: disabled ? theme.colorScheme.error : Colors.green),
-              _buildDetailRow(theme, 'تاريخ التسجيل',
+              _buildDetailRow(
+                  theme,
+                  'تاريخ التسجيل',
                   _formatDate(signupAt(u)) ?? 'غير مسجّل',
                   Icons.calendar_today_rounded),
-              _buildDetailRow(theme, 'آخر تسجيل دخول',
+              _buildDetailRow(
+                  theme,
+                  'آخر تسجيل دخول',
                   _formatDate(lastLoginAt(u)) ?? 'لم يسجّل الدخول بعد',
                   Icons.login_rounded,
                   color: lastLoginAt(u) == null
@@ -1223,7 +1293,8 @@ class _UsersPageState extends State<_UsersPage> {
     return targetRole == 'admin' && _actingRole == 'assistant_admin';
   }
 
-  static String _roleHint(String role) {    switch (role) {
+  static String _roleHint(String role) {
+    switch (role) {
       case 'user':
         return 'تصفح وإضافة محتوى (يُنشر بعد الموافقة)';
       case 'seller':
@@ -1250,8 +1321,7 @@ class _UsersPageState extends State<_UsersPage> {
     ));
   }
 
-  Future<void> _confirmDelete(
-      BuildContext context, String uid, String name,
+  Future<void> _confirmDelete(BuildContext context, String uid, String name,
       {required String role}) async {
     // حماية مزدوجة: القواعد ترفض ذلك أيضاً، لكن نمنع المحاولة هنا برسالة واضحة.
     // الفحص بدور الهدف الحقيقي: تمرير دور ثابت كان يمنع الأدمن المساعد من حذف
@@ -1288,4 +1358,24 @@ class _UsersPageState extends State<_UsersPage> {
       }
     }
   }
+}
+
+/// سطر في قائمة المستخدمين: إمّا رأس مجموعة نوع أو بطاقة مستخدم. القائمة صارت
+/// مزيجا من الاثنين، فلا يصلح `itemCount` على عدد المستخدمين وحدهم.
+class _UserRow {
+  const _UserRow.header(this.label, this.count)
+      : user = null,
+        cardIndex = 0;
+  const _UserRow.card(this.user, this.cardIndex)
+      : label = null,
+        count = null;
+
+  final String? label;
+  final int? count;
+  final Map<String, dynamic>? user;
+
+  /// موضع البطاقة بين البطاقات — تتسلّمه `_userCard` لاحتياط الرقم التسلسلي.
+  final int cardIndex;
+
+  bool get isHeader => user == null;
 }

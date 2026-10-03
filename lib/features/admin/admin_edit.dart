@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/utils/firebase_ts.dart';
+import '../../models/data_models.dart';
 import '../../services/admin_service.dart';
+import '../../widgets/document_field_editor.dart';
 import '../../widgets/qurity_app_bar.dart';
 
-/// شاشة تعديل الأدمن لأي عنصر — تغطي كل المجموعات بحقولها الحقيقية،
-/// مع أنواع صحيحة (نص/رقم/منطقي) ووسوم عربية.
+/// شاشة تعديل الأدمن لأي عنصر — تُظهر **كل** حقول الوثيقة لا ما تعرفه القائمة
+/// فقط، وتُدير الصور (معاينة وحذف ورفع ولصق رابط) في مواضعها كلها.
 class AdminEditScreen extends StatefulWidget {
   final String collection;
   final String docId;
@@ -23,396 +26,379 @@ class AdminEditScreen extends StatefulWidget {
   State<AdminEditScreen> createState() => _AdminEditScreenState();
 }
 
-class _FieldSpec {
-  final String key;
-  final String label;
-  final bool required;
-  final bool numeric;
-  final bool multiline;
-  final bool boolean;
-  final bool list;
-  const _FieldSpec(this.key, this.label,
-      {this.required = false,
-      this.numeric = false,
-      this.multiline = false,
-      this.boolean = false,
-      this.list = false});
-}
-
 class _AdminEditScreenState extends State<AdminEditScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final Map<String, TextEditingController> _controllers = {};
-  final Map<String, bool> _bools = {};
-  late final List<_FieldSpec> _fields;
+  final DocumentEditor _editor = DocumentEditor();
+  late final List<DocFieldSpec> _fields;
   bool _isSaving = false;
-
-  static const Set<String> _systemKeys = {
-    'id',
-    'createdAt',
-    'updatedAt',
-    'approvedAt',
-    'approvedBy',
-    'rejectedAt',
-    'rejectedBy',
-    'reviewedAt',
-    'reviewedBy',
-    'isApproved',
-    'imageUrls',
-    'likedBy',
-    'categories',
-    'fcmToken',
-    'fcmTokenUpdatedAt',
-    'relatives',
-  };
 
   @override
   void initState() {
     super.initState();
-    _fields = _fieldsFor(widget.collection);
-    for (final f in _fields) {
-      final v = widget.item[f.key];
-      if (f.boolean) {
-        _bools[f.key] = v is bool ? v : false;
-      } else if (f.list) {
-        _controllers[f.key] = TextEditingController(
-            text: v is List
-                ? v.map((e) => e.toString()).join('، ')
-                : (v?.toString() ?? ''));
-      } else {
-        _controllers[f.key] =
-            TextEditingController(text: v?.toString() ?? '');
-      }
-    }
+    _fields = _buildFields();
+    _editor.seed(_fields, widget.item);
   }
 
   @override
   void dispose() {
-    for (final c in _controllers.values) {
-      c.dispose();
-    }
+    _editor.dispose();
     super.dispose();
   }
 
-  List<_FieldSpec> _fieldsFor(String c) {
+  /// الحقول المسمّاة للمجموعة + كل ما تبقى في الوثيقة من مفاتيح.
+  List<DocFieldSpec> _buildFields() {
+    final named = _namedFieldsFor(widget.collection);
+    return [
+      ...named,
+      ...deriveMissingFields(
+          widget.item, named.map((f) => f.key).toSet())
+    ];
+  }
+
+  List<DocFieldSpec> _namedFieldsFor(String c) {
     switch (c) {
       case 'news':
         return const [
-          _FieldSpec('title', 'العنوان', required: true),
-          _FieldSpec('subtitle', 'المحتوى', multiline: true),
-          _FieldSpec('category', 'التصنيف'),
-          _FieldSpec('authorName', 'اسم الكاتب'),
+          DocFieldSpec('title', 'العنوان', required: true),
+          DocFieldSpec('subtitle', 'المحتوى',
+              kind: DocFieldKind.multiline),
+          DocFieldSpec('category', 'التصنيف'),
+          DocFieldSpec('authorName', 'اسم الكاتب'),
+          DocFieldSpec('imageUrls', 'صور الخبر',
+              kind: DocFieldKind.images, maxImages: 3),
+          DocFieldSpec('imageUrl', 'الصورة الرئيسية',
+              kind: DocFieldKind.image),
         ];
       case 'market_products':
         return const [
-          _FieldSpec('name', 'اسم المنتج', required: true),
-          _FieldSpec('description', 'الوصف', multiline: true),
-          _FieldSpec('price', 'السعر', numeric: true),
-          _FieldSpec('offerPrice', 'سعر العرض', numeric: true),
-          _FieldSpec('category', 'الفئة'),
-          _FieldSpec('stock', 'المخزون', numeric: true),
-          _FieldSpec('sellerName', 'اسم البائع'),
-          _FieldSpec('sellerPhone', 'هاتف البائع'),
+          DocFieldSpec('name', 'اسم المنتج', required: true),
+          DocFieldSpec('description', 'الوصف',
+              kind: DocFieldKind.multiline),
+          DocFieldSpec('price', 'السعر', kind: DocFieldKind.number),
+          DocFieldSpec('offerPrice', 'سعر العرض',
+              kind: DocFieldKind.number),
+          DocFieldSpec('category', 'الفئة'),
+          DocFieldSpec('stock', 'المخزون', kind: DocFieldKind.number),
+          DocFieldSpec('sellerName', 'اسم البائع'),
+          DocFieldSpec('sellerPhone', 'هاتف البائع'),
+          DocFieldSpec('imageUrls', 'صور المنتج',
+              kind: DocFieldKind.images),
+          DocFieldSpec('imageUrl', 'الصورة الرئيسية',
+              kind: DocFieldKind.image),
         ];
       case 'obituaries':
         return const [
-          _FieldSpec('name', 'اسم المتوفى', required: true),
-          _FieldSpec('gender', 'نوع المتوفى (رجل أو امرأة)'),
-          _FieldSpec('dateOfDeath', 'تاريخ الوفاة'),
-          _FieldSpec('funeralDate', 'تاريخ صلاة الجنازة'),
-          _FieldSpec('funeralLocation', 'مكان صلاة الجنازة'),
-          _FieldSpec('funeralTime', 'موعد صلاة الجنازة (مثال: 10:30 ص)'),
-          _FieldSpec('burialLocation', 'مكان الدفن'),
-          _FieldSpec('condolenceLocation', 'مكان العزاء'),
-          _FieldSpec('condolenceTime', 'موعد العزاء (مثال: 8 م)'),
-          _FieldSpec('cardBackground',
+          DocFieldSpec('name', 'اسم المتوفى', required: true),
+          DocFieldSpec('gender', 'نوع المتوفى (رجل أو امرأة)'),
+          DocFieldSpec('dateOfDeath', 'تاريخ الوفاة'),
+          DocFieldSpec('funeralDate', 'تاريخ صلاة الجنازة'),
+          DocFieldSpec('funeralLocation', 'مكان صلاة الجنازة'),
+          DocFieldSpec('funeralTime', 'موعد صلاة الجنازة (مثال: 10:30 ص)'),
+          DocFieldSpec('burialLocation', 'مكان الدفن'),
+          DocFieldSpec('condolenceLocation', 'مكان العزاء'),
+          DocFieldSpec('condolenceTime', 'موعد العزاء (مثال: 8 م)'),
+          DocFieldSpec('imageUrl', 'صورة المتوفى',
+              kind: DocFieldKind.image),
+          DocFieldSpec('cardBackground',
               'خلفية البطاقة (azaa1 / azaa2 / azaa3 / azaa4 أو رابط صورة)'),
-          _FieldSpec('age', 'العمر (حقل قديم)'),
-          _FieldSpec('mosque', 'المسجد (حقل قديم)'),
-          _FieldSpec('description', 'نبذة', multiline: true),
+          DocFieldSpec('age', 'العمر (حقل قديم)'),
+          DocFieldSpec('mosque', 'المسجد (حقل قديم)'),
+          DocFieldSpec('description', 'نبذة',
+              kind: DocFieldKind.multiline),
         ];
       case 'occasions':
         return const [
-          _FieldSpec('title', 'العنوان', required: true),
-          _FieldSpec('description', 'الوصف', multiline: true),
-          _FieldSpec('date', 'التاريخ'),
-          _FieldSpec('location', 'المكان'),
-          _FieldSpec('organizer', 'المنظم'),
+          DocFieldSpec('title', 'العنوان', required: true),
+          DocFieldSpec('description', 'الوصف',
+              kind: DocFieldKind.multiline),
+          DocFieldSpec('date', 'التاريخ'),
+          DocFieldSpec('location', 'المكان'),
+          DocFieldSpec('organizer', 'المنظم'),
+          DocFieldSpec('imageUrl', 'صورة المناسبة',
+              kind: DocFieldKind.image),
         ];
       case 'forum_posts':
         return const [
-          _FieldSpec('title', 'العنوان'),
-          _FieldSpec('content', 'المحتوى', required: true, multiline: true),
-          _FieldSpec('category', 'التصنيف'),
-          _FieldSpec('userName', 'اسم الناشر'),
+          DocFieldSpec('title', 'العنوان'),
+          DocFieldSpec('content', 'المحتوى',
+              required: true, kind: DocFieldKind.multiline),
+          DocFieldSpec('category', 'التصنيف'),
+          DocFieldSpec('userName', 'اسم الناشر'),
+          DocFieldSpec('imageUrl', 'صورة المنشور',
+              kind: DocFieldKind.image),
         ];
       case 'phone_directory':
         return const [
-          _FieldSpec('name', 'الاسم', required: true),
-          _FieldSpec('title', 'المسمى/اللقب'),
-          _FieldSpec('phone', 'الهاتف'),
-          _FieldSpec('secondaryPhone', 'هاتف إضافي'),
-          _FieldSpec('job', 'الوظيفة'),
-          _FieldSpec('address', 'العنوان'),
-          _FieldSpec('email', 'البريد'),
-          _FieldSpec('isPublic', 'ظاهر للجميع', boolean: true),
+          DocFieldSpec('name', 'الاسم', required: true),
+          DocFieldSpec('title', 'المسمى/اللقب'),
+          DocFieldSpec('phone', 'الهاتف'),
+          DocFieldSpec('secondaryPhone', 'هاتف إضافي'),
+          DocFieldSpec('job', 'الوظيفة'),
+          DocFieldSpec('address', 'العنوان'),
+          DocFieldSpec('email', 'البريد'),
+          DocFieldSpec('photoUrl', 'صورة الرقم',
+              kind: DocFieldKind.image),
+          DocFieldSpec('isPublic', 'ظاهر للجميع',
+              kind: DocFieldKind.boolean),
         ];
       case 'shops':
         return const [
-          _FieldSpec('name', 'اسم المحل', required: true),
-          _FieldSpec('category', 'التصنيف'),
-          _FieldSpec('description', 'نبذة', multiline: true),
-          _FieldSpec('whatsapp', 'واتساب للتواصل'),
-          _FieldSpec('ownerName', 'اسم المالك'),
-          _FieldSpec('isActive', 'نشط', boolean: true),
+          DocFieldSpec('name', 'اسم المحل', required: true),
+          DocFieldSpec('category', 'التصنيف'),
+          DocFieldSpec('description', 'نبذة',
+              kind: DocFieldKind.multiline),
+          DocFieldSpec('whatsapp', 'واتساب للتواصل'),
+          DocFieldSpec('ownerName', 'اسم المالك'),
+          DocFieldSpec('imageUrls', 'صور المحل', kind: DocFieldKind.images),
+          DocFieldSpec('isActive', 'نشط', kind: DocFieldKind.boolean),
         ];
       case 'seller_profiles':
         return const [
-          _FieldSpec('name', 'اسم المتجر', required: true),
-          _FieldSpec('bio', 'نبذة', multiline: true),
-          _FieldSpec('phone', 'الهاتف'),
-          _FieldSpec('address', 'العنوان'),
-          _FieldSpec('isVerified', 'موثّق', boolean: true),
+          DocFieldSpec('name', 'اسم المتجر', required: true),
+          DocFieldSpec('bio', 'نبذة', kind: DocFieldKind.multiline),
+          DocFieldSpec('phone', 'الهاتف'),
+          DocFieldSpec('address', 'العنوان'),
+          DocFieldSpec('isVerified', 'موثّق', kind: DocFieldKind.boolean),
         ];
       case 'village_clinics':
         return const [
-          _FieldSpec('name', 'اسم العيادة', required: true),
-          _FieldSpec('specialty', 'التخصص'),
-          _FieldSpec('ownerName', 'اسم الطبيب'),
-          _FieldSpec('phone', 'الهاتف'),
-          _FieldSpec('address', 'العنوان'),
-          _FieldSpec('workingHours', 'مواعيد العمل'),
-          _FieldSpec('description', 'نبذة', multiline: true),
+          DocFieldSpec('name', 'اسم العيادة', required: true),
+          DocFieldSpec('specialty', 'التخصص'),
+          DocFieldSpec('ownerName', 'اسم الطبيب'),
+          DocFieldSpec('phone', 'الهاتف'),
+          DocFieldSpec('address', 'العنوان'),
+          DocFieldSpec('workingHours', 'مواعيد العمل'),
+          DocFieldSpec('description', 'نبذة',
+              kind: DocFieldKind.multiline),
+          DocFieldSpec('imageUrls', 'صور العيادة',
+              kind: DocFieldKind.images),
         ];
       case 'pharmacies':
         return const [
-          _FieldSpec('name', 'اسم الصيدلية', required: true),
-          _FieldSpec('ownerName', 'الصيدلي/المسؤول'),
-          _FieldSpec('phone', 'الهاتف'),
-          _FieldSpec('address', 'العنوان'),
-          _FieldSpec('workingHours', 'مواعيد العمل'),
-          _FieldSpec('description', 'نبذة', multiline: true),
-          _FieldSpec('is24Hours', '٢٤ ساعة', boolean: true),
+          DocFieldSpec('name', 'اسم الصيدلية', required: true),
+          DocFieldSpec('ownerName', 'الصيدلي/المسؤول'),
+          DocFieldSpec('phone', 'الهاتف'),
+          DocFieldSpec('address', 'العنوان'),
+          DocFieldSpec('workingHours', 'مواعيد العمل'),
+          DocFieldSpec('description', 'نبذة',
+              kind: DocFieldKind.multiline),
+          DocFieldSpec('imageUrls', 'صور الصيدلية',
+              kind: DocFieldKind.images),
+          DocFieldSpec('is24Hours', '٢٤ ساعة',
+              kind: DocFieldKind.boolean),
         ];
       case 'medical_labs':
         return const [
-          _FieldSpec('name', 'اسم المعمل', required: true),
-          _FieldSpec('category', 'نوع التحاليل'),
-          _FieldSpec('ownerName', 'المسؤول / مدير المعمل'),
-          _FieldSpec('phone', 'الهاتف'),
-          _FieldSpec('address', 'العنوان'),
-          _FieldSpec('workingHours', 'مواعيد العمل'),
-          _FieldSpec('homeCollection', 'سحب عينات بالمنزل', boolean: true),
-          _FieldSpec('description', 'نبذة', multiline: true),
+          DocFieldSpec('name', 'اسم المعمل', required: true),
+          DocFieldSpec('category', 'نوع التحاليل'),
+          DocFieldSpec('ownerName', 'المسؤول / مدير المعمل'),
+          DocFieldSpec('phone', 'الهاتف'),
+          DocFieldSpec('address', 'العنوان'),
+          DocFieldSpec('workingHours', 'مواعيد العمل'),
+          DocFieldSpec('homeCollection', 'سحب عينات بالمنزل',
+              kind: DocFieldKind.boolean),
+          DocFieldSpec('description', 'نبذة',
+              kind: DocFieldKind.multiline),
+          DocFieldSpec('imageUrls', 'صور المعمل',
+              kind: DocFieldKind.images),
         ];
       case 'optical_shops':
         return const [
-          _FieldSpec('name', 'اسم محل النظارات', required: true),
-          _FieldSpec('ownerName', 'صاحب المحل / المسؤول'),
-          _FieldSpec('phone', 'الهاتف'),
-          _FieldSpec('address', 'العنوان'),
-          _FieldSpec('workingHours', 'مواعيد العمل'),
-          _FieldSpec('description', 'نبذة', multiline: true),
+          DocFieldSpec('name', 'اسم محل النظارات', required: true),
+          DocFieldSpec('ownerName', 'صاحب المحل / المسؤول'),
+          DocFieldSpec('phone', 'الهاتف'),
+          DocFieldSpec('address', 'العنوان'),
+          DocFieldSpec('workingHours', 'مواعيد العمل'),
+          DocFieldSpec('description', 'نبذة',
+              kind: DocFieldKind.multiline),
+          DocFieldSpec('categories', 'تصنيفات المحل',
+              kind: DocFieldKind.list),
+          DocFieldSpec('imageUrls', 'صور المحل', kind: DocFieldKind.images),
+          DocFieldSpec('adType', 'نوع الإعلان (normal / featured)'),
         ];
       case 'blood_requests':
         return const [
-          _FieldSpec('patientName', 'اسم المريض', required: true),
-          _FieldSpec('bloodType', 'الفصيلة'),
-          _FieldSpec('units', 'عدد الوحدات', numeric: true),
-          _FieldSpec('hospital', 'المستشفى/المكان'),
-          _FieldSpec('phone', 'هاتف التواصل'),
-          _FieldSpec('urgency', 'درجة الأهمية'),
-          _FieldSpec('notes', 'ملاحظات', multiline: true),
-          _FieldSpec('requesterName', 'اسم مقدم الطلب'),
+          DocFieldSpec('patientName', 'اسم المريض', required: true),
+          DocFieldSpec('bloodType', 'الفصيلة'),
+          DocFieldSpec('units', 'عدد الوحدات',
+              kind: DocFieldKind.number),
+          DocFieldSpec('hospital', 'المستشفى/المكان'),
+          DocFieldSpec('phone', 'هاتف التواصل'),
+          DocFieldSpec('urgency', 'درجة الأهمية'),
+          DocFieldSpec('notes', 'ملاحظات', kind: DocFieldKind.multiline),
+          DocFieldSpec('requesterName', 'اسم مقدم الطلب'),
         ];
       case 'blood_donors':
         return const [
-          _FieldSpec('name', 'اسم المتبرع', required: true),
-          _FieldSpec('bloodType', 'الفصيلة'),
-          _FieldSpec('phone', 'الهاتف'),
-          _FieldSpec('age', 'السن', numeric: true),
-          _FieldSpec('gender', 'النوع'),
-          _FieldSpec('address', 'العنوان'),
-          _FieldSpec('isAvailable', 'متبرع متاح', boolean: true),
+          DocFieldSpec('name', 'اسم المتبرع', required: true),
+          DocFieldSpec('bloodType', 'الفصيلة'),
+          DocFieldSpec('phone', 'الهاتف'),
+          DocFieldSpec('age', 'السن', kind: DocFieldKind.number),
+          DocFieldSpec('gender', 'النوع'),
+          DocFieldSpec('address', 'العنوان'),
+          DocFieldSpec('isAvailable', 'متبرع متاح',
+              kind: DocFieldKind.boolean),
         ];
       case 'service_providers':
         // حقول السجل التعليمي (اختيار متعدد) تظهر لسجل التعليمية فقط.
         final isEdu = widget.item['category'] == 'educational';
         return [
-          _FieldSpec('name',
+          DocFieldSpec(
+              'name',
               isEdu ? 'اسم المدرّس / اسم المدرسة' : 'الاسم / اسم الورشة',
               required: true),
           // الفئة تحسم **أي صفحة مستقلة** يظهر فيها السجل.
-          const _FieldSpec('category',
+          const DocFieldSpec('category',
               'الصفحة (technicians = دليل الحرفيين / agricultural = خدمات زراعية / educational = خدمات تعليمية)'),
           if (isEdu) ...[
-            const _FieldSpec('providerKind', 'الصفة (مدرس / مدرسة)'),
-            const _FieldSpec('eduTypes', 'أنواع التعليم (تعليم عام، أزهري، خاص)',
-                list: true),
-            const _FieldSpec(
+            const DocFieldSpec('providerKind', 'الصفة (مدرس / مدرسة)'),
+            const DocFieldSpec(
+                'eduTypes', 'أنواع التعليم (تعليم عام، أزهري، خاص)',
+                kind: DocFieldKind.list),
+            const DocFieldSpec(
                 'stages', 'المراحل (تمهيدي، ابتدائي، إعدادي، ثانوي، جامعي)',
-                list: true),
-            const _FieldSpec('subjects', 'المواد الدراسية', list: true),
-            const _FieldSpec('universityNote', 'التخصص الجامعي',
-                multiline: true),
-            const _FieldSpec('offersPrivateTutoring',
+                kind: DocFieldKind.list),
+            const DocFieldSpec('subjects', 'المواد الدراسية',
+                kind: DocFieldKind.list),
+            const DocFieldSpec('universityNote', 'التخصص الجامعي',
+                kind: DocFieldKind.multiline),
+            const DocFieldSpec('offersPrivateTutoring',
                 'تدريس خاص (دروس خصوصية)',
-                boolean: true),
+                kind: DocFieldKind.boolean),
           ] else
-            const _FieldSpec('specialty', 'الحرفة / الخدمة'),
-          const _FieldSpec('phone', 'الهاتف'),
-          const _FieldSpec('photoUrl', 'رابط صورة السجل (https://…)'),
-          const _FieldSpec('address', 'العنوان'),
-          const _FieldSpec('description', 'نبذة', multiline: true),
-          const _FieldSpec('isFeatured',
+            const DocFieldSpec('specialty', 'الحرفة / الخدمة'),
+          const DocFieldSpec('phone', 'الهاتف'),
+          const DocFieldSpec('photoUrl', 'صورة السجل',
+              kind: DocFieldKind.image),
+          const DocFieldSpec('address', 'العنوان'),
+          const DocFieldSpec('description', 'نبذة',
+              kind: DocFieldKind.multiline),
+          const DocFieldSpec('isFeatured',
               'بيان مميز (يظهر ذهبيًا وفي المقدمة)',
-              boolean: true),
+              kind: DocFieldKind.boolean),
         ];
       case 'lost_items':
         return const [
-          _FieldSpec('title', 'اسم الغرض', required: true),
-          _FieldSpec('type', 'النوع (lost/found)'),
-          _FieldSpec('description', 'الوصف', multiline: true),
-          _FieldSpec('location', 'المكان'),
-          _FieldSpec('phone', 'هاتف التواصل'),
-          _FieldSpec('userName', 'اسم صاحب الإعلان'),
-          _FieldSpec('isResolved', 'تم التسليم (مغلق)', boolean: true),
+          DocFieldSpec('title', 'اسم الغرض', required: true),
+          DocFieldSpec('type', 'النوع (lost/found)'),
+          DocFieldSpec('description', 'الوصف',
+              kind: DocFieldKind.multiline),
+          DocFieldSpec('location', 'المكان'),
+          DocFieldSpec('phone', 'هاتف التواصل'),
+          DocFieldSpec('userName', 'اسم صاحب الإعلان'),
+          DocFieldSpec('imageUrl', 'صورة الغرض', kind: DocFieldKind.image),
+          DocFieldSpec('isResolved', 'تم التسليم (مغلق)',
+              kind: DocFieldKind.boolean),
         ];
       case 'village_ads':
         return const [
-          _FieldSpec('title', 'عنوان الإعلان', required: true),
-          _FieldSpec('kind', 'النوع (تجارية / خدمية / إنشائية)'),
-          _FieldSpec('businessName', 'اسم النشاط'),
-          _FieldSpec('description', 'نص الإعلان', multiline: true),
-          _FieldSpec('location', 'المكان'),
-          _FieldSpec('phone', 'هاتف التواصل'),
-          _FieldSpec('userName', 'اسم صاحب الإعلان'),
+          DocFieldSpec('title', 'عنوان الإعلان', required: true),
+          DocFieldSpec('kind', 'النوع (تجارية / خدمية / إنشائية)'),
+          DocFieldSpec('businessName', 'اسم النشاط'),
+          DocFieldSpec('description', 'نص الإعلان',
+              kind: DocFieldKind.multiline),
+          DocFieldSpec('location', 'المكان'),
+          DocFieldSpec('phone', 'هاتف التواصل'),
+          DocFieldSpec('userName', 'اسم صاحب الإعلان'),
+          DocFieldSpec('imageUrls', 'صور الإعلان',
+              kind: DocFieldKind.images, maxImages: 3),
         ];
       case 'lawyers':
         return const [
-          _FieldSpec('name', 'اسم المحامي', required: true),
-          _FieldSpec('phone', 'الهاتف'),
-          _FieldSpec('specializations', 'التخصصات (افصل بينها بفاصلة)',
-              list: true),
-          _FieldSpec('office', 'المكتب / العنوان'),
-          _FieldSpec('workingHours', 'مواعيد العمل'),
-          _FieldSpec('photoUrl', 'رابط صورة السجل (https://…)'),
-          _FieldSpec('bio', 'نبذة', multiline: true),
-          _FieldSpec('submittedByName', 'اسم مقدّم التسجيل'),
+          DocFieldSpec('name', 'اسم المحامي', required: true),
+          DocFieldSpec('phone', 'الهاتف'),
+          DocFieldSpec('specializations', 'التخصصات (افصل بينها بفاصلة)',
+              kind: DocFieldKind.list),
+          DocFieldSpec('office', 'المكتب / العنوان'),
+          DocFieldSpec('workingHours', 'مواعيد العمل'),
+          DocFieldSpec('photoUrl', 'صورة المحامي',
+              kind: DocFieldKind.image),
+          DocFieldSpec('bio', 'نبذة', kind: DocFieldKind.multiline),
+          DocFieldSpec('submittedByName', 'اسم مقدّم التسجيل'),
         ];
       case 'legal_consultations':
         return const [
-          _FieldSpec('question', 'نص السؤال', required: true, multiline: true),
-          _FieldSpec('details', 'تفاصيل إضافية', multiline: true),
-          _FieldSpec('category', 'التصنيف (أحوال شخصية / قضايا جنائية / …)'),
-          _FieldSpec('answer', 'رد المستشار (يظهر للقرية)', multiline: true),
-          _FieldSpec('userName', 'اسم صاحب السؤال'),
+          DocFieldSpec('question', 'نص السؤال',
+              required: true, kind: DocFieldKind.multiline),
+          DocFieldSpec('details', 'تفاصيل إضافية',
+              kind: DocFieldKind.multiline),
+          DocFieldSpec('category', 'التصنيف (أحوال شخصية / قضايا جنائية / …)'),
+          DocFieldSpec('answer', 'رد المستشار (يظهر للقرية)',
+              kind: DocFieldKind.multiline),
+          DocFieldSpec('userName', 'اسم صاحب السؤال'),
         ];
       case 'medical_center_clinics':
         return const [
-          _FieldSpec('name', 'اسم العيادة', required: true),
-          _FieldSpec('specialty', 'التخصص'),
-          _FieldSpec('doctorName', 'اسم الطبيب'),
-          _FieldSpec('workingHours', 'مواعيد العمل'),
-          _FieldSpec('fees', 'الأجر الرمزي', numeric: true),
-          _FieldSpec('description', 'نبذة', multiline: true),
-          _FieldSpec('isActive', 'ظاهرة للجمهور', boolean: true),
+          DocFieldSpec('name', 'اسم العيادة', required: true),
+          DocFieldSpec('specialty', 'التخصص'),
+          DocFieldSpec('doctorName', 'اسم الطبيب'),
+          DocFieldSpec('workingHours', 'مواعيد العمل'),
+          DocFieldSpec('fees', 'الأجر الرمزي', kind: DocFieldKind.number),
+          DocFieldSpec('description', 'نبذة',
+              kind: DocFieldKind.multiline),
+          DocFieldSpec('imageUrl', 'صورة العيادة', kind: DocFieldKind.image),
+          DocFieldSpec('isActive', 'ظاهرة للجمهور',
+              kind: DocFieldKind.boolean),
         ];
       case 'service_requests':
         return const [
-          _FieldSpec('type', 'نوع الطلب', required: true),
-          _FieldSpec('description', 'الوصف', multiline: true),
-          _FieldSpec('location', 'الموقع'),
-          _FieldSpec('status', 'الحالة (pending/in_progress/completed/cancelled)'),
-          _FieldSpec('notes', 'ملاحظات', multiline: true),
-          _FieldSpec('userName', 'اسم مقدم الطلب'),
+          DocFieldSpec('type', 'نوع الطلب', required: true),
+          DocFieldSpec('description', 'الوصف',
+              kind: DocFieldKind.multiline),
+          DocFieldSpec('location', 'الموقع'),
+          DocFieldSpec('status',
+              'الحالة (pending/in_progress/completed/cancelled)'),
+          DocFieldSpec('notes', 'ملاحظات', kind: DocFieldKind.multiline),
+          DocFieldSpec('userName', 'اسم مقدم الطلب'),
         ];
       case 'product_reviews':
-        return const [
-          _FieldSpec('comment', 'نص المراجعة', multiline: true),
-          _FieldSpec('rating', 'التقييم (1-5)', numeric: true),
-          _FieldSpec('userName', 'اسم المراجع'),
-        ];
       case 'reviews':
         return const [
-          _FieldSpec('comment', 'نص المراجعة', multiline: true),
-          _FieldSpec('rating', 'التقييم (1-5)', numeric: true),
-          _FieldSpec('userName', 'اسم المراجع'),
+          DocFieldSpec('comment', 'نص المراجعة',
+              kind: DocFieldKind.multiline),
+          DocFieldSpec('rating', 'التقييم (1-5)',
+              kind: DocFieldKind.number),
+          DocFieldSpec('userName', 'اسم المراجع'),
+          DocFieldSpec('imageUrl', 'صورة المراجعة',
+              kind: DocFieldKind.image),
         ];
       case 'donations':
         return const [
-          _FieldSpec('title', 'اسم السلعة', required: true),
-          _FieldSpec('description', 'الوصف', multiline: true),
-          _FieldSpec('category', 'التصنيف'),
-          _FieldSpec('contactPhone', 'هاتف التواصل'),
-          _FieldSpec('status', 'الحالة (available/donated)'),
+          DocFieldSpec('title', 'اسم السلعة', required: true),
+          DocFieldSpec('description', 'الوصف',
+              kind: DocFieldKind.multiline),
+          DocFieldSpec('category', 'التصنيف'),
+          DocFieldSpec('contactPhone', 'هاتف التواصل'),
+          DocFieldSpec('status', 'الحالة (available/donated)'),
+          DocFieldSpec('imageUrls', 'صور السلعة', kind: DocFieldKind.images),
         ];
       case 'buy_requests':
         return const [
-          _FieldSpec('title', 'العنوان', required: true),
-          _FieldSpec('details', 'التفاصيل', multiline: true),
-          _FieldSpec('budget', 'الميزانية'),
-          _FieldSpec('status', 'الحالة (open/closed)'),
+          DocFieldSpec('title', 'العنوان', required: true),
+          DocFieldSpec('details', 'التفاصيل',
+              kind: DocFieldKind.multiline),
+          DocFieldSpec('budget', 'الميزانية'),
+          DocFieldSpec('status', 'الحالة (open/closed)'),
+          DocFieldSpec('imageUrls', 'صور الطلب', kind: DocFieldKind.images),
         ];
       default:
-        return _genericFields();
+        return const [];
     }
   }
 
-  List<_FieldSpec> _genericFields() {
-    return widget.item.entries
-        .where((e) =>
-            !_systemKeys.contains(e.key) &&
-            (e.value is String || e.value is num || e.value == null))
-        .map((e) => _FieldSpec(e.key, _labelFor(e.key),
-            multiline: (e.value?.toString().length ?? 0) > 60))
-        .toList();
-  }
-
-  static String _labelFor(String key) {
-    const labels = {
-      'title': 'العنوان',
-      'name': 'الاسم',
-      'content': 'المحتوى',
-      'description': 'الوصف',
-      'details': 'التفاصيل',
-      'category': 'التصنيف',
-      'phone': 'الهاتف',
-      'address': 'العنوان',
-      'status': 'الحالة',
-      'notes': 'ملاحظات',
-    };
-    return labels[key] ?? key;
-  }
-
   Future<void> _save() async {
-    if (!_formKey.currentState!.validate()) return;
+    final missing = _editor.missingRequiredLabel(_fields);
+    if (missing != null) {
+      _toast('الحقل مطلوب: $missing', error: true);
+      return;
+    }
     setState(() => _isSaving = true);
     try {
-      final data = <String, dynamic>{};
-      for (final f in _fields) {
-        if (f.boolean) {
-          data[f.key] = _bools[f.key] ?? false;
-          continue;
-        }
-        final text = _controllers[f.key]!.text.trim();
-        if (f.list) {
-          data[f.key] = text
-              .split(RegExp(r'[،,]'))
-              .map((s) => s.trim())
-              .where((s) => s.isNotEmpty)
-              .toList();
-          continue;
-        }
-        if (text.isEmpty && !f.required) continue;
-        if (f.numeric) {
-          final n = num.tryParse(text);
-          if (n != null) data[f.key] = n;
-        } else {
-          data[f.key] = text;
-        }
+      final data = _editor.collect(_fields);
+      // المرآتان اللتان تقرأهما الواجهات القديمة والشرائح المثبّتة.
+      syncImageMirrors(_fields, data);
+      if (widget.collection == 'market_products') {
+        stampOfferWindow(widget.item, data);
       }
-      // مرآتا `specialty`/`stage` تُبقيان النسخ القديمة المثبّتة قادرة على
-      // عرض السجل التعليمي بعد تعديل قوائمه.
       if (widget.collection == 'service_providers') {
         final subjects = data['subjects'];
         final stages = data['stages'];
@@ -426,168 +412,108 @@ class _AdminEditScreenState extends State<AdminEditScreen> {
       await (widget.service ?? AdminService())
           .updateItem(widget.collection, widget.docId, data);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('تم الحفظ بنجاح'), backgroundColor: Color(0xFF6F4E37)));
+        _toast('تم الحفظ بنجاح');
         Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('خطأ: $e'), backgroundColor: Colors.red));
+        _toast('خطأ: $e', error: true);
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
   }
 
+  void _toast(String message, {bool error = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(message),
+        backgroundColor: error ? Colors.red : const Color(0xFF6F4E37)));
+  }
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final rows = <Widget>[
+      for (final f in _fields)
+        DocFieldRow(editor: _editor, spec: f, onChanged: () => setState(() {})),
+    ];
     return Scaffold(
       appBar: QurityAppBar(
         title: 'تعديل',
         actions: [
           TextButton.icon(
+            key: const ValueKey('admin-edit-save'),
             onPressed: _isSaving ? null : _save,
             icon: const Icon(Icons.save_rounded, size: 18),
             label: const Text('حفظ'),
           ),
         ],
       ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            ..._fields.map((f) => _buildField(theme, f)),
-            const SizedBox(height: 8),
-            SizedBox(
-              height: 52,
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: _isSaving ? null : _save,
-                icon: _isSaving
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white))
-                    : const Icon(Icons.save_rounded, size: 20),
-                label: Text(
-                    _isSaving ? 'جاري الحفظ...' : 'حفظ التعديلات',
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w800, fontSize: 15)),
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
-                ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          ...rows,
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 52,
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _isSaving ? null : _save,
+              icon: _isSaving
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.save_rounded, size: 20),
+              label: Text(_isSaving ? 'جاري الحفظ...' : 'حفظ التعديلات',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w800, fontSize: 15)),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
+}
 
-  Widget _buildField(ThemeData theme, _FieldSpec f) {
-    if (f.boolean) {
-      return SwitchListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-        title: Text(f.label),
-        value: _bools[f.key] ?? false,
-        onChanged: (v) => setState(() => _bools[f.key] = v),
-      );
-    }
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: TextFormField(
-        controller: _controllers[f.key],
-        maxLines: (f.multiline || f.list) ? 4 : 1,
-        keyboardType: f.numeric ? TextInputType.number : TextInputType.text,
-        decoration: InputDecoration(
-          labelText: f.label + (f.required ? ' *' : ''),
-          helperText: f.list ? 'افصل بين القيم بفاصلة' : null,
-          alignLabelWithHint: true,
-          border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12)),
-          enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
-                  color: theme.colorScheme.outlineVariant
-                      .withValues(alpha: 0.5))),
-          focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.6))),
-          prefixIcon: Icon(_fieldIcon(f.key), color: theme.colorScheme.primary),
-        ),
-        validator: f.required
-            ? (v) =>
-                (v == null || v.trim().isEmpty) ? 'هذا الحقل مطلوب' : null
-            : null,
-      ),
-    );
+/// حيثما وُجدت قائمة صور و«صورة رئيسية» في نفس الوثيقة تبقى الصورة الأولى
+/// هي المرآة، فالقائمة والواجهات القديمة لا يتفارقان. المستند القديم الذي
+/// يحمل `imageUrl` وحده تُملأ قائمته الفارغة منه، لا يُمحى رابطه.
+void syncImageMirrors(List<DocFieldSpec> fields, Map<String, dynamic> data) {
+  if (!fields.any((f) => f.key == 'imageUrl')) return;
+  final urls = data['imageUrls'];
+  if (urls is! List) return;
+  final single = data['imageUrl'];
+  if (urls.isEmpty && single is String && single.isNotEmpty) {
+    data['imageUrls'] = [single];
+    return;
   }
+  data['imageUrl'] = urls.isEmpty ? '' : urls.first.toString();
+}
 
-  IconData _fieldIcon(String key) {
-    switch (key) {
-      case 'title':
-      case 'name':
-        return Icons.title_rounded;
-      case 'content':
-      case 'subtitle':
-      case 'message':
-      case 'description':
-      case 'details':
-      case 'universityNote':
-        return Icons.notes_rounded;
-      case 'price':
-      case 'offerPrice':
-      case 'budget':
-        return Icons.attach_money_rounded;
-      case 'stock':
-      case 'units':
-      case 'age':
-      case 'rating':
-        return Icons.straighten_rounded;
-      case 'location':
-      case 'funeralLocation':
-      case 'condolenceLocation':
-      case 'address':
-      case 'hospital':
-        return Icons.location_on_rounded;
-      case 'mosque':
-        return Icons.mosque_rounded;
-      case 'providerKind':
-        return Icons.badge_rounded;
-      case 'stages':
-        return Icons.school_rounded;
-      case 'subjects':
-        return Icons.menu_book_rounded;
-      case 'eduTypes':
-        return Icons.category_rounded;
-      case 'funeralTime':
-      case 'condolenceTime':
-        return Icons.schedule_rounded;
-      case 'date':
-      case 'dateOfDeath':
-      case 'funeralDate':
-        return Icons.calendar_today_rounded;
-      case 'phone':
-      case 'sellerPhone':
-      case 'contactPhone':
-      case 'secondaryPhone':
-      case 'whatsapp':
-        return Icons.phone_rounded;
-      case 'category':
-      case 'specialty':
-        return Icons.category_rounded;
-      case 'status':
-        return Icons.flag_rounded;
-      default:
-        return Icons.edit_rounded;
+/// العرض الذي لا أجل له يبقى مخفَّضًا إلى الأبد، فالمُحرِّر يكتب العلم وحده.
+/// التفعيل الجديد (أو إعادة تفعيل نافذة منتهية) يحصل على نافذة `offerEndsAt`
+/// محسوبة الآن، وأما نافذة ما زالت سارية فتُترك كما هي — فحفظ تعديلٍ عرضي
+/// كالوصف لا يُمطّط المدة ولا يجدّد شيئًا.
+void stampOfferWindow(Map<String, dynamic> item, Map<String, dynamic> data,
+    {DateTime? now}) {
+  final on = data['isOnOffer'];
+  if (on is! bool) return;
+  final moment = now ?? DateTime.now();
+  if (!on) {
+    if (tsToDateTime(item['offerEndsAt']) != null) {
+      data['offerStartsAt'] = null;
+      data['offerEndsAt'] = null;
     }
+    return;
   }
+  final ends = tsToDateTime(item['offerEndsAt']);
+  if (ends != null && ends.isAfter(moment)) return;
+  data.addAll(MarketProduct.offerWindow(moment));
 }

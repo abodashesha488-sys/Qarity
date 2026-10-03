@@ -2,7 +2,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/utils/contact_links.dart';
@@ -12,6 +11,8 @@ import '../../services/image_upload_service.dart';
 import '../../services/lost_item_service.dart';
 import '../../services/share_service.dart';
 import '../../services/user_service.dart';
+import '../../widgets/document_field_editor.dart';
+import '../../widgets/owner_actions.dart';
 import '../../widgets/qurity_app_bar.dart';
 
 String _fmtDate(DateTime? d) => d == null
@@ -71,7 +72,8 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
-      builder: (_) => _LostFormSheet(userId: user.uid, userName: identity.name),
+      builder: (_) => LostItemFormSheet(
+          userId: user.uid, userName: identity.name),
     );
     if (ok == true) {
       _snack('تم إرسال الإعلان — يظهر للقرية بعد موافقة الإدارة');
@@ -356,7 +358,7 @@ class LostItemDetailScreen extends StatefulWidget {
 }
 
 class _LostItemDetailScreenState extends State<LostItemDetailScreen> {
-  final LostItemService _service = LostItemService();
+  late final LostItemService _service = LostItemService();
   LostItem? _item;
   bool _busy = false;
 
@@ -364,6 +366,29 @@ class _LostItemDetailScreenState extends State<LostItemDetailScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _item ??= ModalRoute.of(context)!.settings.arguments as LostItem?;
+  }
+
+  /// تعديل المالك لإعلانه: الورقة نفسها بـ`existing`، والنجاح يُغلق التفاصيل
+  /// لأن الإعلان عاد للمراجعة فاختلّ ما هو معروض عليها.
+  Future<void> _openEdit(LostItem item) async {
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      builder: (_) => LostItemFormSheet(
+          userId: item.userId, userName: item.userName, existing: item),
+    );
+    if (ok == true && mounted) Navigator.pop(context);
+  }
+
+  Future<bool> _delete(LostItem item) async {
+    try {
+      await _service.delete(item.id);
+      if (mounted) Navigator.pop(context);
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<void> _launch(String url) async {
@@ -594,6 +619,17 @@ class _LostItemDetailScreenState extends State<LostItemDetailScreen> {
                   style: const TextStyle(fontWeight: FontWeight.w800)),
             ),
           ],
+          const SizedBox(height: 12),
+          OwnerActions(
+            keyTag: 'lost-item-detail',
+            ownerId: item.userId,
+            currentUserId: myUid ?? '',
+            itemName: item.title,
+            editLabel: 'تعديل إعلاني',
+            deleteLabel: 'حذف إعلاني',
+            onEdit: () => _openEdit(item),
+            onDelete: () => _delete(item),
+          ),
           const SizedBox(height: 20),
         ],
       ),
@@ -627,27 +663,48 @@ class _LostItemDetailScreenState extends State<LostItemDetailScreen> {
 }
 
 /// نموذج إضافة إعلان (bottom sheet) — نوع + عنوان + وصف + مكان + تاريخ + هاتف + صورة.
-class _LostFormSheet extends StatefulWidget {
-  const _LostFormSheet({required this.userId, required this.userName});
+class LostItemFormSheet extends StatefulWidget {
+  const LostItemFormSheet({
+    super.key,
+    required this.userId,
+    required this.userName,
+    this.service,
+    this.uploader,
+    this.bytesSource,
+    this.existing,
+  });
+
   final String userId;
   final String userName;
 
+  /// السجل المحرَّر — عند وجوده يحفظ النموذج بتعديل صاحبه (البند ٨).
+  final LostItem? existing;
+
+  /// اختياري لاختبار النموذج والمحرّر المشترك بلا شبكة ولا معرض جهاز.
+  final LostItemService? service;
+  final ImageUploadService? uploader;
+  final ImageBytesSource? bytesSource;
+
   @override
-  State<_LostFormSheet> createState() => _LostFormSheetState();
+  State<LostItemFormSheet> createState() => _LostItemFormSheetState();
 }
 
-class _LostFormSheetState extends State<_LostFormSheet> {
+class _LostItemFormSheetState extends State<LostItemFormSheet> {
   final _formKey = GlobalKey<FormState>();
-  final _title = TextEditingController();
-  final _description = TextEditingController();
-  final _location = TextEditingController();
-  final _phone = TextEditingController();
-  final ImagePicker _picker = ImagePicker();
-  String _type = 'lost';
-  DateTime? _date;
-  String _imageUrl = '';
+  late final _title = TextEditingController(text: widget.existing?.title ?? '');
+  late final _description =
+      TextEditingController(text: widget.existing?.description ?? '');
+  late final _location =
+      TextEditingController(text: widget.existing?.location ?? '');
+  late final _phone = TextEditingController(text: widget.existing?.phone ?? '');
+  late final LostItemService _service = widget.service ?? LostItemService();
+  late String _type = widget.existing?.type ?? 'lost';
+  late DateTime? _date = widget.existing?.date;
+  late String _imageUrl = widget.existing?.imageUrl ?? '';
   bool _uploading = false;
   bool _saving = false;
+
+  bool get _isEdit => widget.existing != null;
 
   @override
   void dispose() {
@@ -669,46 +726,49 @@ class _LostFormSheetState extends State<_LostFormSheet> {
     if (picked != null) setState(() => _date = picked);
   }
 
-  Future<void> _pickImage() async {
-    try {
-      final x = await _picker.pickImage(
-          source: ImageSource.gallery, maxWidth: 1280, imageQuality: 82);
-      if (x == null) return;
-      setState(() => _uploading = true);
-      final bytes = await x.readAsBytes();
-      final url = await ImageUploadService().uploadImage(bytes);
-      if (mounted) {
-        setState(() {
-          _imageUrl = url;
-          _uploading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) setState(() => _uploading = false);
-    }
-  }
-
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
+    final editing = widget.existing;
     try {
-      await LostItemService().create(LostItem(
-        title: _title.text.trim(),
-        type: _type,
-        description: _description.text.trim(),
-        location: _location.text.trim(),
-        date: _date,
-        phone: _phone.text.trim(),
-        imageUrl: _imageUrl,
-        userId: widget.userId,
-        userName: widget.userName,
-      ));
+      if (editing == null) {
+        await _service.create(LostItem(
+          title: _title.text.trim(),
+          type: _type,
+          description: _description.text.trim(),
+          location: _location.text.trim(),
+          date: _date,
+          phone: _phone.text.trim(),
+          imageUrl: _imageUrl,
+          userId: widget.userId,
+          userName: widget.userName,
+        ));
+      } else {
+        // النسبة وحالة «تم التسليم» والتاريخ تُنقل كما هي: فالتعديل مضمون
+        // المحتوى، وتبديل الحالة إجراء مستقل يملك صاحبه زرّه الخاص.
+        await _service.update(LostItem(
+          id: editing.id,
+          title: _title.text.trim(),
+          type: _type,
+          description: _description.text.trim(),
+          location: _location.text.trim(),
+          date: _date,
+          phone: _phone.text.trim(),
+          imageUrl: _imageUrl,
+          userId: editing.userId,
+          userName: editing.userName,
+          isResolved: editing.isResolved,
+          createdAt: editing.createdAt,
+        ));
+      }
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
         setState(() => _saving = false);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('خطأ في الإرسال: $e'),
+            content: Text(editing == null
+                ? 'خطأ في الإرسال: $e'
+                : 'تعذّر حفظ التعديلات: $e'),
             backgroundColor: Colors.red));
       }
     }
@@ -751,8 +811,9 @@ class _LostFormSheetState extends State<_LostFormSheet> {
                 ),
               ),
               const SizedBox(height: 14),
-              const Text('إعلان جديد في المفقودات',
-                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+              Text(_isEdit ? 'تعديل إعلان المفقودات' : 'إعلان جديد في المفقودات',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w900, fontSize: 16)),
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -786,84 +847,34 @@ class _LostFormSheetState extends State<_LostFormSheet> {
                 decoration: _dec('مكان الفقد / العثور (تقريبي)'),
               ),
               const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(12),
-                      onTap: _pickDate,
-                      child: InputDecorator(
-                        decoration: _dec('التاريخ'),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.event_rounded,
-                                size: 18, color: kLostItemsColor),
-                            const SizedBox(width: 7),
-                            Text(_date == null
-                                ? 'التاريخ (اختياري)'
-                                : _fmtDate(_date)),
-                          ],
-                        ),
-                      ),
-                    ),
+              InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: _pickDate,
+                child: InputDecorator(
+                  decoration: _dec('التاريخ'),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.event_rounded,
+                          size: 18, color: kLostItemsColor),
+                      const SizedBox(width: 7),
+                      Text(_date == null
+                          ? 'التاريخ (اختياري)'
+                          : _fmtDate(_date)),
+                    ],
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(12),
-                      onTap: _uploading ? null : _pickImage,
-                      child: Container(
-                        height: 52,
-                        decoration: BoxDecoration(
-                            color: kLostItemsColor.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                                color:
-                                    kLostItemsColor.withValues(alpha: 0.4))),
-                        child: Center(
-                          child: _uploading
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                      strokeWidth: 2.4,
-                                      color: kLostItemsColor))
-                              : _imageUrl.isNotEmpty
-                                  ? const Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Icon(Icons.image_rounded,
-                                            size: 18,
-                                            color: Color(0xFF00897B)),
-                                        SizedBox(width: 6),
-                                        Text('الصورة مرفقة ✓',
-                                            style: TextStyle(
-                                                fontWeight: FontWeight.w800,
-                                                fontSize: 11.5,
-                                                color: Color(0xFF00897B))),
-                                      ],
-                                    )
-                                  : const Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Icon(Icons.add_a_photo_rounded,
-                                            size: 18,
-                                            color: kLostItemsColor),
-                                        SizedBox(width: 6),
-                                        Text('صورة (اختياري)',
-                                            style: TextStyle(
-                                                fontWeight: FontWeight.w800,
-                                                fontSize: 11.5,
-                                                color: kLostItemsColor)),
-                                      ],
-                                    ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
+              ),
+              const SizedBox(height: 10),
+              ImageListEditor(
+                label: 'صورة الغرض (اختياري)',
+                fieldKey: 'imageUrl',
+                single: true,
+                urls: _imageUrl.isEmpty ? const <String>[] : <String>[_imageUrl],
+                uploader: widget.uploader,
+                bytesSource: widget.bytesSource,
+                onBusyChanged: (busy) => setState(() => _uploading = busy),
+                onChanged: (urls) => setState(
+                    () => _imageUrl = urls.isEmpty ? '' : urls.first),
               ),
               const SizedBox(height: 10),
               TextFormField(
@@ -887,8 +898,11 @@ class _LostFormSheetState extends State<_LostFormSheet> {
                           child: CircularProgressIndicator(
                               strokeWidth: 2, color: Colors.white))
                       : const Icon(Icons.send_rounded, size: 18),
-                  label: const Text('إرسال للمراجعة',
-                      style: TextStyle(fontWeight: FontWeight.w800)),
+                  label: Text(
+                      _isEdit
+                          ? 'حفظ التعديلات — يعاد للمراجعة'
+                          : 'إرسال للمراجعة',
+                      style: const TextStyle(fontWeight: FontWeight.w800)),
                 ),
               ),
             ],

@@ -7,6 +7,7 @@ import '../models/service_provider_model.dart';
 import '../routes/app_routes.dart';
 import 'notification_inbox_service.dart';
 import 'notification_service.dart';
+import 'owner_content_service.dart';
 import 'remote_push_service.dart';
 
 /// خدمة دليل الخدمات — فنيون/خدمات زراعية/خدمات تعليمية (مدخلات مستخدمين + موافقة).
@@ -48,6 +49,21 @@ class ServiceProviderService {
     }
     return ref.id;
   }
+
+  /// تعديل مقدّم السجل لسجله في أي وقت — يعود إلى المراجعة ولا يلمس نسبه
+  /// (`submittedBy`/`submittedByName`)، ويُبلَّغ في صفحة فئته المستقلة.
+  Future<void> update(ServiceProvider provider) => OwnerContentService.edit(
+        _firestore,
+        'service_providers',
+        provider.id,
+        provider.toJson(),
+        label: provider.name,
+        route: AppRoutes.routeForProviderCategory(provider.category),
+      );
+
+  /// حذف فوري لمقدّم السجل: تعليقاته وتقييماته ثم صورته ثم الوثيقة.
+  Future<void> delete(String providerId) =>
+      OwnerContentService.remove(_firestore, 'service_providers', providerId);
 
   /// العناصر المعتمدة لفئة معينة — المميز منها أولاً.
   Stream<List<ServiceProvider>> getApprovedByCategory(String category) {

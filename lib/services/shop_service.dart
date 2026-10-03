@@ -7,6 +7,7 @@ import '../models/market_extra_models.dart';
 import 'cache_service.dart';
 import 'notification_inbox_service.dart';
 import 'notification_service.dart';
+import 'owner_content_service.dart';
 import 'remote_push_service.dart';
 
 class ShopService {
@@ -105,11 +106,20 @@ class ShopService {
         (doc) => doc.exists ? Shop.fromJson(doc.data()!, doc.id) : null);
   }
 
-  Future<void> updateShop(String id, Map<String, dynamic> data) async {
-    await _col.doc(id).update(data);
-    await CacheService.invalidateShops();
-  }
+  /// تعديل صاحب المحل لبياناته: يعود المحل إلى طابور المراجعة (البند ٨).
+  Future<void> updateShop(Shop shop) => OwnerContentService.edit(
+        _firestore,
+        'shops',
+        shop.id,
+        shop.toJson(),
+        label: shop.name,
+      );
 
+  /// حذف فوري لصاحب المحل: بياناته التابعة ثم صوره ثم وثيقته.
+  Future<void> deleteShop(String id) =>
+      OwnerContentService.remove(_firestore, 'shops', id);
+
+  /// تشغيل/إيقاف المحل من الإدارة.
   Future<void> setShopActive(String id, bool active) async {
     await _col.doc(id).update({'isActive': active});
     await CacheService.invalidateShops();

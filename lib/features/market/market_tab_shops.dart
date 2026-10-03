@@ -1,6 +1,181 @@
 ﻿part of 'market_tabs_screen.dart';
 
 // ═══════════════════ Tab 2: المحلات ═══════════════════
+
+/// نموذج المحل المشترك — إنشاءً وتعديلًا. كان الحوار خاصًا بالشاشة الرئيسية
+/// للتبويبات فلا يستطيع صاحب المحل تعديل بياناته من صفحة المحل نفسها.
+/// يعيد true فقط عند نجاح الحفظ (والبنية كما هي عند الإلغاء أو الرفض).
+Future<bool> showShopFormDialog(
+  BuildContext context, {
+  required ShopService service,
+  required String uid,
+  required String ownerName,
+  required String ownerRole,
+  required SellerType sellerType,
+  Shop? existing,
+}) async {
+  final theme = Theme.of(context);
+  final isEdit = existing != null;
+  final nameC = TextEditingController(text: existing?.name ?? '');
+  final descC = TextEditingController(text: existing?.description ?? '');
+  final waC = TextEditingController(text: existing?.whatsapp ?? '');
+  final categories = List<String>.from(_MarketTabsScreenState._shopCats);
+  var category = existing?.category ?? 'عام';
+  if (!categories.contains(category)) category = 'عام';
+  final images = <String>[...(existing?.imageUrls ?? const <String>[])];
+  final max = sellerType.maxImages;
+
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => StatefulBuilder(
+      builder: (ctx, setSt) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Expanded(child: Text(isEdit ? 'تعديل المحل' : 'إنشاء محل')),
+            Chip(
+              label: Text('${sellerType.label} • حتى $max صورة',
+                  style: const TextStyle(fontSize: 10)),
+              backgroundColor: theme.colorScheme.primaryContainer,
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              MarketImageField(
+                  maxImages: max,
+                  initialUrls: images,
+                  onChanged: (l) {
+                    setSt(() {
+                      images
+                        ..clear()
+                        ..addAll(l);
+                    });
+                  }),
+              const SizedBox(height: 12),
+              TextField(
+                  controller: nameC,
+                  decoration: const InputDecoration(
+                      labelText: 'اسم المحل',
+                      prefixIcon: Icon(Icons.store_rounded))),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: category,
+                items: categories
+                    .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                    .toList(),
+                onChanged: (v) => setSt(() => category = v ?? category),
+                decoration: const InputDecoration(
+                    labelText: 'التصنيف',
+                    prefixIcon: Icon(Icons.category_rounded)),
+                menuMaxHeight: 360,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                  controller: descC,
+                  decoration: const InputDecoration(
+                      labelText: 'نبذة',
+                      prefixIcon: Icon(Icons.description_rounded)),
+                  maxLines: 3),
+              const SizedBox(height: 12),
+              TextField(
+                  controller: waC,
+                  decoration: const InputDecoration(
+                      labelText: 'واتساب للتواصل',
+                      prefixIcon: Icon(Icons.chat_rounded)),
+                  keyboardType: TextInputType.phone),
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border:
+                        Border.all(color: Colors.orange.withValues(alpha: 0.4))),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.info_outline_rounded,
+                        size: 18, color: Colors.orange),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        isEdit
+                            ? 'بعد الحفظ يعود المحل إلى لوحة المراجعة تلقائيًا، فلا يُعدَّل بياناته أحد بلا علم الإدارة، ثم يظهر لأهالي القرية بعد الموافقة.'
+                            : 'بعد الإنشاء سيظهر محلك هنا مباشرة بوسم «بانتظار موافقة الإدارة»، ولن يراه بقية أهالي القرية إلا بعد موافقة الأدمن من لوحة التحكم. ستصلك رسالة فور الموافقة.',
+                        style: const TextStyle(
+                            fontSize: 11.5,
+                            height: 1.5,
+                            fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('إلغاء')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(isEdit ? 'حفظ التعديلات' : 'إنشاء')),
+        ],
+      ),
+    ),
+  );
+  if (ok != true) return false;
+  if (nameC.text.trim().isEmpty) return false;
+  try {
+    if (isEdit) {
+      await service.updateShop(Shop(
+        id: existing.id,
+        ownerUid: existing.ownerUid,
+        ownerName: existing.ownerName,
+        name: nameC.text.trim(),
+        category: category,
+        description: descC.text.trim(),
+        logoUrl: images.isNotEmpty ? images.first : existing.logoUrl,
+        coverUrl: existing.coverUrl,
+        imageUrls: List<String>.from(images),
+        whatsapp: waC.text.trim(),
+        ownerRole: existing.ownerRole,
+        ownerSellerType: existing.ownerSellerType,
+        isActive: existing.isActive,
+        isApproved: existing.isApproved,
+        createdAt: existing.createdAt,
+      ));
+      return true;
+    }
+    await service.createShop(Shop(
+      id: '',
+      ownerUid: uid,
+      ownerName: ownerName,
+      name: nameC.text.trim(),
+      category: category,
+      description: descC.text.trim(),
+      logoUrl: images.isNotEmpty ? images.first : null,
+      imageUrls: List<String>.from(images),
+      whatsapp: waC.text.trim(),
+      ownerRole: ownerRole,
+      ownerSellerType: sellerType.name,
+    ));
+    return true;
+  } catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('خطأ: $e'),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ));
+    }
+    return false;
+  }
+}
 class _ShopsTab extends StatelessWidget {
   const _ShopsTab();
 
@@ -142,20 +317,82 @@ class _ShopsTab extends StatelessWidget {
   }
 }
 
-class _ShopDetailScreen extends StatelessWidget {
+class _ShopDetailScreen extends StatefulWidget {
   const _ShopDetailScreen({required this.shop});
   final Shop shop;
 
   @override
+  State<_ShopDetailScreen> createState() => _ShopDetailScreenState();
+}
+
+class _ShopDetailScreenState extends State<_ShopDetailScreen> {
+  final ShopService _shopService = ShopService();
+
+  Shop get shop => widget.shop;
+
+  String _currentUid() {
+    try {
+      return FirebaseAuth.instance.currentUser?.uid ?? '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  Future<void> _openEdit() async {
+    final uid = _currentUid();
+    if (uid.isEmpty) {
+      _snack('سجّل الدخول أولاً');
+      return;
+    }
+    SellerType sellerType;
+    try {
+      sellerType = SellerType.values.firstWhere((t) => t.name == shop.ownerSellerType);
+    } catch (_) {
+      sellerType = SellerType.regular;
+    }
+    final saved = await showShopFormDialog(
+      context,
+      service: _shopService,
+      uid: uid,
+      ownerName: shop.ownerName,
+      ownerRole: shop.ownerRole ?? 'user',
+      sellerType: sellerType,
+      existing: shop,
+    );
+    // التعديل يُعيد المحل للمراجعة، فصفحة المحل لم يعد لها ما تعرضه.
+    if (saved && mounted) Navigator.pop(context);
+  }
+
+  Future<bool> _delete() async {
+    try {
+      await _shopService.deleteShop(shop.id);
+      if (mounted) Navigator.pop(context);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  void _snack(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg),
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    ));
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final currentUid = FirebaseAuth.instance.currentUser?.uid;
-    final isOwner = currentUid == shop.ownerUid;
+    final currentUid = _currentUid();
+    final isOwner = currentUid.isNotEmpty && currentUid == shop.ownerUid;
     return Scaffold(
       appBar: QurityAppBar(
         title: shop.name,
         onAdd: isOwner
-            ? () => Navigator.pushNamed(context, AppRoutes.marketAdd)
+            ? () => Navigator.pushNamed(context, AppRoutes.marketAdd,
+                arguments: <String, dynamic>{kShopIdArgKey: shop.id})
             : null,
         addTooltip: 'أضف منتجاً لمحلي',
         actions: [
@@ -188,7 +425,8 @@ class _ShopDetailScreen extends StatelessWidget {
         ],
       ),
       body: StreamBuilder<List<MarketProduct>>(
-        stream: MarketService().getSellerProductsStream(shop.ownerUid),
+        stream: MarketService()
+            .getShopProductsStream(ownerUid: shop.ownerUid, shopId: shop.id),
         builder: (context, snapshot) {
           final products = (snapshot.data ?? [])
               .where((p) => p.isApproved && p.isInStock)
@@ -220,19 +458,8 @@ class _ShopDetailScreen extends StatelessWidget {
                         TextStyle(fontWeight: FontWeight.w900, fontSize: 14)),
                 const SizedBox(height: 8),
                 SizedBox(
-                  height: 80,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: shop.imageUrls.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 8),
-                    itemBuilder: (context, i) => ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: SizedBox(
-                          width: 100,
-                          height: 80,
-                          child: _net(shop.imageUrls[i], theme)),
-                    ),
-                  ),
+                  child: ImageGalleryWrap(
+                      urls: shop.imageUrls, tileWidth: 110),
                 ),
               ],
               const SizedBox(height: 20),
@@ -258,6 +485,17 @@ class _ShopDetailScreen extends StatelessWidget {
                   itemBuilder: (context, i) =>
                       _MiniProductCard(product: products[i]),
                 ),
+              const SizedBox(height: 20),
+              OwnerActions(
+                keyTag: 'shop-detail',
+                ownerId: shop.ownerUid,
+                currentUserId: currentUid,
+                itemName: shop.name,
+                editLabel: 'تعديل المحل',
+                deleteLabel: 'حذف المحل',
+                onEdit: _openEdit,
+                onDelete: _delete,
+              ),
             ],
           );
         },

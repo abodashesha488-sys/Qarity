@@ -5,10 +5,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/data_models.dart';
 import 'cache_service.dart';
-import 'content_cleanup_service.dart';
-import 'image_upload_service.dart';
 import 'notification_inbox_service.dart';
 import 'notification_service.dart';
+import 'owner_content_service.dart';
 import 'remote_push_service.dart';
 
 class MarketService {
@@ -74,11 +73,10 @@ class MarketService {
     if (sellerId != null) {
       query = query.where('sellerId', isEqualTo: sellerId);
     }
+    // «العرض» حالة زمنية تُحسم عند القراءة، والعلم الخام يبقى مرفوعًا بعد
+    // الانتهاء — فربطه بـ`where` خادمي يُخفي المنتهي عن فلتر «بلا عرض».
     if (isFeatured != null) {
       query = query.where('isFeatured', isEqualTo: isFeatured);
-    }
-    if (isOnOffer != null) {
-      query = query.where('isOnOffer', isEqualTo: isOnOffer);
     }
 
     final snapshot = await query.get();
@@ -128,15 +126,17 @@ class MarketService {
     String? productStatus,
   }) {
     // كل الفلاتر تُطبّق هنا حتى يتطابق مسار الكاش مع مسار الخادم
+    final now = DateTime.now();
     final filtered = products.where((p) {
       if (category != null && category != 'الكل' && p.category != category) {
         return false;
       }
       if (sellerId != null && p.sellerId != sellerId) return false;
       if (isFeatured != null && p.isFeatured != isFeatured) return false;
-      if (isOnOffer != null && p.isOnOffer != isOnOffer) return false;
-      if (minPrice != null && p.effectivePrice < minPrice) return false;
-      if (maxPrice != null && p.effectivePrice > maxPrice) return false;
+      // «عرض» يعني ساريًا الآن، لا مرفوعًا عليه علم يومًا ما.
+      if (isOnOffer != null && isOnOffer != p.hasActiveOfferAt(now)) return false;
+      if (minPrice != null && p.effectivePriceAt(now) < minPrice) return false;
+      if (maxPrice != null && p.effectivePriceAt(now) > maxPrice) return false;
       if (inStockOnly == true && !p.isInStock) return false;
       if (minRating != null && p.rating < minRating) return false;
       if (productStatus != null &&
@@ -156,14 +156,14 @@ class MarketService {
         filtered.sort((a, b) => b.rating.compareTo(a.rating));
         break;
       case 'أقل سعر':
-        filtered.sort((a, b) => a.effectivePrice.compareTo(b.effectivePrice));
+        filtered.sort((a, b) =>
+            a.effectivePriceAt(now).compareTo(b.effectivePriceAt(now)));
         break;
       case 'العروض أولاً':
         filtered.sort((a, b) {
-          if (a.isOnOffer && !b.isOnOffer) return -1;
-          if (!a.isOnOffer && b.isOnOffer) return 1;
-          return (b.createdAt ?? DateTime.now())
-              .compareTo(a.createdAt ?? DateTime.now());
+          final weight = b.sortWeightAt(now).compareTo(a.sortWeightAt(now));
+          if (weight != 0) return weight;
+          return (b.createdAt ?? now).compareTo(a.createdAt ?? now);
         });
         break;
       case 'الأكثر مبيعاً':
@@ -204,18 +204,8 @@ class MarketService {
     }
   }
 
-  Future<void> deleteProduct(String productId, List<String> imageUrls) async {
-    final uploader = ImageUploadService();
-    for (final url in imageUrls) {
-      try {
-        await uploader.deleteImage(url);
-      } catch (_) {}
-    }
-    await ContentCleanupService.cleanupForDeleted(
-        _firestore, 'market_products', productId);
-    await _firestore.collection('market_products').doc(productId).delete();
-    await CacheService.invalidateProducts();
-  }
+  Future<void> deleteProduct(String productId) =>
+      OwnerContentService.remove(_firestore, 'market_products', productId);
 
   Stream<List<MarketProduct>> getProductsStream({int? limit}) {
     Query<Map<String, dynamic>> query = _firestore
@@ -238,6 +228,23 @@ class MarketService {
         .snapshots()
         .map((snapshot) => snapshot.docs
             .map((doc) => MarketProduct.fromJson(doc.data(), doc.id))
+            .toList());
+  }
+
+  /// منتجات محلٍّ بعينه: تُقرأ بربط المالك (وهو وحده القادر على إضافتها من
+  /// صفحة محله) ثم يُرشَّح كل منتج بحالته — فمرتبط بمحل يظهر في ذلك المحل
+  /// وحده، وبلا ربط يبقى في كل محلات صاحبه كما في السجل القديم.
+  Stream<List<MarketProduct>> getShopProductsStream({
+    required String ownerUid,
+    required String shopId,
+  }) {
+    return _firestore
+        .collection('market_products')
+        .where('sellerId', isEqualTo: ownerUid)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => MarketProduct.fromJson(doc.data(), doc.id))
+            .where((p) => p.belongsToShop(ownerUid: ownerUid, shopId: shopId))
             .toList());
   }
 
@@ -282,7 +289,7 @@ class MarketService {
         .toList();
   }
 
-  // Products on Offer
+  // Products on Offer — الساري الآن فقط، فالعلم الخام يبقى مرفوعًا بعد الانتهاء
   Future<List<MarketProduct>> getProductsOnOffer({int limit = 20}) async {
     final snapshot = await _firestore
         .collection('market_products')
@@ -292,6 +299,7 @@ class MarketService {
         .get();
     return snapshot.docs
         .map((doc) => MarketProduct.fromJson(doc.data(), doc.id))
+        .where((p) => p.hasActiveOffer)
         .toList();
   }
 
@@ -415,12 +423,14 @@ class MarketService {
         .update(profile.toJson());
   }
 
-  // Update product fields
-  Future<void> updateProduct(
-      String productId, Map<String, dynamic> data) async {
-    await _firestore.collection('market_products').doc(productId).update(data);
-    await CacheService.invalidateProducts();
-  }
+  // تعديل البائع لمنتجه: يعيد المنتج إلى طابور المراجعة (البند ٨)
+  Future<void> updateProduct(MarketProduct product) => OwnerContentService.edit(
+        _firestore,
+        'market_products',
+        product.id,
+        product.toJson(),
+        label: product.name,
+      );
 
   // Toggle featured status
   Future<void> toggleFeatured(String productId, bool isFeatured) async {
@@ -431,12 +441,14 @@ class MarketService {
     await CacheService.invalidateProducts();
   }
 
-  // Toggle offer status
-  Future<void> toggleOffer(
-      String productId, bool isOnOffer, double? offerPrice) async {
+  // Toggle offer status — المدة تُحفظ وقت التفعيل لا عند كل قراءة
+  Future<void> toggleOffer(String productId, bool isOnOffer, double? offerPrice,
+      {Duration? window}) async {
+    final now = DateTime.now();
     await _firestore.collection('market_products').doc(productId).update({
       'isOnOffer': isOnOffer,
       'offerPrice': offerPrice,
+      if (isOnOffer) ...MarketProduct.offerWindow(now, window: window),
     });
     await CacheService.invalidateProducts();
   }

@@ -9,6 +9,7 @@ import '../../routes/app_routes.dart';
 import '../../services/legal_service.dart';
 import '../../services/share_service.dart';
 import '../../widgets/full_fit_image.dart';
+import '../../widgets/owner_actions.dart';
 import '../../widgets/qurity_app_bar.dart';
 import 'legal_advisor_screen.dart';
 
@@ -54,35 +55,13 @@ class _LawyerDetailScreenState extends State<LawyerDetailScreen> {
     _snack('تم حفظ التعديلات');
   }
 
-  Future<void> _confirmDelete(Lawyer lawyer) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('حذف التسجيل'),
-        content:
-            Text('سيُحذف تسجيل «${lawyer.name}» من سجل المحامين نهائيًا.'),
-        actions: [
-          TextButton(
-            key: const Key('lawyer-detail-delete-cancel'),
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('إلغاء'),
-          ),
-          FilledButton(
-            key: const Key('lawyer-detail-delete-confirm'),
-            style: FilledButton.styleFrom(backgroundColor: kLegalDeleteRed),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('حذف'),
-          ),
-        ],
-      ),
-    );
-    if (ok != true) return;
+  Future<bool> _delete(Lawyer lawyer) async {
     try {
       await _service.delete(lawyer.id);
       if (mounted) Navigator.pop(context);
-      _snack('تم حذف تسجيل «${lawyer.name}»');
+      return true;
     } catch (_) {
-      _snack('تعذّر الحذف — تحقّق من الصلاحيات ثم أعد المحاولة.', error: true);
+      return false;
     }
   }
 
@@ -126,9 +105,6 @@ class _LawyerDetailScreenState extends State<LawyerDetailScreen> {
     } catch (_) {
       uid = null;
     }
-    final isOwner = uid != null &&
-        uid.isNotEmpty &&
-        uid == lawyer.submittedBy;
 
     return Scaffold(
       appBar: QurityAppBar(
@@ -241,34 +217,17 @@ class _LawyerDetailScreenState extends State<LawyerDetailScreen> {
               ],
             ),
           ],
-          if (isOwner) ...[
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              key: const Key('lawyer-detail-edit'),
-              onPressed: () => _edit(lawyer),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: kLegalAdvisorColor,
-                side: const BorderSide(color: kLegalAdvisorColor, width: 1.4),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-              ),
-              icon: const Icon(Icons.edit_rounded, size: 18),
-              label: const Text('تعديل تسجيلي',
-                  style: TextStyle(fontWeight: FontWeight.w800)),
-            ),
-            const SizedBox(height: 8),
-            OutlinedButton.icon(
-              key: const Key('lawyer-detail-delete'),
-              onPressed: () => _confirmDelete(lawyer),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: kLegalDeleteRed,
-                side: const BorderSide(color: kLegalDeleteRed, width: 1.4),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-              ),
-              icon: const Icon(Icons.delete_outline_rounded, size: 18),
-              label: const Text('حذف تسجيلي',
-                  style: TextStyle(fontWeight: FontWeight.w800)),
-            ),
-          ],
+          const SizedBox(height: 12),
+          OwnerActions(
+            keyTag: 'lawyer-detail',
+            ownerId: lawyer.submittedBy,
+            currentUserId: uid ?? '',
+            itemName: lawyer.name,
+            editLabel: 'تعديل تسجيلي',
+            deleteLabel: 'حذف تسجيلي',
+            onEdit: () => _edit(lawyer),
+            onDelete: () => _delete(lawyer),
+          ),
           const SizedBox(height: 16),
           OutlinedButton.icon(
             key: const Key('lawyer-detail-ask'),

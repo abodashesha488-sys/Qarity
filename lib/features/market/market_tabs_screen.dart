@@ -1,8 +1,9 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/product_categories.dart';
@@ -19,8 +20,13 @@ import '../../services/market_service.dart';
 import '../../services/share_service.dart';
 import '../../services/shop_service.dart';
 import '../../services/user_service.dart';
+import '../../widgets/document_field_editor.dart';
+import '../../widgets/full_fit_image.dart';
+import '../../widgets/image_gallery_wrap.dart';
 import '../../widgets/offline_stream_builder.dart';
+import '../../widgets/owner_actions.dart';
 import '../../widgets/qurity_app_bar.dart';
+import 'add_product.dart';
 
 part 'market_tab_buy_donate.dart';
 part 'market_tab_market.dart';
@@ -198,128 +204,17 @@ class _MarketTabsScreenState extends State<MarketTabsScreen>
   Future<void> _createShop() async {
     final uid = await _requireUser();
     if (uid == null || !mounted) return;
-    final nameC = TextEditingController();
-    final descC = TextEditingController();
-    final waC = TextEditingController();
-    var category = 'عام';
-    final images = <String>[];
-    final max = _sellerType.maxImages;
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSt) => AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Row(
-            children: [
-              const Expanded(child: Text('إنشاء محل')),
-              _sellerBadge(ctx),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _ImageField(
-                    maxImages: max,
-                    onChanged: (l) {
-                      setSt(() {
-                        images
-                          ..clear()
-                          ..addAll(l);
-                      });
-                    }),
-                const SizedBox(height: 12),
-                TextField(
-                    controller: nameC,
-                    decoration: const InputDecoration(
-                        labelText: 'اسم المحل',
-                        prefixIcon: Icon(Icons.store_rounded))),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: category,
-                  items: _shopCats
-                      .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                      .toList(),
-                  onChanged: (v) => setSt(() => category = v ?? category),
-                  decoration: const InputDecoration(
-                      labelText: 'التصنيف',
-                      prefixIcon: Icon(Icons.category_rounded)),
-                  menuMaxHeight: 360,
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                    controller: descC,
-                    decoration: const InputDecoration(
-                        labelText: 'نبذة',
-                        prefixIcon: Icon(Icons.description_rounded)),
-                    maxLines: 3),
-                const SizedBox(height: 12),
-                TextField(
-                    controller: waC,
-                    decoration: const InputDecoration(
-                        labelText: 'واتساب للتواصل',
-                        prefixIcon: Icon(Icons.chat_rounded)),
-                    keyboardType: TextInputType.phone),
-                const SizedBox(height: 14),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                      color: Colors.orange.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                          color: Colors.orange.withValues(alpha: 0.4))),
-                  child: const Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(Icons.info_outline_rounded,
-                          size: 18, color: Colors.orange),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'بعد الإنشاء سيظهر محلك هنا مباشرة بوسم «بانتظار موافقة الإدارة»، ولن يراه بقية أهالي القرية إلا بعد موافقة الأدمن من لوحة التحكم. ستصلك رسالة فور الموافقة.',
-                          style: TextStyle(
-                              fontSize: 11.5,
-                              height: 1.5,
-                              fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('إلغاء')),
-            FilledButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('إنشاء')),
-          ],
-        ),
-      ),
+    final saved = await showShopFormDialog(
+      context,
+      service: _shopService,
+      uid: uid,
+      ownerName: _userName(),
+      ownerRole: _userRole,
+      sellerType: _sellerType,
     );
-    if (ok == true && nameC.text.trim().isNotEmpty) {
-      try {
-        await _shopService.createShop(Shop(
-          id: '',
-          ownerUid: uid,
-          ownerName: _userName(),
-          name: nameC.text.trim(),
-          category: category,
-          description: descC.text.trim(),
-          logoUrl: images.isNotEmpty ? images.first : null,
-          imageUrls: List.from(images),
-          whatsapp: waC.text.trim(),
-          ownerRole: _userRole,
-          ownerSellerType: _sellerType.name,
-        ));
-        _snack('تم إنشاء المحل، وسيظهر بعد موافقة الإدارة');
-      } catch (e) {
-        _snack('خطأ: $e');
-      }
+    if (!mounted) return;
+    if (saved) {
+      _snack('تم إنشاء المحل، وسيظهر بعد موافقة الإدارة');
     }
   }
 
@@ -347,7 +242,7 @@ class _MarketTabsScreenState extends State<MarketTabsScreen>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _ImageField(
+                MarketImageField(
                     maxImages: max,
                     onChanged: (l) {
                       setSt(() {
@@ -434,7 +329,7 @@ class _MarketTabsScreenState extends State<MarketTabsScreen>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _ImageField(
+                MarketImageField(
                     maxImages: max,
                     onChanged: (l) {
                       setSt(() {
@@ -510,143 +405,52 @@ class _MarketTabsScreenState extends State<MarketTabsScreen>
   }
 }
 
-// ═══════════════════ Reusable multi-image uploader (seller-type limit) ═══════════════════
-class _ImageField extends StatefulWidget {
+// ═══════════════════ الصور: المحرّر المشترك لكل التطبيق ═══════════════════
+/// غلاف رفيع حول `ImageListEditor`: يبقى حدّ الصور حسب نوع البائع
+/// (`SellerType.maxImages`) وهو ما يمرّره كل نموذج، والمحرك نفسه — الرفع
+/// والحذف والفشل المرئي — مشترك. كان لهذا الحقل رافعه الخاص الذي يبتلع خطأ
+/// ImgBB في `catch (_)` فتُحفظ السلعة بلا صورة وبلا كلمة.
+class MarketImageField extends StatefulWidget {
   final int maxImages;
   final ValueChanged<List<String>> onChanged;
-  const _ImageField({required this.maxImages, required this.onChanged});
+
+  /// اختياري لاختبار المحرّر المشترك بلا معرض جهاز ولا شبكة.
+  final ImageUploadService? uploader;
+  final ImageBytesSource? bytesSource;
+
+  /// عند تعديل صاحب محله أو سلعته: صوره المحفوظة تدخل المحرّر جاهزة.
+  final List<String> initialUrls;
+  const MarketImageField(
+      {super.key,
+      required this.maxImages,
+      required this.onChanged,
+      this.initialUrls = const [],
+      this.uploader,
+      this.bytesSource});
 
   @override
-  State<_ImageField> createState() => _ImageFieldState();
+  State<MarketImageField> createState() => _MarketImageFieldState();
 }
 
-class _ImageFieldState extends State<_ImageField> {
-  final ImagePicker _picker = ImagePicker();
-  final List<String> _urls = [];
-  bool _uploading = false;
-
-  bool get _atMax => _urls.length >= widget.maxImages;
-
-  Future<void> _add() async {
-    if (_atMax) return;
-    setState(() => _uploading = true);
-    try {
-      final file = await _picker.pickImage(
-          source: ImageSource.gallery,
-          imageQuality: 85,
-          maxWidth: 1200,
-          maxHeight: 1200);
-      if (file == null) return;
-      final bytes = await file.readAsBytes();
-      final url = await ImageUploadService().uploadImage(bytes);
-      setState(() => _urls.add(url));
-      widget.onChanged(List.of(_urls));
-    } catch (_) {
-    } finally {
-      if (mounted) setState(() => _uploading = false);
-    }
-  }
-
-  void _remove(int i) {
-    setState(() => _urls.removeAt(i));
-    widget.onChanged(List.of(_urls));
-  }
+class _MarketImageFieldState extends State<MarketImageField> {
+  late final List<String> _urls = [...widget.initialUrls];
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(Icons.photo_library_rounded,
-                size: 16, color: theme.colorScheme.primary),
-            const SizedBox(width: 6),
-            Text('الصور (${_urls.length}/${widget.maxImages})',
-                style: theme.textTheme.labelLarge
-                    ?.copyWith(fontWeight: FontWeight.w800)),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            ...List.generate(_urls.length, (i) => _thumb(theme, i)),
-            if (!_atMax)
-              InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: _uploading ? null : _add,
-                child: Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainerHighest
-                        .withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                        color: theme.colorScheme.outlineVariant
-                            .withValues(alpha: 0.5)),
-                  ),
-                  child: Center(
-                    child: _uploading
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2))
-                        : Icon(Icons.add_a_photo_rounded,
-                            color: theme.colorScheme.primary),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _thumb(ThemeData theme, int i) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: CachedNetworkImage(
-            imageUrl: _urls[i],
-            width: 72,
-            height: 72,
-            fit: BoxFit.cover,
-            placeholder: (_, __) => Container(
-              width: 72,
-              height: 72,
-              color: theme.colorScheme.surfaceContainerHighest,
-            ),
-            errorWidget: (_, __, ___) => Container(
-              width: 72,
-              height: 72,
-              color: theme.colorScheme.surfaceContainerHighest,
-              child: const Icon(Icons.broken_image_rounded),
-            ),
-          ),
-        ),
-        Positioned(
-          top: -6,
-          right: -6,
-          child: GestureDetector(
-            onTap: () => _remove(i),
-            child: Container(
-              decoration: BoxDecoration(
-                  color: theme.colorScheme.error, shape: BoxShape.circle),
-              padding: const EdgeInsets.all(2),
-              child: const Icon(Icons.close_rounded,
-                  size: 14, color: Colors.white),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+  Widget build(BuildContext context) => ImageListEditor(
+        label: 'الصور',
+        fieldKey: 'marketImages',
+        urls: _urls,
+        maxImages: widget.maxImages,
+        maxSide: 1200,
+        uploader: widget.uploader,
+        bytesSource: widget.bytesSource,
+        onChanged: (urls) {
+          setState(() => _urls
+            ..clear()
+            ..addAll(urls));
+          widget.onChanged(urls);
+        },
+      );
 }
 
 Widget _net(String url, ThemeData theme) {

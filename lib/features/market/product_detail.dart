@@ -11,7 +11,11 @@ import '../../routes/app_routes.dart';
 import '../../services/market_service.dart';
 import '../../services/product_interaction_service.dart';
 import '../../services/share_service.dart';
+import '../../widgets/full_fit_image.dart';
+import '../../widgets/image_gallery_wrap.dart';
+import '../../widgets/owner_actions.dart';
 import '../../widgets/qurity_app_bar.dart';
+import 'add_product.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   const ProductDetailScreen({super.key});
@@ -241,6 +245,20 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                   color: theme.colorScheme.error,
                                   fontWeight: FontWeight.w800)),
                         ),
+                      ] else if (product.isExpiredOffer) ...[
+                        // السعر رجع لأصله: يُقال للسبب، لا صمتًا.
+                        const SizedBox(width: 10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                              color: theme.colorScheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(12)),
+                          child: Text('انتهى العرض',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                  fontWeight: FontWeight.w700)),
+                        ),
                       ],
                       const SizedBox(width: 12),
                       const Icon(Icons.star_rounded,
@@ -319,6 +337,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       const SizedBox(width: 12),
                       _buildReviewsBadge(theme)
                     ]),
+                    OwnerActions(
+                      keyTag: 'product-detail',
+                      ownerId: product.sellerId ?? '',
+                      currentUserId: _currentUid(),
+                      itemName: product.name,
+                      editLabel: 'تعديل المنتج',
+                      deleteLabel: 'حذف المنتج',
+                      onEdit: () => _openEdit(product),
+                      onDelete: () => _delete(product),
+                    ),
                     const SizedBox(height: 20),
                     Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -357,6 +385,33 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 
+  /// معرّف الجلسة الحالي — فارغ بلا تسجيل دخول، فتُحجب أزرار المالك.
+  String _currentUid() {
+    try {
+      return _auth.currentUser?.uid ?? '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  /// تعديل البائع لمنتجه: نفس صفحة الإضافة بـ`existing`، والنجاح يُغلق التفاصيل
+  /// لأن المنتج عاد للمراجعة فلم يعد المعروض هو المنشور.
+  Future<void> _openEdit(MarketProduct product) async {
+    final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(
+        builder: (_) => AddMarketProductScreen(existing: product)));
+    if (saved == true && mounted) Navigator.pop(context);
+  }
+
+  Future<bool> _delete(MarketProduct product) async {
+    try {
+      await _marketService.deleteProduct(product.id);
+      if (mounted) Navigator.pop(context);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   void _openSeller() {
     if (_product == null) return;
     Navigator.pushNamed(
@@ -371,54 +426,63 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   Widget _buildImageCarousel(ThemeData theme, MarketProduct product) {
-    final hasImages =
-        product.imageUrls.isNotEmpty || product.imageUrl.isNotEmpty;
-    if (!hasImages) return const SizedBox.shrink();
+    final urls = product.imageUrls.isNotEmpty
+        ? product.imageUrls
+        : (product.imageUrl.isEmpty ? const <String>[] : [product.imageUrl]);
+    if (urls.isEmpty) return const SizedBox.shrink();
+    final current = urls[_currentPage.clamp(0, urls.length - 1)];
 
-    return Stack(
-      alignment: Alignment.bottomCenter,
-      children: [
-        SizedBox(
-          height: 300,
-          child: PageView.builder(
-            controller: _pageController,
-            itemCount:
-                product.imageUrls.isNotEmpty ? product.imageUrls.length : 1,
-            itemBuilder: (context, index) {
-              final imageUrl = product.imageUrls.isNotEmpty
-                  ? product.imageUrls[index]
-                  : product.imageUrl;
-              return CachedNetworkImage(
-                  imageUrl: imageUrl,
-                  fit: BoxFit.cover,
-                  width: double.infinity);
-            },
-            onPageChanged: (index) => setState(() => _currentPage = index),
+    return LayoutBuilder(builder: (context, constraints) {
+      final width = constraints.maxWidth.isFinite ? constraints.maxWidth : 360.0;
+      // النسب تُقاس عبر محرك العرض المشترك، فيأخذ الشريط ارتفاع الصورة نفسها
+      // وترسم `BoxFit.contain` — لا قصّ لمنتج صُوَّره بمقاسات مختلفة.
+      FullFitImage.measure(current,
+          onResult: (_) {
+            if (mounted) setState(() {});
+          });
+      return Stack(
+        alignment: Alignment.bottomCenter,
+        children: [
+          SizedBox(
+            height: FullFitImage.heightFor(current, width),
+            child: PageView.builder(
+              controller: _pageController,
+              itemCount: urls.length,
+              itemBuilder: (context, index) => FullFitImage(
+                imageUrl: urls[index],
+                width: width,
+                radius: 0,
+                fallback: const Center(
+                    child: Icon(Icons.broken_image_rounded,
+                        color: Colors.black26, size: 40)),
+              ),
+              onPageChanged: (index) => setState(() => _currentPage = index),
+            ),
           ),
-        ),
-        if ((product.imageUrls.isNotEmpty ? product.imageUrls.length : 1) > 1)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 14),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(
-                product.imageUrls.isNotEmpty ? product.imageUrls.length : 1,
-                (index) => Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _currentPage == index
-                        ? Colors.white
-                        : Colors.white.withValues(alpha: 0.5),
+          if (urls.length > 1)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(
+                  urls.length,
+                  (index) => Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _currentPage == index
+                          ? Colors.white
+                          : Colors.white.withValues(alpha: 0.5),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-      ],
-    );
+        ],
+      );
+    });
   }
 
   Widget _buildLikeButton(ThemeData theme) {
@@ -768,22 +832,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   Text(review.comment, style: CommentStyle.body),
                   if (review.images.isNotEmpty) ...[
                     const SizedBox(height: 8),
-                    SizedBox(
-                      height: 60,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: review.images.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 8),
-                        itemBuilder: (context, i) => ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: CachedNetworkImage(
-                              imageUrl: review.images[i],
-                              width: 60,
-                              height: 60,
-                              fit: BoxFit.cover),
-                        ),
-                      ),
-                    ),
+                    ImageGalleryWrap(urls: review.images, tileWidth: 72, radius: 8, spacing: 8),
                   ],
                 ],
               ),

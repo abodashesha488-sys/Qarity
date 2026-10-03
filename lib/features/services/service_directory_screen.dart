@@ -1,7 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/service_provider_model.dart';
@@ -10,6 +9,7 @@ import '../../services/image_upload_service.dart';
 import '../../services/service_provider_service.dart';
 import '../../services/share_service.dart';
 import '../../services/user_service.dart';
+import '../../widgets/document_field_editor.dart';
 import '../../widgets/edu_kind_mark.dart';
 import '../../widgets/full_fit_image.dart';
 import '../../widgets/qurity_app_bar.dart';
@@ -155,7 +155,7 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
     ].join(' ').toLowerCase().contains(_query);
   }
 
-  Future<void> _openForm() async {
+  Future<void> _openForm({ServiceProvider? existing}) async {
     User? user;
     try {
       user = FirebaseAuth.instance.currentUser;
@@ -175,12 +175,19 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
         category: widget.category,
         userId: uid,
         userName: identity.name,
+        existing: existing,
       ),
     );
     if (res == null) return;
+    final editing = existing != null;
     try {
-      await ServiceProviderService().create(res);
-      _snack('تم إرسال الإضافة — تظهر في الدليل بعد موافقة الإدارة');
+      if (editing) {
+        await ServiceProviderService().update(res);
+        _snack('تم حفظ التعديلات — عاد السجل للمراجعة');
+      } else {
+        await ServiceProviderService().create(res);
+        _snack('تم إرسال الإضافة — تظهر في الدليل بعد موافقة الإدارة');
+      }
     } catch (e) {
       _snack('خطأ: $e', error: true);
     }
@@ -1175,25 +1182,57 @@ class ProviderFormSheet extends StatefulWidget {
       {super.key,
       required this.category,
       required this.userId,
-      required this.userName});
+      required this.userName,
+      this.existing,
+      this.uploader,
+      this.bytesSource});
   final String category;
   final String userId;
   final String userName;
+
+  /// بيان يملكه المستخدم الحالي — النموذج نفسه للتعديل (البند ٨): تُملأ
+  /// الحقول من السجل، ويُعاد بنفس `id`/`createdAt`/النسبة فيحفظها Caller
+  /// عبر `ServiceProviderService.update` الذي يفرض العودة إلى المراجعة.
+  final ServiceProvider? existing;
+
+  /// اختياري لاختبار المحرّر المشترك بلا شبكة ولا معرض جهاز.
+  final ImageUploadService? uploader;
+  final ImageBytesSource? bytesSource;
 
   @override
   State<ProviderFormSheet> createState() => _ProviderFormSheetState();
 }
 
 class _ProviderFormSheetState extends State<ProviderFormSheet> {
-  final _nameC = TextEditingController();
-  final _phoneC = TextEditingController();
-  final _addressC = TextEditingController();
-  final _descC = TextEditingController();
-  final _universityC = TextEditingController();
+  late final TextEditingController _nameC =
+      TextEditingController(text: widget.existing?.name ?? '');
+  late final TextEditingController _phoneC =
+      TextEditingController(text: widget.existing?.phone ?? '');
+  late final TextEditingController _addressC =
+      TextEditingController(text: widget.existing?.address ?? '');
+  late final TextEditingController _descC =
+      TextEditingController(text: widget.existing?.description ?? '');
+  late final TextEditingController _universityC =
+      TextEditingController(text: widget.existing?.universityNote ?? '');
   final _subjectSearchC = TextEditingController();
   final _customSubjectC = TextEditingController();
-  final ImagePicker _picker = ImagePicker();
-  late String _specialty = kSubcategoriesFor(widget.category).first;
+  late String _specialty = _initialSpecialty;
+
+  /// خيارات الحرفة/الخدمة: تُضاف قيمة السجل المحفوظة أولًا إن لم تكن في
+  /// القائمة الحالية، فإبدالها ببداية القائمة كان يغيّر حرفة حرفيٍّ قديم
+  /// لمجرد أن تسميتها أُزيلت من `kTechnicianCrafts`.
+  List<String> get _specialtyOptions {
+    final options = kSubcategoriesFor(widget.category);
+    final saved = widget.existing?.specialty.trim() ?? '';
+    if (saved.isEmpty || options.contains(saved)) return options;
+    return [saved, ...options];
+  }
+
+  String get _initialSpecialty {
+    final options = _specialtyOptions;
+    final saved = widget.existing?.specialty.trim() ?? '';
+    return options.contains(saved) ? saved : options.first;
+  }
 
   // ── الخدمات التعليمية: صفة + اختيار متعدد ──
   String _kind = kEduKindTeacher;
@@ -1204,9 +1243,13 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
   String _subjectQuery = '';
 
   bool _saving = false;
+
+  /// انشغال الرفع كما يُبلّغه المحرّر المشترك — لا يملك النموذج الرفع ليُنبَّأ
+  /// بدونه، والحفظ أثناءه كان يُضيع الصورة.
   bool _uploading = false;
   String? _photoUrl;
-  String? _photoError;
+
+  bool get _isEdit => widget.existing != null;
 
   bool get _isEdu => widget.category == ServiceCategory.educational;
 
@@ -1218,6 +1261,26 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
       .toList(growable: false);
 
   Color get _accent => ServiceCategory.color(widget.category);
+
+  @override
+  void initState() {
+    super.initState();
+    final editing = widget.existing;
+    if (editing == null) return;
+    _kind = editing.providerKind;
+    _eduTypes.addAll(editing.eduTypes);
+    _stages.addAll(editing.stages);
+    _subjects.addAll(editing.subjects.where(kEgyptSubjects.contains));
+    _privateTutoring = editing.offersPrivateTutoring;
+    _photoUrl = (editing.photoUrl?.trim().isNotEmpty ?? false)
+        ? editing.photoUrl!.trim()
+        : null;
+    // مادة قديمة لم تعد في `kEgyptSubjects` تُستعاد في الخانة الحرة، وإلا
+    // ضاعت من السجل بمجرد فتح التعديل.
+    final free =
+        editing.subjects.where((s) => !kEgyptSubjects.contains(s)).join('، ');
+    if (free.isNotEmpty) _customSubjectC.text = free;
+  }
 
   @override
   void dispose() {
@@ -1249,39 +1312,6 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
             Icon(Icons.person_rounded, size: 36, color: _accent),
       ),
     );
-  }
-
-  Future<void> _pickPhoto() async {
-    setState(() {
-      _uploading = true;
-      _photoError = null;
-    });
-    try {
-      final XFile? image = await _picker.pickImage(
-          source: ImageSource.gallery,
-          imageQuality: 85,
-          maxWidth: 600,
-          maxHeight: 600);
-      if (image == null) return;
-      final bytes = await image.readAsBytes();
-      final url = await ImageUploadService().uploadImage(bytes);
-      if (!mounted) return;
-      setState(() {
-        _photoUrl = url;
-        _photoError = null;
-      });
-    } catch (e) {
-      // التنبيه المؤقت وحده كان يُبتلع عند ظهور أي رسالة أخرى، فتُحفظ السجل
-      // بلا صورة دون أن يعرف صاحبها. الآن يبقى الخطر ظاهرًا داخل النموذج.
-      final raw = e.toString().replaceFirst('Exception: ', '').trim();
-      if (mounted) {
-        setState(() => _photoError = raw.isEmpty
-            ? 'تعذّر رفع الصورة — المس الدائرة للمحاولة مرة أخرى'
-            : raw);
-      }
-    } finally {
-      if (mounted) setState(() => _uploading = false);
-    }
   }
 
   void _warn(String msg) {
@@ -1325,10 +1355,13 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
       ..._customSubjects.where((c) => !_subjects.contains(c)),
     ];
     setState(() => _saving = true);
+    final editing = widget.existing;
     Navigator.pop(
       context,
       ServiceProvider(
-        id: '',
+        // التعديل يعيد نفس السجل: المعرّف والتاريخ والنسبة وحالة الإدارة
+        // تُقرأ من السول كما هي، و`update` هو من يفرض العودة إلى المراجعة.
+        id: editing?.id ?? '',
         category: widget.category,
         specialty: _isEdu ? '' : _specialty,
         name: name,
@@ -1336,8 +1369,13 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
         address: _addressC.text.trim(),
         description: _descC.text.trim(),
         photoUrl: _photoUrl,
-        submittedBy: widget.userId,
-        submittedByName: widget.userName,
+        isApproved: editing?.isApproved ?? false,
+        isFeatured: editing?.isFeatured ?? false,
+        rating: editing?.rating ?? 0,
+        ratingCount: editing?.ratingCount ?? 0,
+        submittedBy: editing?.submittedBy ?? widget.userId,
+        submittedByName: editing?.submittedByName ?? widget.userName,
+        createdAt: editing?.createdAt,
         providerKind: _kind,
         eduTypes:
             _isEdu ? kEduTypes.where(_eduTypes.contains).toList() : const [],
@@ -1369,7 +1407,9 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                      'إضافة إلى ${ServiceCategory.label(widget.category)}',
+                      _isEdit
+                          ? 'تعديل ${ServiceCategory.label(widget.category)}'
+                          : 'إضافة إلى ${ServiceCategory.label(widget.category)}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -1382,66 +1422,32 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
             ),
             const SizedBox(height: 8),
             Center(
-              child: GestureDetector(
-                onTap: _uploading ? null : _pickPhoto,
-                child: Stack(
-                  children: [
-                    CircleAvatar(
-                      radius: 40,
-                      backgroundColor: _accent.withValues(alpha: 0.1),
-                      foregroundImage: (_photoUrl?.isNotEmpty ?? false)
-                          ? CachedNetworkImageProvider(_photoUrl!)
-                          : null,
-                      child: (_photoUrl?.isNotEmpty ?? false)
-                          ? null
-                          : _defaultPhotoMark(),
-                    ),
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(5),
-                        decoration: BoxDecoration(
-                          color: _accent,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                              color: theme.colorScheme.surface, width: 2),
-                        ),
-                        child: _uploading
-                            ? const SizedBox(
-                                width: 12,
-                                height: 12,
-                                child: CircularProgressIndicator(
-                                    strokeWidth: 2, color: Colors.white))
-                            : const Icon(Icons.camera_alt_rounded,
-                                size: 12, color: Colors.white),
-                      ),
-                    ),
-                  ],
-                ),
+              child: CircleAvatar(
+                radius: 40,
+                backgroundColor: _accent.withValues(alpha: 0.1),
+                foregroundImage: (_photoUrl?.isNotEmpty ?? false)
+                    ? CachedNetworkImageProvider(_photoUrl!)
+                    : null,
+                child: (_photoUrl?.isNotEmpty ?? false)
+                    ? null
+                    : _defaultPhotoMark(),
               ),
             ),
             const SizedBox(height: 6),
-            if (_photoError != null) ...[
-              Row(
-                key: const Key('photo-upload-error'),
-                children: [
-                  const Icon(Icons.error_outline_rounded,
-                      size: 16, color: Color(0xFFB71C1C)),
-                  const SizedBox(width: 5),
-                  Expanded(
-                    child: Text(
-                      '${_photoError!} — المس الدائرة لإعادة المحاولة، أو احفظ بلا صورة',
-                      style: const TextStyle(
-                          color: Color(0xFFB71C1C),
-                          fontWeight: FontWeight.w700,
-                          fontSize: 11.5,
-                          height: 1.35),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+            ImageListEditor(
+              label: 'صورة السجل',
+              fieldKey: 'photoUrl',
+              single: true,
+              urls: (_photoUrl?.isNotEmpty ?? false)
+                  ? [_photoUrl!]
+                  : const <String>[],
+              uploader: widget.uploader,
+              bytesSource: widget.bytesSource,
+              maxSide: 600,
+              onBusyChanged: (busy) => _uploading = busy,
+              onChanged: (urls) => setState(() => _photoUrl =
+                  urls.isEmpty ? null : urls.first),
+            ),
             const SizedBox(height: 10),
             if (isEdu) ...[
               _kindSelector(theme),
@@ -1502,7 +1508,7 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
               _dropdown(
                   theme,
                   'الحرفة / الخدمة',
-                  kSubcategoriesFor(widget.category),
+                  _specialtyOptions,
                   _specialty,
                   Icons.category_rounded,
                   (v) => setState(() => _specialty = v)),
@@ -1548,9 +1554,11 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
                   backgroundColor: _accent,
                   padding: const EdgeInsets.symmetric(vertical: 14)),
               onPressed: _saving ? null : _submit,
-              icon: const Icon(Icons.send_rounded, size: 18),
-              label: const Text('إرسال للمراجعة',
-                  style: TextStyle(fontWeight: FontWeight.w800)),
+              icon: Icon(_isEdit ? Icons.save_rounded : Icons.send_rounded,
+                  size: 18),
+              label: Text(
+                  _isEdit ? 'حفظ التعديلات' : 'إرسال للمراجعة',
+                  style: const TextStyle(fontWeight: FontWeight.w800)),
             ),
           ],
         ),

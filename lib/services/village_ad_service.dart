@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/village_ad_model.dart';
 import 'notification_inbox_service.dart';
 import 'notification_service.dart';
+import 'owner_content_service.dart';
 import 'remote_push_service.dart';
 
 /// خدمة «إعلانات القرية» — إعلانات تجارية وخدمية وإنشائية لأهل القرية.
@@ -49,11 +50,19 @@ class VillageAdService {
     return ref.id;
   }
 
-  /// تعديل بيانات الإعلان — بلا `isApproved` حتى لا يُخفى إعلان معتمد.
-  Future<void> update(String id, VillageAd ad) =>
-      _col.doc(id).set(ad.toWriteMap(), SetOptions(merge: true));
+  /// تعديل صاحب الإعلان لبياناته: يعود إلى طابور المراجعة (البند ٨) —
+  /// والقواعد ترفض أي نتيجة كتابة معتمدة، فتمرّ الرقعة عبر المحرك المشترك
+  /// الذي يفرض ذلك وُيخطر الإدارة والمالك.
+  Future<void> update(String id, VillageAd ad) => OwnerContentService.edit(
+        _firestore,
+        'village_ads',
+        id,
+        ad.toWriteMap(),
+        label: ad.title,
+      );
 
-  Future<void> delete(String id) => _col.doc(id).delete();
+  Future<void> delete(String id) =>
+      OwnerContentService.remove(_firestore, 'village_ads', id);
 
   /// إعلانات القرية المعتمدة — المرشَّح على الخادم (شرط القائمة في القواعد
   /// يرفض أي استعلام غير مُصفًّى لغير الأدمن)، والترتيب في الكلاينت لأن

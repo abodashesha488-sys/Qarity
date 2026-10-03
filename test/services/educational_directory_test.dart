@@ -721,32 +721,44 @@ void main() {
     Finder field(String label) =>
         find.widgetWithText(TextFormField, label);
 
-    testWidgets('حقل رابط الصورة يظهر ويحمّل الصورة المخزنة', (tester) async {
+    testWidgets('حقل الصورة في محرر المستند يحمّل الصورة المخزنة', (tester) async {
       bigScreen(tester);
       await openEdit(tester, {
         ...eduItem,
         'photoUrl': 'https://i.ibb.co/abc/upload.jpg',
       });
 
-      expect(
-          tester
-              .widget<TextFormField>(field('رابط صورة السجل (https://…)'))
-              .controller!
-              .text,
-          'https://i.ibb.co/abc/upload.jpg');
+      // الصورة الواحدة: محرر صور بمصغّرة واحدة قابلة للحذف، لا حقل نصّ.
+      expect(find.byKey(const Key('img-editor-photoUrl')), findsOneWidget);
+      expect(find.byKey(const Key('img-delete-photoUrl-0')), findsOneWidget);
+      expect(find.text('لا صورة — ارفع من الجهاز أو الصق رابطًا'), findsNothing);
     });
 
-    testWidgets('سجل بلا صورة: حقل الرابط ظاهر وفارغ ليُرفَد بدل حذف السجل',
+    testWidgets('سجل بلا صورة: المحرر ظاهر ولصق الرابط يُرفده بدل حذف السجل',
         (tester) async {
       bigScreen(tester);
       await openEdit(tester, eduItem);
 
-      expect(
-          tester
-              .widget<TextFormField>(field('رابط صورة السجل (https://…)'))
-              .controller!
-              .text,
-          isEmpty);
+      expect(find.byKey(const Key('img-editor-photoUrl')), findsOneWidget);
+      expect(find.byKey(const Key('img-delete-photoUrl-0')), findsNothing);
+      expect(find.text('لا صورة — ارفع من الجهاز أو الصق رابطًا'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('img-paste-photoUrl')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+          find.byKey(const Key('img-link-photoUrl')), 'i-not-a-url');
+      await tester.tap(find.text('إضافة'));
+      await tester.pumpAndSettle();
+      expect(find.text('الرابط يجب أن يبدأ بـ http أو https'), findsOneWidget,
+          reason: 'رابط خام مقبول صامتًا هو نفس خطأ ضياع الصورة');
+
+      await tester.tap(find.byKey(const Key('img-paste-photoUrl')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('img-link-photoUrl')),
+          'https://i.ibb.co/repair/x.jpg');
+      await tester.tap(find.text('إضافة'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('img-delete-photoUrl-0')), findsOneWidget);
     });
 
     testWidgets('حقول التعليمية: قوائم نصية وبلا حقل الحرفة', (tester) async {

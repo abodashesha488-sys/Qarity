@@ -1,7 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../../core/constants/legal_reference_egypt.dart';
 import '../../core/utils/relative_time.dart';
@@ -10,7 +9,9 @@ import '../../routes/app_routes.dart';
 import '../../services/image_upload_service.dart';
 import '../../services/legal_service.dart';
 import '../../services/user_service.dart';
+import '../../widgets/document_field_editor.dart';
 import '../../widgets/full_fit_image.dart';
+import '../../widgets/owner_actions.dart';
 import '../../widgets/qurity_app_bar.dart';
 
 /// أحمر/برتقالي هذا القسم — مستقل عن أخضر «منشور» وعن تركوازي القسم.
@@ -571,33 +572,24 @@ class _ConsultationsTabState extends State<_ConsultationsTab> {
         }
       });
 
-  Future<void> _confirmDelete(LegalConsultation c) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('حذف الاستشارة'),
-        content: const Text('سيُحذف سؤالك ونشره نهائيًا.'),
-        actions: [
-          TextButton(
-            key: const Key('consult-delete-cancel'),
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('إلغاء'),
-          ),
-          FilledButton(
-            key: const Key('consult-delete-confirm'),
-            style: FilledButton.styleFrom(backgroundColor: kLegalDeleteRed),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('حذف'),
-          ),
-        ],
-      ),
-    );
-    if (ok != true) return;
+  Future<void> _openEdit(LegalConsultation c) async {
+    if (c.isApproved) {
+      _snack('لا يمكن تعديل سؤال نُشر — احذفه وأعد طرحه إن لزم.', error: true);
+      return;
+    }
+    final saved = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+            builder: (_) => ConsultationFormSheet(service: _service, existing: c)));
+    if (saved == true) _snack('تم حفظ التعديلات — عاد سؤالك للمراجعة');
+  }
+
+  Future<bool> _delete(LegalConsultation c) async {
     try {
       await _service.delete(c.id);
-      _snack('تم حذف استشارتك');
+      return true;
     } catch (_) {
-      _snack('تعذّر الحذف — تحقّق من الصلاحيات ثم أعد المحاولة.', error: true);
+      return false;
     }
   }
 
@@ -678,7 +670,9 @@ class _ConsultationsTabState extends State<_ConsultationsTab> {
                   return ConsultationCard(
                     consultation: c,
                     showStatus: _mineOnly,
-                    onDelete: _mineOnly ? () => _confirmDelete(c) : null,
+                    currentUserId: _mineOnly ? _myUid : '',
+                    onEdit: () => _openEdit(c),
+                    onDelete: () => _delete(c),
                   ).animate(delay: ((i % 8) * 35).ms).fadeIn(duration: 300.ms);
                 },
               );
@@ -712,12 +706,16 @@ class ConsultationCard extends StatelessWidget {
     super.key,
     required this.consultation,
     this.showStatus = false,
+    this.currentUserId = '',
+    this.onEdit,
     this.onDelete,
   });
 
   final LegalConsultation consultation;
   final bool showStatus;
-  final VoidCallback? onDelete;
+  final String currentUserId;
+  final VoidCallback? onEdit;
+  final Future<bool> Function()? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -813,19 +811,17 @@ class ConsultationCard extends StatelessWidget {
             ],
             if (showStatus) ...[
               const SizedBox(height: 10),
-              Row(
-                children: [
-                  _StatusMark(approved: c.isApproved),
-                  const Spacer(),
-                  if (onDelete != null)
-                    IconButton(
-                      key: Key('consult-delete-${c.id}'),
-                      tooltip: 'حذف الاستشارة',
-                      icon: const Icon(Icons.delete_outline_rounded,
-                          size: 19, color: kLegalDeleteRed),
-                      onPressed: onDelete,
-                    ),
-                ],
+              _StatusMark(approved: c.isApproved),
+              const SizedBox(height: 10),
+              OwnerActions(
+                keyTag: 'consult-${c.id}',
+                ownerId: c.userId,
+                currentUserId: currentUserId,
+                itemName: 'استشارتك',
+                editLabel: 'تعديل السؤال',
+                deleteLabel: 'حذف السؤال',
+                onEdit: onEdit ?? () {},
+                onDelete: onDelete ?? () async => false,
               ),
             ],
           ],
@@ -1041,10 +1037,20 @@ class LegalTopicSheet extends StatelessWidget {
 
 // ═══════════════════════════ نموذج تسجيل محامٍ ═══════════════════════════
 class LawyerFormSheet extends StatefulWidget {
-  const LawyerFormSheet({super.key, this.existing, this.service});
+  const LawyerFormSheet({
+    super.key,
+    this.existing,
+    this.service,
+    this.uploader,
+    this.bytesSource,
+  });
 
   final Lawyer? existing;
   final LawyerService? service;
+
+  /// اختياري لاختبار المحرّر المشترك بلا شبكة ولا معرض جهاز.
+  final ImageUploadService? uploader;
+  final ImageBytesSource? bytesSource;
 
   @override
   State<LawyerFormSheet> createState() => _LawyerFormSheetState();
@@ -1063,7 +1069,6 @@ class _LawyerFormSheetState extends State<LawyerFormSheet> {
       TextEditingController(text: widget.existing?.workingHours ?? '');
   late final TextEditingController _bio =
       TextEditingController(text: widget.existing?.bio ?? '');
-  late final ImagePicker _picker = ImagePicker();
 
   late final List<String> _specs = [...?widget.existing?.specializations];
   late String _photo = widget.existing?.photoUrl ?? '';
@@ -1093,43 +1098,10 @@ class _LawyerFormSheetState extends State<LawyerFormSheet> {
     super.dispose();
   }
 
-  Future<void> _pickPhoto() async {
-    setState(() {
-      _uploading = true;
-      _error = '';
-    });
-    try {
-      final x = await _picker.pickImage(
-          source: ImageSource.gallery, maxWidth: 1280, imageQuality: 82);
-      if (x == null) {
-        if (mounted) setState(() => _uploading = false);
-        return;
-      }
-      final url = await ImageUploadService().uploadImage(await x.readAsBytes());
-      if (mounted) {
-        setState(() {
-          _photo = url;
-          _uploading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _uploading = false;
-          _error = '$e'.replaceFirst('Exception: ', '');
-        });
-      }
-    }
-  }
-
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_specs.isEmpty) {
       setState(() => _error = 'اختر تخصصًا واحدًا على الأقل.');
-      return;
-    }
-    if (_uploading) {
-      setState(() => _error = 'الصورة ما زالت تُرفع… انتظر ثم احفظ.');
       return;
     }
     if (_uid.isEmpty && widget.existing == null) {
@@ -1214,62 +1186,45 @@ class _LawyerFormSheetState extends State<LawyerFormSheet> {
               children: [
                 Row(
                   children: [
-                    InkWell(
-                      key: const Key('lawyer-photo-field'),
-                      onTap: _uploading ? null : _pickPhoto,
+                    ClipRRect(
                       borderRadius: BorderRadius.circular(14),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(14),
-                        child: _photo.isEmpty
-                            ? SizedBox(
-                                width: 92,
-                                height: 92,
-                                child: _uploading
-                                    ? const ColoredBox(
-                                        color: Color(0xFFE7F1F2),
-                                        child: Center(
-                                            child: CircularProgressIndicator(
-                                                strokeWidth: 2.4,
-                                                color: kLegalAdvisorColor)))
-                                    : const _LawyerAvatar(),
-                              )
-                            : FullFitImage(
-                                imageUrl: _photo,
-                                width: 92,
-                                fallback: const _LawyerAvatar(),
-                              ),
-                      ),
+                      child: _photo.isEmpty
+                          ? const SizedBox(
+                              width: 92,
+                              height: 92,
+                              child: _LawyerAvatar(),
+                            )
+                          : FullFitImage(
+                              imageUrl: _photo,
+                              width: 92,
+                              fallback: const _LawyerAvatar(),
+                            ),
                     ),
                     const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('صورة المحامي (اختياري)',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 13,
-                                  color: theme.colorScheme.onSurface)),
-                          const SizedBox(height: 4),
-                          Text(
-                              _photo.isEmpty
-                                  ? 'المس المربّع لاختيار صورة تظهر في السجل.'
-                                  : 'أُرفقت صورة ✓ — المس المربّع لتغييرها.',
-                              style: TextStyle(
-                                  fontSize: 11.5,
-                                  height: 1.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: theme.colorScheme.onSurfaceVariant)),
-                          if (_photo.isNotEmpty)
-                            TextButton(
-                              key: const Key('lawyer-photo-remove'),
-                              onPressed: () => setState(() => _photo = ''),
-                              child: const Text('إزالة الصورة'),
-                            ),
-                        ],
+                    const Expanded(
+                      child: Text(
+                        'صورة المحامي تظهر في السجل وفي صفحة التفاصيل — '
+                        'أضفها أو غيّرها من المحرّر أدناه.',
+                        style: TextStyle(
+                            fontSize: 11.5,
+                            height: 1.6,
+                            fontWeight: FontWeight.w700),
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 14),
+                ImageListEditor(
+                  label: 'صورة المحامي (اختياري)',
+                  fieldKey: 'photoUrl',
+                  single: true,
+                  urls: _photo.isEmpty ? const <String>[] : <String>[_photo],
+                  uploader: widget.uploader,
+                  bytesSource: widget.bytesSource,
+                  maxSide: 1280,
+                  onBusyChanged: (busy) => setState(() => _uploading = busy),
+                  onChanged: (urls) =>
+                      setState(() => _photo = urls.isEmpty ? '' : urls.first),
                 ),
                 const SizedBox(height: 14),
                 TextFormField(

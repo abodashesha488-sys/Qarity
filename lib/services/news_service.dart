@@ -7,6 +7,7 @@ import '../models/data_models.dart';
 import 'cache_service.dart';
 import 'notification_inbox_service.dart';
 import 'notification_service.dart';
+import 'owner_content_service.dart';
 import 'remote_push_service.dart';
 
 class NewsService {
@@ -172,4 +173,19 @@ class NewsService {
       ));
     }
   }
+
+  /// تعديل صاحب الخبر لخبره — قبل الاعتماد وبعده. المحرّك المشترك يفرض
+  /// `isApproved: false` فتعود للوحة المراجعة (كما تُثبت `firestore.rules`)،
+  /// ويترك نسبه (`authorId`/`authorName`) كما هو.
+  Future<void> updateNews(NewsItem news) => OwnerContentService.edit(
+        _firestore,
+        'news',
+        news.id,
+        news.toJson(),
+        label: news.title,
+      );
+
+  /// حذف فوري لصاحب الخبر: تعليقات الخبر ثم صوره ثم الوثيقة.
+  Future<void> deleteNews(String newsId) =>
+      OwnerContentService.remove(_firestore, 'news', newsId);
 }

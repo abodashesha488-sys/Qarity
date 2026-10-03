@@ -9,7 +9,9 @@ import '../../services/occasion_service.dart';
 import '../../services/share_service.dart';
 import '../../services/user_service.dart';
 import '../../widgets/app_card.dart';
+import '../../widgets/owner_actions.dart';
 import '../../widgets/qurity_app_bar.dart';
+import 'add.dart';
 
 class OccasionDetailScreen extends StatefulWidget {
   const OccasionDetailScreen({super.key});
@@ -57,6 +59,48 @@ class _OccasionDetailScreenState extends State<OccasionDetailScreen> {
     }
   }
 
+  String _currentUid() {
+    try {
+      return FirebaseAuth.instance.currentUser?.uid ?? '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  /// تعديل صاحب مناسبته: نفس نموذج الإضافة بـ`existing`، والنجاح يُغلق الصفحة
+  /// لأن المناسبة عادت إلى طابور المراجعة.
+  Future<void> _openEdit(Occasion occasion) async {
+    final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(
+        builder: (_) => AddOccasionScreen(existing: occasion)));
+    if (saved == true && mounted) Navigator.pop(context);
+  }
+
+  Future<bool> _delete(Occasion occasion) async {
+    try {
+      await _service.deleteOccasion(occasion.id);
+      if (mounted) Navigator.pop(context);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Widget? _ownerActions(Occasion occasion) {
+    final uid = _currentUid();
+    final owner = occasion.submittedBy ?? '';
+    if (uid.isEmpty || uid != owner) return null;
+    return OwnerActions(
+      keyTag: 'occasion-detail',
+      ownerId: owner,
+      currentUserId: uid,
+      itemName: occasion.title,
+      editLabel: 'تعديل المناسبة',
+      deleteLabel: 'حذف المناسبة',
+      onEdit: () => _openEdit(occasion),
+      onDelete: () => _delete(occasion),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -80,7 +124,8 @@ class _OccasionDetailScreenState extends State<OccasionDetailScreen> {
     if (occasion != null) {
       return RefreshIndicator(
         onRefresh: _refresh,
-        child: _OccasionDetailContent(occasion: occasion),
+        child: _OccasionDetailContent(
+            occasion: occasion, ownerActions: _ownerActions(occasion)),
       );
     }
 
@@ -116,7 +161,8 @@ class _OccasionDetailScreenState extends State<OccasionDetailScreen> {
         }
         return RefreshIndicator(
           onRefresh: _refresh,
-          child: _OccasionDetailContent(occasion: loaded),
+          child: _OccasionDetailContent(
+              occasion: loaded, ownerActions: _ownerActions(loaded)),
         );
       },
     );
@@ -124,9 +170,12 @@ class _OccasionDetailScreenState extends State<OccasionDetailScreen> {
 }
 
 class _OccasionDetailContent extends StatelessWidget {
-  const _OccasionDetailContent({required this.occasion});
+  const _OccasionDetailContent({required this.occasion, this.ownerActions});
 
   final Occasion occasion;
+
+  /// صفا تعديل المالك وحذفه — تبنيهما الشاشة الأم بحسب الجلسة.
+  final Widget? ownerActions;
 
   @override
   Widget build(BuildContext context) {
@@ -200,6 +249,10 @@ class _OccasionDetailContent extends StatelessWidget {
         if (!_isPastOccasion(occasion))
           _AttendanceSection(
               occasionId: occasion.id, occasionTitle: occasion.title),
+        if (ownerActions != null) ...[
+          const SizedBox(height: 20),
+          ownerActions!,
+        ],
       ],
     );
   }

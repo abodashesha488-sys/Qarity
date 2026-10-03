@@ -12,11 +12,39 @@ class _ReportsPageState extends State<_ReportsPage> {
   final AdminService _service = AdminService();
   bool _isLoading = true;
   Map<String, dynamic> _reportData = {};
+  StreamSubscription<String>? _pendingSub;
 
   @override
   void initState() {
     super.initState();
     _loadReportData();
+    // بطاقة «بانتظار المراجعة» هنا نسخة مخزّونة لا ستريم حيّ: بلا اشتراك تبقى
+    // أرقامها أقدم من قرار واحد أمام من يفتح التقارير بعد مراجعته.
+    _pendingSub = AdminService.pendingCountEvents.listen(_applyPendingCount);
+  }
+
+  @override
+  void dispose() {
+    _pendingSub?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _applyPendingCount(String collection) async {
+    final current = _reportData['pendingCounts'];
+    if (current is! Map<String, int>) return;
+    if (!current.containsKey(collection)) return;
+    final int count;
+    try {
+      count = await _service.recountPending(collection);
+    } catch (_) {
+      // يبقى آخر رقم معروف بدل صفر زائف؛ «اسحب للتحديث» يعيد العدّ كاملة.
+      return;
+    }
+    if (!mounted) return;
+    if (current[collection] == count) return;
+    setState(() {
+      _reportData['pendingCounts'] = {...current, collection: count};
+    });
   }
 
   Future<void> _loadReportData() async {
@@ -449,18 +477,20 @@ class _ReportsPageState extends State<_ReportsPage> {
 
   Future<void> _exportToJson() async {
     if (_reportData.isEmpty) {
-      _snack('لا توجد بيانات للتصدير');
+      _snack(kExportEmptyMessageAr);
       return;
     }
     try {
       final jsonStr = const JsonEncoder.withIndent('  ')
           .convert(_reportPayload);
-      await exportFile(
+      final saved = await exportFile(
         fileName: 'qarity_report_$_stamp.json',
         mimeType: 'application/json',
         bytes: utf8.encode(jsonStr),
       );
-      _snack('تم تصدير التقرير (JSON)');
+      _snack(saved ? 'تم تصدير التقرير (JSON)' : kExportCancelledMessageAr);
+    } on ExportException catch (e) {
+      _snack(e.message);
     } catch (e) {
       _snack('تعذّر التصدير: $e');
     }
@@ -468,7 +498,7 @@ class _ReportsPageState extends State<_ReportsPage> {
 
   Future<void> _exportToExcel() async {
     if (_reportData.isEmpty) {
-      _snack('لا توجد بيانات للتصدير');
+      _snack(kExportEmptyMessageAr);
       return;
     }
     try {
@@ -522,17 +552,18 @@ class _ReportsPageState extends State<_ReportsPage> {
         _writeRow(products, 1, ['لا توجد منتجات', '', '', '']);
       }
 
-      excel.delete('Sheet1');
-
-      final fileBytes = excel.encode();
-      if (fileBytes == null) throw Exception('فشل إنشاء ملف Excel');
-      await exportFile(
+      // `encodeWorkbook` يحذف `Sheet1` ويفحص أن البايتات غير فارغة — الورقتان
+      // هنا باسميهما العربيين فلا يبقى المجلد مفتوحًا على صفحة بيضاء.
+      final bytes = encodeWorkbook(excel);
+      final saved = await exportFile(
         fileName: 'qarity_report_$_stamp.xlsx',
         mimeType:
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        bytes: Uint8List.fromList(fileBytes),
+        bytes: bytes,
       );
-      _snack('تم تصدير التقرير (Excel)');
+      _snack(saved ? 'تم تصدير التقرير (Excel)' : kExportCancelledMessageAr);
+    } on ExportException catch (e) {
+      _snack(e.message);
     } catch (e) {
       _snack('تعذّر التصدير: $e');
     }

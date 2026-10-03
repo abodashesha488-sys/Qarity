@@ -1,7 +1,7 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../../services/market_service.dart';
+import '../../widgets/image_gallery_wrap.dart';
 import '../../widgets/qurity_app_bar.dart';
 
 class SellerGalleryScreen extends StatefulWidget {
@@ -77,28 +77,16 @@ class _SellerGalleryScreenState extends State<SellerGalleryScreen> {
                       ),
                     ],
                   )
-                : GridView.builder(
-                    padding: const EdgeInsets.all(12),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                    ),
-                    itemCount: _images.length,
-                    itemBuilder: (context, index) {
-                      return ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: CachedNetworkImage(
-                          imageUrl: _images[index],
-                          fit: BoxFit.cover,
-                          placeholder: (context, url) => ColoredBox(
-                            color: theme.colorScheme.surfaceContainerHighest,
-                            child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                          ),
-                          errorWidget: (context, url, error) => ColoredBox(
-                            color: theme.colorScheme.surfaceContainerHighest,
-                            child: Icon(Icons.broken_image_rounded, size: 40, color: theme.colorScheme.onSurfaceVariant),
-                          ),
+                : LayoutBuilder(
+                    builder: (context, constraints) {
+                      final tile = (constraints.maxWidth - 24 - 12) / 2;
+                      return SingleChildScrollView(
+                        padding: const EdgeInsets.all(12),
+                        child: ImageGalleryWrap(
+                          urls: _images,
+                          tileWidth: tile,
+                          radius: 16,
+                          spacing: 12,
                         ),
                       );
                     },

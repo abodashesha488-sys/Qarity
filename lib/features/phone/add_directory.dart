@@ -1,16 +1,33 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../../models/data_models.dart';
 import '../../services/image_upload_service.dart';
 import '../../services/phone_directory_service.dart';
+import '../../widgets/document_field_editor.dart';
 import '../../widgets/qurity_app_bar.dart';
 
 /// إضافة جهة اتصال — الاسم + رقم الهاتف + الوظيفة (اختياري) + صورة اختيارية.
+/// يقبل `existing` فيصبح نفس النموذج أداةً لتعديل صاحب البيان سجله (البند ٨).
 class AddPhoneDirectoryScreen extends StatefulWidget {
-  const AddPhoneDirectoryScreen({super.key});
+  const AddPhoneDirectoryScreen({
+    super.key,
+    this.uploader,
+    this.bytesSource,
+    this.service,
+    this.existing,
+  });
+
+  /// اختياري لاختبار المحرّر المشترك بلا شبكة ولا معرض جهاز.
+  final ImageUploadService? uploader;
+  final ImageBytesSource? bytesSource;
+
+  /// اختياري للحقن في الاختبارات.
+  final PhoneDirectoryService? service;
+
+  /// بيان يملكه المستخدم الحالي — الحفظ يكتب فوقه بدل بيان جديد.
+  final PhoneDirectoryEntry? existing;
 
   @override
   State<AddPhoneDirectoryScreen> createState() =>
@@ -19,14 +36,25 @@ class AddPhoneDirectoryScreen extends StatefulWidget {
 
 class _AddPhoneDirectoryScreenState extends State<AddPhoneDirectoryScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _phoneController = TextEditingController();
-  final _jobController = TextEditingController();
-  final PhoneDirectoryService _service = PhoneDirectoryService();
-  final ImagePicker _picker = ImagePicker();
+  late final _nameController =
+      TextEditingController(text: widget.existing?.name ?? '');
+  late final _phoneController =
+      TextEditingController(text: widget.existing?.phone ?? '');
+  late final _jobController =
+      TextEditingController(text: widget.existing?.job ?? '');
+  late final PhoneDirectoryService _service =
+      widget.service ?? PhoneDirectoryService();
   bool _isSaving = false;
   bool _uploadingPhoto = false;
   String? _photoUrl;
+
+  bool get _isEdit => widget.existing != null;
+
+  @override
+  void initState() {
+    super.initState();
+    _photoUrl = widget.existing?.photoUrl;
+  }
 
   @override
   void dispose() {
@@ -36,37 +64,17 @@ class _AddPhoneDirectoryScreenState extends State<AddPhoneDirectoryScreen> {
     super.dispose();
   }
 
-  Future<void> _pickPhoto() async {
-    setState(() => _uploadingPhoto = true);
-    try {
-      final XFile? image = await _picker.pickImage(
-          source: ImageSource.gallery,
-          imageQuality: 85,
-          maxWidth: 600,
-          maxHeight: 600);
-      if (image == null) return;
-      final bytes = await image.readAsBytes();
-      final url = await ImageUploadService().uploadImage(bytes);
-      if (!mounted) return;
-      setState(() => _photoUrl = url);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('خطأ في رفع الصورة: $e'), backgroundColor: Colors.red));
-      }
-    } finally {
-      if (mounted) setState(() => _uploadingPhoto = false);
-    }
-  }
-
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     final phone = _phoneController.text.trim();
+    final editing = widget.existing;
     setState(() => _isSaving = true);
     try {
       final entries = await _service.getApprovedEntriesList();
       final duplicate = entries.firstWhere(
-        (e) => _normalizePhone(e.phone) == _normalizePhone(phone),
+        (e) =>
+            _normalizePhone(e.phone) == _normalizePhone(phone) &&
+            e.id != editing?.id,
         orElse: () => const PhoneDirectoryEntry(
           id: '',
           name: '',
@@ -76,6 +84,7 @@ class _AddPhoneDirectoryScreenState extends State<AddPhoneDirectoryScreen> {
       );
       if (duplicate.id.isNotEmpty && duplicate.phone.isNotEmpty) {
         if (!mounted) return;
+        setState(() => _isSaving = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('هذا الرقم مسجل في الدليل تحت اسم: ${duplicate.name}'),
@@ -86,22 +95,32 @@ class _AddPhoneDirectoryScreenState extends State<AddPhoneDirectoryScreen> {
       }
       final job = _jobController.text.trim();
       final entry = PhoneDirectoryEntry(
-        id: '',
+        id: editing?.id ?? '',
         name: _nameController.text.trim(),
         title: job,
         phone: phone,
+        secondaryPhone: editing?.secondaryPhone,
         job: job.isNotEmpty ? job : null,
+        address: editing?.address,
+        email: editing?.email,
         photoUrl: _photoUrl,
-        submittedBy: FirebaseAuth.instance.currentUser?.uid,
+        isPublic: editing?.isPublic ?? true,
+        submittedBy: editing?.submittedBy ??
+            FirebaseAuth.instance.currentUser?.uid,
       );
-      await _service.addPhoneDirectoryEntry(entry);
+      if (editing == null) {
+        await _service.addPhoneDirectoryEntry(entry);
+      } else {
+        await _service.updatePhoneDirectoryEntry(entry);
+      }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('تم إرسال الطلب للمراجعة'),
-            backgroundColor: Color(0xFF6F4E37)),
-      );
-      Navigator.pop(context);
+        SnackBar(
+            content: Text(editing == null
+                ? 'تم إرسال الطلب للمراجعة'
+                : 'تم حفظ التعديلات — عاد البيان للمراجعة'),
+            backgroundColor: const Color(0xFF6F4E37)));
+      Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -119,7 +138,8 @@ class _AddPhoneDirectoryScreenState extends State<AddPhoneDirectoryScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: const QurityAppBar(title: 'إضافة جهة اتصال'),
+      appBar: QurityAppBar(
+          title: _isEdit ? 'تعديل جهة اتصال' : 'إضافة جهة اتصال'),
       body: AbsorbPointer(
         absorbing: _isSaving,
         child: SingleChildScrollView(
@@ -129,59 +149,44 @@ class _AddPhoneDirectoryScreenState extends State<AddPhoneDirectoryScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // صورة جهة الاتصال
+                // صورة جهة الاتصال — المعاينة دائرية والمرفع/الحذف للمحرّر المشترك
                 Center(
-                  child: GestureDetector(
-                    onTap: _uploadingPhoto ? null : _pickPhoto,
-                    child: Stack(
-                      children: [
-                        CircleAvatar(
-                          radius: 48,
-                          backgroundColor: theme.colorScheme.primary
-                              .withValues(alpha: 0.1),
-                          backgroundImage: _photoUrl != null
-                              ? CachedNetworkImageProvider(_photoUrl!)
-                              : null,
-                          child: _photoUrl == null
-                              ? Icon(Icons.person_rounded,
-                                  size: 44,
-                                  color: theme.colorScheme.primary)
-                              : null,
-                        ),
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.primary,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                  color: theme.colorScheme.surface, width: 2),
-                            ),
-                            child: _uploadingPhoto
-                                ? const SizedBox(
-                                    width: 14,
-                                    height: 14,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2, color: Colors.white))
-                                : const Icon(Icons.camera_alt_rounded,
-                                    size: 14, color: Colors.white),
-                          ),
-                        ),
-                      ],
-                    ),
+                  child: CircleAvatar(
+                    radius: 48,
+                    backgroundColor:
+                        theme.colorScheme.primary.withValues(alpha: 0.1),
+                    backgroundImage: _photoUrl != null
+                        ? CachedNetworkImageProvider(_photoUrl!)
+                        : null,
+                    child: _photoUrl == null
+                        ? Icon(Icons.person_rounded,
+                            size: 44, color: theme.colorScheme.primary)
+                        : null,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Center(
-                  child: Text(
-                    _photoUrl == null
-                        ? 'إضافة صورة (اختياري)'
-                        : 'المصورة جاهزة — اضغط للتغيير',
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                if (_uploadingPhoto)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 10),
+                    child: Center(
+                        child: SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2))),
                   ),
+                const SizedBox(height: 16),
+                ImageListEditor(
+                  label: 'صورة جهة الاتصال (اختياري)',
+                  fieldKey: 'photoUrl',
+                  single: true,
+                  urls:
+                      _photoUrl == null ? const <String>[] : <String>[_photoUrl!],
+                  uploader: widget.uploader,
+                  bytesSource: widget.bytesSource,
+                  maxSide: 600,
+                  onBusyChanged:
+                      (busy) => setState(() => _uploadingPhoto = busy),
+                  onChanged: (urls) =>
+                      setState(() => _photoUrl = urls.isEmpty ? null : urls.first),
                 ),
                 const SizedBox(height: 20),
                 TextFormField(
@@ -220,7 +225,9 @@ class _AddPhoneDirectoryScreenState extends State<AddPhoneDirectoryScreen> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          'سيتم مراجعة الإدخال من قبل الإدارة قبل نشره في الدليل',
+                          _isEdit
+                              ? 'حفظ التعديلات يعيد البيان إلى المراجعة قبل أن يظهر في الدليل'
+                              : 'سيتم مراجعة الإدخال من قبل الإدارة قبل نشره في الدليل',
                           style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.onSurface),
                         ),
@@ -232,14 +239,16 @@ class _AddPhoneDirectoryScreenState extends State<AddPhoneDirectoryScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton.icon(
-                    onPressed: _isSaving ? null : _submit,
+                    onPressed: _isSaving || _uploadingPhoto ? null : _submit,
                     icon: _isSaving
                         ? const SizedBox(
                             width: 18,
                             height: 18,
                             child: CircularProgressIndicator(strokeWidth: 2))
                         : const Icon(Icons.send_rounded),
-                    label: Text(_isSaving ? 'جاري الإرسال...' : 'إرسال للمراجعة'),
+                    label: Text(_isSaving
+                        ? 'جاري الحفظ...'
+                        : (_isEdit ? 'حفظ التعديلات' : 'إرسال للمراجعة')),
                     style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16)),
                   ),

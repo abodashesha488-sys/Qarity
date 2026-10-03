@@ -7,6 +7,7 @@ import '../models/data_models.dart';
 import 'cache_service.dart';
 import 'notification_inbox_service.dart';
 import 'notification_service.dart';
+import 'owner_content_service.dart';
 import 'remote_push_service.dart';
 
 /// توصيل إشعار الإعجاب لصاحب المنشور. قابل للحقن في الاختبارات؛ الإنتاج
@@ -85,6 +86,22 @@ class ForumService {
       ));
     }
   }
+
+  /// تعديل صاحب المنشور لمنشوره في أي وقت؛ يعود إلى المراجعة بلا لمس نسبه
+  /// (`userId`/`userName`/`userPhotoUrl`) — وهو ما ترفضه `firestore.rules`.
+  /// عدّادات التفاعل (`likes`/`likedBy`/`views`/`comments`) تُجرَّد من الرقعة
+  /// في طبقة المالك المشتركة فلا تُكتب قيمًا قديمة فوق ما جمعته الوثيقة.
+  Future<void> updatePost(ForumPost post) => OwnerContentService.edit(
+        _firestore,
+        'forum_posts',
+        post.id,
+        post.toJson(),
+        label: post.title,
+      );
+
+  /// حذف فوري لصاحب المنشور: تعليقاته ثم صورته ثم وثيقته.
+  Future<void> deletePost(String postId) =>
+      OwnerContentService.remove(_firestore, 'forum_posts', postId);
 
   /// يسجّل/يلغي إعجاب [userId] على [postId] داخل معاملة واحدة: القراءة ثم
   /// التعديل الذرّيان يمنعان فقدان إعجاب متزامن (was last-write-wins)، ويبقي

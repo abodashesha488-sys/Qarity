@@ -14,7 +14,9 @@ import '../../services/share_service.dart';
 import '../../services/user_service.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/full_fit_image.dart';
+import '../../widgets/owner_actions.dart';
 import '../../widgets/qurity_app_bar.dart';
+import 'add.dart';
 
 class ObituaryDetailScreen extends StatefulWidget {
   const ObituaryDetailScreen({super.key});
@@ -64,6 +66,50 @@ class _ObituaryDetailScreenState extends State<ObituaryDetailScreen> {
     await ShareService.shareObituaryAsImage(context, obituary);
   }
 
+  String _currentUid() {
+    try {
+      return FirebaseAuth.instance.currentUser?.uid ?? '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  /// تعديل صاحب نعوتته: نفس نموذج الإضافة بـ`existing`. النجاح يُغلق الصفحة لأن
+  /// السجل عاد إلى المراجعة فلم يعد هنا ما يُعرض.
+  Future<void> _openEdit(Obituary obituary) async {
+    final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(
+        builder: (_) => AddObituaryScreen(existing: obituary)));
+    if (saved == true && mounted) Navigator.pop(context);
+  }
+
+  Future<bool> _delete(Obituary obituary) async {
+    try {
+      await _service.deleteObituary(obituary.id);
+      if (mounted) Navigator.pop(context);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// صف «تعديل/حذف» لصاحب النعوة فقط — الإدارة تراجع من لوحة التحكم، لأن
+  /// قواعد البند ٨ تسمح بتعديل المالك لسجله العائد إلى المراجعة وحده.
+  Widget? _ownerActions(Obituary obituary) {
+    final uid = _currentUid();
+    final owner = obituary.submittedBy ?? '';
+    if (uid.isEmpty || uid != owner) return null;
+    return OwnerActions(
+      keyTag: 'obituary-detail',
+      ownerId: owner,
+      currentUserId: uid,
+      itemName: obituary.name,
+      editLabel: 'تعديل النعوة',
+      deleteLabel: 'حذف النعوة',
+      onEdit: () => _openEdit(obituary),
+      onDelete: () => _delete(obituary),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -88,7 +134,10 @@ class _ObituaryDetailScreenState extends State<ObituaryDetailScreen> {
     if (obituary != null) {
       return RefreshIndicator(
         onRefresh: _refresh,
-        child: _ObituaryDetailContent(obituary: obituary, onShare: _shareObituary),
+        child: _ObituaryDetailContent(
+            obituary: obituary,
+            onShare: _shareObituary,
+            ownerActions: _ownerActions(obituary)),
       );
     }
 
@@ -126,7 +175,10 @@ class _ObituaryDetailScreenState extends State<ObituaryDetailScreen> {
         }
         return RefreshIndicator(
           onRefresh: _refresh,
-          child: _ObituaryDetailContent(obituary: loaded, onShare: _shareObituary),
+          child: _ObituaryDetailContent(
+              obituary: loaded,
+              onShare: _shareObituary,
+              ownerActions: _ownerActions(loaded)),
         );
       },
     );
@@ -137,10 +189,14 @@ class _ObituaryDetailContent extends StatelessWidget {
   const _ObituaryDetailContent({
     required this.obituary,
     required this.onShare,
+    this.ownerActions,
   });
 
   final Obituary obituary;
   final Future<void> Function(Obituary) onShare;
+
+  /// صفا تعديل المالك وحذفه — تبنيهما الشاشة الأم بحسب الجلسة.
+  final Widget? ownerActions;
 
   @override
   Widget build(BuildContext context) {
@@ -278,6 +334,10 @@ class _ObituaryDetailContent extends StatelessWidget {
         const SizedBox(height: 24),
         _CondolenceSection(
             obituaryId: obituary.id, obituaryName: obituary.name),
+        if (ownerActions != null) ...[
+          const SizedBox(height: 20),
+          ownerActions!,
+        ],
       ],
     );
   }
