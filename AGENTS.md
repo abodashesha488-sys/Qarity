@@ -38,6 +38,19 @@ For Google Sign-In to work on web:
   - The value in `app_config.dart` is only a **dev default**; override it for releases and rotate it in ImgBB if leaked.
 - Used by: add product, add news, medical submissions, and image deletion flows.
 
+## Local secrets and `.env`
+- `.env` is **not tracked** (removed from the index 2026-10-03) and `.gitignore` also covers `.env.*` / `*.env`.
+  `.env.example` is the committed template — it carries variable names only, never values.
+- **Nothing reads `.env`**: the app takes its keys exclusively from `--dart-define` (`IMGBB_API_KEY`,
+  `OWM_API_KEY`, `BOOTSTRAP_ADMIN_EMAIL`, `FCM_VAPID_PUBLIC_KEY`, `PUSH_ENDPOINT`). Do not assume
+  dropping a value in `.env` changes a build.
+- **Open exposure that is still real:** the dev defaults inside `lib/core/constants/app_config.dart`
+  (ImgBB + OpenWeatherMap) are committed in a **public** repository. Isolating `.env` does not remove
+  them; **rotating those two keys in their own dashboards is the only remediation**, after which the
+  defaults should become `''` and every build should pass `--dart-define`.
+- Never print a key value in logs, commits, docs, or chat. SHA-1/SHA-256 stay out of the repo entirely
+  (add them only in Firebase Console from a safe environment).
+
 ## Push Notifications (Vercel worker — no Blaze plan required)
 Because Firebase Cloud Functions require the Blaze plan and this project is on Spark,
 push notifications go through a Vercel Serverless function instead.
@@ -435,4 +448,4 @@ The app is deployed on Firebase Hosting:
   `Get-Date).ToUniversalTime()`).
 
 ## Last Updated
-2026-10-03T19:20:00+03:00
+2026-10-03T19:45:00+03:00
