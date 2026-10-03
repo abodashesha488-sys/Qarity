@@ -80,3 +80,8 @@ android/.kotlin/
 # APK binaries served via hosting (kept local, never committed)
 web/download/*.apk
 download/*.apk
+
+# Local secret files (NEVER commit) — «.env» مذكور أعلاه، وهذه بقية الأشكال
+.env.*
+*.env
+!.env.example
