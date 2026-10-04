@@ -8,8 +8,8 @@ import '../../routes/app_routes.dart';
 import '../../services/image_upload_service.dart';
 import '../../services/user_service.dart';
 import '../../services/village_ad_service.dart';
+import '../../widgets/ad_photo_frame.dart';
 import '../../widgets/document_field_editor.dart';
-import '../../widgets/full_fit_image.dart';
 import '../../widgets/qurity_app_bar.dart';
 
 /// شاشة «إعلانات القرية» — إعلانات تجارية وخدمية وإنشائية لأهل القرية.
@@ -292,8 +292,8 @@ class _VillageAdsScreenState extends State<VillageAdsScreen> {
       );
 }
 
-/// بطاقة إعلان واحدة — مساحة صورة كاملة العرض ثم العنوان والوصف، فكل إعلان
-/// يُرى بوضوح ولا يُقصّ رسْمه.
+/// بطاقة إعلان واحدة — مساحة صورة معلومة الارتفاع يملؤها الرسم، ثم العنوان
+/// والوصف، فتتساوى البطاقات ولو اختلفت مقاسات صور أصحاب الإعلانات.
 class VillageAdCard extends StatelessWidget {
   const VillageAdCard({
     super.key,
@@ -326,15 +326,11 @@ class VillageAdCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            LayoutBuilder(builder: (context, c) {
-              final w = c.maxWidth.isFinite ? c.maxWidth : 360.0;
-              return FullFitImage(
-                imageUrl: ad.imageUrl,
-                width: w,
-                radius: 0,
-                fallback: _placeholder(w),
-              );
-            }),
+            AdPhotoFrame(
+              imageUrl: ad.imageUrl,
+              height: kVillageAdCardImageHeight,
+              accent: kVillageAdsColor,
+            ),
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
               child: Column(
@@ -420,14 +416,6 @@ class VillageAdCard extends StatelessWidget {
       ),
     );
   }
-
-  Widget _placeholder(double width) => Container(
-        width: width,
-        height: width * 0.62,
-        color: kVillageAdsColor.withValues(alpha: 0.10),
-        child: Icon(Icons.campaign_rounded,
-            size: 40, color: kVillageAdsColor.withValues(alpha: 0.6)),
-      );
 }
 
 /// شارة نوع الإعلان (تجارية / خدمية / إنشائية).

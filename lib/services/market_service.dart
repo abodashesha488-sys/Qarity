@@ -207,10 +207,18 @@ class MarketService {
   Future<void> deleteProduct(String productId) =>
       OwnerContentService.remove(_firestore, 'market_products', productId);
 
-  Stream<List<MarketProduct>> getProductsStream({int? limit}) {
+  /// تدفّق منتجات معتمدة. `category` تصفية خادمية بمساواة واحدة إضافية —
+  /// **بلا `orderBy`** فلا فهرس مركّب جديد، والترتيب يُحسم في الكلاينت.
+  Stream<List<MarketProduct>> getProductsStream({
+    int? limit,
+    String? category,
+  }) {
     Query<Map<String, dynamic>> query = _firestore
         .collection('market_products')
         .where('isApproved', isEqualTo: true);
+    if (category != null && category.isNotEmpty) {
+      query = query.where('category', isEqualTo: category);
+    }
     if (limit != null) {
       query = query.orderBy('createdAt', descending: true).limit(limit);
     }

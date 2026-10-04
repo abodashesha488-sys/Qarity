@@ -12,9 +12,13 @@ class CommonAppBarActions {
   }
 
 /// جرس الإشعارات — عادي لـ AppBar، أو `compact` دائري زجاجي لهيدر الرئيسية.
+/// `compactSize` يضبط قطر الدائرة (افتراضيًا 42)، فتبقى الشارة والأيقونة
+/// متناسبة مع أي حجم يطلبه الهيدر.
 class NotificationBellButton extends StatefulWidget {
-  const NotificationBellButton({super.key, this.compact = false});
+  const NotificationBellButton(
+      {super.key, this.compact = false, this.compactSize});
   final bool compact;
+  final double? compactSize;
 
   @override
   State<NotificationBellButton> createState() => _NotificationBellButtonState();
@@ -68,20 +72,22 @@ class _NotificationBellButtonState extends State<NotificationBellButton> {
           );
         }
         // النسخة المضغوطة (هيدر الرئيسية) — دائرة بلون الثيم + شارة غير مقطوعة
+        final side = widget.compactSize ?? 42.0;
+        final scale = side / 42.0;
         return Padding(
           padding: const EdgeInsetsDirectional.only(end: 4, top: 1, bottom: 1),
           child: InkWell(
             customBorder: const CircleBorder(),
             onTap: open,
             child: Container(
-              width: 42,
-              height: 42,
+              width: side,
+              height: side,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: Theme.of(context).colorScheme.primaryContainer,
                 border: Border.all(
                     color: Colors.white.withValues(alpha: 0.55),
-                    width: 1.6),
+                    width: 1.6 * scale),
                 boxShadow: const [
                   BoxShadow(
                       color: Color(0x40000000),
@@ -95,28 +101,28 @@ class _NotificationBellButtonState extends State<NotificationBellButton> {
                   Icon(
                     Icons.notifications_none_rounded,
                     color: Theme.of(context).colorScheme.onPrimaryContainer,
-                    size: 21),
+                    size: 21 * scale),
                   if (unread > 0)
                     PositionedDirectional(
-                      top: 4,
-                      end: 3,
+                      top: 4 * scale,
+                      end: 3 * scale,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 4.5, vertical: 1),
-                        constraints: const BoxConstraints(minWidth: 15),
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 4.5 * scale, vertical: 1 * scale),
+                        constraints: BoxConstraints(minWidth: 15 * scale),
                         decoration: BoxDecoration(
                           color: Theme.of(context).colorScheme.error,
                           borderRadius: BorderRadius.circular(999),
                           border: Border.all(
                               color: Colors.white.withValues(alpha: 0.9),
-                              width: 1.2),
+                              width: 1.2 * scale),
                         ),
                         child: Text(
                             unread > 99 ? '99+' : '$unread',
                             textAlign: TextAlign.center,
-                            style: const TextStyle(
+                            style: TextStyle(
                                 color: Colors.white,
-                                fontSize: 8.5,
+                                fontSize: 8.5 * scale,
                                 height: 1.25,
                                 fontWeight: FontWeight.w900)),
                       ),

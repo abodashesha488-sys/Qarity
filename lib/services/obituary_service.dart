@@ -21,11 +21,17 @@ class ObituaryService {
     if (!forceRefresh) {
       final cached = await CacheService.getObituaries();
       if (cached != null) {
-        return cached.map((json) => Obituary.fromJson(json, 'cache')).toList();
+        return cached
+            .map((json) => _tryParse(json, 'cache'))
+            .nonNulls
+            .toList();
       }
     }
     final snapshot = await _firestore.collection('obituaries').where('isApproved', isEqualTo: true).get();
-    final obituaries = snapshot.docs.map((doc) => Obituary.fromJson(doc.data(), doc.id)).toList();
+    final obituaries = snapshot.docs
+        .map((doc) => _tryParse(doc.data(), doc.id))
+        .nonNulls
+        .toList();
     await CacheService.saveObituaries(obituaries.map((o) => o.toJson()).toList());
     return obituaries;
   }
@@ -35,7 +41,19 @@ class ObituaryService {
         .collection('obituaries')
         .where('isApproved', isEqualTo: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) => Obituary.fromJson(doc.data(), doc.id)).toList());
+        .map((snapshot) => snapshot.docs
+            .map((doc) => _tryParse(doc.data(), doc.id))
+            .nonNulls
+            .toList());
+  }
+
+  /// وثيقة تالفة واحدة تُتخطّى ولا تُفرغ صفحة «سجل العزاء» كاملة.
+  static Obituary? _tryParse(Map<String, dynamic> data, String id) {
+    try {
+      return Obituary.fromJson(data, id);
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<Obituary?> getObituaryById(String id) async {
@@ -43,7 +61,7 @@ class ObituaryService {
     final doc = await _firestore.collection('obituaries').doc(id.trim()).get();
     final data = doc.data();
     if (!doc.exists || data == null) return null;
-    return Obituary.fromJson(data, doc.id);
+    return _tryParse(data, doc.id);
   }
 
   Future<void> addObituary(Obituary obituary) async {

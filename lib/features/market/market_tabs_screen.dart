@@ -153,7 +153,7 @@ class _MarketTabsScreenState extends State<MarketTabsScreen>
         controller: _tabController,
         children: const [
           _MarketTab(),
-          _ShopsTab(),
+          ShopsTab(),
           _BuyRequestsTab(),
           _DonationsTab(),
         ],

@@ -243,7 +243,7 @@ void main() {
       expect(src.contains('Wrap('), isTrue);
     });
 
-    test('بوابة الأقسام: بلاطتان في السطر بصور أكبر، والمحتوى كما هو', () {
+    test('بوابة الأقسام: بلاطتان في السطر بصور أكبر، والستة الأولى كما هي', () {
       final src = File('lib/features/medical/medical_home_screen.dart')
           .readAsStringSync();
       // تنسيق عرض فقط: عمودان بدل ثلاثة، والصورة تُفكّ بمقاسها الفعلي.
@@ -252,10 +252,11 @@ void main() {
           reason: 'لاعودة لشبكة الثلاثة أعمدة');
       expect(src.contains('cacheWidth: 520'), isTrue,
           reason: 'بلاطة بعرض ~172dp تحتاج ~520px عند DPR 3 لا 280');
-      // والأقسام الستة بمساراتها وصورها لم تمسّ.
+      // والأقسام السبعة بمساراتها وصورها لم تمسّ — السابع «المستلزمات الطبية»
+      // هو المضاف بهذا الطلب، لا تعديل في شيء من الستة قبله.
       expect(RegExp(r"\('([^']+)', 'assets/images/[^']+'\)", multiLine: true)
           .allMatches(src)
-          .length, 6);
+          .length, 7);
     });
   });
 

@@ -13,6 +13,13 @@ const List<String> kVillageAdKinds = ['تجارية', 'خدمية', 'إنشائ�
 /// أو موقع العمل بلا إثقال القراءة ولا الحفظ.
 const int kVillageAdMaxImages = 3;
 
+/// ارتفاع مساحة صورة الإعلان في البطاقة — مساحة معلومة يملؤها الرسم، فالإعلان
+/// لا يُقاس بمقاس صورة صاحبه وإلا تفاوتت البطاقات تفاوتًا يُربك القراءة.
+const double kVillageAdCardImageHeight = 230;
+
+/// مثلها في صفحة التفاصيل — مساحة أوسع قليلاً تُرى فيها الصورة بوضوح.
+const double kVillageAdDetailImageHeight = 260;
+
 IconData villageAdKindIcon(String kind) => switch (kind) {
       'خدمية' => Icons.handyman_rounded,
       'إنشائية' => Icons.construction_rounded,

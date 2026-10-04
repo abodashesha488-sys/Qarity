@@ -295,6 +295,12 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
         for (final r in value.whereType<Map>()) {
           final name = (r['name'] ?? '').toString();
           if (name.isEmpty) continue;
+          // نوع قرابة مكتوب يدويًا: عنوانه الحرفي كما أدخله صاحبه.
+          final custom = (r['typeLabel'] ?? '').toString().trim();
+          if (custom.isNotEmpty) {
+            grouped.putIfAbsent(custom, () => []).add(name);
+            continue;
+          }
           final typeKey = (r['type'] ?? '').toString();
           final group =
               RelativeType.values.where((t) => t.name == typeKey).toList();
@@ -330,9 +336,11 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
         'funeralDate': 'تاريخ صلاة الجنازة',
         'funeralLocation': 'مكان صلاة الجنازة',
         'funeralTime': 'موعد صلاة الجنازة',
+        'funeralPrayer': 'صلاة الجنازة المحددة',
         'burialLocation': 'مكان الدفن',
         'condolenceLocation': 'مكان العزاء',
         'condolenceTime': 'موعد العزاء',
+        'condolencePrayer': 'صلاة العزاء المحددة',
         'mosque': 'المسجد (حقل قديم)',
         'gender': 'نوع المتوفى',
         'age': 'العمر (حقل قديم)',

@@ -419,21 +419,26 @@ void main() {
           const MaterialApp(home: Scaffold(body: MedicalHomeScreen())));
       await tester.pump(const Duration(milliseconds: 600));
 
-      expect(MedicalHomeScreen.colors.length, 6);
+      expect(MedicalHomeScreen.colors.length, 7);
       final assets = tester
           .widgetList<Image>(find.byType(Image))
           .map((i) => _assetName(i.image))
           .toList();
       expect(assets, contains('assets/images/nadara.jpg'));
+      expect(assets, contains('assets/images/doctor5.jpg'));
       // الشعار في أعلى الصفحة صورة من نفس المجلد، لذا يُحسب كل صورة قسم وحدها
       final sectionImages =
           assets.where((a) => a != 'assets/images/Qurity.png').toList();
-      expect(sectionImages.length, 6);
-      expect(sectionImages.toSet().length, 6);
+      expect(sectionImages.length, 7);
+      expect(sectionImages.toSet().length, 7);
     });
 
-    test('لكل قسم لون خاص — السادس غير الخامس', () {
+    test('لكل قسم لون خاص — السادس غير الخامس والسابع غيرهما', () {
       expect(MedicalHomeScreen.colors[5], isNot(MedicalHomeScreen.colors[4]));
+      expect(MedicalHomeScreen.colors[6], isNot(MedicalHomeScreen.colors[5]));
+      expect(MedicalHomeScreen.colors.toSet().length,
+          MedicalHomeScreen.colors.length,
+          reason: 'سبعة أقسام، سبعة ألوان لا تتكرر');
     });
 
     test('الإشعارات: إخطار الأدمن وقناة طبية', () {

@@ -176,14 +176,25 @@ Future<bool> showShopFormDialog(
     return false;
   }
 }
-class _ShopsTab extends StatelessWidget {
-  const _ShopsTab();
+/// تبويب المحلات — كرتان في كل سطر. عام وقابل للحقن ليُختبر على بيانات بلا
+/// Firebase (نمط المشروع)، كما هو الحال في بطاقات الخدمات الطبية.
+class ShopsTab extends StatelessWidget {
+  const ShopsTab({super.key, this.service});
+
+  final ShopService? service;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final service = ShopService();
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final service = this.service ?? ShopService();
+    String? uid;
+    try {
+      uid = FirebaseAuth.instance.currentUser?.uid;
+    } catch (_) {
+      // بلا جلسة (أو بلا Firebase في الاختبار) تبقى قائمة القرية العامة هي
+      // المطلوب عرضها، فلا يُسقط شذوذٌ غير محاصر التبويب كله.
+      uid = null;
+    }
     return OfflineStreamBuilder<List<Shop>>(
       stream: service.getVisibleShopsStream(uid),
       onlineBuilder: (context, snapshot) {
@@ -214,105 +225,144 @@ class _ShopsTab extends StatelessWidget {
   }
 
   Widget _buildShopsList(ThemeData theme, List<Shop> shops) {
-    return ListView.separated(
+    return GridView.builder(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 14,
+        crossAxisSpacing: 14,
+        // ارتفاع مطلق لا نسبة: البطاقة تُركّ صورة ثابتة ثم أسطر محدودة،
+        // فالنسبة تُقصّ النص على الشاشات الأضيق.
+        mainAxisExtent: 212,
+      ),
       itemCount: shops.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, i) {
-            final s = shops[i];
-            final accent = RoleStyle.contentAccent(s.ownerRole, s.ownerSellerType);
-            return Card(
-              elevation: accent != null ? 2 : 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
-                side: BorderSide(
-                    width: accent != null ? 1.5 : 1,
-                    color: accent?.withValues(alpha: 0.7) ??
-                        theme.colorScheme.outlineVariant
-                            .withValues(alpha: 0.4)),
-              ),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(18),
-                onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => _ShopDetailScreen(shop: s))),
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Row(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(14),
-                        child: SizedBox(
-                            width: 60,
-                            height: 60,
-                            child: _net(s.imageUrl, theme)),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+        final s = shops[i];
+        return _ShopGridCard(
+          shop: s,
+          theme: theme,
+          onTap: () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => _ShopDetailScreen(shop: s))),
+        ).animate(delay: (i * 40).ms).fadeIn().slideX(begin: 0.06);
+      },
+    );
+  }
+}
+
+/// بطاقة محل في شبكة المحلات — صورتها تعلوها وشارة الانتظار فوقها، فالكرت
+/// يبدو متناسقًا ولو اختلفت المحلات في المقاس والنص.
+class _ShopGridCard extends StatelessWidget {
+  const _ShopGridCard({
+    required this.shop,
+    required this.theme,
+    required this.onTap,
+  });
+
+  final Shop shop;
+  final ThemeData theme;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = shop;
+    final accent = RoleStyle.contentAccent(s.ownerRole, s.ownerSellerType);
+    final radius = BorderRadius.circular(20);
+    return Card(
+      elevation: accent != null ? 2 : 0,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: radius,
+        side: BorderSide(
+            width: accent != null ? 1.5 : 1,
+            color: accent?.withValues(alpha: 0.7) ??
+                theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(
+              height: 110,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  _net(s.imageUrl, theme),
+                  if (!s.isApproved)
+                    PositionedDirectional(
+                      top: 6,
+                      start: 6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 7, vertical: 3),
+                        decoration: BoxDecoration(
+                            color: Colors.orange.withValues(alpha: 0.92),
+                            borderRadius: BorderRadius.circular(9)),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            RoleNameText(
-                                name: s.name,
-                                role: s.ownerRole,
-                                sellerType: s.ownerSellerType,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w900, fontSize: 15),
-                                iconSize: 14),
-                            const SizedBox(height: 3),
-                            if (!s.isApproved)
-                              Container(
-                                margin: const EdgeInsets.only(bottom: 4),
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                    color:
-                                        Colors.orange.withValues(alpha: 0.12),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                        color: Colors.orange
-                                            .withValues(alpha: 0.4))),
-                                child: const Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.hourglass_top_rounded,
-                                        size: 12, color: Colors.orange),
-                                    SizedBox(width: 4),
-                                    Text('بانتظار موافقة الإدارة',
-                                        style: TextStyle(
-                                            fontSize: 10.5,
-                                            fontWeight: FontWeight.w800,
-                                            color: Colors.orange)),
-                                  ],
-                                ),
-                              ),
-                            Text(s.category,
-                                style: TextStyle(
-                                    fontSize: 12,
-                                    color: theme.colorScheme.primary,
-                                    fontWeight: FontWeight.w700)),
-                            if (s.description.isNotEmpty) ...[
-                              const SizedBox(height: 3),
-                              Text(s.description,
-                                  style: TextStyle(
-                                      fontSize: 11,
-                                      color:
-                                          theme.colorScheme.onSurfaceVariant),
+                            Icon(Icons.hourglass_top_rounded,
+                                size: 11, color: Colors.white),
+                            SizedBox(width: 4),
+                            Flexible(
+                              child: Text('بانتظار موافقة الإدارة',
                                   maxLines: 1,
-                                  overflow: TextOverflow.ellipsis),
-                            ],
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.white)),
+                            ),
                           ],
                         ),
                       ),
-                      Icon(Icons.chevron_left_rounded,
-                          color: theme.colorScheme.onSurfaceVariant),
+                    ),
+                ],
+              ),
+            ),
+            // الجسم «المتبقّي» لا «مقدار ثابت»: الارتفاع المطلق للبطاقة قد
+            // يقلّ عن مجموع الأسطر على العروض الضيّقة، فالتوسيع يضمن أن
+            // النبذة هي من ينكمش (بسَطرين وellipsis) لا أن يفيض الكرت.
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(10, 9, 10, 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    RoleNameText(
+                        name: s.name,
+                        role: s.ownerRole,
+                        sellerType: s.ownerSellerType,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w900, fontSize: 14),
+                        iconSize: 13),
+                    const SizedBox(height: 3),
+                    Text(s.category,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 11.5,
+                            color: theme.colorScheme.primary,
+                            fontWeight: FontWeight.w800)),
+                    if (s.description.isNotEmpty) ...[
+                      const SizedBox(height: 5),
+                      Flexible(
+                        child: Text(s.description,
+                            style: TextStyle(
+                                fontSize: 11,
+                                height: 1.45,
+                                color: theme.colorScheme.onSurfaceVariant),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis),
+                      ),
                     ],
-                  ),
+                  ],
                 ),
               ),
-             ).animate(delay: (i * 40).ms).fadeIn().slideX(begin: 0.06);
-          },
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

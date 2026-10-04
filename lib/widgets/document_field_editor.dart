@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../models/data_models.dart';
 import '../services/image_upload_service.dart';
 
 /// أنواع الحقول التي يرسمها المُحرِّر المشترك.
@@ -154,6 +155,7 @@ String docFieldLabel(String key) {
     'placement': 'موضع الظهور',
     'startsAt': 'بداية النافذة',
     'endsAt': 'نهاية النافذة',
+    'relatives': 'أقارب المتوفى',
   };
   return labels[key] ?? key;
 }
@@ -191,6 +193,15 @@ List<DocFieldSpec> deriveMissingFields(
               ? DocFieldKind.image
               : (v.length > 60 ? DocFieldKind.multiline : DocFieldKind.text)));
     } else if (v is List) {
+      // قائمة تحوي خرائط أو قوائم (مثل `relatives`) لا يمكن تمثيلها في حقل نص:
+      // تحويلها إلى نص ثم تقسيمه على الفاصلة يمسح بنيتها ويُفسد الوثيقة.
+      final hasStructures =
+          v.any((e) => e is Map || e is List);
+      if (hasStructures) {
+        out.add(DocFieldSpec(entry.key, docFieldLabel(entry.key),
+            kind: DocFieldKind.readOnly, rawValue: v));
+        continue;
+      }
       final strings = v.map((e) => e?.toString() ?? '').toList();
       out.add(isImageFieldKey(entry.key) || strings.every(looksLikeImageUrl)
           ? DocFieldSpec(entry.key, docFieldLabel(entry.key),
@@ -357,7 +368,7 @@ class _DocFieldRowState extends State<DocFieldRow> {
             prefixIcon: Icon(Icons.lock_outline_rounded,
                 color: theme.colorScheme.onSurfaceVariant),
           ),
-          child: Text(_readable(spec.rawValue, theme),
+          child: Text(_readable(spec.rawValue, theme, key: spec.key),
               style: TextStyle(
                   fontSize: 13, color: theme.colorScheme.onSurfaceVariant)),
         ),
@@ -410,8 +421,10 @@ class _DocFieldRowState extends State<DocFieldRow> {
     );
   }
 
-  static String _readable(dynamic v, ThemeData theme) {
+  static String _readable(dynamic v, ThemeData theme, {String key = ''}) {
     if (v == null) return '—';
+    // قائمة أقارب العزاء خرائط لا نصوص: تُسمَّى عربية بدل طباعة `{id: …}`.
+    if (key == 'relatives') return obituaryRelativesReadable(v);
     final s = v is List ? v.map((e) => e.toString()).join('، ') : '$v';
     return s.length > 160 ? '${s.substring(0, 157)}…' : s;
   }
@@ -846,6 +859,9 @@ IconData docFieldIcon(String key) {
     case 'workingHours':
     case 'time':
       return Icons.schedule_rounded;
+    case 'funeralPrayer':
+    case 'condolencePrayer':
+      return Icons.mosque_rounded;
     case 'date':
     case 'dateOfDeath':
     case 'funeralDate':

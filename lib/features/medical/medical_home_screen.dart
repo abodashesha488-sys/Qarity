@@ -4,21 +4,31 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/constants/product_categories.dart';
+import '../../models/data_models.dart';
 import '../../models/medical_models.dart';
+import '../../routes/app_routes.dart';
 import '../../services/admin_service.dart';
 import '../../services/image_upload_service.dart';
+import '../../services/market_service.dart';
 import '../../services/medical_service.dart';
 import '../../services/share_service.dart';
 import '../../services/user_service.dart';
 import '../../widgets/clinic_photo_tile.dart';
 import '../../widgets/document_field_editor.dart';
+import '../../widgets/med_grid_tile.dart';
 import '../../widgets/owner_actions.dart';
 import '../../widgets/qurity_app_bar.dart';
+import '../market/add_product.dart';
 import 'medical_admin_screen.dart';
 import 'optical_shop_detail_screen.dart';
 
 /// بوابة الخدمات الطبية — شبكة صور بلا إطارات أو عناوين (مثل الشبكة
 /// الرئيسية وبوابة خدمات المزارع)، كل صورة تفتح شاشة قسمها.
+
+/// لون قسم «المستلزمات الطبية» — لا يتكرر مع ألوان الأقسام الأخرى في البوابة.
+const Color kMedicalSuppliesAccent = Color(0xFF0097A7);
+
 class MedicalHomeScreen extends StatelessWidget {
   const MedicalHomeScreen({super.key});
 
@@ -29,6 +39,7 @@ class MedicalHomeScreen extends StatelessWidget {
     ('صيدليات القرية', 'assets/images/doctor3.jpg'),
     ('معامل التحاليل', 'assets/images/doctor4.jpg'),
     ('نظارات طبية', 'assets/images/nadara.jpg'),
+    ('المستلزمات الطبية', 'assets/images/doctor5.jpg'),
   ];
 
   static const List<Color> colors = [
@@ -38,6 +49,7 @@ class MedicalHomeScreen extends StatelessWidget {
     Color(0xFF6F4E37),
     Color(0xFF6A1B9A),
     kOpticalAccent,
+    kMedicalSuppliesAccent,
   ];
 
   @override
@@ -113,20 +125,43 @@ class _MedicalSectionTile extends StatelessWidget {
 
 /// شاشة قسم طبي واحد — نفس محتوى التبويب السابق كاملاً مع FABه.
 class MedicalSectionScreen extends StatefulWidget {
-  const MedicalSectionScreen({super.key, required this.index});
+  const MedicalSectionScreen({
+    super.key,
+    required this.index,
+    this.clinicService,
+    this.pharmacyService,
+    this.labService,
+    this.opticalService,
+    this.marketService,
+  });
   final int index;
+
+  /// قابلة للحقن لاختبار الأقسام على بيانات بلا Firebase (نمط المشروع).
+  final VillageClinicService? clinicService;
+  final PharmacyService? pharmacyService;
+  final MedicalLabService? labService;
+  final OpticalShopService? opticalService;
+  final MarketService? marketService;
 
   @override
   State<MedicalSectionScreen> createState() => _MedicalSectionScreenState();
 }
 
 class _MedicalSectionScreenState extends State<MedicalSectionScreen> {
-  final MedicalCenterService _centerService = MedicalCenterService();
-  final VillageClinicService _clinicService = VillageClinicService();
-  final PharmacyService _pharmacyService = PharmacyService();
-  final MedicalLabService _labService = MedicalLabService();
-  final OpticalShopService _opticalService = OpticalShopService();
-  final AdminService _adminService = AdminService();
+  // كسولتان: تُبنى خادم كل قسم عند أول استعماله لا عند فتح الشاشة، فلا تُرمَى
+  // core/no-app حيث لا Firebase (اختبارات الواجهة بلا جلسة).
+  late final MedicalCenterService _centerService = MedicalCenterService();
+  late final VillageClinicService _clinicService =
+      widget.clinicService ?? VillageClinicService();
+  late final PharmacyService _pharmacyService =
+      widget.pharmacyService ?? PharmacyService();
+  late final MedicalLabService _labService =
+      widget.labService ?? MedicalLabService();
+  late final OpticalShopService _opticalService =
+      widget.opticalService ?? OpticalShopService();
+  late final MarketService _marketService =
+      widget.marketService ?? MarketService();
+  late final AdminService _adminService = AdminService();
   bool _isMedicalAdmin = false;
   String _profileName = '';
   int _opticalRefresh = 0;
@@ -138,6 +173,7 @@ class _MedicalSectionScreenState extends State<MedicalSectionScreen> {
         2 => 'عيادات القرية',
         3 => 'صيدليات القرية',
         5 => 'نظارات طبية',
+        6 => 'المستلزمات الطبية',
         _ => 'معامل التحاليل',
       };
 
@@ -149,12 +185,24 @@ class _MedicalSectionScreenState extends State<MedicalSectionScreen> {
   }
 
   Future<void> _loadProfile() async {
-    final u = await UserService().getCurrentUser();
-    if (mounted) setState(() => _profileName = (u?.name ?? '').trim());
+    // بلا جلسة (أو بلا Firebase في الاختبار) يبقى الاسم فارغًا: العرض له
+    // بدائل، فلا يصح أن يُسقط شذوذٌ غير محاصر الشاشة كلها.
+    String name = '';
+    try {
+      name = (await UserService().getCurrentUser())?.name.trim() ?? '';
+    } catch (_) {
+      name = '';
+    }
+    if (mounted) setState(() => _profileName = name);
   }
 
   Future<void> _checkMedicalAdmin() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final String? uid;
+    try {
+      uid = FirebaseAuth.instance.currentUser?.uid;
+    } catch (_) {
+      return;
+    }
     if (uid == null) return;
     final ok = await _adminService.isMedicalAdmin(uid);
     if (mounted) setState(() => _isMedicalAdmin = ok);
@@ -163,8 +211,12 @@ class _MedicalSectionScreenState extends State<MedicalSectionScreen> {
 
   String _userName() {
     if (_profileName.isNotEmpty) return _profileName;
-    final u = FirebaseAuth.instance.currentUser;
-    return u?.displayName ?? u?.email ?? 'مستخدم';
+    try {
+      final u = FirebaseAuth.instance.currentUser;
+      return u?.displayName ?? u?.email ?? 'مستخدم';
+    } catch (_) {
+      return 'مستخدم';
+    }
   }
 
   void _snack(String msg) {
@@ -190,11 +242,11 @@ class _MedicalSectionScreenState extends State<MedicalSectionScreen> {
           snackbar: _snack,
         );
       case 2:
-        return _ClinicsTab(snackbar: _snack);
+        return _ClinicsTab(snackbar: _snack, service: _clinicService);
       case 3:
-        return _PharmaciesTab(snackbar: _snack);
+        return _PharmaciesTab(snackbar: _snack, service: _pharmacyService);
       case 4:
-        return _LabsTab(snackbar: _snack);
+        return _LabsTab(snackbar: _snack, service: _labService);
       case 5:
         return _OpticalTab(
           snackbar: _snack,
@@ -202,8 +254,10 @@ class _MedicalSectionScreenState extends State<MedicalSectionScreen> {
           color: _color,
           refresh: _opticalRefresh,
         );
+      case 6:
+        return _SuppliesTab(snackbar: _snack, service: _marketService);
       default:
-        return _LabsTab(snackbar: _snack);
+        return _LabsTab(snackbar: _snack, service: _labService);
     }
   }
 
@@ -216,6 +270,7 @@ class _MedicalSectionScreenState extends State<MedicalSectionScreen> {
       3 => (run: _addPharmacy, label: 'أضف صيدلية'),
       4 => (run: _addLab, label: 'أضف معملاً'),
       5 => (run: _addOpticalShop, label: 'أضف محل نظارات'),
+      6 => (run: _addSupply, label: 'أضف مستلزمًا طبيًا'),
       _ => null,
     };
   }
@@ -312,6 +367,25 @@ class _MedicalSectionScreenState extends State<MedicalSectionScreen> {
     } catch (e) {
       _snack('خطأ: $e');
     }
+  }
+
+  /// المستلزمات الطبية منتجات سوق بامتياز: تُفتح نفس «إضافة منتج» بفئة هذا
+  /// القسم وحدها (نفس عقد الوسائط الذي يستعمله محل النظارات)، فلا نموذج
+  /// ثانٍ ولا مجموعة ثانية تُراجَع خارج قناة المنتجات القائمة.
+  Future<void> _addSupply() async {
+    try {
+      if (FirebaseAuth.instance.currentUser?.uid == null) {
+        _snack('سجّل الدخول أولاً');
+        return;
+      }
+    } catch (_) {
+      // لا Firebase في اختبارات الواجهة — يُترك المسار للشاشة نفسها.
+    }
+    if (!mounted) return;
+    Navigator.pushNamed(context, AppRoutes.marketAdd,
+        arguments: <String, dynamic>{
+          kCategoryOptionsArgKey: const [kMedicalSuppliesCategory]
+        });
   }
 
   @override
@@ -1037,15 +1111,17 @@ class _DonorCard extends StatelessWidget {
 
 // ═══════════════════════ Tab 3: عيادات القرية ═══════════════════════
 class _ClinicsTab extends StatefulWidget {
-  const _ClinicsTab({required this.snackbar});
+  const _ClinicsTab({required this.snackbar, this.service});
   final void Function(String) snackbar;
+  final VillageClinicService? service;
 
   @override
   State<_ClinicsTab> createState() => _ClinicsTabState();
 }
 
 class _ClinicsTabState extends State<_ClinicsTab> {
-  final VillageClinicService _service = VillageClinicService();
+  late final VillageClinicService _service =
+      widget.service ?? VillageClinicService();
   final TextEditingController _search = TextEditingController();
   // تدفّق واحد مثبّت — إعادة بنائها كل ضغطة كانت تفقد مربع البحث التركيز.
   late final Stream<List<VillageClinic>> _stream = _service.getApprovedStream();
@@ -1094,13 +1170,12 @@ class _ClinicsTabState extends State<_ClinicsTab> {
                   ? const _MedEmpty(
                       icon: Icons.add_business_rounded,
                       message: 'لا توجد عيادات معتمدة بعد')
-                  : ListView.separated(
+                  : GridView.builder(
                       padding: const EdgeInsets.fromLTRB(16, 4, 16, 110),
+                      gridDelegate: kMedGridDelegate,
                       itemCount: items.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
                       itemBuilder: (context, i) => _ClinicCard(clinic: items[i]),
-                    ),
-            ),
+                    ),            ),
           ],
         );
       },
@@ -1115,103 +1190,39 @@ class _ClinicCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    const accent = Color(0xFF00897B);
-    return Card(
-      elevation: 0,
-      clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-        side:
-            BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
-      ),
-      child: InkWell(
-        onTap: () =>
-            Navigator.pushNamed(context, '/medical/clinic-detail',
-                arguments: clinic),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              Container(
-                width: 62,
-                height: 62,
-                decoration: BoxDecoration(
-                    color: accent.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(14)),
-                clipBehavior: Clip.antiAlias,
-                child: clinic.imageUrl.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: clinic.imageUrl,
-                        fit: BoxFit.cover,
-                        errorWidget: (_, __, ___) => const Icon(
-                            Icons.add_business_rounded,
-                            color: accent),
-                      )
-                    : const Icon(Icons.add_business_rounded,
-                        color: accent),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(clinic.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w900, fontSize: 15)),
-                    const SizedBox(height: 4),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 4,
-                      children: [
-                        if (clinic.specialty.isNotEmpty)
-                          _Tag(clinic.specialty, accent),
-                        if (clinic.ownerName.isNotEmpty)
-                          _Tag('د. ${clinic.ownerName}',
-                              theme.colorScheme.onSurfaceVariant),
-                      ],
-                    ),
-                    if (clinic.workingHours.isNotEmpty ||
-                        clinic.address.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        [
-                          if (clinic.workingHours.isNotEmpty)
-                            clinic.workingHours,
-                          if (clinic.address.isNotEmpty) clinic.address,
-                        ].join(' • '),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            fontSize: 11.5,
-                            color: theme.colorScheme.onSurfaceVariant),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              Icon(Icons.chevron_left_rounded,
-                  color: theme.colorScheme.onSurfaceVariant),
-            ],
-          ),
-        ),
-      ),
-    ).animate().fadeIn(duration: 200.ms);
+    return MedGridTile(
+      title: clinic.name,
+      imageUrl: clinic.imageUrl,
+      icon: Icons.add_business_rounded,
+      accent: const Color(0xFF00897B),
+      onTap: () => Navigator.pushNamed(context, '/medical/clinic-detail',
+          arguments: clinic),
+      tags: [
+        if (clinic.specialty.isNotEmpty)
+          _Tag(clinic.specialty, const Color(0xFF00897B)),
+        if (clinic.ownerName.isNotEmpty)
+          _Tag('د. ${clinic.ownerName}', theme.colorScheme.onSurfaceVariant),
+      ],
+      subtitle: [
+        if (clinic.workingHours.isNotEmpty) clinic.workingHours,
+        if (clinic.address.isNotEmpty) clinic.address,
+      ].join(' • '),
+    );
   }
 }
 
 // ═══════════════════════ Tab 4: صيدليات القرية ═══════════════════════
 class _PharmaciesTab extends StatefulWidget {
-  const _PharmaciesTab({required this.snackbar});
+  const _PharmaciesTab({required this.snackbar, this.service});
   final void Function(String) snackbar;
+  final PharmacyService? service;
 
   @override
   State<_PharmaciesTab> createState() => _PharmaciesTabState();
 }
 
 class _PharmaciesTabState extends State<_PharmaciesTab> {
-  final PharmacyService _service = PharmacyService();
+  late final PharmacyService _service = widget.service ?? PharmacyService();
   final TextEditingController _search = TextEditingController();
   late final Stream<List<Pharmacy>> _stream = _service.getApprovedStream();
 
@@ -1259,10 +1270,10 @@ class _PharmaciesTabState extends State<_PharmaciesTab> {
                   ? const _MedEmpty(
                       icon: Icons.local_pharmacy_rounded,
                       message: 'لا توجد صيدليات معتمدة بعد')
-                  : ListView.separated(
+                  : GridView.builder(
                       padding: const EdgeInsets.fromLTRB(16, 4, 16, 110),
+                      gridDelegate: kMedGridDelegate,
                       itemCount: items.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
                       itemBuilder: (context, i) =>
                           _PharmacyCard(pharmacy: items[i]),
                     ),
@@ -1282,103 +1293,35 @@ class _PharmacyCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     const accent = Color(0xFF6F4E37);
-    return Card(
-      elevation: 0,
-      clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-        side:
-            BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
-      ),
-      child: InkWell(
-        onTap: () =>
-            Navigator.pushNamed(context, '/medical/pharmacy-detail',
-                arguments: pharmacy),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              Container(
-                width: 62,
-                height: 62,
-                decoration: BoxDecoration(
-                    color: accent.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(14)),
-                clipBehavior: Clip.antiAlias,
-                child: pharmacy.imageUrl.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: pharmacy.imageUrl,
-                        fit: BoxFit.cover,
-                        errorWidget: (_, __, ___) => const Icon(
-                            Icons.local_pharmacy_rounded, color: accent),
-                      )
-                    : const Icon(Icons.local_pharmacy_rounded, color: accent),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(pharmacy.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 15)),
-                        ),
-                        if (pharmacy.is24Hours)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                                color: accent.withValues(alpha: 0.14),
-                                borderRadius: BorderRadius.circular(8)),
-                            child: const Text('٢٤ ساعة',
-                                style: TextStyle(
-                                    fontSize: 10.5,
-                                    fontWeight: FontWeight.w800,
-                                    color: accent)),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    if (pharmacy.ownerName.isNotEmpty)
-                      Text(pharmacy.ownerName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                              fontSize: 12,
-                              color: theme.colorScheme.onSurfaceVariant)),
-                    if (pharmacy.workingHours.isNotEmpty ||
-                        pharmacy.address.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Text(
-                          [
-                            if (pharmacy.workingHours.isNotEmpty)
-                              pharmacy.workingHours,
-                            if (pharmacy.address.isNotEmpty)
-                              pharmacy.address,
-                          ].join(' • '),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              fontSize: 11.5, color: Colors.grey),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              Icon(Icons.chevron_left_rounded,
-                  color: theme.colorScheme.onSurfaceVariant),
-            ],
-          ),
-        ),
-      ),
-    ).animate().fadeIn(duration: 200.ms);
+    return MedGridTile(
+      title: pharmacy.name,
+      imageUrl: pharmacy.imageUrl,
+      icon: Icons.local_pharmacy_rounded,
+      accent: accent,
+      onTap: () => Navigator.pushNamed(context, '/medical/pharmacy-detail',
+          arguments: pharmacy),
+      badge: pharmacy.is24Hours
+          ? Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(8)),
+              child: const Text('٢٤ ساعة',
+                  style: TextStyle(
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w800,
+                      color: accent)),
+            )
+          : null,
+      tags: [
+        if (pharmacy.ownerName.isNotEmpty)
+          _Tag(pharmacy.ownerName, theme.colorScheme.onSurfaceVariant),
+      ],
+      subtitle: [
+        if (pharmacy.workingHours.isNotEmpty) pharmacy.workingHours,
+        if (pharmacy.address.isNotEmpty) pharmacy.address,
+      ].join(' • '),
+    );
   }
 }
 
@@ -1396,6 +1339,11 @@ class _Tag extends StatelessWidget {
           color: color.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(8)),
       child: Text(text,
+          // سطر واحد دائمًا: الوسم داخل `Wrap` بعرض البطاقة (~١٥٢dp)، ونصّ
+          // التخصص أو «د. فلان» الطويل كان يلتفّ سطرين داخل الوسم نفسه فتتجاوز
+          // مجموعتا الأوسمة ارتفاع جسم البطاقة المقصوص (فيضان مقيس ٢px).
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: TextStyle(
               fontSize: 10.5, fontWeight: FontWeight.w800, color: color)),
     );
@@ -1404,15 +1352,17 @@ class _Tag extends StatelessWidget {
 
 // ═══════════════════════ Tab 5: معامل التحاليل ═══════════════════════
 class _LabsTab extends StatefulWidget {
-  const _LabsTab({required this.snackbar});
+  const _LabsTab({required this.snackbar, this.service});
   final void Function(String) snackbar;
+  final MedicalLabService? service;
 
   @override
   State<_LabsTab> createState() => _LabsTabState();
 }
 
 class _LabsTabState extends State<_LabsTab> {
-  final MedicalLabService _service = MedicalLabService();
+  late final MedicalLabService _service =
+      widget.service ?? MedicalLabService();
   final TextEditingController _search = TextEditingController();
   late final Stream<List<MedicalLab>> _stream = _service.getApprovedStream();
 
@@ -1461,10 +1411,10 @@ class _LabsTabState extends State<_LabsTab> {
                   ? const _MedEmpty(
                       icon: Icons.science_rounded,
                       message: 'لا توجد معامل معتمدة بعد')
-                  : ListView.separated(
+                  : GridView.builder(
                       padding: const EdgeInsets.fromLTRB(16, 4, 16, 110),
+                      gridDelegate: kMedGridDelegate,
                       itemCount: items.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
                       itemBuilder: (context, i) => _LabCard(lab: items[i]),
                     ),
             ),
@@ -1483,102 +1433,36 @@ class _LabCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     const accent = Color(0xFF6A1B9A);
-    return Card(
-      elevation: 0,
-      clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-        side:
-            BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
-      ),
-      child: InkWell(
-        onTap: () =>
-            Navigator.pushNamed(context, '/medical/lab-detail', arguments: lab),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              Container(
-                width: 62,
-                height: 62,
-                decoration: BoxDecoration(
-                    color: accent.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(14)),
-                clipBehavior: Clip.antiAlias,
-                child: lab.imageUrl.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: lab.imageUrl,
-                        fit: BoxFit.cover,
-                        errorWidget: (_, __, ___) =>
-                            const Icon(Icons.science_rounded, color: accent),
-                      )
-                    : const Icon(Icons.science_rounded, color: accent),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(lab.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w900, fontSize: 15)),
-                        ),
-                        if (lab.homeCollection)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                                color: accent.withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(8)),
-                            child: const Text('سحب منزلي',
-                                style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w800,
-                                    color: accent)),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 4,
-                      children: [
-                        if (lab.category.isNotEmpty) _Tag(lab.category, accent),
-                        if (lab.ownerName.isNotEmpty)
-                          _Tag(lab.ownerName,
-                              theme.colorScheme.onSurfaceVariant),
-                      ],
-                    ),
-                    if (lab.workingHours.isNotEmpty ||
-                        lab.address.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 5),
-                        child: Text(
-                          [
-                            if (lab.workingHours.isNotEmpty) lab.workingHours,
-                            if (lab.address.isNotEmpty) lab.address,
-                          ].join(' • '),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              fontSize: 11.5, color: Colors.grey),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              Icon(Icons.chevron_left_rounded,
-                  color: theme.colorScheme.onSurfaceVariant),
-            ],
-          ),
-        ),
-      ),
-    ).animate().fadeIn(duration: 200.ms);
+    return MedGridTile(
+      title: lab.name,
+      imageUrl: lab.imageUrl,
+      icon: Icons.science_rounded,
+      accent: accent,
+      onTap: () =>
+          Navigator.pushNamed(context, '/medical/lab-detail', arguments: lab),
+      badge: lab.homeCollection
+          ? Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8)),
+              child: const Text('سحب منزلي',
+                  style: TextStyle(
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w800,
+                      color: accent)),
+            )
+          : null,
+      tags: [
+        if (lab.category.isNotEmpty) _Tag(lab.category, accent),
+        if (lab.ownerName.isNotEmpty)
+          _Tag(lab.ownerName, theme.colorScheme.onSurfaceVariant),
+      ],
+      subtitle: [
+        if (lab.workingHours.isNotEmpty) lab.workingHours,
+        if (lab.address.isNotEmpty) lab.address,
+      ].join(' • '),
+    );
   }
 }
 
@@ -1822,43 +1706,87 @@ class _OpticalTabState extends State<_OpticalTab> {
                   ? const _MedEmpty(
                       icon: Icons.remove_red_eye_rounded,
                       message: 'لا توجد محلات نظارات معتمدة بعد')
-                  : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 110),
-                      itemCount: items.length + (hidden.isEmpty ? 0 : 1),
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
-                      itemBuilder: (context, i) {
-                        if (hidden.isNotEmpty && i == 0) {
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Text('محلاتي غير الظاهرة في الدليل (${hidden.length})',
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w900,
-                                      fontSize: 14)),
-                              const SizedBox(height: 8),
-                              ...hidden.map((s) => Padding(
-                                    padding: const EdgeInsets.only(bottom: 10),
-                                    child: _OpticalCard(
-                                      shop: s,
-                                      accent: widget.color,
-                                      // الإعلان يُختار من صفحة المحل بعد الإنشاء،
-                                      // فكل محل صاحبه يملك زر تفعيل العرض المميز.
-                                      onRenew: () => _renew(s),
-                                    ),
-                                  )),
-                              const SizedBox(height: 4),
-                            ],
-                          );
-                        }
-                        final index = hidden.isNotEmpty ? i - 1 : i;
-                        return _OpticalCard(
-                            shop: items[index], accent: widget.color);
-                      },
+                  : CustomScrollView(
+                      slivers: [
+                        if (hidden.isNotEmpty)
+                          SliverPadding(
+                            padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+                            sliver: SliverToBoxAdapter(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Text(
+                                      'محلاتي غير الظاهرة في الدليل (${hidden.length})',
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 14)),
+                                  const SizedBox(height: 8),
+                                  ...hidden.map((s) => Padding(
+                                        padding:
+                                            const EdgeInsets.only(bottom: 10),
+                                        child: _OpticalCard(
+                                          shop: s,
+                                          accent: widget.color,
+                                          // الإعلان يُختار من صفحة المحل بعد الإنشاء،
+                                          // فكل محل صاحبه يملك زر تفعيل العرض المميز.
+                                          onRenew: () => _renew(s),
+                                        ),
+                                      )),
+                                ],
+                              ),
+                            ),
+                          ),
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 110),
+                          sliver: SliverGrid(
+                            gridDelegate: kMedGridDelegate,
+                            delegate: SliverChildBuilderDelegate(
+                              (context, i) => _OpticalGridCard(
+                                  shop: items[i], accent: widget.color),
+                              childCount: items.length,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
             ),
           ],
         );
       },
+    );
+  }
+}
+
+/// بطاقة محل نظارات في شبكة الدليل (كرتان في السطر).
+class _OpticalGridCard extends StatelessWidget {
+  const _OpticalGridCard({required this.shop, required this.accent});
+  final OpticalShop shop;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final live = shop.adLiveAt(DateTime.now());
+    return MedGridTile(
+      title: shop.name,
+      imageUrl: shop.imageUrl,
+      icon: Icons.remove_red_eye_rounded,
+      accent: accent,
+      goldBorder: live,
+      onTap: () => Navigator.pushNamed(context, '/medical/optical-detail',
+          arguments: shop),
+      badge: live ? const _Tag('مميز', Color(0xFFB8860B)) : null,
+      tags: [
+        // وسمان كحدّ أقصى: ثلاثة وسوم بعرض ~١٧٢dp تلتفّ أسطرًا وتتجاوز ارتفاع
+        // البطاقة، فيُكتفى بأول تصنيف وصاحب المحل.
+        if (shop.categories.isNotEmpty) _Tag(shop.categories.first, accent),
+        if (shop.ownerName.isNotEmpty)
+          _Tag(shop.ownerName, theme.colorScheme.onSurfaceVariant),
+      ],
+      subtitle: [
+        if (shop.workingHours.isNotEmpty) shop.workingHours,
+        if (shop.address.isNotEmpty) shop.address,
+      ].join(' • '),
     );
   }
 }
@@ -2122,6 +2050,135 @@ class _OpticalFormSheetState extends State<OpticalFormSheet> {
               maxLines: 3),
         ],
       ),
+    );
+  }
+}
+
+// ═══════════════════════ المستلزمات الطبية ═══════════════════════
+/// قسم «المستلزمات الطبية»: منتجات السوق المكتوبة بتصنيف
+/// [kMedicalSuppliesCategory] فقط. لا مجموعة جديدة ولا مراجعة ثانية —
+/// المنتج يُقبل/يُرفض من قناة «المنتجات» القائمة، والتصفية خادمية
+/// بمساواتين (`isApproved` + `category`) بلا `orderBy` فلا فهرس مركّب.
+class _SuppliesTab extends StatefulWidget {
+  const _SuppliesTab({required this.snackbar, this.service});
+  final void Function(String) snackbar;
+  final MarketService? service;
+
+  @override
+  State<_SuppliesTab> createState() => _SuppliesTabState();
+}
+
+class _SuppliesTabState extends State<_SuppliesTab> {
+  late final MarketService _service = widget.service ?? MarketService();
+  final TextEditingController _search = TextEditingController();
+
+  /// مثبّت في الحالة: إعادة بناء الشاشة (كل حرف بحث) كانت تعيد الاشتراك
+  /// بالقائمة كاملة.
+  late final Stream<List<MarketProduct>> _stream =
+      _service.getProductsStream(category: kMedicalSuppliesCategory);
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<MarketProduct>>(
+      stream: _stream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        var items = [...snapshot.data ?? []];
+        items.sort((a, b) => (b.createdAt ?? DateTime(1900))
+            .compareTo(a.createdAt ?? DateTime(1900)));
+        final q = _search.text.trim().toLowerCase();
+        if (q.isNotEmpty) {
+          items = items
+              .where((p) =>
+                  p.name.toLowerCase().contains(q) ||
+                  p.description.toLowerCase().contains(q) ||
+                  p.sellerName.toLowerCase().contains(q))
+              .toList();
+        }
+        return Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: TextField(
+                controller: _search,
+                onChanged: (_) => setState(() {}),
+                decoration: const InputDecoration(
+                  hintText: 'ابحث عن مستلزم طبي...',
+                  isDense: true,
+                  prefixIcon: Icon(Icons.search_rounded, size: 20),
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
+              ),
+            ),
+            Expanded(
+              child: items.isEmpty
+                  ? const _MedEmpty(
+                      icon: Icons.medical_services_rounded,
+                      message: 'لا توجد مستلزمات طبية معتمدة بعد')
+                  : GridView.builder(
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 110),
+                      gridDelegate: kMedGridDelegate,
+                      itemCount: items.length,
+                      itemBuilder: (context, i) =>
+                          _SuppliesCard(product: items[i]),
+                    ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _SuppliesCard extends StatelessWidget {
+  const _SuppliesCard({required this.product});
+  final MarketProduct product;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final p = product;
+    final price = p.effectivePrice;
+    return MedGridTile(
+      title: p.name,
+      imageUrl: p.imageUrls.isNotEmpty ? p.imageUrls.first : p.imageUrl,
+      icon: Icons.medical_services_rounded,
+      accent: kMedicalSuppliesAccent,
+      onTap: () => Navigator.pushNamed(context, AppRoutes.marketProductDetail,
+          arguments: p),
+      // السعر في شارة بجوار العنوان: المستلزم يُقارن بثمنه أولًا، والشارة
+      // تبقى داخل صفّ العنوان المقصوص فلا تفيض البطاقة.
+      badge: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+        decoration: BoxDecoration(
+            color: (p.hasActiveOffer ? theme.colorScheme.error : kMedicalSuppliesAccent)
+                .withValues(alpha: 0.14),
+            borderRadius: BorderRadius.circular(8)),
+        child: Text('${price.toStringAsFixed(0)} ج.م',
+            style: TextStyle(
+                fontSize: 9.5,
+                fontWeight: FontWeight.w900,
+                color: p.hasActiveOffer
+                    ? theme.colorScheme.error
+                    : kMedicalSuppliesAccent)),
+      ),
+      tags: [
+        if (p.hasActiveOffer)
+          _Tag('-${p.discountPercent.round()}٪ عرض', theme.colorScheme.error),
+        if (p.sellerName.isNotEmpty)
+          _Tag(p.sellerName, theme.colorScheme.onSurfaceVariant),
+        if (!p.isInStock) const _Tag('نفد المخزون', Colors.brown),
+      ],
+      subtitle: p.description,
     );
   }
 }

@@ -206,11 +206,15 @@ class ObituaryShareCard extends StatelessWidget {
         o.burialLocation.isNotEmpty ? o.burialLocation : o.mosque;
     return [
       for (final e in <_PlaceData>[
-        _PlaceData('مكان صلاة الجنازة', o.funeralLocation, o.funeralTime),
+        _PlaceData(
+            'مكان صلاة الجنازة',
+            o.funeralLocation,
+            obituaryTimeWithPrayer(o.funeralTime, o.funeralPrayer)),
         // السجل القديم لا يملك مكان دفن، فيه «المسجد» هو المدخول وحده.
         _PlaceData(
             o.burialLocation.isNotEmpty ? 'مكان الدفن' : 'المسجد', burial, ''),
-        _PlaceData('مكان العزاء', o.condolenceLocation, o.condolenceTime),
+        _PlaceData('مكان العزاء', o.condolenceLocation,
+            obituaryTimeWithPrayer(o.condolenceTime, o.condolencePrayer)),
       ])
         if (e.value.isNotEmpty || e.time.isNotEmpty) e,
     ];

@@ -102,10 +102,69 @@ const String kObituaryGenderMale = 'رجل';
 const String kObituaryGenderFemale = 'امرأة';
 const List<String> kObituaryGenders = [kObituaryGenderMale, kObituaryGenderFemale];
 
+/// الصلوات التي يُحدَّد بها وقت صلاة الجنازة ووقت العزاء: نص عربي مخزَّن كما
+/// يُعرض، فلا هجرة ولا فهرس، والسجل القديم بغير الحقل يبقى فارغًا.
+const List<String> kObituaryPrayers = [
+  'صلاة الظهر',
+  'صلاة العصر',
+  'صلاة المغرب',
+  'صلاة العشاء',
+  'صلاة الفجر',
+];
+
+/// الموعد مع اسم الصلاة في نص واحد («10:30 ص — صلاة الظهر»): السجل القديم بلا
+/// صلاة يعرض موعده كما هو، ومن اختار صلاة بلا وقت تُعرض صلاته وحدها.
+String obituaryTimeWithPrayer(String time, String prayer) {
+  if (prayer.isEmpty) return time;
+  if (time.isEmpty) return prayer;
+  return '$time — $prayer';
+}
+
+/// قائمة أقارب خام (كما هي في الوثيقة) في سطر عربي مقروء: «عنوان: أسماء».
+/// النوع المكتوب يدويًا يبقى عنوانه حرفيًا، والمفهرس يُصرَّف بالنوع المُمرَّر
+/// (فارغ ⇒ المذكر، وهو الوضع الافتراضي لأي سجل قديم). تستعملها لوحة الإدارة
+/// حيث تُعرض القائمة للقراءة فقط، فلا يُرى dumps الخرائط الخام.
+String obituaryRelativesReadable(dynamic raw, {String gender = ''}) {
+  final labels = <String>[];
+  final names = <String, List<String>>{};
+  for (final r in _obituaryRelativesOf(raw)) {
+    final name = r.name.trim();
+    if (name.isEmpty) continue;
+    final custom = r.typeLabel.trim();
+    final label = custom.isNotEmpty
+        ? custom
+        : (r.type.isEditableGroup ? r.type.labelFor(gender) : r.type.label);
+    if (!names.containsKey(label)) {
+      labels.add(label);
+      names[label] = <String>[];
+    }
+    names[label]!.add(name);
+  }
+  if (labels.isEmpty) return 'لا يوجد';
+  return [for (final label in labels) '$label: ${names[label]!.join('، ')}']
+      .join(' | ');
+}
+
+/// قائمة الأقارب تتخطى أي عنصر ليس خريطة: مستند أُفسدت قائمته (نصوص مفصولة
+/// بالفاصلة بدل خرائط) يجب أن يُعرض ببقية بياناته، لا أن يرمي فيُفرغ صفحة
+/// السجل كاملة.
+List<Relative> _obituaryRelativesOf(dynamic value) {
+  if (value is! List) return const [];
+  return value
+      .whereType<Map>()
+      .map((e) => Relative.fromJson(Map<String, dynamic>.from(e)))
+      .toList();
+}
+
 class Relative {
   final String id;
   final String name;
   final RelativeType type;
+
+  /// نوع القرابة كما كتبه صاحب البيان حرفيًا (كتلة «قرابة أخرى — اكتبها
+  /// بنفسك»). نصّ فارغ في المجموعات الاثنتي عشرة وفي كل سجل قديم، فيُكتفى
+  /// بمفتاح `type` وتُصرَّف تسميته بالنوع كما هو.
+  final String typeLabel;
   final String? phone;
   final int order;
 
@@ -113,6 +172,7 @@ class Relative {
     required this.id,
     required this.name,
     required this.type,
+    this.typeLabel = '',
     this.phone,
     this.order = 0,
   });
@@ -126,6 +186,7 @@ class Relative {
         orElse: () => RelativeType.other,
       ),
       phone: json['phone'] as String?,
+      typeLabel: json['typeLabel'] as String? ?? '',
       order: json['order'] as int? ?? 0,
     );
   }
@@ -135,6 +196,7 @@ class Relative {
       'id': id,
       'name': name,
       'type': type.name,
+      'typeLabel': typeLabel,
       'phone': phone,
       'order': order,
     };
@@ -144,6 +206,7 @@ class Relative {
     String? id,
     String? name,
     RelativeType? type,
+    String? typeLabel,
     String? phone,
     int? order,
   }) {
@@ -151,6 +214,7 @@ class Relative {
       id: id ?? this.id,
       name: name ?? this.name,
       type: type ?? this.type,
+      typeLabel: typeLabel ?? this.typeLabel,
       phone: phone ?? this.phone,
       order: order ?? this.order,
     );
@@ -173,11 +237,18 @@ class Obituary implements BaseModel {
   /// موعد صلاة الجنازة نصًا مقروءًا («10:30 ص») لا طابع زمني، فالنموذج يسأل
   /// وقتًا فقط والسجل القديم بلا الحقل يبقى صحيح العرض.
   final String funeralTime;
+
+  /// اسم الصلاة المصاحبة لموعد الجنازة من `kObituaryPrayers` — فارغ في السجل
+  /// القديم فلا يُختلق موعد لم يسأله أحد.
+  final String funeralPrayer;
   final String burialLocation;
   final String condolenceLocation;
 
   /// موعد العزاء نصًا مقروءًا، يُعرض تحت مكان العزاء في البطاقة والتفاصيل.
   final String condolenceTime;
+
+  /// اسم الصلاة المصاحبة لموعد العزاء من `kObituaryPrayers`.
+  final String condolencePrayer;
   final String mosque;
   final String cardBackground;
   final String? imageUrl;
@@ -199,9 +270,11 @@ class Obituary implements BaseModel {
     this.funeralDate = '',
     this.funeralLocation = '',
     this.funeralTime = '',
+    this.funeralPrayer = '',
     this.burialLocation = '',
     this.condolenceLocation = '',
     this.condolenceTime = '',
+    this.condolencePrayer = '',
     this.mosque = '',
     this.cardBackground = '',
     this.imageUrl,
@@ -226,16 +299,16 @@ class Obituary implements BaseModel {
       funeralLocation:
           json['funeralLocation'] as String? ?? json['place'] as String? ?? '',
       funeralTime: json['funeralTime'] as String? ?? '',
+      funeralPrayer: json['funeralPrayer'] as String? ?? '',
       burialLocation: json['burialLocation'] as String? ?? '',
       condolenceLocation: json['condolenceLocation'] as String? ?? '',
       condolenceTime: json['condolenceTime'] as String? ?? '',
+      condolencePrayer: json['condolencePrayer'] as String? ?? '',
       mosque: json['mosque'] as String? ?? '',
       cardBackground: json['cardBackground'] as String? ?? '',
       imageUrl: json['imageUrl'] as String?,
       description: json['description'] as String?,
-      relatives: (json['relatives'] as List<dynamic>? ?? [])
-          .map((e) => Relative.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      relatives: _obituaryRelativesOf(json['relatives']),
       isApproved: json['isApproved'] as bool? ?? false,
       submittedBy: json['submittedBy'] as String?,
       approvedBy: json['approvedBy'] as String?,
@@ -257,9 +330,11 @@ class Obituary implements BaseModel {
       'funeralDate': funeralDate,
       'funeralLocation': funeralLocation,
       'funeralTime': funeralTime,
+      'funeralPrayer': funeralPrayer,
       'burialLocation': burialLocation,
       'condolenceLocation': condolenceLocation,
       'condolenceTime': condolenceTime,
+      'condolencePrayer': condolencePrayer,
       'mosque': mosque,
       'cardBackground': cardBackground,
       'imageUrl': imageUrl,
@@ -316,10 +391,14 @@ class Obituary implements BaseModel {
   List<Relative> relativesOf(RelativeType group) =>
       relatives.where((r) => r.type == group).toList();
 
-  /// أسماء مجموعة واحدة، مرتبة بحقل `order` كما أُدخِلت؛ الأسماء الفارغة أو
-  /// المسافات وحدها لا تُعرض، فلا يظهر عنوان مجموعة بلا أسماء تحته.
+  /// أسماء مجموعة مفهرسة واحدة، مرتبة بحقل `order` كما أُدخِلت؛ الأسماء الفارغة أو
+  /// المسافات وحدها لا تُعرض، فلا يظهر عنوان مجموعة بلا أسماء تحته. entries
+  /// لها نوع مكتوب يدويًا تُترك هنا لأن `customRelativeSections` تعرضها
+  /// بعنوانها الحرفي، وإلا ظهرت مرة تحت «أخرى» ومرة تحت اسمها.
   List<String> namesOf(RelativeType group) {
     final list = relativesOf(group)
+        .where((r) => r.typeLabel.trim().isEmpty)
+        .toList()
       ..sort((a, b) => a.order.compareTo(b.order));
     return list
         .map((r) => r.name.trim())
@@ -327,17 +406,43 @@ class Obituary implements BaseModel {
         .toList();
   }
 
+  /// الأنواع المكتوبة يدويًا: قسم مستقل لكل نوع بعنوانه الحرفي (بلا صرف
+  /// بالنوع، لأن الكاتب اختار لفظه بنفسه)، وأسماء النوع الواحد في سطر واحد
+  /// بترتيب الإدخال.
+  List<RelativeSection> get customRelativeSections {
+    final typed = relatives
+        .where((r) => r.typeLabel.trim().isNotEmpty && r.name.trim().isNotEmpty)
+        .toList()
+      ..sort((a, b) => a.order.compareTo(b.order));
+    final labels = <String>[];
+    final names = <String, List<String>>{};
+    for (final r in typed) {
+      final label = r.typeLabel.trim();
+      if (!names.containsKey(label)) {
+        labels.add(label);
+        names[label] = <String>[];
+      }
+      names[label]!.add(r.name.trim());
+    }
+    return [
+      for (final label in labels)
+        RelativeSection(RelativeType.other, label, names[label]!),
+    ];
+  }
+
   /// أي مجموعة تحمل أسماء، بما فيها التسميات التراثية، حتى لا تختفي بيانات
   /// سجل قديم عندما لا يندرج تحت التسع الجديدة.
   bool get hasRelatives => relatives.any((r) => r.name.trim().isNotEmpty);
 
-  /// أقسام الأقارب غير الفارغة بترتيب العرض وتسمياتها المصروفة حسب النوع.
+  /// أقسام الأقارب غير الفارغة بترتيب العرض وتسمياتها المصروفة حسب النوع،
+  /// ثم الأنواع المكتوبة يدويًا بعنوانها الحرفي، ثم التسميات التراثية.
   /// تستعملها بطاقة المشاركة وصفحة التفاصيل ولوحة الإدارة، فلا تتفارق
   /// التسميات بين موضعٍ وأخيه.
   List<RelativeSection> get relativeSections => [
         for (final group in kObituaryRelativeGroups)
           if (namesOf(group).isNotEmpty)
             RelativeSection(group, group.labelFor(gender), namesOf(group)),
+        ...customRelativeSections,
         for (final group in kLegacyRelativeGroups)
           if (namesOf(group).isNotEmpty)
             RelativeSection(group, group.label, namesOf(group)),

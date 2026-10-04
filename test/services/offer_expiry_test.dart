@@ -64,11 +64,14 @@ void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
   group('عقد النموذج الزمني', () {
-    test('hasActiveOffer هو hasActiveOfferAt(now) في كل حالة', () {
+    /// القياس على ساعة الجهاز: تاريخ مجمّد يجعل النافذة سارية عنده ومنتهية عند
+    /// `DateTime.now()` داخل المُحصِّلة، فيفشل العقد وحده بعد يومين من كتابته.
+    test('hasActiveOffer هو hasActiveOfferAt(الآن) في كل حالة', () {
+      final wallNow = DateTime.now();
       final cases = [
         _p(),
-        _p(offerEndsAt: now.add(const Duration(days: 1))),
-        _p(offerEndsAt: now.subtract(const Duration(days: 1))),
+        _p(offerEndsAt: wallNow.add(const Duration(days: 1))),
+        _p(offerEndsAt: wallNow.subtract(const Duration(days: 1))),
         _p(offerPrice: 120),
         _p(offerPrice: 100),
         _p(offerPrice: null),
@@ -77,7 +80,8 @@ void main() {
         _p(isOnOffer: false),
       ];
       for (final p in cases) {
-        expect(p.hasActiveOffer, p.hasActiveOfferAt(now), reason: p.toString());
+        expect(p.hasActiveOffer, p.hasActiveOfferAt(wallNow),
+            reason: p.toString());
       }
     });
 

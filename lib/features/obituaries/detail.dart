@@ -261,10 +261,12 @@ class _ObituaryDetailContent extends StatelessWidget {
         ),
         if (obituary.funeralLocation.isNotEmpty ||
             obituary.funeralTime.isNotEmpty ||
+            obituary.funeralPrayer.isNotEmpty ||
             obituary.burialLocation.isNotEmpty ||
             obituary.mosque.isNotEmpty ||
             obituary.condolenceLocation.isNotEmpty ||
-            obituary.condolenceTime.isNotEmpty) ...[
+            obituary.condolenceTime.isNotEmpty ||
+            obituary.condolencePrayer.isNotEmpty) ...[
           const SizedBox(height: 20),
           AppCard(
             child: Column(
@@ -279,11 +281,13 @@ class _ObituaryDetailContent extends StatelessWidget {
                       icon: Icons.mosque_rounded,
                       label: 'مكان صلاة الجنازة',
                       value: obituary.funeralLocation),
-                if (obituary.funeralTime.isNotEmpty)
+                if (obituary.funeralTime.isNotEmpty ||
+                    obituary.funeralPrayer.isNotEmpty)
                   _InfoRow(
                       icon: Icons.schedule_rounded,
                       label: 'موعد صلاة الجنازة',
-                      value: obituary.funeralTime),
+                      value: obituaryTimeWithPrayer(
+                          obituary.funeralTime, obituary.funeralPrayer)),
                 if (obituary.burialLocation.isNotEmpty)
                   _InfoRow(
                       icon: Icons.terrain_rounded,
@@ -301,11 +305,14 @@ class _ObituaryDetailContent extends StatelessWidget {
                       icon: Icons.home_rounded,
                       label: 'مكان العزاء',
                       value: obituary.condolenceLocation),
-                if (obituary.condolenceTime.isNotEmpty)
+                if (obituary.condolenceTime.isNotEmpty ||
+                    obituary.condolencePrayer.isNotEmpty)
                   _InfoRow(
                       icon: Icons.schedule_rounded,
                       label: 'موعد العزاء',
-                      value: obituary.condolenceTime),
+                      value: obituaryTimeWithPrayer(
+                          obituary.condolenceTime,
+                          obituary.condolencePrayer)),
               ],
             ),
           ),

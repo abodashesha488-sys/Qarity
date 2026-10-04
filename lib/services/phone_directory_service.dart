@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../core/utils/arabic_sort_key.dart';
 import '../models/data_models.dart';
 import 'cache_service.dart';
 import 'notification_inbox_service.dart';
@@ -15,22 +16,38 @@ class PhoneDirectoryService {
   PhoneDirectoryService([FirebaseFirestore? firestore])
       : _firestore = firestore ?? FirebaseFirestore.instance;
   
+  /// الترتيب الأبجدي العربي مصدره هذه الطبقة وحدها: كل قراءة للدليل ترجع
+  /// مرتّبة بالاسم (ثم بالرقم عند التساوي)، بلا `orderBy` على الخادم ولا فهرس
+  /// مركّب — فالخادم يُرجع مستنديين لا ترتيب لهما وقد لا يملك الاسم أصلًا.
+  static List<PhoneDirectoryEntry> _byArabicName(List<PhoneDirectoryEntry> e) {
+    final sorted = <PhoneDirectoryEntry>[...e];
+    sorted.sort((a, b) {
+      final byName = arabicSortKey(a.name).compareTo(arabicSortKey(b.name));
+      if (byName != 0) return byName;
+      return arabicSortKey(a.phone).compareTo(arabicSortKey(b.phone));
+    });
+    return sorted;
+  }
+
   Future<List<PhoneDirectoryEntry>> getApprovedEntriesList({bool forceRefresh = false}) async {
     if (!forceRefresh) {
       final cached = await CacheService.getPhoneDirectory();
       if (cached != null) {
-        return cached.map((json) => PhoneDirectoryEntry.fromJson(json, 'cache')).toList();
+        return _byArabicName(
+            cached.map((json) => PhoneDirectoryEntry.fromJson(json, 'cache')).toList());
       }
     }
     final snapshot = await _firestore.collection('phone_directory').where('isApproved', isEqualTo: true).get();
     final entries = snapshot.docs.map((doc) => PhoneDirectoryEntry.fromJson(doc.data(), doc.id)).toList();
     await CacheService.savePhoneDirectory(entries.map((e) => e.toJson()).toList());
-    return entries;
+    return _byArabicName(entries);
   }
 
   Future<List<PhoneDirectoryEntry>> getEntriesList() async {
     final snapshot = await _firestore.collection('phone_directory').get();
-    return snapshot.docs.map((doc) => PhoneDirectoryEntry.fromJson(doc.data(), doc.id)).toList();
+    return _byArabicName(snapshot.docs
+        .map((doc) => PhoneDirectoryEntry.fromJson(doc.data(), doc.id))
+        .toList());
   }
 
   /// المعتمدة للجميع + إدخالات المستخدم نفسه المعلقة (يراها بوسم «قيد المراجعة»).

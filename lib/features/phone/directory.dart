@@ -3,28 +3,42 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/utils/contact_links.dart';
 import '../../models/data_models.dart';
+import '../../models/service_provider_model.dart';
 import '../../routes/app_routes.dart';
 import '../../services/admin_service.dart';
 import '../../services/phone_directory_service.dart';
 import '../../widgets/owner_actions.dart';
 import '../../widgets/qurity_app_bar.dart';
+import '../../widgets/whatsapp_mark.dart';
 import 'add_directory.dart';
 
 class PhoneDirectoryScreen extends StatefulWidget {
-  const PhoneDirectoryScreen({super.key, this.embedded = false});
+  const PhoneDirectoryScreen({
+    super.key,
+    this.embedded = false,
+    this.service,
+    this.adminService,
+  });
 
   /// عند التضمين داخل تبويب (دليل الخدمات) يُخفى الـAppBar الخاص بالشاشة
   /// مع الإبقاء على كامل التصميم والبرمجة كما هي.
   final bool embedded;
+
+  /// اختياري للحقن في الاختبارات.
+  final PhoneDirectoryService? service;
+  final AdminService? adminService;
 
   @override
   State<PhoneDirectoryScreen> createState() => _PhoneDirectoryScreenState();
 }
 
 class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
-  final PhoneDirectoryService _service = PhoneDirectoryService();
-  final AdminService _adminService = AdminService();
+  late final PhoneDirectoryService _service =
+      widget.service ?? PhoneDirectoryService();
+  late final AdminService _adminService =
+      widget.adminService ?? AdminService();
   final TextEditingController _searchController = TextEditingController();
   List<PhoneDirectoryEntry> _entries = [];
   List<PhoneDirectoryEntry> _filteredEntries = [];
@@ -41,14 +55,17 @@ class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
   }
 
   Future<void> _checkAdminStatus() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
       final isAdmin = await _adminService.isAdminUser(user.uid);
       if (!mounted) return;
       setState(() => _isAdmin = isAdmin);
       if (isAdmin) {
         _loadPendingCount();
       }
+    } catch (_) {
+      // لا جلسة ولا Firebase (اختبارات): الدليل يُعرض بصفحة عامة بلا أدوات إدارة.
     }
   }
 
@@ -65,8 +82,7 @@ class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
 
   Future<void> _loadEntries() async {
     try {
-      final uid = FirebaseAuth.instance.currentUser?.uid;
-      final entries = await _service.getVisibleEntriesList(uid);
+      final entries = await _service.getVisibleEntriesList(_currentUid());
       if (!mounted) return;
       setState(() {
         _entries = entries;
@@ -216,48 +232,57 @@ class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
               : theme.colorScheme.error.withValues(alpha: 0.3),
         ),
       ),
-      child: Theme(
-        data: theme.copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          leading: GestureDetector(
-            onTap: () => _showContactDetailDialog(entry),
-            child: CircleAvatar(
-              backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
-              foregroundImage: entry.photoUrl != null && entry.photoUrl!.isNotEmpty
-                  ? CachedNetworkImageProvider(entry.photoUrl!)
-                  : null,
-              child: Text(
-                (entry.photoUrl != null && entry.photoUrl!.isNotEmpty) ? '' : (entry.name.isNotEmpty ? entry.name[0] : ''),
-                style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.w800),
-              ),
-            ),
-          ),
-          title: Text(entry.name, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
-          subtitle: isApproved
-              ? null
-              : Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.pending_rounded, size: 14, color: Colors.orange),
-                      const SizedBox(width: 4),
-                      Text(
-                        'قيد المراجعة',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: Colors.orange,
-                          fontWeight: FontWeight.w600,
+      // النقر على الصفّ كله — وعلى الاسم منه — يفتح بطاقة السجل.
+      child: InkWell(
+        key: Key('phone-row-${entry.id}'),
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => _showContactDetailDialog(entry),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            children: [
+              _avatar(theme, entry),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(entry.name,
+                        key: Key('phone-row-name-${entry.id}'),
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleSmall
+                            ?.copyWith(fontWeight: FontWeight.w800)),
+                    if (!isApproved)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.pending_rounded,
+                                size: 14, color: Colors.orange),
+                            const SizedBox(width: 4),
+                            Text(
+                              'قيد المراجعة',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: Colors.orange,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
+                  ],
                 ),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
+              ),
+              const SizedBox(width: 8),
               IconButton.filled(
+                key: Key('phone-row-call-${entry.id}'),
+                tooltip: 'اتصال',
                 onPressed: () => _makeCall(entry.phone),
                 icon: const Icon(Icons.call_rounded, size: 18),
-                style: IconButton.styleFrom(backgroundColor: const Color(0xFF6F4E37).withValues(alpha: 0.15)),
+                style: IconButton.styleFrom(
+                  backgroundColor: kCallButtonColor,
+                  foregroundColor: Colors.white,
+                ),
               ),
               if (_isAdmin && !isApproved)
                 PopupMenuButton<String>(
@@ -294,46 +319,69 @@ class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
                 ),
             ],
           ),
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildInfoRow(theme, 'الهاتف:', entry.phone),
-                  if (entry.secondaryPhone != null && entry.secondaryPhone!.isNotEmpty)
-                    _buildInfoRow(theme, 'هاتف إضافي:', entry.secondaryPhone!),
-                  if (entry.job != null && entry.job!.isNotEmpty)
-                    _buildInfoRow(theme, 'الوظيفة:', entry.job!),
-                  if (entry.address != null && entry.address!.isNotEmpty)
-                    _buildInfoRow(theme, 'العنوان:', entry.address!),
-                ],
-              ),
-            ),
-          ],
         ),
       ),
     );
   }
 
-  Widget _buildInfoRow(ThemeData theme, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Text(label, style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700)),
-          const SizedBox(width: 8),
-          Expanded(child: Text(value, style: theme.textTheme.bodySmall)),
-        ],
+  Widget _avatar(ThemeData theme, PhoneDirectoryEntry entry) {
+    final hasPhoto = entry.photoUrl != null && entry.photoUrl!.isNotEmpty;
+    return CircleAvatar(
+      backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
+      foregroundImage: hasPhoto ? CachedNetworkImageProvider(entry.photoUrl!) : null,
+      child: Text(
+        hasPhoto ? '' : (entry.name.isNotEmpty ? entry.name[0] : ''),
+        style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.w800),
       ),
     );
   }
 
-  Future<void> _makeCall(String phone) async {
-    final uri = Uri(scheme: 'tel', path: phone);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
+  /// اتصال بحالات فشل صادقة: بلا رقم / جهاز لا يستطيع / استثناء في المشغّل.
+  /// `report` هو موضع البطاقة نفسه (الشريط الأحمر داخلها)، وغيابه يعني
+  /// الصفّ في القائمة فيُبلَّغ بشريط أسفل الشاشة.
+  Future<void> _makeCall(String phone, {void Function(String)? report}) async {
+    final number = phone.trim();
+    if (number.isEmpty) {
+      _fail('لا يوجد رقم هاتف في هذا البيان.', report);
+      return;
     }
+    try {
+      final uri = Uri(scheme: 'tel', path: number);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+      } else {
+        _fail('لا يمكن الاتصال على هذا الجهاز.', report);
+      }
+    } catch (_) {
+      _fail('تعذّر بدء المكالمة — أعد المحاولة.', report);
+    }
+  }
+
+  /// مراسلة واتساب مباشرة: `wa.me/20xxxxxxxxxx` يبنيه `egyptianWhatsAppUrl`
+  /// (مصدر أرقام مصر الواحد)، فيفتح محادثة الرقم نفسه بلا وسيط.
+  Future<void> _openWhatsApp(String url, {void Function(String)? report}) async {
+    try {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        _fail('واتساب غير متاح على هذا الجهاز.', report);
+      }
+    } catch (_) {
+      _fail('تعذّر فتح المراسلة — تحقّق من الاتصال ثم أعد المحاولة.', report);
+    }
+  }
+
+  void _fail(String message, void Function(String)? report) {
+    if (report != null) {
+      report(message);
+      return;
+    }
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger
+      ..removeCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _approveEntry(PhoneDirectoryEntry entry) async {
@@ -376,16 +424,20 @@ class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
 
   Future<void> _showContactDetailDialog(PhoneDirectoryEntry entry) async {
     if (!mounted) return;
+    String? cardError;
     await showDialog(
       context: context,
       builder: (ctx) => Dialog(
         insetPadding: const EdgeInsets.symmetric(horizontal: 16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+        child: StatefulBuilder(
+          builder: (context, setCardState) {
+            void report(String message) => setCardState(() => cardError = message);
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
               // صورة كبيرة
               CircleAvatar(
                 radius: 64,
@@ -408,29 +460,63 @@ class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
                 Text(entry.job!, style: const TextStyle(fontSize: 14, color: Colors.grey)),
               ],
               const SizedBox(height: 16),
-              // أزرار الهاتف والواتساب
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  IconButton.filled(
-                    onPressed: () => _makeCall(entry.phone),
-                    icon: const Icon(Icons.call_rounded),
-                    style: IconButton.styleFrom(backgroundColor: const Color(0xFF6F4E37).withValues(alpha: 0.15)),
+              // أزرار الاتصال والمباشرة على واتساب برمز واتساب نفسه
+              Builder(builder: (context) {
+                final wa = egyptianWhatsAppUrl(entry.phone);
+                return Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton.icon(
+                        key: const Key('phone-card-call'),
+                        onPressed: () => _makeCall(entry.phone, report: report),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: kCallButtonColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        icon: const Icon(Icons.call_rounded, size: 18),
+                        label: const Text('اتصال',
+                            style: TextStyle(fontWeight: FontWeight.w800)),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Tooltip(
+                        message: wa == null
+                            ? 'الرقم غير صالح للمراسلة على واتساب'
+                            : 'مراسلة على واتساب',
+                        child: FilledButton.icon(
+                          key: const Key('phone-card-whatsapp'),
+                          onPressed:
+                              wa == null ? null : () => _openWhatsApp(wa, report: report),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: kWhatsAppGreen,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          icon: const WhatsAppMark(size: 20),
+                          label: const Text('واتساب',
+                              style: TextStyle(fontWeight: FontWeight.w800)),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              }),
+              // الفشل داخل البطاقة يُعلن هنا: الشريط السفلي يرسم خلف النافذة المفتوحة
+              if (cardError != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  cardError!,
+                  key: const Key('phone-card-error'),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFFB71C1C),
                   ),
-                  const SizedBox(width: 12),
-                  FutureBuilder<String?>(
-                    future: _getWhatsAppUrl(entry.phone),
-                    builder: (ctx, snap) {
-                      final url = snap.data;
-                      return IconButton.filled(
-                        onPressed: url != null ? () => _launchUrl(url) : null,
-                        icon: const Icon(Icons.message_rounded),
-                        style: IconButton.styleFrom(backgroundColor: const Color(0xFF25D366).withValues(alpha: 0.15)),
-                      );
-                    },
-                  ),
-                ],
-              ),
+                ),
+              ],
               const SizedBox(height: 16),
               // رقم الهاتف
               Text(entry.phone, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
@@ -466,6 +552,8 @@ class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
                 ),
             ],
           ),
+            );
+          },
         ),
       ),
     );
@@ -501,23 +589,6 @@ class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
     } catch (_) {
       return false;
     }
-  }
-
-  Future<String?> _getWhatsAppUrl(String phone) async {
-    final normalized = phone.replaceAll(RegExp(r'[\s\-\+\(\)\.]+'), '');
-    final waPhone = normalized.startsWith('0') ? '20${normalized.substring(1)}' : normalized;
-    final uri = Uri.parse('https://wa.me/$waPhone');
-    if (await canLaunchUrl(uri)) return uri.toString();
-    return null;
-  }
-
-  Future<void> _launchUrl(String url) async {
-    try {
-      final uri = Uri.parse(url);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      }
-    } catch (_) {}
   }
 
   void _navigateToAddScreen() {

@@ -607,7 +607,7 @@ class _HeroHeader extends StatelessWidget {
   final String dateLabel;
 
   Widget _pill({required Widget child}) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 5),
         decoration: BoxDecoration(
           color: const Color(0xE66F4E37),
           borderRadius: BorderRadius.circular(999),
@@ -629,8 +629,8 @@ class _HeroHeader extends StatelessWidget {
       width: double.infinity,
       decoration: const BoxDecoration(
         borderRadius: BorderRadius.only(
-            bottomLeft: Radius.circular(32),
-            bottomRight: Radius.circular(32)),
+            bottomLeft: Radius.circular(45),
+            bottomRight: Radius.circular(45)),
         boxShadow: [
           BoxShadow(
               color: Color(0x2E000000),
@@ -654,7 +654,7 @@ class _HeroHeader extends StatelessWidget {
           SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
+              padding: const EdgeInsets.fromLTRB(22, 11, 22, 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -667,18 +667,18 @@ class _HeroHeader extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _pill(child: const _VillageClock()),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 8),
                           _pill(
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 const Icon(Icons.event_rounded,
-                                    size: 11, color: Color(0xFFFFE082)),
-                                const SizedBox(width: 5),
+                                    size: 15, color: Color(0xFFFFE082)),
+                                const SizedBox(width: 7),
                                 Text(dateLabel,
                                     style: const TextStyle(
                                         color: Colors.white,
-                                        fontSize: 10,
+                                        fontSize: 14,
                                         fontWeight: FontWeight.w700)),
                               ],
                             ),
@@ -686,7 +686,8 @@ class _HeroHeader extends StatelessWidget {
                         ],
                       ),
                       const Spacer(),
-                      const NotificationBellButton(compact: true),
+                      const NotificationBellButton(
+                          compact: true, compactSize: 59),
                     ],
                   ),
                 ],
@@ -699,7 +700,7 @@ class _HeroHeader extends StatelessWidget {
             right: 0,
             bottom: 0,
             child: SizedBox(
-              height: 3,
+              height: 4,
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(colors: [
@@ -1023,14 +1024,14 @@ class _VillageClockState extends State<_VillageClock> {
       mainAxisSize: MainAxisSize.min,
       children: [
         const Icon(Icons.schedule_rounded,
-            size: 11, color: Color(0xFFFFE082)),
-        const SizedBox(width: 5),
+            size: 15, color: Color(0xFFFFE082)),
+        const SizedBox(width: 7),
         Text(text,
             style: const TextStyle(
                 color: Colors.white,
-                fontSize: 10.5,
+                fontSize: 14.5,
                 fontWeight: FontWeight.w800,
-                letterSpacing: 0.5,
+                letterSpacing: 0.7,
                 fontFeatures: [FontFeature.tabularFigures()])),
       ],
     );

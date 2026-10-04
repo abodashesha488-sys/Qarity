@@ -36,6 +36,7 @@ const List<PromoPlacement> kPromoPlacements = [
   PromoPlacement('med_pharmacies', 'المركز الطبي — الصيدليات', 'المركز الطبي'),
   PromoPlacement('med_labs', 'المركز الطبي — معامل التحاليل', 'المركز الطبي'),
   PromoPlacement('med_optical', 'المركز الطبي — نظارات طبية', 'المركز الطبي'),
+  PromoPlacement('med_supplies', 'المركز الطبي — مستلزمات طبية', 'المركز الطبي'),
   PromoPlacement('village_ads', 'إعلانات القرية', 'الأقسام الخدمية'),
   PromoPlacement('legal', 'مستشار القرية', 'الأقسام الخدمية'),
   PromoPlacement('agri_fertilizers', 'خدمات المزارع — الأسمدة', 'خدمات المزارع'),
@@ -96,6 +97,7 @@ String promoKeyForRoute(String name, Object? args) {
         3 => 'med_pharmacies',
         4 => 'med_labs',
         5 => 'med_optical',
+        6 => 'med_supplies',
         _ => 'medical',
       };
     default:
@@ -151,6 +153,7 @@ const List<PromoInternalLink> kPromoInternalLinks = [
   PromoInternalLink('المركز الطبي — الصيدليات', AppRoutes.medicalSection, '3'),
   PromoInternalLink('المركز الطبي — معامل التحاليل', AppRoutes.medicalSection, '4'),
   PromoInternalLink('المركز الطبي — نظارات طبية', AppRoutes.medicalSection, '5'),
+  PromoInternalLink('المركز الطبي — مستلزمات طبية', AppRoutes.medicalSection, '6'),
   PromoInternalLink('حالة الطقس', AppRoutes.weather),
   PromoInternalLink('ملفي الشخصي', AppRoutes.profileMain),
   PromoInternalLink('الإعدادات', AppRoutes.settingsIndex),

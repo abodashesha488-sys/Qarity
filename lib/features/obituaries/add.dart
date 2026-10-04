@@ -60,6 +60,11 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
   /// زمني يفسد السجلات القديمة.
   TimeOfDay? _funeralTime;
   TimeOfDay? _condolenceTime;
+
+  /// اسم الصلاة المصاحب لكل موعد، يُختار بجوار الوقت. فارغ في السجل القديم
+  /// فيبقى كما هو حتى يلمسه المستخدم.
+  String _funeralPrayer = '';
+  String _condolencePrayer = '';
   String? _imageUrl;
   String? _photoError;
   bool _isUploading = false;
@@ -103,6 +108,8 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
     _imageUrl = e.imageUrl;
     _savedFuneralTime = e.funeralTime;
     _savedCondolenceTime = e.condolenceTime;
+    _funeralPrayer = e.funeralPrayer;
+    _condolencePrayer = e.condolencePrayer;
     _selectedDeathDate = _parseObituaryDate(e.dateOfDeath);
     _selectedFuneralDate = _parseObituaryDate(e.funeralDate);
     _relatives
@@ -289,6 +296,58 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
     });
   }
 
+  /// الإدخالات ذات النوع المكتوب يدويًا (كتلة «قرابة أخرى») كما أُدخلت.
+  List<Relative> get _customRelatives =>
+      _relatives.where((r) => r.typeLabel.trim().isNotEmpty).toList();
+
+  List<String> _customNamesFor(String type) => _customRelatives
+      .where((r) => r.typeLabel.trim() == type)
+      .map((r) => r.name)
+      .toList();
+
+  /// النوع والاسم كلاهما مطلوب: النوع عنوانٌ يظهر في البطاقة، والاسم تحته،
+  /// ولا يُقبل أحدهما بلا الآخر صمتًا. يعيد صحيحًا فقط عند الإضافة الفعلية،
+  /// فتمسح الكتلة حقلَيها ولا تضيع على الرفض ما كتبه المستخدم.
+  bool _addCustomRelative(String rawType, String rawName) {
+    final type = rawType.trim();
+    final name = rawName.trim();
+    if (type.isEmpty) {
+      AppHelpers.showSnackBar(context, 'اكتب نوع القرابة أولاً', isError: true);
+      return false;
+    }
+    if (name.isEmpty) {
+      AppHelpers.showSnackBar(context, 'اكتب اسم القريب أولاً', isError: true);
+      return false;
+    }
+    if (_customNamesFor(type).contains(name)) {
+      AppHelpers.showSnackBar(
+          context, '«$name» مضاف بالفعل تحت «$type»', isError: true);
+      return false;
+    }
+    setState(() {
+      _relatives.add(Relative(
+        id: 'rel_${DateTime.now().millisecondsSinceEpoch}_${_relativeSeq++}',
+        name: name,
+        type: RelativeType.other,
+        typeLabel: type,
+        order: _customRelatives.length,
+      ));
+    });
+    return true;
+  }
+
+  void _removeCustomRelative(String id) {
+    setState(() {
+      _relatives.removeWhere((r) => r.id == id && r.typeLabel.trim().isNotEmpty);
+      var order = 0;
+      for (var i = 0; i < _relatives.length; i++) {
+        if (_relatives[i].typeLabel.trim().isNotEmpty) {
+          _relatives[i] = _relatives[i].copyWith(order: order++);
+        }
+      }
+    });
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_gender.isEmpty) {
@@ -333,11 +392,13 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
         funeralTime: _funeralTime != null
             ? obituaryTimeLabel(_funeralTime!)
             : (editing?.funeralTime ?? _savedFuneralTime),
+        funeralPrayer: _funeralPrayer,
         burialLocation: _burialLocationController.text.trim(),
         condolenceLocation: _condolenceLocationController.text.trim(),
         condolenceTime: _condolenceTime != null
             ? obituaryTimeLabel(_condolenceTime!)
             : (editing?.condolenceTime ?? _savedCondolenceTime),
+        condolencePrayer: _condolencePrayer,
         mosque: editing?.mosque ?? '',
         cardBackground: _cardBackground,
         imageUrl: _imageUrl,
@@ -387,11 +448,13 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
       funeralTime: _funeralTime != null
           ? obituaryTimeLabel(_funeralTime!)
           : _savedFuneralTime,
+      funeralPrayer: _funeralPrayer,
       burialLocation: _burialLocationController.text.trim(),
       condolenceLocation: _condolenceLocationController.text.trim(),
       condolenceTime: _condolenceTime != null
           ? obituaryTimeLabel(_condolenceTime!)
           : _savedCondolenceTime,
+      condolencePrayer: _condolencePrayer,
       cardBackground: _cardBackground,
       imageUrl: _imageUrl,
       description: _descriptionController.text.trim(),
@@ -652,13 +715,16 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
           icon: Icons.mosque_rounded,
         ),
         const SizedBox(height: 12),
-        _buildTimeField(
+        _buildTimeAndPrayerRow(
           theme: theme,
-          keyName: 'funeral-time-field',
-          label: 'موعد صلاة الجنازة',
-          value: _funeralTime,
-          onTap: _pickFuneralTime,
-          savedLabel: _savedFuneralTime,
+          timeKeyName: 'funeral-time-field',
+          prayerKeyName: 'funeral-prayer-field',
+          timeLabel: 'موعد صلاة الجنازة',
+          time: _funeralTime,
+          savedTimeLabel: _savedFuneralTime,
+          onPickTime: _pickFuneralTime,
+          prayer: _funeralPrayer,
+          onPickPrayer: (v) => setState(() => _funeralPrayer = v),
         ),
         const SizedBox(height: 16),
         _buildTextField(
@@ -675,15 +741,93 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
           icon: Icons.home_rounded,
         ),
         const SizedBox(height: 12),
-        _buildTimeField(
+        _buildTimeAndPrayerRow(
           theme: theme,
-          keyName: 'condolence-time-field',
-          label: 'موعد العزاء',
-          value: _condolenceTime,
-          onTap: _pickCondolenceTime,
-          savedLabel: _savedCondolenceTime,
+          timeKeyName: 'condolence-time-field',
+          prayerKeyName: 'condolence-prayer-field',
+          timeLabel: 'موعد العزاء',
+          time: _condolenceTime,
+          savedTimeLabel: _savedCondolenceTime,
+          onPickTime: _pickCondolenceTime,
+          prayer: _condolencePrayer,
+          onPickPrayer: (v) => setState(() => _condolencePrayer = v),
         ),
       ],
+    );
+  }
+
+  /// الوقت واسم الصلاة **بجوار بعضهما** في صف واحد كما طلب المستخدم، فيُقرأ
+  /// الموعد وصلاته معًا من نظرة واحدة على أي عرض شاشة.
+  Widget _buildTimeAndPrayerRow({
+    required ThemeData theme,
+    required String timeKeyName,
+    required String prayerKeyName,
+    required String timeLabel,
+    required TimeOfDay? time,
+    required String savedTimeLabel,
+    required VoidCallback onPickTime,
+    required String prayer,
+    required ValueChanged<String> onPickPrayer,
+  }) {
+    // «10:30 ص» قصيرة و«صلاة الظهر» أطول، والمنتقي يخصم سهمه من عرضه:
+    // فالتقسيم ١١/٩ هو ما يُبقي تسمية الوقت كاملة والصلاة كاملة معًا.
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          flex: 11,
+          child: _buildTimeField(
+            theme: theme,
+            keyName: timeKeyName,
+            label: timeLabel,
+            value: time,
+            onTap: onPickTime,
+            savedLabel: savedTimeLabel,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          flex: 9,
+          child: _buildPrayerField(
+            keyName: prayerKeyName,
+            value: prayer,
+            onChanged: onPickPrayer,
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// اختيار اسم الصلاة لا كتابة: القيم الخمس مع «بدون» للسجل الذي لا يُحدَّد
+  /// فيه صلاة، فيبقى الحقل نصًا عربيًا مختصرًا كما عُرِض.
+  Widget _buildPrayerField({
+    required String keyName,
+    required String value,
+    required ValueChanged<String> onChanged,
+  }) {
+    return DropdownButtonFormField<String>(
+      key: Key(keyName),
+      initialValue: kObituaryPrayers.contains(value) ? value : '',
+      isExpanded: true,
+      iconSize: 18,
+      // حجم ١٤ بلا لون = أسود: `style` يستبدل نمط النص كاملًا فلا يرث لون
+      // الثيم، فيُمرَّر اللون صراحةً ليبقى مثل نص حقل الوقت المجاور.
+      style: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w700,
+        color: Theme.of(context).colorScheme.onSurface,
+      ),
+      decoration: const InputDecoration(
+        labelText: 'الصلاة',
+        contentPadding:
+            EdgeInsetsDirectional.only(start: 8, end: 2, top: 14, bottom: 14),
+      ),
+      items: [
+        const DropdownMenuItem(value: '', child: Text('بدون')),
+        ...kObituaryPrayers
+            .map((p) => DropdownMenuItem(value: p, child: Text(p))),
+      ],
+      onChanged: (v) => onChanged(v ?? ''),
     );
   }
 
@@ -730,7 +874,8 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
       children: [
         Text(
           'كل مجموعة تقبل أسماء متعددة — اكتب الاسم ثم اضغط «إضافة». '
-          'العناوين تتبدّل تلقائيًا بحسب نوع المتوفى.',
+          'العناوين تتبدّل تلقائيًا بحسب نوع المتوفى، وإن لم تندرج القرابة تحت '
+          'المجموعات فاكتب نوعها بنفسك في الكتلة الأخيرة.',
           style: theme.textTheme.bodySmall
               ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
         ),
@@ -764,6 +909,15 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
                 onRemove: (name) => _removeRelativeName(group, name),
               ),
             ),
+        const SizedBox(height: 12),
+        // بلا بوابة على النوع: العنوان هنا مكتوب حرفيًا فلا يُصرَّف بالنوع،
+        // فيجوز إضافته حتى قبل اختيار رجل/امرأة.
+        _CustomRelativeEditor(
+          key: const ValueKey('rel-group-custom'),
+          entries: _customRelatives,
+          onAdd: _addCustomRelative,
+          onRemove: _removeCustomRelative,
+        ),
       ],
     );
   }
@@ -1159,6 +1313,173 @@ class _RelativeGroupEditorState extends State<_RelativeGroupEditor> {
                         style: const TextStyle(
                             fontSize: 12.5, fontWeight: FontWeight.w700)),
                     onDeleted: () => widget.onRemove(name),
+                    deleteIconColor: theme.colorScheme.error,
+                    visualDensity: VisualDensity.compact,
+                  ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// كتلة «قرابة أخرى — اكتبها بنفسك»: خانتان متجاورتان لنوع القرابة المكتوب
+/// واسم القريب، ورقاقة «النوع: الاسم» لكل إدخال تُحذف وحدها. النوع نصّ مخزَّن
+/// كما كُتب، فيظهر في البطاقة والتفاصيل ولوحة الإدارة بعنوانه الحرفي.
+class _CustomRelativeEditor extends StatefulWidget {
+  const _CustomRelativeEditor({
+    super.key,
+    required this.entries,
+    required this.onAdd,
+    required this.onRemove,
+  });
+
+  final List<Relative> entries;
+  final bool Function(String type, String name) onAdd;
+  final ValueChanged<String> onRemove;
+
+  @override
+  State<_CustomRelativeEditor> createState() => _CustomRelativeEditorState();
+}
+
+class _CustomRelativeEditorState extends State<_CustomRelativeEditor> {
+  final _typeController = TextEditingController();
+  final _nameController = TextEditingController();
+
+  @override
+  void dispose() {
+    _typeController.dispose();
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final type = _typeController.text.trim();
+    final name = _nameController.text.trim();
+    // الرفض ورسالته عند الأب وحده — رسالتان مختلفتان لنقص النوع ونقص الاسم —
+    // والحقلان يبقيان كما كتبتْهما اليد فلا يُفقد إدخال على رفض.
+    if (widget.onAdd(type, name)) {
+      _typeController.clear();
+      _nameController.clear();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.edit_rounded,
+                  size: 18, color: theme.colorScheme.primary),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text('قرابة أخرى — اكتبها بنفسك',
+                    style: TextStyle(fontWeight: FontWeight.w800)),
+              ),
+              if (widget.entries.isNotEmpty)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text('${widget.entries.length}',
+                      style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w800,
+                          color: theme.colorScheme.primary)),
+                ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'مثال: «جار» باسم، أو «عمّ والد» باسم — يظهر كما كتبته تمامًا.',
+            style: theme.textTheme.bodySmall
+                ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: TextField(
+                  key: const Key('relative-custom-type'),
+                  controller: _typeController,
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    labelText: 'نوع القرابة',
+                    hintText: 'اكتبه بنفسك',
+                    labelStyle: TextStyle(fontSize: 12.5),
+                    hintStyle: TextStyle(fontSize: 12),
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(10))),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 2,
+                child: TextField(
+                  key: const Key('relative-custom-name'),
+                  controller: _nameController,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _submit(),
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    labelText: 'اسم القريب',
+                    hintText: 'الاسم ثم إضافة',
+                    labelStyle: TextStyle(fontSize: 12.5),
+                    hintStyle: TextStyle(fontSize: 12),
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(10))),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.tonalIcon(
+              key: const Key('relative-custom-add'),
+              onPressed: _submit,
+              icon: const Icon(Icons.add_rounded, size: 20),
+              label: const Text('إضافة هذه القرابة',
+                  style: TextStyle(fontWeight: FontWeight.w800)),
+            ),
+          ),
+          if (widget.entries.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final entry in widget.entries)
+                  InputChip(
+                    key: Key('relative-custom-chip-${entry.id}'),
+                    label: Text('${entry.typeLabel.trim()}: ${entry.name}',
+                        style: const TextStyle(
+                            fontSize: 12.5, fontWeight: FontWeight.w700)),
+                    onDeleted: () => widget.onRemove(entry.id),
                     deleteIconColor: theme.colorScheme.error,
                     visualDensity: VisualDensity.compact,
                   ),

@@ -7,13 +7,14 @@ import '../../core/utils/relative_time.dart';
 import '../../models/village_ad_model.dart';
 import '../../services/share_service.dart';
 import '../../services/village_ad_service.dart';
-import '../../widgets/full_fit_image.dart';
+import '../../widgets/ad_photo_frame.dart';
 import '../../widgets/owner_actions.dart';
 import '../../widgets/qurity_app_bar.dart';
 import 'village_ads_screen.dart';
 
-/// صفحة تفاصيل الإعلان — الصور كاملة بلا اقتصاص، والوصف غير مقتطع، وأزرار
-/// تواصل، وتحكم لصاحب الإعلان (تعديل/حذف) فوق ما تملكه الإدارة في اللوحة.
+/// صفحة تفاصيل الإعلان — كل صورة في مساحة معلومة يملؤها الرسم، والوصف غير
+/// مقتطع، وأزرار تواصل، وتحكم لصاحب الإعلان (تعديل/حذف) فوق ما تملكه الإدارة
+/// في اللوحة.
 class VillageAdDetailScreen extends StatefulWidget {
   const VillageAdDetailScreen({super.key, this.service});
 
@@ -278,31 +279,19 @@ class _VillageAdDetailScreenState extends State<VillageAdDetailScreen> {
         ),
       );
 
-  /// الصور كاملة واحدة تلو الأخرى بعرض الصفحة — بلا اقتصاص ولا تصغير.
+  /// مساحة صورة معلومة الارتفاع بعرض الصفحة، يملؤها الرسم — فالإعلان يُقرأ
+  /// بمساحاته لا بمقاس صورة صاحبه.
   List<Widget> _images(VillageAd ad) {
     final list = <Widget>[];
     for (var i = 0; i < ad.imageUrls.length; i++) {
       list.add(const SizedBox(height: 14));
-      list.add(
-        ClipRRect(
-          borderRadius: BorderRadius.circular(18),
-          child: LayoutBuilder(builder: (context, c) {
-            final w = c.maxWidth.isFinite ? c.maxWidth : 360.0;
-            return FullFitImage(
-              imageUrl: ad.imageUrls[i],
-              width: w,
-              radius: 0,
-              fallback: Container(
-                width: w,
-                height: w * 0.6,
-                color: kVillageAdsColor.withValues(alpha: 0.08),
-                child: Icon(Icons.image_rounded,
-                    color: kVillageAdsColor.withValues(alpha: 0.5)),
-              ),
-            );
-          }),
-        ),
-      );
+      list.add(AdPhotoFrame(
+        imageUrl: ad.imageUrls[i],
+        height: kVillageAdDetailImageHeight,
+        accent: kVillageAdsColor,
+        radius: 18,
+        icon: Icons.image_rounded,
+      ));
       if (ad.imageUrls.length > 1) {
         list.add(Padding(
           padding: const EdgeInsets.only(top: 5, right: 2),

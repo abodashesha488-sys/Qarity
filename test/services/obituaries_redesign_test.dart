@@ -607,8 +607,13 @@ void main() {
       expect(card, isNot(contains(" 'الصلوات والأماكن'")));
       expect(card, contains("const _SectionTitle('مكان الصلاة والدفن والعزاء')"));
       expect(detail, contains("Text('مكان الصلاة والدفن والعزاء'"));
-      expect(card, contains("_PlaceData('مكان صلاة الجنازة', o.funeralLocation, o.funeralTime)"));
-      expect(card, contains("_PlaceData('مكان العزاء', o.condolenceLocation, o.condolenceTime)"));
+      // الموعد في عمود مكانه، وصار اسم الصلاة ملحقًا به نصًا واحدًا.
+      expect(card, contains("'مكان صلاة الجنازة',"));
+      expect(card,
+          contains('obituaryTimeWithPrayer(o.funeralTime, o.funeralPrayer)'));
+      expect(card, contains("'مكان العزاء',"));
+      expect(card,
+          contains('obituaryTimeWithPrayer(o.condolenceTime, o.condolencePrayer)'));
       // المواعيد لا تُطبع في سطر مستقل: لكل بيان عموده، وتحته مواعيده.
       expect(card, contains('Expanded(child: _PlaceColumn(data: entries[i]))'));
       expect(card, isNot(contains('_PlaceLine')));
