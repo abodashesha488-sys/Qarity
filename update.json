@@ -1,7 +1,7 @@
 {
-  "versionCode": 2024,
-  "versionName": "1.1.24",
+  "versionCode": 2025,
+  "versionName": "1.1.25",
   "apkUrl": "https://github.com/abodashesha488-sys/Qarity/releases/latest/download/Qarity.apk",
   "forceUpdate": false,
-  "releaseNotes": "صار بإمكانك تعديل إضافتك وحذفها في أي وقت: التعديل يعود إلى مراجعة الإدارة، والحذف فوري بعد التأكيد."
+  "releaseNotes": "دليل الهاتف ببطاقة منسّقة واتصال أخضر ومراسلة واتساب مباشرة وترتيب أبجدي، وقسم جديد للمستلزمات الطبية داخل الخدمات الطبية، وخانة قرابة أخرى في سجل العزاء، وتنسيق المحلات والأدلة بكرتين في السطر"
 }
