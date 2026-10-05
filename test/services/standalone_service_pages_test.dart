@@ -70,23 +70,28 @@ void main() {
       expect(routes, contains('category: ServiceCategory.educational'));
     });
 
-    test('بوابة المزارع: بلاطتان في السطر بصور أكبر، والست كما هي', () {
+    test('بوابة المزارع: بلاطتان في السطر بصور أكبر، والخمس كما هي', () {
       final farmer = src('lib/features/services/farmer_services_screen.dart');
       expect(farmer, contains('crossAxisCount: 2'));
       expect(farmer, isNot(contains('crossAxisCount: 3')),
-          reason: 'لاعودة لشبكة الثلاثة أعمدة');
+          reason: 'لا عودة لشبكة الثلاثة أعمدة');
       expect(farmer, contains('cacheWidth: 520'));
-      // الخدمات الست ومساراتها لم تتغيّر — التنسيق وحده.
+      // أيقونة «عمال ومعدات» لم تُحذف مع صفحتها — نُقلت إلى «خدمات زراعية».
+      expect(farmer, contains("image: 'assets/images/tools.jpg'"));
+      expect(farmer, isNot(contains('workers_equipment')),
+          reason: 'الشاشة المحذوفة لا ذكر لها في البوابة');
+      // الخدمات خمس بعد إلغاء «عمال ومعدات» — ومساراتها الباقية لم تتغيّر.
       final start = farmer.indexOf('static const _services = [');
       expect(start, greaterThan(-1), reason: 'البوابة تبنى من قائمة واحدة ثابتة');
       final block = farmer.substring(start, farmer.indexOf('];', start));
       final tiles =
           RegExp(r"title: '([^']+)'").allMatches(block).map((m) => m.group(1)!).toList();
-      expect(tiles, hasLength(6));
+      expect(tiles, hasLength(5));
+      expect(tiles, isNot(contains('عمال ومعدات')),
+          reason: 'الصفحة أُلغيت ببوابتها');
       expect(
           tiles,
           containsAll([
-            'عمال ومعدات',
             'خدمات زراعية',
             'مستشارك الزراعي',
             'المحاصيل',

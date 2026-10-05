@@ -10,6 +10,29 @@ import '../../services/obituary_service.dart';
 import '../../widgets/offline_stream_builder.dart';
 import '../../widgets/qurity_app_bar.dart';
 
+/// تاريخ الوفاة كما كتبه صاحبه (`yyyy/MM/dd`) — يُقرأ في الكلاينت لأن الفرز
+/// على الخادم يُسقط أي وثيقة لا تملك الحقل.
+DateTime? obituaryDeathDate(String raw) {
+  if (raw.trim().isEmpty) return null;
+  return DateTime.tryParse(raw.trim().replaceAll('/', '-'));
+}
+
+/// الأحدث وفاةً أولًا؛ مَن بلا تاريخ وفاة مرئي يبقى بعد ذوي التواريخ، وداخل
+/// كل فريق يحسم تاريخ الإنشاء (فالترتيب السابق كان به).
+int compareObituaryByDeathDate(Obituary a, Obituary b) {
+  final da = obituaryDeathDate(a.dateOfDeath);
+  final db = obituaryDeathDate(b.dateOfDeath);
+  if (da != null && db != null) {
+    final byDeath = db.compareTo(da);
+    if (byDeath != 0) return byDeath;
+  } else if (da != null) {
+    return -1;
+  } else if (db != null) {
+    return 1;
+  }
+  return (b.createdAt ?? DateTime(1970)).compareTo(a.createdAt ?? DateTime(1970));
+}
+
 class ObituariesListScreen extends StatefulWidget {
   const ObituariesListScreen({super.key});
 
@@ -104,15 +127,12 @@ class _ObituariesListScreenState extends State<ObituariesListScreen> {
       }).toList();
     }
 
-    list.sort((a, b) => (b.createdAt ?? DateTime(1970))
-        .compareTo(a.createdAt ?? DateTime(1970)));
+    // الترتيب بتاريخ الوفاة حديثًا أولًا (مقارنة واحدة مصدرها أعلى الملف).
+    list.sort(compareObituaryByDeathDate);
     return list;
   }
 
-  DateTime? _parseDate(String raw) {
-    if (raw.isEmpty) return null;
-    return DateTime.tryParse(raw.replaceAll('/', '-'));
-  }
+  DateTime? _parseDate(String raw) => obituaryDeathDate(raw);
 
   @override
   Widget build(BuildContext context) {

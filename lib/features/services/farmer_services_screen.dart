@@ -4,22 +4,16 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../routes/app_routes.dart';
 import '../../widgets/qurity_app_bar.dart';
 
-/// بوابة خدمات المزارع — ست خدمات بصور موحّدة مثل شبكة الصفحة الرئيسية.
+/// بوابة خدمات المزارع — خمس خدمات بصور موحّدة مثل شبكة الصفحة الرئيسية.
 /// منها صفحة «خدمات زراعية» المستقلة (سجل مقدّمي الخدمات الزراعية).
 class FarmerServicesScreen extends StatelessWidget {
   const FarmerServicesScreen({super.key});
 
   static const _services = [
     _FarmerService(
-      title: 'عمال ومعدات',
-      route: AppRoutes.farmerWorkersEquipment,
-      image: 'assets/images/tools.jpg',
-      description: 'عمال، جرارات، معدات وخدمات الحقول',
-    ),
-    _FarmerService(
       title: 'خدمات زراعية',
       route: AppRoutes.agriculturalServices,
-      image: 'assets/images/farmer.jpg',
+      image: 'assets/images/tools.jpg',
       description: 'سجل مقدّمي الآلات والخدمات الزراعية في القرية',
     ),
     _FarmerService(
@@ -54,7 +48,8 @@ class FarmerServicesScreen extends StatelessWidget {
     // أربع صفوف في الشاشة الواحدة مثل بوابة الخدمات الطبية: ارتفاع البلاطة يُحسب
     // من المتاح فعليًا لا من نسبة ثابتة. يُطرح رأس «كل ما يحتاجه المزارع في مكان
     // واحد» (حشوه 16 أعلى و4 أسفل + سطر العنوان) لأن السلايفرز يتقاسم معه نفس
-    // الارتفاع. الخدمات ومساراتها وصورها كما هي — تنسيق العرض وحده.
+    // الارتفاع. المرتِّب محسوب على أربعة صفوف سواء كانت البلاطات خمسًا أو ستًّا،
+    // فحذف بلاطة لا يغيّر هندسة الشبكة.
     return Scaffold(
       appBar: const QurityAppBar(title: 'خدمات المزارع'),
       body: LayoutBuilder(builder: (context, box) {

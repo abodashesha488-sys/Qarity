@@ -155,14 +155,20 @@ class ObituaryShareCard extends StatelessWidget {
                 height: 1.5,
                 shadows: _lift)),
         const SizedBox(height: 6),
-        Text(o.name.isEmpty ? '—' : o.name,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-                color: ivory,
-                fontSize: 26,
-                fontWeight: FontWeight.w900,
-                height: 1.35,
-                shadows: _lift)),
+        // الاسم سطر واحد دائمًا: FittedBox يفكّ النص بعرض غير محدود فيرتّب
+        // نفسه على سطر، ثم يصغّر المقاس فقط حين يتجاوز عرض البطاقة.
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(o.name.isEmpty ? '—' : o.name,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              style: const TextStyle(
+                  color: ivory,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w900,
+                  height: 1.35,
+                  shadows: _lift)),
+        ),
         _facts(o),
       ],
     );

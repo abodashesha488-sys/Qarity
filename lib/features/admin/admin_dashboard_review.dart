@@ -679,7 +679,6 @@ class _ReviewCard extends StatelessWidget {
         'service_providers' => switch ('${item['category'] ?? ''}') {
             ServiceCategory.agricultural => 'سجل في صفحة خدمات زراعية',
             ServiceCategory.educational => 'سجل في صفحة خدمات تعليمية',
-            ServiceCategory.farmerWorkersEquipment => 'سجل في صفحة عمال و معدات',
             _ => 'سجل في صفحة دليل الحرفيين',
           },
         'lost_items' => 'إعلان مفقودات',

@@ -438,6 +438,28 @@ void main() {
       expect(home, contains('fontSize: 10,'));
       expect(home, contains('fontSize: 10.5'));
       expect(home, contains('horizontal: 9, vertical: 3.5'));
+      // ── بموجة ٢٠٢٦-١٠-٠٥: انتقل الوقت والتاريخ إلى سطر واحد متمركز أسفل
+      // الهيدر، فاحتفظ الصندوق بارتفاعه بثابت يحسم جسم الهيدر بدل الحبّاعتين.
+      // 53.0 هو ارتفاع الحبّاعتين فوق بعضهما كما قِيست في بناء المقارنة نفسه
+      // (الهيدر الكامل 117.5 عند عرض ٣٩٠)، فلا ينقص سنتيمتر عند النقل.
+      expect(home, contains('const double kHeroBodyHeight = 53.0;'));
+      expect(home, contains('height: kHeroBodyHeight'));
+      expect(home, contains("key: const ValueKey('header-clock-date-line')"));
+      // السطر واحد متمركز، وحبايته في صفٍّ واحد لا فوق بعضهما.
+      final line = home.indexOf("ValueKey('header-clock-date-line')");
+      final lineBlock = home.substring(line, line + 640);
+      expect(lineBlock, contains('mainAxisAlignment: MainAxisAlignment.center'));
+      expect(lineBlock.split('_pill(').length - 1, 2,
+          reason: 'حبايتان فقط — الساعة والتاريخ — في السطر');
+      // موضعه في أسفل الهيدر: مثبت بأسفل الصندوق لا في جسمه.
+      final positioned = home.lastIndexOf('Positioned(', line);
+      expect(home.substring(positioned, line), contains('bottom: 12'));
+      expect(home.substring(positioned, line), contains('left: 0'));
+      // جسم الهيدر صار الجرس وحده: لا تُعاد حَبّاعة إلى الصفّ القديم.
+      final body = home.substring(home.indexOf('height: kHeroBodyHeight'), line);
+      expect(body, isNot(contains('_pill(')),
+          reason: 'الوقت والتاريخ خارج جسم الهيدر لا داخله');
+      expect(body, contains('NotificationBellButton(compact: true)'));
     });
   });
 }

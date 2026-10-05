@@ -52,7 +52,6 @@ import '../features/services/lost_items_screen.dart';
 import '../features/services/service_directory_screen.dart';
 import '../features/services/service_provider_detail_screen.dart';
 import '../features/services/weather_advisory_screen.dart';
-import '../features/services/workers_equipment_screen.dart';
 import '../features/settings/index.dart';
 import '../features/settings/notifications.dart';
 import '../features/village/about.dart';
@@ -153,7 +152,6 @@ static const String marketProducts = '/market';
   static const String agriculturalServices = '/services/agricultural';
   static const String educationalServices = '/services/educational';
   static const String farmerServices = '/services/farmer';
-  static const String farmerWorkersEquipment = '/services/farmer/workers-equipment';
   static const String farmerAdvisor = '/services/farmer/advisor';
   static const String farmerCrops = '/services/farmer/crops';
   static const String farmerFertilizersPesticides = '/services/farmer/fertilizers-pesticides';
@@ -256,7 +254,6 @@ obituariesAdd: (_) => const AddObituaryScreen(),
     legalAdvisor: (_ ) => const LegalAdvisorScreen(),
     lawyerDetail: (_ ) => const LawyerDetailScreen(),
     farmerServices: (_ ) => const FarmerServicesScreen(),
-    farmerWorkersEquipment: (_ ) => const WorkersEquipmentScreen(),
     farmerAdvisor: (_ ) => const AgriculturalAdvisorScreen(),
     farmerCrops: (_ ) => const CropsScreen(),
     farmerFertilizersPesticides: (_ ) => const FertilizersPesticidesScreen(),
@@ -336,12 +333,6 @@ obituariesAdd: (_) => const AddObituaryScreen(),
     if (settings.name == farmerServices) {
       return _buildSlideRoute(
         (_) => const FarmerServicesScreen(),
-        settings,
-      );
-    }
-    if (settings.name == farmerWorkersEquipment) {
-      return _buildSlideRoute(
-        (_) => const WorkersEquipmentScreen(),
         settings,
       );
     }

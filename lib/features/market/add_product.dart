@@ -185,7 +185,7 @@ class _AddMarketProductScreenState extends State<AddMarketProductScreen> {
       if (mounted) {
         AppHelpers.showSnackBar(context,
             editing == null
-                ? 'تمت الإضافة بنجاح'
+                ? 'تمت الإضافة بنجاح — يظهر المنتج في سوق القرية بعد موافقة الإدارة'
                 : 'تم حفظ التعديلات — أُعيد للمراجعة',
             isSuccess: true);
         Navigator.pop(context, true);

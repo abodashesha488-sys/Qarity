@@ -602,6 +602,10 @@ class _HomeContentState extends State<HomeContent> {
 }
 
 // ═══════════════ هيدر علوي مبسّط: الجرس + التاريخ والوقت ═══════════════
+/// ارتفاع جسم هيدر الرئيسية — كان تحسمه حبّاعتا الوقت والتاريخ فوق بعضهما،
+/// وبقي ثابتًا بعد نقلهما إلى سطر واحد أسفل الهيدر.
+const double kHeroBodyHeight = 53.0;
+
 class _HeroHeader extends StatelessWidget {
   const _HeroHeader({required this.dateLabel});
   final String dateLabel;
@@ -651,43 +655,53 @@ class _HeroHeader extends StatelessWidget {
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => const SizedBox.shrink()),
           ),
-          SafeArea(
+          const SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(31, 15, 31, 49.5),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              padding: EdgeInsets.fromLTRB(31, 15, 31, 49.5),
+              // جسم الهيدر يحتفظ بارتفاعه السابق (كان تحسمه حبّاعتا الوقت
+              // والتاريخ فوق بعضهما) فلا يتقلّص الصندوق المكبّر حين انتقلتا
+              // إلى سطر واحد في أسفل الهيدر.
+              child: SizedBox(
+                height: kHeroBodyHeight,
+                child: Row(
+                  children: [
+                    Spacer(),
+                    NotificationBellButton(compact: true),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // ── الوقت والتاريخ: سطر واحد متمركز أسفل الهيدر ──
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 12,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: Row(
+                key: const ValueKey('header-clock-date-line'),
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // ── الوقت فوق التاريخ يمينًا، والجرس أعلى اليسار ──
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // توقيت القرية ثم تاريخها (حسب إحداثيات الطقس، لا جهاز المستخدم)
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _pill(child: const _VillageClock()),
-                          const SizedBox(height: 6),
-                          _pill(
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.event_rounded,
-                                    size: 11, color: Color(0xFFFFE082)),
-                                const SizedBox(width: 5),
-                                Text(dateLabel,
-                                    style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w700)),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const Spacer(),
-                      const NotificationBellButton(compact: true),
-                    ],
+                  _pill(child: const _VillageClock()),
+                  const SizedBox(width: 8),
+                  _pill(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.event_rounded,
+                            size: 11, color: Color(0xFFFFE082)),
+                        const SizedBox(width: 5),
+                        Text(dateLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700)),
+                      ],
+                    ),
                   ),
                 ],
               ),
