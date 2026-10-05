@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/contact_links.dart';
+import '../../core/utils/launch_link.dart';
 import '../../models/service_provider_model.dart';
 import '../../routes/app_routes.dart';
 import '../../widgets/qurity_app_bar.dart';
@@ -70,16 +71,15 @@ class _AboutScreenState extends State<AboutScreen> {
       _fail('لا يوجد رقم هاتف للاتصال.');
       return;
     }
-    try {
-      final uri = Uri(scheme: 'tel', path: number);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri);
-        _clearError();
-      } else {
-        _fail('لا يمكن الاتصال على هذا الجهاز.');
-      }
-    } catch (_) {
-      _fail('تعذّر بدء المكالمة — أعد المحاولة.');
+    final error = await launchContactUrl(
+        Uri(scheme: 'tel', path: number).toString(),
+        unavailable: 'لا يمكن الاتصال على هذا الجهاز.',
+        failed: 'تعذّر بدء المكالمة — أعد المحاولة.',
+        mode: LaunchMode.platformDefault);
+    if (error == null) {
+      _clearError();
+    } else {
+      _fail(error);
     }
   }
 
@@ -100,18 +100,17 @@ class _AboutScreenState extends State<AboutScreen> {
         failed: 'تعذّر فتح صفحة فيسبوك — تحقّق من الاتصال ثم أعد المحاولة.');
   }
 
+  /// فتح خارجي بلا بوّابة `canLaunchUrl`: الفحص القبلي كان يرجع false على
+  /// أندرويد 11+ لأن رؤية حزم واتساب/فيسبوك غير مصرّحة بها، فكان الزر يظهر
+  /// «غير متاح على هذا الجهاز» وهو يعمل — والمحاولة المباشرة وحدها دليل صادق.
   Future<void> _openExternal(String url,
       {required String unavailable, required String failed}) async {
-    try {
-      final uri = Uri.parse(url);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-        _clearError();
-      } else {
-        _fail(unavailable);
-      }
-    } catch (_) {
-      _fail(failed);
+    final error = await launchContactUrl(url,
+        unavailable: unavailable, failed: failed);
+    if (error == null) {
+      _clearError();
+    } else {
+      _fail(error);
     }
   }
 
@@ -175,10 +174,6 @@ class _AboutScreenState extends State<AboutScreen> {
         children: [
           _hero(theme),
           const SizedBox(height: 22),
-          _sectionTitle(theme, 'بيانات المطور', Icons.code_rounded),
-          const SizedBox(height: 10),
-          _developerCard(),
-          const SizedBox(height: 22),
           _sectionTitle(theme, 'أقسام التطبيق', Icons.grid_view_rounded),
           const SizedBox(height: 10),
           _sectionsGrid(theme),
@@ -203,6 +198,11 @@ class _AboutScreenState extends State<AboutScreen> {
               title: 'تعرف على القرية',
               subtitle: 'تاريخها وأرشيفها ومنشآتها',
               onTap: () => Navigator.pushNamed(context, AppRoutes.about)),
+          // «بيانات المطور» آخر كارت في الصفحة كما طلب المستخدم.
+          const SizedBox(height: 22),
+          _sectionTitle(theme, 'بيانات المطور', Icons.code_rounded),
+          const SizedBox(height: 10),
+          _developerCard(),
           const SizedBox(height: 24),
           _footer(theme),
         ],

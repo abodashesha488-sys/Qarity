@@ -5,9 +5,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../core/constants/promo_placements.dart';
+import '../core/utils/helpers.dart';
+import '../core/utils/launch_link.dart';
 import '../core/utils/navigator_key.dart';
 import '../models/promo_model.dart';
 import '../routes/app_routes.dart';
@@ -167,9 +168,12 @@ class _PromoHostState extends State<PromoHost> {
     final url = buildExternalUrl(promo.linkType, value);
     _dismiss();
     if (url == null) return;
-    try {
-      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-    } catch (_) {}
+    // رابط الإعلان قد يكون محادثة واتساب — نفس ممرّ أزرار التواصل: تجربة مباشرة
+    // والفشل يُبلَّغ، فلا يختفي النقر بلا رابط ولا كلمة.
+    final error = await launchContactUrl(url,
+        unavailable: 'لا يمكن فتح رابط الإعلان على هذا الجهاز.',
+        failed: 'تعذّر فتح الرابط — تحقّق من الاتصال ثم أعد المحاولة.');
+    if (error != null) AppHelpers.showToast(error, isError: true);
   }
 
   @override

@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/utils/contact_links.dart';
+import '../../core/utils/helpers.dart';
+import '../../core/utils/launch_link.dart';
 import '../../core/utils/relative_time.dart';
 import '../../models/legal_models.dart';
 import '../../routes/app_routes.dart';
@@ -35,11 +37,15 @@ class _LawyerDetailScreenState extends State<LawyerDetailScreen> {
     _lawyer ??= ModalRoute.of(context)?.settings.arguments as Lawyer?;
   }
 
-  Future<void> _launch(String url) async {
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
+  /// فتح مباشر بلا بوّابة `canLaunchUrl`: الفحص القبلي كان يرجع false على أندرويد
+  /// 11+ للحزم غير المصرّح برؤيتها، فالزر كان يصمت بلا رابط ولا كلمة.
+  Future<void> _launch(String url,
+      {LaunchMode mode = LaunchMode.externalApplication}) async {
+    final error = await launchContactUrl(url,
+        mode: mode,
+        unavailable: 'لا يمكن فتح هذا الرابط على هذا الجهاز.',
+        failed: 'تعذّر الفتح — تحقّق من الاتصال ثم أعد المحاولة.');
+    if (error != null) AppHelpers.showToast(error, isError: true);
   }
 
   Future<void> _edit(Lawyer lawyer) async {

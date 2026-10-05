@@ -53,10 +53,34 @@ void main() {
       .map((c) => c.url)
       .toList();
 
+  /// extent الـ`ListView` مجهول فطول نافذة ثابت قد يبقي البطاقة الأخيرة خارج
+  /// الطيّ؛ تُمدّد النافذة سطرًا بسطر حتى تُبنى، والدليل وجود أزرارها نفسها.
+  Future<void> growUntilDeveloperCard(WidgetTester tester) async {
+    for (var height = 2600.0; height <= 6000.0; height += 800) {
+      if (find.byKey(const Key('dev-call')).evaluate().isNotEmpty) return;
+      tester.view.physicalSize = Size(1170, height * 3);
+      await tester.pump();
+    }
+  }
+
   /// نفس إعداد `main.dart`: عربية مصرية بمندوبيها، فالصفحة تُختبر في الاتجاه
   /// الذي تُبنى فيه فعلًا (بلا المندوبين يبقى LTR وتصبح «RTL» بلا معنى).
+  ///
+  /// «بيانات المطور» صارت آخر كارت في `ListView` كسول، فمقياس الهاتف (844) لا
+  /// يبنيها أصلًا — وهذا ليس دليلًا على غيابها بل على الكسل. العلاج تمديد
+  /// **النافذة** لا التمرير: التمرير إلى الأسفل يُسقط ما فوق الشاشة من الشجرة
+  /// الكسولة فتضيع عناوين الأقسام التي يُقارن بها موضع البطاقة، بينما النافذة
+  /// الطويلة تبني الكل في إطار واحد. اختبار الفيضان وحده يبقى على 844 لأن
+  /// مطلوبه مقاس الهاتف لا بناء الصفحة كاملة.
+  /// يبنيها أصلًا — وهذا ليس دليلًا على غيابها بل على الكسل. العلاج تمديد
+  /// **النافذة** لا التمرير: التمرير إلى الأسفل يُسقط ما فوق الشاشة من الشجرة
+  /// الكسولة فتضيع عناوين الأقسام التي يُقارن بها موضع البطاقة، بينما النافذة
+  /// الطويلة تبني الكل في إطار واحد. اختبار الفيضان وحده يبقى على 844 لأن
+  /// مطلوبه مقاس الهاتف لا بناء الصفحة كاملة.
   Future<void> pumpPage(WidgetTester tester,
-      {List<String>? pushed, double logicalHeight = 844}) async {
+      {List<String>? pushed,
+      double logicalHeight = 2600,
+      bool revealDeveloperCard = true}) async {
     tester.view.physicalSize = Size(1170, logicalHeight * 3);
     tester.view.devicePixelRatio = 3.0;
     addTearDown(tester.view.reset);
@@ -87,6 +111,7 @@ void main() {
     ));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
+    if (revealDeveloperCard) await growUntilDeveloperCard(tester);
   }
 
   Color? backgroundOf(WidgetTester tester, String key) {
@@ -196,7 +221,14 @@ void main() {
       );
       // الرمز في الزر وحده بعد أن حُذف سطر البيان
       expect(find.byType(WhatsAppMark), findsOneWidget);
-      expect(find.byIcon(Icons.chat_bubble_rounded), findsNothing);
+      // المقياس داخل الزر وحده: «مندرة القرية» في شبكة الأقسام تستعمل
+      // `chat_bubble_rounded` عن جدارة، فمسح الصفحة كلها كان يصف الصفحة لا الزر.
+      expect(
+        find.descendant(
+            of: find.byKey(const Key('dev-whatsapp')),
+            matching: find.byIcon(Icons.chat_bubble_rounded)),
+        findsNothing,
+      );
     });
 
     testWidgets('الأزرار الثلاثة بألوانها المعروفة من مصادرها الواحدة', (tester) async {
@@ -214,7 +246,10 @@ void main() {
       await tapKey(tester, 'dev-call');
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
-      expect(calls.map((c) => c.url), containsAllInOrder(['tel:$phone', 'tel:$phone']));
+      expect(launchedUrls(), ['tel:$phone']);
+      // تجربة مباشرة بلا بوّابة: لا `canLaunch` سابق يرجع false على أندرويد
+      // 11+ (رؤية الحزم) فيصمت الزر ويظهر فشل كاذب.
+      expect(calls.map((c) => c.method), isNot(contains('canLaunch')));
       expect(find.byKey(const Key('dev-contact-error')), findsNothing);
     });
 
@@ -256,6 +291,25 @@ void main() {
       expect(error.data, isNot('واتساب غير متاح على هذا الجهاز.'));
     });
 
+    testWidgets('بطاقة «بيانات المطور» تُرسم أسفل كل الأقسام الأخرى',
+        (tester) async {
+      stubLauncher();
+      await pumpPage(tester);
+      double dy(String label) =>
+          tester.getTopLeft(find.text(label).first).dy;
+      final dev = dy('بيانات المطور');
+      for (final earlier in const [
+        'أقسام التطبيق',
+        'أحدث ما أُضيف إلى التطبيق',
+        'روابط',
+      ]) {
+        expect(dev, greaterThan(dy(earlier)), reason: '«$earlier» صار أسفلها');
+      }
+      // أزرار البطاقة الثلاثة موجودة فعليًا في موضعها الجديد.
+      expect(find.byKey(const Key('dev-whatsapp')), findsOneWidget);
+      expect(find.byKey(const Key('dev-facebook')), findsOneWidget);
+    });
+
     testWidgets('استثناء المشغّل يُبلَّغ ولا يصمت', (tester) async {
       stubLauncher(throwFromChannel: true);
       await pumpPage(tester);
@@ -289,7 +343,7 @@ void main() {
     // عشرة كلها، فيبدو الفحص كأنه «صفر بلاطات» لا «بلاطة ميتة».
     testWidgets('لا بلاطة ميتة: كل مسار في الشبكة مسجّل فعلًا', (tester) async {
       stubLauncher();
-      await pumpPage(tester, logicalHeight: 2600);
+      await pumpPage(tester);
       final keys = tester
           .widgetList<InkWell>(find.byWidgetPredicate((w) =>
               w is InkWell && (w.key as ValueKey<String>?)?.value.startsWith('about-section-') == true))
@@ -307,7 +361,7 @@ void main() {
     testWidgets('النقر على بلاطة قسم يدفع مسارها', (tester) async {
       stubLauncher();
       final pushed = <String>[];
-      await pumpPage(tester, pushed: pushed, logicalHeight: 2600);
+      await pumpPage(tester, pushed: pushed);
       await tester.tap(find.byKey(const Key('about-section-${AppRoutes.children}')));
       await tester.pumpAndSettle();
       // أول نداء هو المسار الابتدائي الذي تطلبه MaterialApp نفسها، فالمهم
@@ -338,8 +392,15 @@ void main() {
       final source = File(pageFile).readAsStringSync();
       expect(source, contains('egyptianWhatsAppUrl('));
       expect(source, isNot(contains('wa.me')));
-      expect(source, contains('scheme: \'tel\''));
-      expect(source, contains('LaunchMode.externalApplication'));
+      expect(source, contains("scheme: 'tel'"));
+      // الفتح صار تجربة مباشرة عبر المحرك المشترك: لا بوّابة `canLaunchUrl`
+      // ترجع false على أندرويد 11+ فتصمّت الأزرار، والخارجي هو الافتراضي
+      // هناك فلا يُعاد ذكره. الوحيدة التي تطلب وضعًا مغايرًا هي المكالمة.
+      expect(source, isNot(contains('canLaunchUrl(')));
+      expect(RegExp('launchContactUrl\\(').allMatches(source).length, 2);
+      expect(source, contains('mode: LaunchMode.platformDefault'));
+      expect(source, isNot(contains('LaunchMode.externalApplication')),
+          reason: 'الوجه الخارجي قرره launchContactUrl — تكراره هنا مجمّد');
       expect(source, contains('kCallButtonColor'));
       expect(source, contains('kWhatsAppGreen'));
       expect(source, contains('WhatsAppMark('));
@@ -347,6 +408,25 @@ void main() {
       expect(source, contains('InteractiveViewer('));
       expect(source, contains('assets/images/leader.jpg'));
       expect(source, contains('assets/images/Qurity.png'));
+    });
+
+    test('عقد المصدر: «بيانات المطور» آخر كارت في الصفحة', () {
+      final source = File(pageFile).readAsStringSync();
+      final body = source.substring(source.indexOf('body: ListView('));
+      final dev = body.indexOf("_sectionTitle(theme, 'بيانات المطور'");
+      expect(dev, greaterThan(0));
+      for (final earlier in [
+        "_sectionTitle(theme, 'أقسام التطبيق'",
+        "_sectionTitle(theme, 'أحدث ما أُضيف إلى التطبيق'",
+        "_sectionTitle(theme, 'روابط'",
+        '_changelogCard(theme)',
+        '_sectionsGrid(theme)',
+      ]) {
+        expect(body.indexOf(earlier), lessThan(dev),
+            reason: '«$earlier» يجب أن يبقى قبل بطاقة المطور');
+      }
+      // التذييل سطر نصي أسفل الكل، فيأتي بعد البطاقة لا قبلها.
+      expect(body.indexOf('_footer(theme)'), greaterThan(dev));
     });
 
     test('النبذة تُقرأ كما أعطاها صاحبها، والاسم يظهر مرة واحدة', () {
@@ -379,15 +459,23 @@ void main() {
 
     testWidgets('لا فيضان على مقاس الهاتف أثناء مشي الصفحة كاملًا', (tester) async {
       stubLauncher();
-      await pumpPage(tester);
-      final list = find.byType(Scrollable).first;
-      for (var step = 0; step < 8; step++) {
-        await tester.drag(list, const Offset(0, -500));
+      await pumpPage(tester, logicalHeight: 844, revealDeveloperCard: false);
+      final position =
+          tester.state<ScrollableState>(find.byType(Scrollable).first).position;
+      // القفز المتدرّج حتى الحدّ الأقصى: السحب بfling لا يستقر في إطار واحد
+      // فتبقى أسطر تحت الطيّ لا تُبنى، ويصير «صفر فيضان» كاذبًا.
+      for (var p = 0.0; p <= position.maxScrollExtent; p += 400) {
+        position.jumpTo(p);
         await tester.pump();
-        await tester.pump(const Duration(milliseconds: 120));
-        expect(tester.takeException(), isNull, reason: 'خطوة $step أفاضت العرض');
+        expect(tester.takeException(), isNull, reason: 'الإحداثي $p أفاض العرض');
       }
-      expect(find.text('العمل بلا اتصال: المحتوى محفوظ محليًا ويظهر فور عودة الشبكة.'), findsOneWidget);
+      position.jumpTo(position.maxScrollExtent);
+      await tester.pump();
+      expect(tester.takeException(), isNull, reason: 'أسفل الصفحة أفاض العرض');
+      // الدليل على بلوغ الأسفل هو البطاقة الأخيرة نفسها، لا نصّ «أحدث ما
+      // أُضيف» — فذلك في أعلى الصفحة وتسقط من الشجرة الكسولة عند القفز.
+      expect(find.byKey(const Key('dev-whatsapp')), findsOneWidget);
+      expect(find.byKey(const Key('dev-facebook')), findsOneWidget);
     });
   });
 }

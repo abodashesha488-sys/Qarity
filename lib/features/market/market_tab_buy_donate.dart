@@ -746,13 +746,14 @@ class _DonationDetailPage extends StatefulWidget {
 class _DonationDetailPageState extends State<_DonationDetailPage> {
   bool _busy = false;
 
+  /// بلا بوّابة `canLaunchUrl`: الفحص القبلي كان يرجع false على أندرويد 11+ للحزم
+  /// غير المصرّح برؤيتها فيصمت الزر رغم أن الفتح نفسه كان سينجح.
   Future<void> _launch(String url) async {
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تعذّر فتح الرابط على هذا الجهاز')));
+    final error = await launchContactUrl(url,
+        unavailable: 'لا يمكن فتح هذا الرابط على هذا الجهاز.',
+        failed: 'تعذّر الفتح — تحقّق من الاتصال ثم أعد المحاولة.');
+    if (error != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
     }
   }
 

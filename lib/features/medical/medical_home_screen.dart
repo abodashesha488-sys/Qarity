@@ -2,9 +2,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/product_categories.dart';
+import '../../core/utils/helpers.dart';
+import '../../core/utils/launch_link.dart';
 import '../../models/data_models.dart';
 import '../../models/medical_models.dart';
 import '../../routes/app_routes.dart';
@@ -57,20 +58,29 @@ class MedicalHomeScreen extends StatelessWidget {
     return Scaffold(
       appBar: const QurityAppBar(
           title: 'الخدمات الطبية'),
-      body: GridView.builder(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
-        itemCount: _sections.length,
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisSpacing: 16,
-            crossAxisSpacing: 16,
-            childAspectRatio: 0.9),
-        itemBuilder: (context, index) => _MedicalSectionTile(
-          index: index,
-          label: _sections[index].$1,
-          image: _sections[index].$2,
-        ),
-      ),
+      // أربع صفوف في الشاشة الواحدة كما طلب المستخدم: ارتفاع البلاطة يُحسب من
+      // ارتفاع الجسم المتاح (لا من نسبة ثابتة)، فيبقى السطر الرابع ظاهرًا على أي
+      // مقاس شاشة. المحتوى والمسارات والصور لم تتغيّر — التنسيق وحده.
+      body: LayoutBuilder(builder: (context, box) {
+        const vPadding = 16.0 + 28.0;
+        const spacing = 16.0;
+        final extent = ((box.maxHeight - vPadding - 3 * spacing) / 4)
+            .clamp(88.0, 240.0);
+        return GridView.builder(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+          itemCount: _sections.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: spacing,
+              crossAxisSpacing: spacing,
+              mainAxisExtent: extent),
+          itemBuilder: (context, index) => _MedicalSectionTile(
+            index: index,
+            label: _sections[index].$1,
+            image: _sections[index].$2,
+          ),
+        );
+      }),
     );
   }
 }
@@ -834,9 +844,11 @@ class _OpenRequestsList extends StatelessWidget {
       BloodBankService().getOpenApprovedRequestsStream();
   static final BloodBankService _service = BloodBankService();
 
+  /// بلا بوّابة `canLaunchUrl`: الفحص القبلي كان يرجع false على أندرويد 11+ حين لا
+  /// تُرى حزمة الطلب، فيصمت الزر؛ التجربة المباشرة هي الدليل والفشل يُبلَّغ.
   Future<void> _call(String phone) async {
-    final uri = Uri(scheme: 'tel', path: phone);
-    if (await canLaunchUrl(uri)) await launchUrl(uri);
+    final error = await launchPhoneCall(phone);
+    if (error != null) AppHelpers.showToast(error, isError: true);
   }
 
   /// تعديل صاحب الطلب لبياناته: يعود إلى المراجعة (البند ٨).
@@ -1083,8 +1095,10 @@ class _DonorCard extends StatelessWidget {
                 ? IconButton(
                     icon: const Icon(Icons.call_rounded, color: Color(0xFF00897B)),
                     onPressed: () async {
-                      final uri = Uri(scheme: 'tel', path: donor.phone);
-                      if (await canLaunchUrl(uri)) await launchUrl(uri);
+                      final error = await launchPhoneCall(donor.phone);
+                      if (error != null) {
+                        AppHelpers.showToast(error, isError: true);
+                      }
                     },
                   )
                 : null,

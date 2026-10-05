@@ -5,6 +5,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/utils/contact_links.dart';
+import '../../core/utils/helpers.dart';
+import '../../core/utils/launch_link.dart';
 import '../../models/lost_item_model.dart';
 import '../../routes/app_routes.dart';
 import '../../services/image_upload_service.dart';
@@ -391,11 +393,15 @@ class _LostItemDetailScreenState extends State<LostItemDetailScreen> {
     }
   }
 
-  Future<void> _launch(String url) async {
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
+  /// فتح مباشر بلا بوّابة `canLaunchUrl`: الفحص القبلي كان يرجع false على أندرويد
+  /// 11+ للحزم غير المصرّح برؤيتها، فيصمت زر الاتصال/واتساب بلا رابط ولا كلمة.
+  Future<void> _launch(String url,
+      {LaunchMode mode = LaunchMode.externalApplication}) async {
+    final error = await launchContactUrl(url,
+        mode: mode,
+        unavailable: 'لا يمكن فتح هذا الرابط على هذا الجهاز.',
+        failed: 'تعذّر الفتح — تحقّق من الاتصال ثم أعد المحاولة.');
+    if (error != null) AppHelpers.showToast(error, isError: true);
   }
 
   Future<void> _toggleResolved() async {

@@ -188,9 +188,10 @@ void main() {
       expect(egyptianWhatsAppUrl('01001234567'), 'https://wa.me/201001234567');
     });
 
-    /// منفذ url_launcher وهمي على القناة نفسها (`plugins.flutter.io/url_launcher`,
-    /// `canLaunch`) بلا插件 في بيئة الاختبار: الردود تصل في نفس الدورة
-    /// اللحظية المزيفة، فمسار الفشل يُختَبَر لا يُنتظر.
+    /// منفذ url_launcher وهمي على القناة نفسها (`plugins.flutter.io/url_launcher`)
+    /// بلا插件 في بيئة الاختبار: الردود تصل في نفس الدورة اللحظية المزيفة،
+    /// فمسار الفشل يُختَبَر لا يُنتظر. الاستجابة الآن تُقرأ من `launchUrl` نفسه
+    /// بعد أن زالت بوّابة `canLaunchUrl` — فـ`false` تعني «الفتح رُفض».
     void stubLauncher(WidgetTester tester, {bool launchable = false, bool throwOnLaunch = false}) {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(

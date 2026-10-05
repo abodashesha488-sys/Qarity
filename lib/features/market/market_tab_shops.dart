@@ -466,10 +466,13 @@ class _ShopDetailScreenState extends State<_ShopDetailScreen> {
               onPressed: () async {
                 final wa = egyptianWhatsAppUrl(shop.whatsapp);
                 if (wa == null) return;
-                final uri = Uri.parse(wa);
-                if (await canLaunchUrl(uri)) {
-                  await launchUrl(uri, mode: LaunchMode.externalApplication);
-                }
+                // بلا بوّابة `canLaunchUrl`: كانت ترجع false على أندرويد 11+ للحزم
+                // غير المصرّح برؤيتها، فيتجمّد الزر صامتًا بلا رابط ولا كلمة.
+                final error = await launchContactUrl(wa,
+                    unavailable: 'واتساب غير متاح على هذا الجهاز.',
+                    failed:
+                        'تعذّر فتح المراسلة — تحقّق من الاتصال ثم أعد المحاولة.');
+                if (error != null) _snack(error);
               },
             ),
         ],

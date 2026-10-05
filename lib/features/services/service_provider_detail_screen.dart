@@ -2,10 +2,11 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/comment_style.dart';
+import '../../core/utils/helpers.dart';
+import '../../core/utils/launch_link.dart';
 import '../../models/service_provider_model.dart';
 import '../../services/service_provider_service.dart';
 import '../../services/share_service.dart';
@@ -219,9 +220,11 @@ class _ServiceProviderDetailScreenState
     );
   }
 
+  /// بلا بوّابة `canLaunchUrl`: كانت ترجع false على أندرويد 11+ حين لا تُرى حزمة
+  /// الطلب، فيصمت زر الاتصال؛ التجربة المباشرة هي الدليل والفشل يُبلَّغ.
   Future<void> _call(String phone) async {
-    final uri = Uri(scheme: 'tel', path: phone);
-    if (await canLaunchUrl(uri)) await launchUrl(uri);
+    final error = await launchPhoneCall(phone);
+    if (error != null) AppHelpers.showToast(error, isError: true);
   }
 
   @override

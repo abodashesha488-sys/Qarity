@@ -1,9 +1,10 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/utils/contact_links.dart';
+import '../../core/utils/helpers.dart';
+import '../../core/utils/launch_link.dart';
 
 import '../../core/utils/role_style.dart';
 import '../../models/data_models.dart';
@@ -61,20 +62,18 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
     }
   }
 
+  /// بلا بوّابة `canLaunchUrl`: الفحص القبلي كان يرجع false على أندرويد 11+ للحزم
+  /// غير المصرّح برؤيتها فيتجمّد الزر صامتًا؛ التجربة المباشرة هي الدليل.
   Future<void> _makePhoneCall(String phone) async {
-    final Uri launchUri = Uri(scheme: 'tel', path: phone);
-    if (await canLaunchUrl(launchUri)) {
-      await launchUrl(launchUri);
-    }
+    final error = await launchPhoneCall(phone);
+    if (error != null) AppHelpers.showToast(error, isError: true);
   }
 
   Future<void> _openWhatsApp(String phone) async {
     final url = egyptianWhatsAppUrl(phone);
     if (url == null) return;
-    final Uri launchUri = Uri.parse(url);
-    if (await canLaunchUrl(launchUri)) {
-      await launchUrl(launchUri, mode: LaunchMode.externalApplication);
-    }
+    final error = await launchWhatsAppUrl(url);
+    if (error != null) AppHelpers.showToast(error, isError: true);
   }
 
   @override

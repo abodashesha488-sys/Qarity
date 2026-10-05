@@ -51,42 +51,55 @@ class FarmerServicesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // أربع صفوف في الشاشة الواحدة مثل بوابة الخدمات الطبية: ارتفاع البلاطة يُحسب
+    // من المتاح فعليًا لا من نسبة ثابتة. يُطرح رأس «كل ما يحتاجه المزارع في مكان
+    // واحد» (حشوه 16 أعلى و4 أسفل + سطر العنوان) لأن السلايفرز يتقاسم معه نفس
+    // الارتفاع. الخدمات ومساراتها وصورها كما هي — تنسيق العرض وحده.
     return Scaffold(
       appBar: const QurityAppBar(title: 'خدمات المزارع'),
-      body: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-              child: Text(
-                'كل ما يحتاجه المزارع في مكان واحد',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w900,
-                  color: theme.colorScheme.primary,
+      body: LayoutBuilder(builder: (context, box) {
+        const titleBlock = 16.0 + 4.0 + 32.0;
+        const vPadding = 12.0 + 28.0;
+        const spacing = 16.0;
+        final extent =
+            ((box.maxHeight - titleBlock - vPadding - 3 * spacing) / 4)
+                .clamp(88.0, 240.0)
+                .toDouble();
+        return CustomScrollView(
+          slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                child: Text(
+                  'كل ما يحتاجه المزارع في مكان واحد',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    color: theme.colorScheme.primary,
+                  ),
                 ),
               ),
             ),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
-            sliver: SliverGrid(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) => _ServiceTile(
-                  service: _services[index],
-                  index: index,
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+              sliver: SliverGrid(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => _ServiceTile(
+                    service: _services[index],
+                    index: index,
+                  ),
+                  childCount: _services.length,
                 ),
-                childCount: _services.length,
-              ),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                mainAxisSpacing: 16,
-                crossAxisSpacing: 16,
-                childAspectRatio: 0.9,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: spacing,
+                  crossAxisSpacing: spacing,
+                  mainAxisExtent: extent,
+                ),
               ),
             ),
-          ),
-        ],
-      ),
+          ],
+        );
+      }),
     );
   }
 }

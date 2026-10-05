@@ -1,8 +1,9 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/utils/helpers.dart';
+import '../../core/utils/launch_link.dart';
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
 import '../../services/market_service.dart';
@@ -186,10 +187,8 @@ class _SellerDetailScreenState extends State<SellerDetailScreen> {
                       label: 'اتصال',
                       color: const Color(0xFF6F4E37),
                       onTap: () async {
-                        final uri = Uri(scheme: 'tel', path: phone);
-                        try {
-                          await launchUrl(uri);
-                        } catch (_) {}
+                        final error = await launchPhoneCall(phone);
+                        if (error != null) AppHelpers.showToast(error, isError: true);
                       },
                     ),
                   ),
@@ -201,10 +200,8 @@ class _SellerDetailScreenState extends State<SellerDetailScreen> {
                       label: 'رسالة',
                       color: Colors.blue,
                       onTap: () async {
-                        final uri = Uri(scheme: 'sms', path: phone);
-                        try {
-                          await launchUrl(uri);
-                        } catch (_) {}
+                        final error = await launchSms(phone);
+                        if (error != null) AppHelpers.showToast(error, isError: true);
                       },
                     ),
                   ),

@@ -1,8 +1,9 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/utils/helpers.dart';
+import '../../core/utils/launch_link.dart';
 import '../../models/service_provider_model.dart';
 import '../../routes/app_routes.dart';
 import '../../services/image_upload_service.dart';
@@ -998,8 +999,10 @@ class _ProviderCard extends StatelessWidget {
             icon: Icons.call_rounded,
             color: kCallButtonColor,
             onTap: () async {
-              final uri = Uri(scheme: 'tel', path: provider.phone);
-              if (await canLaunchUrl(uri)) await launchUrl(uri);
+              // بلا بوّابة `canLaunchUrl`: الفحص القبلي كان يصمت حين لا تُرى حزمة
+              // الطلب على أندرويد 11+، والتجربة المباشرة هي الدليل.
+              final error = await launchPhoneCall(provider.phone);
+              if (error != null) AppHelpers.showToast(error, isError: true);
             },
           ),
         _miniAction(

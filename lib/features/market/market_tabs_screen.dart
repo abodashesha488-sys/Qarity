@@ -4,10 +4,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/product_categories.dart';
 import '../../core/utils/contact_links.dart';
+import '../../core/utils/launch_link.dart';
 import '../../core/utils/role_style.dart';
 import '../../models/data_models.dart';
 import '../../models/market_extra_models.dart';

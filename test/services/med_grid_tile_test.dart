@@ -368,15 +368,35 @@ void main() {
       expect(s, contains('if (widget.index != 0 || !_isMedicalAdmin) return null;'));
     });
 
-    test('البوابة الطبية: بلاطتان في السطر وصور مفكوكة بمقاسها', () {
+    test('البوابة الطبية: بلاطتان في السطر، أربع صفوف محسوبة من المتاح', () {
       final s = src('lib/features/medical/medical_home_screen.dart');
       expect(s, contains('crossAxisCount: 2'));
       expect(s, contains('cacheWidth: 520'));
+      // الكثافة تُشتق من ارتفاع الجسم لا من نسبة مجمّدة: القسمة على أربعة.
+      expect(s, contains('LayoutBuilder'));
+      expect(s, contains('(box.maxHeight - vPadding - 3 * spacing) / 4'));
+      expect(s, contains('mainAxisExtent: extent'));
+      expect(s, isNot(contains('childAspectRatio')),
+          reason: 'النسبة الثابتة تجعل عدد الصفوف يعتمد على العرض');
       expect(
           RegExp(r"\('([^']+)', 'assets/images/[^']+'\)", multiLine: true)
               .allMatches(s)
               .length,
           7);
+    });
+
+    test('بوابة خدمات المزارع: بلاطتان في السطر وأربع صفوف', () {
+      final s = src('lib/features/services/farmer_services_screen.dart');
+      expect(s, contains('crossAxisCount: 2'));
+      expect(s, contains('LayoutBuilder'));
+      // يُطرح رأس «كل ما يحتاجه المزارع» لأنه يسكن نفس ارتفاع الجسم.
+      expect(s, contains('const titleBlock = 16.0 + 4.0 + 32.0;'));
+      expect(s,
+          contains('(box.maxHeight - titleBlock - vPadding - 3 * spacing) / 4'));
+      expect(s, contains('mainAxisExtent: extent'));
+      expect(s, isNot(contains('childAspectRatio')));
+      // البلاطات ومساراتها وصورها كما كانت — التنسيق وحده تغيّر.
+      expect(s, contains('_ServiceTile('));
     });
 
     test('تبويب المحلات في سوق القرية: كرتان في السطر', () {
@@ -400,15 +420,15 @@ void main() {
       expect(list, contains('ListView'));
     });
 
-    test('هيدر الشاشة الرئيسية: الصندوق مُكبّر والبيانات الثلاث عائدة لحجمها السابق',
+    test('هيدر الشاشة الرئيسية: الصندوق مُكبّر 40% والبيانات الثلاث بحجمها السابق',
         () {
       final home = src('lib/features/home/home.dart');
       final bell = src('lib/widgets/common_appbar_actions.dart');
-      // صندوق الهيدر بقي على تكبيره (زاوية 45 وحشوه الخارجي) — الطلب لمسه فقط
-      // الساعة والتاريخ والجرس.
-      expect(home, contains('bottomRight: Radius.circular(45)'));
-      expect(home, contains('EdgeInsets.fromLTRB(22, 11, 22, 20)'));
-      expect(home, contains('bottomLeft: Radius.circular(45)'));
+      // صندوق الهيدر وحده تكبّر (قيس بالأداة A/B: old=84.0 ⇒ new=117.5 = +39.9%).
+      // صورة الخلفية تملؤه تلقائيًا لأنها Positioned.fill.
+      expect(home, contains('bottomRight: Radius.circular(63)'));
+      expect(home, contains('EdgeInsets.fromLTRB(31, 15, 31, 49.5)'));
+      expect(home, contains('bottomLeft: Radius.circular(63)'));
       // الجرس رجع إلى قطره الثابت: لا وسيط حجم يبقى بلا طالب.
       expect(home, contains('NotificationBellButton(compact: true)'));
       expect(bell, isNot(contains('compactSize')));

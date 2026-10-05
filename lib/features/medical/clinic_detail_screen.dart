@@ -1,8 +1,9 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/utils/helpers.dart';
+import '../../core/utils/launch_link.dart';
 import '../../models/medical_models.dart';
 import '../../services/medical_service.dart';
 import '../../services/share_service.dart';
@@ -386,8 +387,10 @@ class _VillageClinicDetailScreenState extends State<VillageClinicDetailScreen> {
                           backgroundColor: _teal,
                           padding: const EdgeInsets.symmetric(vertical: 16)),
                       onPressed: () async {
-                        final uri = Uri(scheme: 'tel', path: clinic.phone);
-                        if (await canLaunchUrl(uri)) await launchUrl(uri);
+                        final error = await launchPhoneCall(clinic.phone);
+                        if (error != null) {
+                          AppHelpers.showToast(error, isError: true);
+                        }
                       },
                       icon: const Icon(Icons.call_rounded),
                       label: const Text('اتصال بالعيادة',
@@ -599,8 +602,10 @@ class _PharmacyDetailScreenState extends State<PharmacyDetailScreen> {
                           backgroundColor: _green,
                           padding: const EdgeInsets.symmetric(vertical: 16)),
                       onPressed: () async {
-                        final uri = Uri(scheme: 'tel', path: pharmacy.phone);
-                        if (await canLaunchUrl(uri)) await launchUrl(uri);
+                        final error = await launchPhoneCall(pharmacy.phone);
+                        if (error != null) {
+                          AppHelpers.showToast(error, isError: true);
+                        }
                       },
                       icon: const Icon(Icons.call_rounded),
                       label: const Text('اتصال بالصيدلية',
@@ -819,8 +824,10 @@ class _MedicalLabDetailScreenState extends State<MedicalLabDetailScreen> {
                           padding:
                               const EdgeInsets.symmetric(vertical: 16)),
                       onPressed: () async {
-                        final uri = Uri(scheme: 'tel', path: lab.phone);
-                        if (await canLaunchUrl(uri)) await launchUrl(uri);
+                        final error = await launchPhoneCall(lab.phone);
+                        if (error != null) {
+                          AppHelpers.showToast(error, isError: true);
+                        }
                       },
                       icon: const Icon(Icons.call_rounded),
                       label: const Text('اتصال بالمعمل',

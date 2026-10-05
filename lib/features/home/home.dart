@@ -629,8 +629,8 @@ class _HeroHeader extends StatelessWidget {
       width: double.infinity,
       decoration: const BoxDecoration(
         borderRadius: BorderRadius.only(
-            bottomLeft: Radius.circular(45),
-            bottomRight: Radius.circular(45)),
+            bottomLeft: Radius.circular(63),
+            bottomRight: Radius.circular(63)),
         boxShadow: [
           BoxShadow(
               color: Color(0x2E000000),
@@ -654,7 +654,7 @@ class _HeroHeader extends StatelessWidget {
           SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(22, 11, 22, 20),
+              padding: const EdgeInsets.fromLTRB(31, 15, 31, 49.5),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

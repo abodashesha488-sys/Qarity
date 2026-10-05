@@ -2,9 +2,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/utils/comment_style.dart';
+import '../../core/utils/helpers.dart';
+import '../../core/utils/launch_link.dart';
 import '../../core/utils/role_style.dart';
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
@@ -618,22 +619,24 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         ShareParams(text: _productShareText, subject: _product!.name));
   }
 
+  /// بلا بوّابة `canLaunchUrl`: الفحص القبلي كان يرجع false على أندرويد 11+ للحزم
+  /// غير المصرّح برؤيتها، فالزر كان يصمت بلا كلمة. الفشل الحقيقي هو ما يُبلَّغ.
   void _shareToWhatsApp() async {
     final url =
         'https://wa.me/?text=${Uri.encodeComponent(_productShareText)}';
-    final Uri launchUri = Uri.parse(url);
-    if (await canLaunchUrl(launchUri)) {
-      await launchUrl(launchUri, mode: LaunchMode.externalApplication);
-    }
+    final error = await launchContactUrl(url,
+        unavailable: 'واتساب غير متاح على هذا الجهاز.',
+        failed: 'تعذّر فتح المراسلة — تحقّق من الاتصال ثم أعد المحاولة.');
+    if (error != null) AppHelpers.showToast(error, isError: true);
   }
 
   void _shareToFacebook() async {
     final url =
         'https://www.facebook.com/sharer/sharer.php?u=${Uri.encodeComponent('https://abudshisha.web.app/market/${_product!.id}')}';
-    final Uri launchUri = Uri.parse(url);
-    if (await canLaunchUrl(launchUri)) {
-      await launchUrl(launchUri, mode: LaunchMode.externalApplication);
-    }
+    final error = await launchContactUrl(url,
+        unavailable: 'فيسبوك غير متاح على هذا الجهاز.',
+        failed: 'تعذّر فتح المشاركة — تحقّق من الاتصال ثم أعد المحاولة.');
+    if (error != null) AppHelpers.showToast(error, isError: true);
   }
 
   Widget _buildReviewsBadge(ThemeData theme) {

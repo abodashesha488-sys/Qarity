@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/utils/contact_links.dart';
+import '../../core/utils/launch_link.dart';
 import '../../models/data_models.dart';
 import '../../models/service_provider_model.dart';
 import '../../routes/app_routes.dart';
@@ -351,37 +352,28 @@ class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
   /// اتصال بحالات فشل صادقة: بلا رقم / جهاز لا يستطيع / استثناء في المشغّل.
   /// `report` هو موضع البطاقة نفسه (الشريط الأحمر داخلها)، وغيابه يعني
   /// الصفّ في القائمة فيُبلَّغ بشريط أسفل الشاشة.
+  /// بلا بوّابة `canLaunchUrl`: التجربة المباشرة هي الدليل، فالفحص القبلي كان
+  /// يرجع false على أندرويد 11+ لأزرار سليمة (رؤية الحزم) فيظهر فشل كاذب.
   Future<void> _makeCall(String phone, {void Function(String)? report}) async {
     final number = phone.trim();
     if (number.isEmpty) {
       _fail('لا يوجد رقم هاتف في هذا البيان.', report);
       return;
     }
-    try {
-      final uri = Uri(scheme: 'tel', path: number);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri);
-      } else {
-        _fail('لا يمكن الاتصال على هذا الجهاز.', report);
-      }
-    } catch (_) {
-      _fail('تعذّر بدء المكالمة — أعد المحاولة.', report);
-    }
+    final error = await launchContactUrl(Uri(scheme: 'tel', path: number).toString(),
+        unavailable: 'لا يمكن الاتصال على هذا الجهاز.',
+        failed: 'تعذّر بدء المكالمة — أعد المحاولة.',
+        mode: LaunchMode.platformDefault);
+    if (error != null) _fail(error, report);
   }
 
   /// مراسلة واتساب مباشرة: `wa.me/20xxxxxxxxxx` يبنيه `egyptianWhatsAppUrl`
   /// (مصدر أرقام مصر الواحد)، فيفتح محادثة الرقم نفسه بلا وسيط.
   Future<void> _openWhatsApp(String url, {void Function(String)? report}) async {
-    try {
-      final uri = Uri.parse(url);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        _fail('واتساب غير متاح على هذا الجهاز.', report);
-      }
-    } catch (_) {
-      _fail('تعذّر فتح المراسلة — تحقّق من الاتصال ثم أعد المحاولة.', report);
-    }
+    final error = await launchContactUrl(url,
+        unavailable: 'واتساب غير متاح على هذا الجهاز.',
+        failed: 'تعذّر فتح المراسلة — تحقّق من الاتصال ثم أعد المحاولة.');
+    if (error != null) _fail(error, report);
   }
 
   void _fail(String message, void Function(String)? report) {

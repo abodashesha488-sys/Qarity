@@ -2,9 +2,10 @@ import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../core/constants/promo_placements.dart';
+import '../core/utils/helpers.dart';
+import '../core/utils/launch_link.dart';
 import '../models/promo_model.dart';
 import '../services/promo_service.dart';
 
@@ -91,7 +92,6 @@ class _AgriculturePromoBannerState extends State<AgriculturePromoBanner> {
 
   Future<void> _openPromo(BuildContext context, Promo promo) async {
     if (promo.linkType == 'none' || promo.linkValue.isEmpty) return;
-    Uri? uri;
     if (promo.linkType == 'app') {
       final decoded = PromoInternalLink.decode(promo.linkValue);
       if (context.mounted) {
@@ -100,7 +100,11 @@ class _AgriculturePromoBannerState extends State<AgriculturePromoBanner> {
       return;
     }
     final url = buildExternalUrl(promo.linkType, promo.linkValue);
-    if (url != null) uri = Uri.tryParse(url);
-    if (uri != null) await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (url == null) return;
+    // رابط الإعلان قد يكون محادثة واتساب — تجربة مباشرة والفشل يُبلَّغ.
+    final error = await launchContactUrl(url,
+        unavailable: 'لا يمكن فتح رابط الإعلان على هذا الجهاز.',
+        failed: 'تعذّر فتح الرابط — تحقّق من الاتصال ثم أعد المحاولة.');
+    if (error != null) AppHelpers.showToast(error, isError: true);
   }
 }

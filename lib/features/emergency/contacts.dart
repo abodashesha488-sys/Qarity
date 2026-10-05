@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
+import '../../core/utils/helpers.dart';
+import '../../core/utils/launch_link.dart';
 
 import '../../models/data_models.dart';
 import '../../services/cache_service.dart';
@@ -23,14 +24,16 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen> {
     _service.seedIfEmpty().catchError((_) {});
   }
 
+  /// بلا بوّابة `canLaunchUrl`: الفحص القبلي كان يرجع false على أندرويد 11+ للحزم
+  /// غير المصرّح برؤيتها، فيصمت زر الطوارئ؛ التجربة هنا هي الدليل.
   Future<void> _makeCall(String phone) async {
-    final uri = Uri(scheme: 'tel', path: phone);
-    if (await canLaunchUrl(uri)) await launchUrl(uri);
+    final error = await launchPhoneCall(phone);
+    if (error != null) AppHelpers.showToast(error, isError: true);
   }
 
   Future<void> _sendSms(String phone) async {
-    final uri = Uri(scheme: 'sms', path: phone);
-    if (await canLaunchUrl(uri)) await launchUrl(uri);
+    final error = await launchSms(phone);
+    if (error != null) AppHelpers.showToast(error, isError: true);
   }
 
   @override

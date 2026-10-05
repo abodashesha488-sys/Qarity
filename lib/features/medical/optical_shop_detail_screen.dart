@@ -1,9 +1,9 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/utils/helpers.dart';
+import '../../core/utils/launch_link.dart';
 import '../../models/data_models.dart';
 import '../../models/medical_models.dart';
 import '../../routes/app_routes.dart';
@@ -340,8 +340,10 @@ class _OpticalShopDetailScreenState extends State<OpticalShopDetailScreen> {
                               padding:
                                   const EdgeInsets.symmetric(vertical: 16)),
                           onPressed: () async {
-                            final uri = Uri(scheme: 'tel', path: shop.phone);
-                            if (await canLaunchUrl(uri)) await launchUrl(uri);
+                            final error = await launchPhoneCall(shop.phone);
+                            if (error != null) {
+                              AppHelpers.showToast(error, isError: true);
+                            }
                           },
                           icon: const Icon(Icons.call_rounded),
                           label: const Text('اتصال بالمحل',

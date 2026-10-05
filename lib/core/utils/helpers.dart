@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import 'navigator_key.dart';
 
@@ -37,13 +36,6 @@ class AppHelpers {
 
   static void hapticLight() => HapticFeedback.lightImpact();
   static void hapticMedium() => HapticFeedback.mediumImpact();
-
-  static Future<void> makePhoneCall(String phone) async {
-    final Uri phoneUri = Uri(scheme: 'tel', path: phone);
-    if (await canLaunchUrl(phoneUri)) {
-      await launchUrl(phoneUri);
-    }
-  }
 
   static String formatDate(DateTime date) {
     return DateFormat('yyyy/MM/dd', 'ar').format(date);
