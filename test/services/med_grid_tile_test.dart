@@ -400,16 +400,24 @@ void main() {
       expect(list, contains('ListView'));
     });
 
-    test('هيدر الشاشة الرئيسية مُكبّر مع الجرس', () {
+    test('هيدر الشاشة الرئيسية: الصندوق مُكبّر والبيانات الثلاث عائدة لحجمها السابق',
+        () {
       final home = src('lib/features/home/home.dart');
       final bell = src('lib/widgets/common_appbar_actions.dart');
-      expect(home, contains('compact: true, compactSize: 59'));
+      // صندوق الهيدر بقي على تكبيره (زاوية 45 وحشوه الخارجي) — الطلب لمسه فقط
+      // الساعة والتاريخ والجرس.
       expect(home, contains('bottomRight: Radius.circular(45)'));
       expect(home, contains('EdgeInsets.fromLTRB(22, 11, 22, 20)'));
-      expect(bell, contains('this.compactSize'));
-      // مقياس التوسيع: نصف قطر الزاوية القديم 31 ⇒ 45، فصار الهيدر أكبر
-      // من مقداره بلا أن يمسّ أي محتوى فيه.
       expect(home, contains('bottomLeft: Radius.circular(45)'));
+      // الجرس رجع إلى قطره الثابت: لا وسيط حجم يبقى بلا طالب.
+      expect(home, contains('NotificationBellButton(compact: true)'));
+      expect(bell, isNot(contains('compactSize')));
+      expect(bell, contains('width: 42'));
+      // حبيبات التاريخ والساعة إلى مقاسها السابق (أيقونتان 11 وخطّان 10/10.5).
+      expect(home, contains('size: 11, color: Color(0xFFFFE082)'));
+      expect(home, contains('fontSize: 10,'));
+      expect(home, contains('fontSize: 10.5'));
+      expect(home, contains('horizontal: 9, vertical: 3.5'));
     });
   });
 }

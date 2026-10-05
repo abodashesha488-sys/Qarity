@@ -942,6 +942,48 @@ class AdminService {
     };
   }
 
+  /// عدّ معلّقات مجموعة واحدة موزَّعًا على قيم حقل تصنيف: لكل قيمة عدّها
+  /// المستقل، ومفتاح `'*'` هو الباقي (إجمالي المعلّقات ناقص ما أخذته القيم).
+  ///
+  /// لا يُقرأ أي مستند: كل عدٍّ `count()` على مساواتين فقط، فلا فهرس مركّب
+  /// جديد. والباقي يُحسب بالطرح لا باستعلام «ليس كذلك»، لأن Firestore يُسقِط
+  /// من `not-in` الوثائق التي لا تملك الحقل أصلًا — وهي السجلات القديمة التي
+  /// يجب أن تبقى قابلة للمراجعة.
+  Future<Map<String, int>> fetchGroupPendingCounts(
+      String collection, String field, List<String> values,
+      {bool strict = false}) async {
+    final out = <String, int>{};
+    final total = collection == 'seller_requests'
+        ? await _statusPendingCount(collection, strict: strict)
+        : await _pendingCountOnce(collection, strict: strict);
+    var claimed = 0;
+    for (final value in values) {
+      final count =
+          await _pendingCountWhere(collection, field, value, strict: strict);
+      out[value] = count;
+      claimed += count;
+    }
+    out['*'] = claimed > total ? 0 : total - claimed;
+    return out;
+  }
+
+  Future<int> _pendingCountWhere(
+      String collection, String field, String value,
+      {bool strict = false}) async {
+    try {
+      final snap = await _firestore
+          .collection(collection)
+          .where('isApproved', isEqualTo: false)
+          .where(field, isEqualTo: value)
+          .count()
+          .get();
+      return snap.count ?? 0;
+    } catch (_) {
+      if (strict) rethrow;
+      return 0;
+    }
+  }
+
   Future<int> _statusPendingCount(String collection,
       {bool strict = false}) async {
     try {

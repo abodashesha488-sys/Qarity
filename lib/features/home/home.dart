@@ -607,7 +607,7 @@ class _HeroHeader extends StatelessWidget {
   final String dateLabel;
 
   Widget _pill({required Widget child}) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
         decoration: BoxDecoration(
           color: const Color(0xE66F4E37),
           borderRadius: BorderRadius.circular(999),
@@ -667,18 +667,18 @@ class _HeroHeader extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _pill(child: const _VillageClock()),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 6),
                           _pill(
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 const Icon(Icons.event_rounded,
-                                    size: 15, color: Color(0xFFFFE082)),
-                                const SizedBox(width: 7),
+                                    size: 11, color: Color(0xFFFFE082)),
+                                const SizedBox(width: 5),
                                 Text(dateLabel,
                                     style: const TextStyle(
                                         color: Colors.white,
-                                        fontSize: 14,
+                                        fontSize: 10,
                                         fontWeight: FontWeight.w700)),
                               ],
                             ),
@@ -686,8 +686,7 @@ class _HeroHeader extends StatelessWidget {
                         ],
                       ),
                       const Spacer(),
-                      const NotificationBellButton(
-                          compact: true, compactSize: 59),
+                      const NotificationBellButton(compact: true),
                     ],
                   ),
                 ],
@@ -1024,14 +1023,14 @@ class _VillageClockState extends State<_VillageClock> {
       mainAxisSize: MainAxisSize.min,
       children: [
         const Icon(Icons.schedule_rounded,
-            size: 15, color: Color(0xFFFFE082)),
-        const SizedBox(width: 7),
+            size: 11, color: Color(0xFFFFE082)),
+        const SizedBox(width: 5),
         Text(text,
             style: const TextStyle(
                 color: Colors.white,
-                fontSize: 14.5,
+                fontSize: 10.5,
                 fontWeight: FontWeight.w800,
-                letterSpacing: 0.7,
+                letterSpacing: 0.5,
                 fontFeatures: [FontFeature.tabularFigures()])),
       ],
     );

@@ -62,12 +62,18 @@ mixin _ReviewBulkMixin on State<_ReviewPage> {
         : null;
     if (action == 'reject' && (notes == null || notes.isEmpty)) return;
 
+    // مجموعة العنصر، وإلا **مصدر** التبويب المحدد: معرّف التبويب المصفّى
+    // (`tab_*`) ليس مجموعة في Firestore، فتمريره يُلغي الإجراء صامتًا.
+    final fallback = widget.cats
+        .firstWhere((c) => c.collection == widget.selected,
+            orElse: () => widget.cats.first)
+        .realCollection;
     for (final key in selectedIds) {
       final separator = key.indexOf('::');
       final collection = separator < 0
-          ? widget.selected
+          ? fallback
           : (key.substring(0, separator).isEmpty
-              ? widget.selected
+              ? fallback
               : key.substring(0, separator));
       final id = separator < 0 ? key : key.substring(separator + 2);
       try {

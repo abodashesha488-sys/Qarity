@@ -193,9 +193,10 @@ class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
                   : _filteredEntries.isEmpty
                       ? _buildEmptyState(theme)
                       : ListView.separated(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
                           itemCount: _filteredEntries.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 10),
+                          separatorBuilder: (_, __) => const SizedBox(height: 4),
                           itemBuilder: (context, index) => _buildContactCard(theme, _filteredEntries[index]),
                         ),
             ),
@@ -224,8 +225,10 @@ class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
     final isApproved = entry.isApproved;
     return Card(
       elevation: 0,
+      // الصفوف متلاصقة: لا هامش للكرت والفراغ بينهما هو فاصل القائمة وحده (4).
+      margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         side: BorderSide(
           color: isApproved
               ? theme.colorScheme.outlineVariant.withValues(alpha: 0.4)
@@ -235,14 +238,14 @@ class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
       // النقر على الصفّ كله — وعلى الاسم منه — يفتح بطاقة السجل.
       child: InkWell(
         key: Key('phone-row-${entry.id}'),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         onTap: () => _showContactDetailDialog(entry),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           child: Row(
             children: [
               _avatar(theme, entry),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -278,10 +281,14 @@ class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
                 key: Key('phone-row-call-${entry.id}'),
                 tooltip: 'اتصال',
                 onPressed: () => _makeCall(entry.phone),
-                icon: const Icon(Icons.call_rounded, size: 18),
+                icon: const Icon(Icons.call_rounded, size: 16),
                 style: IconButton.styleFrom(
                   backgroundColor: kCallButtonColor,
                   foregroundColor: Colors.white,
+                  // الصف مضغوط: الزر 34 بدل 48 الافتراضي، بلا هوامش لمس إضافية.
+                  minimumSize: const Size(34, 34),
+                  padding: EdgeInsets.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
               ),
               if (_isAdmin && !isApproved)
@@ -327,11 +334,16 @@ class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
   Widget _avatar(ThemeData theme, PhoneDirectoryEntry entry) {
     final hasPhoto = entry.photoUrl != null && entry.photoUrl!.isNotEmpty;
     return CircleAvatar(
+      // 16 بدل 20 الافتراضية: ارتفاع الصفّ كله يتبع هذه الدائرة.
+      radius: 16,
       backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
       foregroundImage: hasPhoto ? CachedNetworkImageProvider(entry.photoUrl!) : null,
       child: Text(
         hasPhoto ? '' : (entry.name.isNotEmpty ? entry.name[0] : ''),
-        style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.w800),
+        style: TextStyle(
+            color: theme.colorScheme.primary,
+            fontWeight: FontWeight.w800,
+            fontSize: 12),
       ),
     );
   }

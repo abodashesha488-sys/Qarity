@@ -17,6 +17,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../core/constants/product_categories.dart';
 import '../../core/constants/promo_placements.dart';
 import '../../core/utils/file_export.dart';
 import '../../core/utils/firebase_ts.dart';
@@ -64,7 +65,25 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
 
   bool _isLoadingStats = true;
   Map<String, int> _stats = {};
-  Map<String, int> _pendingCounts = {};
+
+  /// عدّادات المعلّقات بمفاتيح **التبويبات**: المجموعات الحقيقية بأسمائها،
+  /// والتبويبات المصفّاة بمعرفاتها الوهمية. `_pendingCounts` هي الوجه الحقيقي
+  /// وحده الذي تقرأه الشريط العلوي والنظرة العامة والتقارير.
+  Map<String, int> _counts = {};
+
+  /// المجموعات الحقيقية التي تُراجع في اللوحة (بلا القائمة الموحّدة الوهمية).
+  static List<String> get _realCollections => _cats
+      .map((c) => c.realCollection)
+      .where((c) => c != kAllPending)
+      .toSet()
+      .toList(growable: false);
+
+  /// التبويبات المصفّاة تعتمد على مستندات مجموعة قائمة، فجمعها معها يُضاعف
+  /// الإجمالي؛ لذلك تُصفّى هنا عند كل جمع أو عرض للمجموعات.
+  Map<String, int> get _pendingCounts => {
+        for (final key in _realCollections)
+          if (_counts[key] != null) key: _counts[key]!
+      };
 
   /// عدّادات أعادت الإذاعة قراءتها بعد قرار واحد. تُدمج فوق نتيجة
   /// `fetchPendingCounts` الكاملة لأن تلك القراءة قد تكون انطلقت قبل القرار
@@ -82,6 +101,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     _Cat(kAllPending, 'كل المعلّقات', Icons.layers_rounded, Color(0xFF6F4E37)),
     _Cat('news', 'الأخبار', Icons.newspaper_rounded, Colors.blue),
     _Cat('market_products', 'المنتجات', Icons.store_rounded, Colors.deepPurple),
+    // «المستلزمات الطبية» صفحة في الخدمات الطبية لا مجموعة: مستندات
+    // `market_products` بتصنيف واحد، فالتبويب هنا عرض مُصفّى من المنتجات.
+    _Cat('tab_med_supplies', 'المستلزمات الطبية',
+        Icons.medical_services_rounded, Color(0xFF0097A7),
+        source: 'market_products',
+        filterField: 'category',
+        filterValues: {kMedicalSuppliesCategory}),
     _Cat('shops', 'المحلات', Icons.storefront_rounded, Colors.amber),
     _Cat('obituaries', 'العزاء', Icons.volunteer_activism_rounded,
         Colors.indigo),
@@ -90,8 +116,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     _Cat('seller_requests', 'طلبات المتاجر', Icons.storefront_rounded,
         Colors.orange),
     _Cat('phone_directory', 'دليل الهاتف', Icons.phone_rounded, Colors.cyan),
-    _Cat('service_providers', 'سجلات دليل الخدمات', Icons.category_rounded,
-        Color(0xFF6D4C41)),
+    // دليل الخدمات صفحةٌ لكل فئة؛ والتبويب هنا صفحةٌ كذلك، لا سجل واحد يخلط
+    // الحرفيين بالزراعة بالتعليم. كلها `service_providers` بتصفية `category`.
+    _Cat('tab_svc_technicians', 'دليل الحرفيين', Icons.engineering_rounded,
+        Color(0xFFEF6C00),
+        source: 'service_providers',
+        filterField: 'category',
+        filterValues: {ServiceCategory.technicians},
+        takesRest: true),
+    _Cat('tab_svc_agricultural', 'خدمات زراعية', Icons.agriculture_rounded,
+        Color(0xFFAD1457),
+        source: 'service_providers',
+        filterField: 'category',
+        filterValues: {ServiceCategory.agricultural}),
+    _Cat('tab_svc_educational', 'خدمات تعليمية', Icons.school_rounded,
+        Color(0xFF1565C0),
+        source: 'service_providers',
+        filterField: 'category',
+        filterValues: {ServiceCategory.educational}),
     _Cat('lost_items', 'المفقودات', Icons.search_rounded, Color(0xFF5E35B1)),
     _Cat('village_ads', 'إعلانات القرية', Icons.campaign_rounded,
         Color(0xFF311B92)),
@@ -115,6 +157,31 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   ];
 
   int get _totalPending => _pendingCounts.values.fold<int>(0, (p, e) => p + e);
+
+  /// بطاقات المراجعة في النظرة العامة تُسمّى **بتبويبات المراجعة** لا بأسماء
+  /// المجموعات، حتى تطابق النقرة ما يفتحه التبويب عددًا وقسمًا. مجموعة يقسّمها
+  /// تبويباتها تقسيمًا كاملًا (أحدها يحمل «الباقي») تُترك لتبويباتها فلا يتكرّر
+  /// مجموعها تحت اسم المجموعة؛ ومجموعة جزئية التصفية (المنتجات ومنها
+  /// المستلزمات الطبية) تبقى لأن رقمها أوسع من رقم تبويبه المصفّى.
+  Map<String, int> get _reviewTabCounts {
+    final partitioned = <String>{
+      for (final c in _cats)
+        if (c.isVirtual && c.takesRest) c.realCollection
+    };
+    final out = <String, int>{};
+    for (final c in _cats) {
+      if (c.isAllPending) continue;
+      if (!c.isVirtual && partitioned.contains(c.collection)) continue;
+      final count = _counts[c.collection] ?? 0;
+      if (count > 0) out[c.collection] = count;
+    }
+    return out;
+  }
+
+  static Map<String, String> get _reviewTabLabels => {
+        for (final c in _cats)
+          if (!c.isAllPending) c.collection: c.label
+      };
 
   @override
   void initState() {
@@ -171,40 +238,75 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   Future<void> _loadPendingCounts() async {
     try {
       final counts = await _adminService.fetchPendingCounts();
+      final groups = await _loadGroupCounts();
       if (!mounted) return;
+      counts.addAll(groups);
       counts.addAll(_recounted);
-      setState(() => _pendingCounts = counts);
+      setState(() => _counts = counts);
     } catch (_) {}
   }
 
-  /// قرار واحد ⇒ عدّ مجموعة واحدة: الشريط العلوي ورقائق التبويب وبطاقات
-  /// النظرة العامة كلها تقرأ `_pendingCounts` نفسها فتنعّم جميعها بـ`setState`
-  /// واحد. تُعاد القراءة مرة أخرة إن وصل قرار أثناء الجري (إجراء جماعي على
-  /// عناصر من نفس المجموعة) وإلا بقي الرقم الذي قرأ قبل آخر قرار.
+  /// عدّادات التبويبات المصفّاة — تُقرأ مع مصدرها في رحلة واحدة لكل مجموعة
+  /// (مجموعتان هنا: المنتجات ودليل الخدمات)، وتفشل بالاستثناء لا بالصفر لأن
+  /// «صفر» في شارة حيّة تعني «لا معلّقات». `onlySource` يحصر القراءة في
+  /// المجموعة التي تغيّرت فعليًا فلا تُعاد قراءة كل المصادر مع كل قرار.
+  Future<Map<String, int>> _loadGroupCounts({String? onlySource}) async {
+    final bySource = <String, List<_Cat>>{};
+    for (final c in _cats) {
+      if (!c.isVirtual) continue;
+      if (onlySource != null && c.realCollection != onlySource) continue;
+      (bySource[c.realCollection] ??= <_Cat>[]).add(c);
+    }
+    final out = <String, int>{};
+    for (final entry in bySource.entries) {
+      final cats = entry.value;
+      final known = <String>{for (final c in cats) ...?c.filterValues};
+      final counts = await _adminService.fetchGroupPendingCounts(
+          entry.key, cats.first.filterField!, known.toList(growable: false));
+      for (final c in cats) {
+        out[c.collection] = c.takesRest
+            ? (counts[_kRestGroup] ?? 0)
+            : c.filterValues!
+                .fold<int>(0, (acc, v) => acc + (counts[v] ?? 0));
+      }
+    }
+    return out;
+  }
+
+  /// قرار واحد ⇒ عدّ مجموعة واحدة وكل تبويباتها المصفّاة: الشريط العلوي
+  /// ورقائق التبويب وبطاقات النظرة العامة كلها تقرأ `_counts` نفسها فتنعّم
+  /// جميعها بـ`setState` واحد. تُعاد القراءة مرة أخرة إن وصل قرار أثناء الجري
+  /// (إجراء جماعي على عناصر من نفس المجموعة) وإلا بقي الرقم الذي قرأ قبل آخر
+  /// قرار.
   Future<void> _applyPendingCount(String collection) async {
-    if (!_cats.any((c) => c.collection == collection)) return;
+    if (!_cats.any((c) => c.realCollection == collection)) return;
     if (!_recountInFlight.add(collection)) {
       _recountAgain.add(collection);
       return;
     }
     do {
       _recountAgain.remove(collection);
-      final int count;
+      final Map<String, int> counted;
       try {
-        count = await _adminService.recountPending(collection);
+        counted = {
+          collection: await _adminService.recountPending(collection),
+          ...await _loadGroupCounts(onlySource: collection),
+        };
       } catch (_) {
         // لا صفر زائف في شارة حيّة — «صفر» تعني «لا معلّقات» فيمضي المراجع دون
         // أن ينظر. يبقى آخر رقم معروف، و«تحديث» السحب أو زر التحديث في المراجعة
-        // هو ممرّ الاستعادة لأنه يعيد العدّادات العشرين كاملة.
+        // هو ممرّ الاستعادة لأنه يعيد العدّادات كاملة.
         if (!mounted) return;
         _recountInFlight.remove(collection);
         return;
       }
       if (!mounted) return;
-      _recounted[collection] = count;
-      if (_pendingCounts[collection] != count) {
-        setState(() => _pendingCounts = {..._pendingCounts, collection: count});
+      _recounted.addAll(counted);
+      var changed = false;
+      for (final entry in counted.entries) {
+        if (_counts[entry.key] != entry.value) changed = true;
       }
+      if (changed) setState(() => _counts = {..._counts, ...counted});
     } while (_recountAgain.contains(collection));
     _recountInFlight.remove(collection);
   }
@@ -347,6 +449,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           _OverviewPage(
             stats: _stats,
             pendingCounts: _pendingCounts,
+            reviewTabs: _reviewTabCounts,
+            reviewLabels: _reviewTabLabels,
             isLoading: _isLoadingStats,
             totalPending: _totalPending,
             onRefresh: _refreshDashboard,
@@ -364,7 +468,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             key: ValueKey('review_$_reviewNav'),
             cats: _cats,
             selected: _selectedCat ?? _cats.first.collection,
-            pendingCounts: _pendingCounts,
+            pendingCounts: _counts,
             onSelect: (c) => setState(() => _selectedCat = c),
             onAction: _handleAction,
             busyActions: _busyActions,

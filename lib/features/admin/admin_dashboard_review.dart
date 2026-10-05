@@ -38,26 +38,70 @@ class _ReviewPageState extends State<_ReviewPage> with _ReviewBulkMixin {
   Stream<List<Map<String, dynamic>>>? _itemsStream;
   String? _itemsStreamKey;
 
-  /// المجموعات الحقيقية (بلا القائمة الموحّدة الوهمية).
+  /// المجموعات الحقيقية وحدها — تُشتق من `realCollection` وتُحصر بالتعيين
+  /// (Set) لأن التبويبات المصفّاة تتشارك مصدرها مع تبويب حقيقي، فذكر المصدر
+  /// مرتين في القائمة الموحّدة يضاعف كل عنصر فيه.
   List<String> get _realCollections => widget.cats
-      .map((c) => c.collection)
+      .map((c) => c.realCollection)
       .where((c) => c != kAllPending)
+      .toSet()
       .toList(growable: false);
 
-  /// اسم القسم المصدري لكل مجموعة — يُعرض على بطاقة القائمة الموحّدة.
-  Map<String, _Cat> get _catsByCollection =>
-      {for (final c in widget.cats) if (c.collection != kAllPending) c.collection: c};
+  /// إجمالي المعلّقات الحقيقية: التبويب المصفّى يعدّ مستندات مجموعة قائمة،
+  /// فجمعه مع مصدرها يُضاعف الرقم في ترويسة «كل المعلّقات» وفي الرقائق.
+  int get _totalRealPending => widget.cats
+      .where((c) => !c.isVirtual && !c.isAllPending)
+      .fold<int>(0, (acc, c) => acc + (widget.pendingCounts[c.collection] ?? 0));
 
-  Stream<List<Map<String, dynamic>>> _streamFor(
-      String collection, bool pendingOnly) {
-    final key = '${collection}_$pendingOnly';
+  /// قيم التصنيف التي أخذتها تبويبات أخرى من نفس المصدر — «الباقي» يتركها لها،
+  /// وإلا ظهر السجل الزراعي في تبويب الحرفيين وتبويب الزراعة معًا.
+  Set<String> _claimedElsewhere(_Cat cat) => {
+        for (final other in widget.cats)
+          if (other.isVirtual &&
+              other.collection != cat.collection &&
+              other.realCollection == cat.realCollection &&
+              other.filterField == cat.filterField)
+            ...?other.filterValues
+      };
+
+  Stream<List<Map<String, dynamic>>> _streamFor(_Cat cat, bool pendingOnly) {
+    final key = '${cat.collection}_$pendingOnly';
     if (_itemsStreamKey != key || _itemsStream == null) {
       _itemsStreamKey = key;
-      _itemsStream = collection == kAllPending
-          ? AdminService().allPendingStream(_realCollections)
-          : AdminService().itemsStream(collection, pendingOnly: pendingOnly);
+      if (cat.isAllPending) {
+        _itemsStream = AdminService().allPendingStream(_realCollections);
+      } else {
+        final source = AdminService()
+            .itemsStream(cat.realCollection, pendingOnly: pendingOnly);
+        // التبويب المصفّى يقرأ مستندات المصدر نفسه ويرفّصها هنا: لا مجموعة
+        // جديدة ولا أدوار ولا قواعد — والقرار في البطاقة يذهب إلى المصدر.
+        _itemsStream = cat.isVirtual
+            ? source.map((docs) => docs
+                .where((d) =>
+                    cat.matches(d, claimedElsewhere: _claimedElsewhere(cat)))
+                .toList(growable: false))
+            : source;
+      }
     }
     return _itemsStream!;
+  }
+
+  /// فئة العنصر للعرض: تبويب مُصفّى يطابقه أولًا (هو أدقّ من اسم المجموعة —
+  /// «خدمات تعليمية» لا «دليل الخدمات»)، وإلا المجموعة الحقيقية نفسها.
+  _Cat? _sourceCatFor(Map<String, dynamic> item) {
+    final real = item['_collection'] as String?;
+    if (real == null) return null;
+    for (final c in widget.cats) {
+      if (c.isVirtual &&
+          c.realCollection == real &&
+          c.matches(item, claimedElsewhere: _claimedElsewhere(c))) {
+        return c;
+      }
+    }
+    for (final c in widget.cats) {
+      if (!c.isVirtual && c.collection == real) return c;
+    }
+    return null;
   }
 
   @override
@@ -74,8 +118,7 @@ class _ReviewPageState extends State<_ReviewPage> with _ReviewBulkMixin {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final allPendingView = _cat.isAllPending;
-    final totalPending = widget.pendingCounts.values
-        .fold<int>(0, (acc, value) => acc + value);
+    final totalPending = _totalRealPending;
     return Column(
       children: [
         // ── عنوان الصفحة الموحّد ─────────────────────────────────
@@ -118,8 +161,7 @@ class _ReviewPageState extends State<_ReviewPage> with _ReviewBulkMixin {
               final c = widget.cats[i];
               final sel = c.collection == widget.selected;
               final pending = c.isAllPending
-                  ? widget.pendingCounts.values
-                      .fold<int>(0, (acc, value) => acc + value)
+                  ? _totalRealPending
                   : (widget.pendingCounts[c.collection] ?? 0);
               return _CategoryChip(
                 cat: c,
@@ -150,8 +192,7 @@ class _ReviewPageState extends State<_ReviewPage> with _ReviewBulkMixin {
         // ── قائمة العناصر ───────────────────────────────────────
         Expanded(
           child: StreamBuilder<List<Map<String, dynamic>>>(
-            stream: _streamFor(
-                _cat.collection, allPendingView ? true : _pendingOnly),
+            stream: _streamFor(_cat, allPendingView ? true : _pendingOnly),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return Center(
@@ -173,7 +214,7 @@ class _ReviewPageState extends State<_ReviewPage> with _ReviewBulkMixin {
               final q = _search.text.trim().toLowerCase();
               if (q.isNotEmpty) {
                 items = items.where((it) {
-                  final source = _catsByCollection[it['_collection']]?.label ?? '';
+                  final source = _sourceCatFor(it)?.label ?? '';
                   final text = [
                     it['title'],
                     it['name'],
@@ -235,8 +276,7 @@ class _ReviewPageState extends State<_ReviewPage> with _ReviewBulkMixin {
                 separatorBuilder: (_, __) => const SizedBox(height: 12),
                 itemBuilder: (context, i) {
                   final item = items[i];
-                  final source =
-                      _catsByCollection[item['_collection'] as String?];
+                  final source = _sourceCatFor(item);
                   return _ReviewCard(
                     cat: _cat,
                     source: source,
@@ -612,9 +652,10 @@ class _ReviewCard extends StatelessWidget {
   final bool selectionMode;
 
   /// المجموعة الفعلية للعنصر: `_collection` المدموجة في القائمة الموحّدة،
-  /// وإلا مجموعة التبويب الحالي. كل إجراء (موافقة/رفض/حذف/تفاصيل/تعديل)
-  /// يجب أن يوجَّه إليها لا إلى `_Cat` الوهمي.
-  String get collection => (item['_collection'] as String?) ?? cat.collection;
+  /// وإلا **مصدر** التبويب الحالي — فالتبويب المصفّى معرّفه وهمي (`tab_*`)
+  /// والعنوان الحقيقي للوثيقة في Firestore هو مصدره. كل إجراء (موافقة/رفض/
+  /// حذف/تفاصيل/تعديل) يجب أن يوجَّه إليها لا إلى المعرّف الوهمي.
+  String get collection => (item['_collection'] as String?) ?? cat.realCollection;
   String get sourceLabel => source?.label ?? cat.label;
   Color get sourceColor => source?.color ?? cat.color;
   IconData get sourceIcon => source?.icon ?? cat.icon;
@@ -623,7 +664,12 @@ class _ReviewCard extends StatelessWidget {
   /// حتى يعرف المدير ما الذي يوافق عليه دون فتح التفاصيل.
   String get _kindLabel => switch (collection) {
         'news' => 'خبر بانتظار النشر',
-        'market_products' => 'منتج من السوق',
+        // «المستلزمات الطبية» ليست مجموعة: هي مستند `market_products` بتصنيف
+        // واحد، فالبطاقة تسمّي حقيقيتها كي لا يظن المراجع أنه يوافق على منتج
+        // سوق عام وهو يوافق على مستلزم يظهر في صفحة الخدمات الطبية.
+        'market_products' => item['category'] == kMedicalSuppliesCategory
+            ? 'مستلزم طبي من السوق'
+            : 'منتج من السوق',
         'shops' => 'محل في السوق',
         'obituaries' => 'نعوة بانتظار النشر',
         'occasions' => 'مناسبة بانتظار النشر',
@@ -631,8 +677,9 @@ class _ReviewCard extends StatelessWidget {
         'seller_requests' => 'طلب تحوّل إلى بائع',
         'phone_directory' => 'رقم في دليل الهاتف',
         'service_providers' => switch ('${item['category'] ?? ''}') {
-            'agricultural' => 'سجل في صفحة خدمات زراعية',
-            'educational' => 'سجل في صفحة خدمات تعليمية',
+            ServiceCategory.agricultural => 'سجل في صفحة خدمات زراعية',
+            ServiceCategory.educational => 'سجل في صفحة خدمات تعليمية',
+            ServiceCategory.farmerWorkersEquipment => 'سجل في صفحة عمال و معدات',
             _ => 'سجل في صفحة دليل الحرفيين',
           },
         'lost_items' => 'إعلان مفقودات',

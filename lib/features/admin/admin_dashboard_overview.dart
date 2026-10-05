@@ -5,6 +5,8 @@ class _OverviewPage extends StatefulWidget {
   const _OverviewPage({
     required this.stats,
     required this.pendingCounts,
+    required this.reviewTabs,
+    required this.reviewLabels,
     required this.isLoading,
     required this.totalPending,
     required this.onRefresh,
@@ -17,6 +19,11 @@ class _OverviewPage extends StatefulWidget {
 
   final Map<String, int> stats;
   final Map<String, int> pendingCounts;
+
+  /// عدّادات بطاقات المراجعة بمفاتيح **تبويبات اللوحة** (لا أسماء المجموعات)
+  /// مع تسمياتها، حتى تفتح النقرة التبويب الذي يحمل الرقم نفسه.
+  final Map<String, int> reviewTabs;
+  final Map<String, String> reviewLabels;
   final bool isLoading;
   final int totalPending;
   final Future<void> Function() onRefresh;
@@ -60,7 +67,8 @@ class _OverviewPageState extends State<_OverviewPage> {
           // عناصر تحتاج مراجعة
           if (widget.totalPending > 0) ...[
             _PendingReviewSection(
-              pendingCounts: widget.pendingCounts,
+              pendingCounts: widget.reviewTabs,
+              labels: widget.reviewLabels,
               onOpenReview: widget.onOpenReview,
             ),
             const SizedBox(height: 20),
@@ -195,38 +203,20 @@ class _StatCellOverview extends StatelessWidget {
 }
 
 /// قسم العناصر المعلقة — شرائط مضغوطة بدل صفوف طويلة: كل شريط يحمل
-/// اسم القسم وعدد معلّقاته، واللمسة تفتح مراجعته مباشرة.
+/// اسم **تبويب المراجعة** وعدد معلّقاته، واللمسة تفتح مراجعته مباشرة.
+///
+/// المفاتيح هنا معرّفات تبويبات (`tab_*` للتصفية) لا أسماء مجموعات، والتسميات
+/// مرافقة لها من `_reviewTabLabels` — فلا يظهر رقم تحت اسم لا يفتحه النقر.
 class _PendingReviewSection extends StatelessWidget {
   const _PendingReviewSection({
     required this.pendingCounts,
+    required this.labels,
     required this.onOpenReview,
   });
 
   final Map<String, int> pendingCounts;
+  final Map<String, String> labels;
   final void Function(String) onOpenReview;
-
-  static const Map<String, String> _labels = {
-    'news': 'الأخبار',
-    'market_products': 'المنتجات',
-    'shops': 'المحلات',
-    'obituaries': 'العزاء',
-    'occasions': 'المناسبات',
-    'forum_posts': 'المنتدى',
-    'seller_requests': 'طلبات المتاجر',
-    'phone_directory': 'دليل الهاتف',
-    'service_providers': 'دليل الخدمات',
-    'lost_items': 'المفقودات',
-    'village_ads': 'إعلانات القرية',
-    'lawyers': 'سجل المحامين',
-    'legal_consultations': 'الاستشارات',
-    'medical_center_clinics': 'عيادات المركز',
-    'village_clinics': 'عيادات القرية',
-    'pharmacies': 'الصيدليات',
-    'medical_labs': 'معامل التحاليل',
-    'optical_shops': 'نظارات طبية',
-    'blood_requests': 'طلبات الدم',
-    'blood_donors': 'المتبرعون بالدم',
-  };
 
   @override
   Widget build(BuildContext context) {
@@ -297,7 +287,7 @@ class _PendingReviewSection extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: pending.map((e) {
-                final label = _labels[e.key] ?? e.key;
+                final label = labels[e.key] ?? e.key;
                 return InkWell(
                   onTap: () => onOpenReview(e.key),
                   borderRadius: BorderRadius.circular(20),

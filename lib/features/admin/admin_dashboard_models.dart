@@ -4,16 +4,62 @@ part of 'admin_dashboard.dart';
 /// كل عنصر فيها يحمل `_collection` الأصلية ليُوجَّه الإجراء إليها.
 const String kAllPending = 'pending_all';
 
+/// مفتاح «بقية القيم» في عدّ التبويبات المصفّاة: السجلات التي لا تحمل حقل
+/// التصنيف أو تحمل قيمة لا تعرفها اللوحة — يَرثها التبويب الافتراضي للمصدر
+/// (`takesRest`) فلا يسقط سجل من المراجعة أبدًا.
+const String _kRestGroup = '*';
+
 /// فئة مراجعة في لوحة الأدمن — تمثل مجموعة Firestore قابلة للموافقة/الرفض.
 /// معرّف خاص بمكتبة لوحة الأدمن عبر `part`.
+/// فئة مراجعة — إما مجموعة Firestore حقيقية، أو **تبويب مُصفّى** من مجموعة
+/// قائمة (`source` + `filterField`/`filterValues`). التبويب المصفّى لا يخترع
+/// مجموعة ولا وثيقة ولا دورًا: يقرأ مستندات المصدر نفسه ويرفّصها، وكل قرار
+/// فيه يُوجَّه إلى `realCollection` لأنها عنوان العنصر في Firestore فعلًا.
 class _Cat {
+  /// معرّف التبويب — فريد في القائمة، وقد يكون وهميًا (راجع `isVirtual`).
   final String collection;
   final String label;
   final IconData icon;
   final Color color;
-  const _Cat(this.collection, this.label, this.icon, this.color);
+
+  /// مجموعة Firestore الحقيقية عندما يكون التبويب عرضًا مُصفّى؛ `null` تعني
+  /// أن `collection` هي المجموعة نفسها.
+  final String? source;
+
+  /// حقل الوثيقة الذي يُصنّف العنصر داخل التبويبات المصفّاة.
+  final String? filterField;
+
+  /// القيم التي يقبلها هذا التبويب حرفيًا.
+  final Set<String>? filterValues;
+
+  /// يَرِث هذا التبويب كل سجل لا تُطابق قيمته أيًا من قيم التبويبات الأخرى
+  /// (بما فيها السجلات القديمة بلا الحقل) — فلا يسقط سجل من المراجعة أبدًا.
+  final bool takesRest;
+
+  const _Cat(this.collection, this.label, this.icon, this.color,
+      {this.source,
+      this.filterField,
+      this.filterValues,
+      this.takesRest = false});
 
   bool get isAllPending => collection == kAllPending;
+
+  /// تبويب عرض مُصفّى داخل مجموعة قائمة، لا مجموعة مستقلة.
+  bool get isVirtual => source != null;
+
+  /// المجموعة التي تُقرأ منها الوثائق وتُوجَّه إليها القرارات.
+  String get realCollection => source ?? collection;
+
+  /// صدق العنصر على هذا التبويب. `restOwner` هو التبويب الوحيد الذي يرث
+  /// القيم غير المعروفة في نفس المصدر.
+  bool matches(Map<String, dynamic> item, {required Set<String> claimedElsewhere}) {
+    final field = filterField;
+    if (field == null) return true;
+    final value = '${item[field]}';
+    if (value.isEmpty) return takesRest;
+    if (filterValues?.contains(value) == true) return true;
+    return takesRest && !claimedElsewhere.contains(value);
+  }
 }
 
 /// ترويسة موحّدة لكل تبويبات لوحة التحكم — أيقونة دائرية متدرّجة + عنوان
