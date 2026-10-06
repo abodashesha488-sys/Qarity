@@ -207,7 +207,7 @@ class _NewsScreenState extends State<NewsScreen>
   Widget _buildAppBar(ThemeData theme) {
     return SliverAppBar(
       pinned: true,
-      backgroundColor: QurityAppBar.headerColor,
+      backgroundColor: QurityAppBar.headerColorFor(theme.brightness),
       foregroundColor: Colors.white,
       elevation: 0,
       scrolledUnderElevation: 0,
@@ -241,11 +241,11 @@ child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
             child: TextField(
               controller: _searchController,
-              style: const TextStyle(color: Colors.black87),
+              style: TextStyle(color: theme.colorScheme.onSurface),
               decoration: InputDecoration(
                 hintText: 'ابحث في الأخبار...',
-                hintStyle: TextStyle(color: Colors.grey.shade600, fontSize: 14),
-                prefixIcon: const Icon(Icons.search_rounded, color: Colors.grey),
+                prefixIcon: Icon(Icons.search_rounded,
+                    color: theme.colorScheme.onSurfaceVariant),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
                         icon: const Icon(Icons.clear_rounded),
@@ -309,7 +309,7 @@ child: Padding(
                     _categoryIcons[cat] ?? Icons.label_outline_rounded,
                     size: 16,
                     color: selected
-                        ? Colors.white
+                        ? theme.colorScheme.onPrimary
                         : theme.colorScheme.onSurfaceVariant,
                   ),
                   const SizedBox(width: 6),
@@ -319,7 +319,7 @@ child: Padding(
                       fontWeight:
                           selected ? FontWeight.w800 : FontWeight.w600,
                       color: selected
-                          ? Colors.white
+                          ? theme.colorScheme.onPrimary
                           : theme.colorScheme.onSurface,
                     ),
                   ),

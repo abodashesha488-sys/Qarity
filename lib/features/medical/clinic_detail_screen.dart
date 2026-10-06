@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/utils/launch_link.dart';
 import '../../models/medical_models.dart';
@@ -40,7 +41,8 @@ class MedInfoRow extends StatelessWidget {
             decoration: BoxDecoration(
                 color: accent.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12)),
-            child: Icon(icon, size: 18, color: accent),
+            child: Icon(icon,
+                size: 18, color: AppColors.inkOn(accent, theme.brightness)),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -92,8 +94,9 @@ class MedSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(title,
-              style: theme.textTheme.titleSmall
-                  ?.copyWith(fontWeight: FontWeight.w900, color: accent)),
+              style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.inkOn(accent, theme.brightness))),
           const SizedBox(height: 6),
           child,
         ],
@@ -128,11 +131,13 @@ class MedDetailHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final headerColor =
+        QurityAppBar.headerColorFor(Theme.of(context).brightness);
     return SliverMainAxisGroup(
       slivers: [
         SliverAppBar(
           pinned: true,
-          backgroundColor: QurityAppBar.headerColor,
+          backgroundColor: headerColor,
           foregroundColor: Colors.white,
           elevation: 0,
           scrolledUnderElevation: 0,
@@ -419,8 +424,8 @@ class PharmacyDetailScreen extends StatefulWidget {
 }
 
 class _PharmacyDetailScreenState extends State<PharmacyDetailScreen> {
-  static const _green = Color(0xFF6F4E37);
-  static const _greenDark = Color(0xFF6F4E37);
+  static Color get _green => AppColors.primary;
+  static Color get _greenDark => AppColors.primaryDark;
 
   Pharmacy? _saved;
   late final PharmacyService _service = PharmacyService();
@@ -536,7 +541,7 @@ class _PharmacyDetailScreenState extends State<PharmacyDetailScreen> {
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
                                   color: _green.withValues(alpha: 0.3))),
-                          child: const Text('٢٤ ساعة',
+                          child: Text('٢٤ ساعة',
                               style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w800,

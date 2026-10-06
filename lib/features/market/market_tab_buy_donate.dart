@@ -4,6 +4,11 @@
 const Color _buyAccent = Color(0xFF1565C0);
 const Color _donateAccent = Color(0xFFEF6C00);
 
+// نفس الدرجة العنبرية لكن محققة التباين: الأرضية والتظليل يبقيان على
+// `_donateAccent`، وأما الكتابة والأيقونات فوق البياض فـ`#EF6C00` يعطيها
+// 3.08 فقط فلا تُقرأ، وهذه 5.04.
+const Color _donateInk = Color(0xFFB45309);
+
 String _agoLabel(DateTime? d) {
   if (d == null) return '';
   final diff = DateTime.now().difference(d);
@@ -33,7 +38,10 @@ Future<bool?> _marketConfirm(BuildContext context,
             onPressed: () => Navigator.pop(ctx, false),
             child: const Text('تراجع')),
         FilledButton(
-          style: FilledButton.styleFrom(backgroundColor: color),
+          // كل نداء هنا يمرّر أرضية ثابتة داكنة، و`onPrimary` في الداكن داكن
+          // مثلها فلا يُقرأ فوقها، فيُثبَّت البياض.
+          style: FilledButton.styleFrom(
+              backgroundColor: color, foregroundColor: Colors.white),
           onPressed: () => Navigator.pop(ctx, true),
           child: Text(okLabel,
               style: const TextStyle(fontWeight: FontWeight.w800)),
@@ -337,13 +345,13 @@ class _BuyRequestsTabState extends State<_BuyRequestsTab> {
                                   children: [
                                     const Icon(Icons.payments_rounded,
                                         size: 11,
-                                        color: Color(0xFFE65100)),
+                                        color: _donateInk),
                                     const SizedBox(width: 3),
                                     Text(r.budget,
                                         style: const TextStyle(
                                             fontSize: 10,
                                             fontWeight: FontWeight.w900,
-                                            color: Color(0xFFE65100))),
+                                            color: _donateInk)),
                                   ],
                                 ),
                               ),
@@ -492,9 +500,11 @@ class _BuyRequestDetailPage extends StatelessWidget {
                   await service.close(r.id);
                   if (context.mounted) {
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                        content: Text('🎉 تمت تلبية الطلب وأُغلق'),
-                        backgroundColor: _buyAccent));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('🎉 تمت تلبية الطلب وأُغلق',
+                                style: TextStyle(color: Colors.white)),
+                            backgroundColor: _buyAccent));
                   }
                 }
               },
@@ -513,19 +523,21 @@ class _BuyRequestDetailPage extends StatelessWidget {
                     title: 'حذف الطلب نهائيًا؟',
                     body: 'سيُحذف الطلب ولن يظهر لأحد بعد الآن.',
                     okLabel: 'حذف',
-                    color: Colors.red.shade700);
+                    color: AppColors.error);
                 if (ok == true) {
                   await service.delete(r.id);
                   if (context.mounted) {
                     Navigator.pop(context);
+                    // بلا أرضية خارج اللوحة: الحذف ليس خطأً، فالكلمة تأخذ
+                    // أرضية الثيم المحايدة وحبرها المرافق بدل `blueGrey`.
                     ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('تم حذف الطلب'),
-                            backgroundColor: Colors.blueGrey));
+                        const SnackBar(content: Text('تم حذف الطلب')));
                   }
                 }
               },
-              style: TextButton.styleFrom(foregroundColor: Colors.red.shade700),
+              style: TextButton.styleFrom(
+                  foregroundColor:
+                      AppColors.inkOn(AppColors.error, theme.brightness)),
               icon: const Icon(Icons.delete_outline_rounded, size: 17),
               label: const Text('حذف الطلب',
                   style: TextStyle(fontWeight: FontWeight.w800)),
@@ -655,20 +667,20 @@ class _DonationsTabState extends State<_DonationsTab> {
                                 label: mine
                                     ? 'تبرعك • ${d.statusLabel}'
                                     : d.statusLabel,
-                                color: _donateAccent),
+                                color: _donateInk),
                           ],
                         ),
                         const SizedBox(height: 3),
                         Row(
                           children: [
                             const Icon(Icons.category_rounded,
-                                size: 12, color: _donateAccent),
+                                size: 12, color: _donateInk),
                             const SizedBox(width: 4),
                             Text(d.category,
                                 style: const TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w800,
-                                    color: _donateAccent)),
+                                    color: _donateInk)),
                             if (d.imageUrls.length > 1) ...[
                               const SizedBox(width: 8),
                               const Icon(Icons.collections_rounded,
@@ -764,15 +776,16 @@ class _DonationDetailPageState extends State<_DonationDetailPage> {
         title: 'تم تسليم التبرع؟',
         body: 'سيُغلق الإعلان ويختفي من قائمة التبرعات — جزاك الله خيراً على خيرك.',
         okLabel: 'نعم، تم التسليم',
-        color: _donateAccent);
+        color: _donateInk);
     if (ok != true) return;
     setState(() => _busy = true);
     await widget.service.markDonated(widget.donation.id);
     if (mounted) {
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('🤲 تم تسليم التبرع وأُغلق الإعلان'),
-          backgroundColor: _donateAccent));
+          content: Text('🤲 تم تسليم التبرع وأُغلق الإعلان',
+              style: TextStyle(color: Colors.white)),
+          backgroundColor: _donateInk));
     }
   }
 
@@ -781,16 +794,16 @@ class _DonationDetailPageState extends State<_DonationDetailPage> {
         title: 'حذف التبرع نهائيًا؟',
         body: 'سيُحذف الإعلان ولن يظهر لأحد بعد الآن.',
         okLabel: 'حذف',
-        color: Colors.red.shade700);
+        color: AppColors.error);
     if (ok != true) return;
     setState(() => _busy = true);
     await widget.service.delete(widget.donation.id);
     if (mounted) {
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('تم حذف الإعلان'),
-              backgroundColor: Colors.blueGrey));
+      // الحذف ليس خطأً، فالكلمة تأخذ أرضية الثيم المحايدة وحبرها المرافق بدل
+      // درجة `blueGrey` الخارجة عن اللوحة.
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('تم حذف الإعلان')));
     }
   }
 
@@ -830,7 +843,7 @@ class _DonationDetailPageState extends State<_DonationDetailPage> {
                     style: const TextStyle(
                         fontWeight: FontWeight.w900, fontSize: 19)),
               ),
-              _StatusChip(label: d.statusLabel, color: _donateAccent),
+              _StatusChip(label: d.statusLabel, color: _donateInk),
             ],
           ),
           const SizedBox(height: 10),
@@ -851,7 +864,7 @@ class _DonationDetailPageState extends State<_DonationDetailPage> {
                       icon: Icons.category_rounded,
                       label: 'التصنيف',
                       value: d.category,
-                      color: _donateAccent),
+                      color: _donateInk),
                   if (d.description.isNotEmpty)
                     _DetailRow(
                         icon: Icons.notes_rounded,
@@ -871,7 +884,7 @@ class _DonationDetailPageState extends State<_DonationDetailPage> {
                         icon: Icons.phone_rounded,
                         label: 'هاتف التواصل',
                         value: d.contactPhone,
-                        color: _donateAccent),
+                        color: _donateInk),
                 ],
               ),
             ),
@@ -884,7 +897,7 @@ class _DonationDetailPageState extends State<_DonationDetailPage> {
                   child: FilledButton.icon(
                     onPressed: _busy ? null : () => _launch('tel://${d.contactPhone}'),
                     style: FilledButton.styleFrom(
-                        backgroundColor: _donateAccent,
+                        backgroundColor: _donateInk,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14)),
                     icon: const Icon(Icons.call_rounded, size: 18),
@@ -919,7 +932,7 @@ class _DonationDetailPageState extends State<_DonationDetailPage> {
                   body:
                       '${d.category}\nسجّل طلبك داخل التطبيق وسيتواصل معك ${d.userName}'),
               style: FilledButton.styleFrom(
-                  backgroundColor: _donateAccent,
+                  backgroundColor: _donateInk,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14)),
               icon: const Icon(Icons.share_rounded, size: 18),
@@ -930,7 +943,7 @@ class _DonationDetailPageState extends State<_DonationDetailPage> {
             FilledButton.icon(
               onPressed: _busy ? null : _markHandedOver,
               style: FilledButton.styleFrom(
-                  backgroundColor: _donateAccent,
+                  backgroundColor: _donateInk,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 15)),
               icon: _busy
@@ -946,7 +959,9 @@ class _DonationDetailPageState extends State<_DonationDetailPage> {
             const SizedBox(height: 10),
             TextButton.icon(
               onPressed: _busy ? null : _delete,
-              style: TextButton.styleFrom(foregroundColor: Colors.red.shade700),
+              style: TextButton.styleFrom(
+                  foregroundColor:
+                      AppColors.inkOn(AppColors.error, theme.brightness)),
               icon: const Icon(Icons.delete_outline_rounded, size: 17),
               label: const Text('حذف الإعلان',
                   style: TextStyle(fontWeight: FontWeight.w800)),
@@ -963,7 +978,7 @@ class _DonationDetailPageState extends State<_DonationDetailPage> {
             child: Row(
               children: [
                 const Icon(Icons.info_outline_rounded,
-                    size: 17, color: _donateAccent),
+                    size: 17, color: _donateInk),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(

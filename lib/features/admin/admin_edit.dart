@@ -431,7 +431,7 @@ class _AdminEditScreenState extends State<AdminEditScreen> {
   void _toast(String message, {bool error = false}) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(message),
-        backgroundColor: error ? Colors.red : const Color(0xFF6F4E37)));
+        backgroundColor: error ? AppColors.error : AppColors.primary));
   }
 
   @override

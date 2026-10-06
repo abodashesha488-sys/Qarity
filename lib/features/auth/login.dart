@@ -348,12 +348,12 @@ class _FeatureItem extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.15),
+              color: theme.colorScheme.primary.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.check_rounded,
-              color: AppColors.primary,
+              color: theme.colorScheme.primary,
               size: 16,
             ),
           ),

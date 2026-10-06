@@ -5,6 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../core/network/network_info.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/utils/obituary_card_assets.dart';
@@ -524,24 +525,26 @@ class _AddObituaryScreenState extends State<AddObituaryScreen> {
   /// يقرأ شبه معدوم فوق خلفية البطاقة الفاتحة.
   Widget _buildReviewNotice(ThemeData theme) {
     const int red = 0xFFB71C1C;
+    // الحبر في الداكن يُرفع سطوعه (6.07 على البطاقة الداكنة) وفي الفاتح يبقى
+    // `#B71C1C` كما هو حرفيًا، فالحقل والحد والنص والأيقونة لون واحد.
+    final Color redInk = AppColors.inkOn(const Color(red), theme.brightness);
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(red).withValues(alpha: 0.08),
+        color: redInk.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(red).withValues(alpha: 0.35)),
+        border: Border.all(color: redInk.withValues(alpha: 0.35)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.warning_amber_rounded,
-              size: 22, color: Color(red)),
+          Icon(Icons.warning_amber_rounded, size: 22, color: redInk),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               'سيتم مراجعة التعزية من قبل الإدارة قبل نشرها',
               style: theme.textTheme.bodyMedium?.copyWith(
-                  color: const Color(red), fontWeight: FontWeight.w800),
+                  color: redInk, fontWeight: FontWeight.w800),
             ),
           ),
         ],
@@ -1189,8 +1192,9 @@ class _FormErrorLine extends StatelessWidget {
   Widget build(BuildContext context) => Text(
         message,
         key: Key(keyName),
-        style: const TextStyle(
-            color: Color(0xFFB71C1C),
+        style: TextStyle(
+            color: AppColors.inkOn(
+                const Color(0xFFB71C1C), Theme.of(context).brightness),
             fontSize: 12.5,
             fontWeight: FontWeight.w700),
       );

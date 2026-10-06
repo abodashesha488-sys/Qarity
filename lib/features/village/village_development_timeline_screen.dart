@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../models/village_content_models.dart';
 import '../../services/village_extended_service.dart';
 import 'village_extended_admin.dart';
@@ -159,7 +160,9 @@ class _MiniImage extends StatelessWidget {
               height: 100,
               color: kDevelopmentColor.withValues(alpha: 0.08),
               child: Icon(Icons.broken_image_outlined,
-                  color: kDevelopmentColor.withValues(alpha: 0.4)),
+                  color: AppColors.inkOn(
+                          kDevelopmentColor, Theme.of(context).brightness)
+                      .withValues(alpha: 0.4)),
             ),
           ),
         ),

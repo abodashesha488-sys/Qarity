@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_config.dart';
 import '../../core/utils/helpers.dart';
 import '../../models/data_models.dart';
@@ -153,7 +154,10 @@ Future<void> manageVillageContent<T extends VillageContentItem>(
               onPressed: () => Navigator.pop(ctx, false),
               child: const Text('إلغاء')),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            // حذف = الحالة الوحيدة المسموح فيها بالأحمر، وهنا الأحمر **الهادئ**
+            // من الثيم لا الفاقع: يبقى #B71C1C في الفاتح ويتبدل بأحمر الداكن.
+            style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(ctx).colorScheme.error),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('حذف'),
           ),
@@ -221,14 +225,20 @@ Future<void> manageVillageContent<T extends VillageContentItem>(
                       children: [
                         IconButton(
                           tooltip: 'تعديل',
-                          icon: const Icon(Icons.edit_rounded,
-                              size: 17, color: Color(0xFF1565C0)),
+                          // الأزرق حبر لا أرضية: يبقى كما هو في الفاتح ويُفتَّح
+                          // في الداكن (كان 2.92:1 على الأرضية الداكنة).
+                          icon: Icon(Icons.edit_rounded,
+                              size: 17,
+                              color: AppColors.inkOn(const Color(0xFF1565C0),
+                                  Theme.of(context).brightness)),
                           onPressed: () => openForm(item),
                         ),
                         IconButton(
                           tooltip: 'حذف',
-                          icon: const Icon(Icons.delete_outline_rounded,
-                              size: 17, color: Colors.red),
+                          // أحمر هادئ من الثيم لا الأحمر الفاقع.
+                          icon: Icon(Icons.delete_outline_rounded,
+                              size: 17,
+                              color: Theme.of(context).colorScheme.error),
                           onPressed: () => confirmRemove(item),
                         ),
                       ],
@@ -249,7 +259,12 @@ Future<void> manageVillageContent<T extends VillageContentItem>(
                       decoration: BoxDecoration(
                           color: accent.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(9)),
-                      child: Icon(Icons.tune_rounded, color: accent, size: 16),
+                      child: Icon(Icons.tune_rounded,
+                          // الأيقونة حبر لون القسم فوق تظليله: تبقى في الفاتح
+                          // وتُفتَّح في الداكن.
+                          color: AppColors.inkOn(
+                              accent, Theme.of(context).brightness),
+                          size: 16),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -260,7 +275,11 @@ Future<void> manageVillageContent<T extends VillageContentItem>(
                     IconButton(
                       tooltip: 'إضافة جديد',
                       onPressed: () => openForm(),
-                      icon: Icon(Icons.add_circle_rounded, color: accent),
+                      icon: Icon(Icons.add_circle_rounded,
+                          // زر «إضافة جديد» يكتب لون القسم حبرًا: يبقى في الفاتح
+                          // ويُفتَّح في الداكن.
+                          color: AppColors.inkOn(
+                              accent, Theme.of(context).brightness)),
                     ),
                   ],
                 ),
@@ -279,25 +298,28 @@ Future<void> manageVillageContent<T extends VillageContentItem>(
 /// حقل مطلوب، ويبقى النموذج مفتوحًا حتى يُصلح الأدمن السبب ويعيد الحفظ.
 Widget villageFormError(String? message) => message == null
     ? const SizedBox.shrink()
-    : Padding(
-        padding: const EdgeInsets.only(bottom: 10),
-        child: Row(
-          children: [
-            const Icon(Icons.error_outline_rounded,
-                size: 16, color: Color(0xFFB71C1C)),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(
-                message,
-                style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFFB71C1C)),
+    : Builder(builder: (context) {
+        // الأحمر الهادئ هنا **حبر** لا أرضية: يبقى #B71C1C في الفاتح (قيمة
+        // الثيم نفسها) ويُستبدل في الداكن بأحمر الثيم الفاتح، لأن على الأرضية
+        // الداكنة لا يجتاز التباين.
+        final error = Theme.of(context).colorScheme.error;
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Row(
+            children: [
+              Icon(Icons.error_outline_rounded, size: 16, color: error),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  message,
+                  style: TextStyle(
+                      fontSize: 12, fontWeight: FontWeight.w800, color: error),
+                ),
               ),
-            ),
-          ],
-        ),
-      );
+            ],
+          ),
+        );
+      });
 
 Widget _sheetMessage(BuildContext context, String text) => Center(
       child: Padding(

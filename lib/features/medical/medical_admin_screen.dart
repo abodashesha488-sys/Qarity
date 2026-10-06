@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../models/medical_models.dart';
 import '../../services/medical_service.dart';
 import '../../widgets/clinic_photo_tile.dart';
 import '../../widgets/qurity_app_bar.dart';
 import 'medical_home_screen.dart' show MedicalImageField;
+
+/// حبر أحمر لرسائل رفض الحقول: يبقى `#B71C1C` في الفاتح كما هو، وفي الداكن يُرفع
+/// سطوعه (6.07 على البطاقة الداكنة) وإلا كان 2.50 فلا يُقرأ.
+Color _fieldErrorInk(Brightness brightness) =>
+    AppColors.inkOn(const Color(0xFFB71C1C), brightness);
 
 /// شاشة إدارة المركز الطبي الخيري — لمدير المركز الطبي.
 /// إضافة/تعديل/حذف عيادات المركز مع الأيام والساعات والأجور وصورة العيادة.
@@ -78,7 +84,11 @@ class _MedicalCenterAdminScreenState extends State<MedicalCenterAdminScreen> {
               onPressed: () => Navigator.pop(ctx, false),
               child: const Text('إلغاء')),
           FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              // أرضية الحذف هادئة موثّقة، والبياض يُثبَّت لأن حبر `FilledButton`
+              // الافتراضي في الداكن داكن فوقها (1.5).
+              style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.error,
+                  foregroundColor: Colors.white),
               onPressed: () => Navigator.pop(ctx, true),
               child: const Text('حذف')),
         ],
@@ -145,13 +155,17 @@ class _MedicalCenterAdminScreenState extends State<MedicalCenterAdminScreen> {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis),
                       if (!c.isApproved)
-                        const Padding(
-                          padding: EdgeInsets.only(top: 2),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
                           child: Text('⏳ بانتظار موافقة المدير العام',
+                              // سطر حالة لا أرضية له: العنبري نفسه كتابةً 2.16
+                              // على البياض، فيُقرأ من حبره البرونزي ويُرفع في
+                              // الداكن.
                               style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
-                                  color: Colors.orange)),
+                                  color: AppColors.inkOn(AppColors.warningInk,
+                                      theme.brightness))),
                         ),
                     ],
                   ),
@@ -169,8 +183,10 @@ class _MedicalCenterAdminScreenState extends State<MedicalCenterAdminScreen> {
                         onPressed: () => _addOrEdit(c),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.delete_rounded,
-                            size: 20, color: Colors.red),
+                        icon: Icon(Icons.delete_rounded,
+                            size: 20,
+                            color: AppColors.inkOn(
+                                AppColors.error, theme.brightness)),
                         onPressed: () => _delete(c),
                       ),
                     ],
@@ -394,10 +410,11 @@ class _ClinicEditFormState extends State<ClinicEditForm> {
                         child: Text(
                           _nameError!,
                           key: const Key('clinic-name-error'),
-                          style: const TextStyle(
+                          style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
-                              color: Color(0xFFB71C1C)),
+                              color: _fieldErrorInk(
+                                  Theme.of(context).brightness)),
                         ),
                       ),
                     ),
@@ -435,10 +452,11 @@ class _ClinicEditFormState extends State<ClinicEditForm> {
                     Padding(
                       padding: const EdgeInsets.only(top: 6),
                       child: Text(_hoursError!,
-                          style: const TextStyle(
+                          style: TextStyle(
                               fontSize: 11.5,
                               fontWeight: FontWeight.w700,
-                              color: Color(0xFFB71C1C))),
+                              color: _fieldErrorInk(
+                                  Theme.of(context).brightness))),
                     ),
                   if (_open == null && _close == null &&
                       (widget.existing?.workingHours ?? '').isNotEmpty)
@@ -506,10 +524,11 @@ class _ClinicEditFormState extends State<ClinicEditForm> {
                       child: Text(
                         _photoError!,
                         key: const Key('clinic-photo-error'),
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFFB71C1C)),
+                            color:
+                                _fieldErrorInk(Theme.of(context).brightness)),
                       ),
                     ),
                   SwitchListTile(

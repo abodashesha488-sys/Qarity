@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../core/constants/legal_reference_egypt.dart';
 import '../../core/utils/relative_time.dart';
 import '../../models/legal_models.dart';
@@ -17,6 +18,11 @@ import '../../widgets/qurity_app_bar.dart';
 /// أحمر/برتقالي هذا القسم — مستقل عن أخضر «منشور» وعن تركوازي القسم.
 const Color kLegalDeleteRed = Color(0xFFB71C1C);
 const Color kLegalPendingOrange = Color(0xFFEF6C00);
+
+/// حبر القسم: في الفاتح هو تركوازي القسم حرفيًا، وفي الداكن يُرفع سطوعه
+/// محافظًا على درجته — فالأصل 2.28 على البطاقة الداكنة ولا يُقرأ.
+Color legalInk(Brightness brightness) =>
+    AppColors.inkOn(kLegalAdvisorColor, brightness);
 
 /// شاشة «مستشار القرية»: سجل محامين + استشارات الأهالي + مرجع معلومات قانونية.
 class LegalAdvisorScreen extends StatefulWidget {
@@ -228,8 +234,8 @@ class _LawyersTabState extends State<_LawyersTab> {
                 controller: _search,
                 decoration: InputDecoration(
                   hintText: 'ابحث: اسم المحامي، تخصصه، مكتبه…',
-                  prefixIcon: const Icon(Icons.search_rounded,
-                      color: kLegalAdvisorColor, size: 20),
+                  prefixIcon: Icon(Icons.search_rounded,
+                      color: legalInk(theme.brightness), size: 20),
                   suffixIcon: _query.isNotEmpty
                       ? IconButton(
                           tooltip: 'مسح',
@@ -277,9 +283,9 @@ class _LawyersTabState extends State<_LawyersTab> {
                     'سجّل الدخول لترى تسجيلك في السجل');
               }
               if (!snap.hasData) {
-                return const Center(
+                return Center(
                     child: CircularProgressIndicator(
-                        color: kLegalAdvisorColor));
+                        color: legalInk(Theme.of(context).brightness)));
               }
               final items = _apply(snap.data!);
               if (items.isEmpty) {
@@ -328,7 +334,8 @@ class _LawyersTabState extends State<_LawyersTab> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon,
-                size: 54, color: kLegalAdvisorColor.withValues(alpha: 0.4)),
+                size: 54,
+                color: legalInk(theme.brightness).withValues(alpha: 0.4)),
             const SizedBox(height: 10),
             Text(text,
                 textAlign: TextAlign.center,
@@ -437,10 +444,10 @@ class LawyerCard extends StatelessWidget {
                                 color: kLegalAdvisorColor
                                     .withValues(alpha: 0.35))),
                         child: Text(s,
-                            style: const TextStyle(
+                            style: TextStyle(
                                 fontSize: 10.5,
                                 fontWeight: FontWeight.w800,
-                                color: kLegalAdvisorColor)),
+                                color: legalInk(theme.brightness))),
                       ),
                   ],
                 ),
@@ -490,7 +497,7 @@ class LawyerCard extends StatelessWidget {
   Widget _meta(ThemeData theme, IconData icon, String text) => Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 13, color: kLegalAdvisorColor),
+          Icon(icon, size: 13, color: legalInk(theme.brightness)),
           const SizedBox(width: 4),
           Flexible(
             child: Text(text,
@@ -514,7 +521,9 @@ class _LawyerAvatar extends StatelessWidget {
             color: kLegalAdvisorColor.withValues(alpha: 0.10),
             borderRadius: BorderRadius.circular(12)),
         child: Icon(Icons.gavel_rounded,
-            size: 34, color: kLegalAdvisorColor.withValues(alpha: 0.65)),
+            size: 34,
+            color: legalInk(Theme.of(context).brightness)
+                .withValues(alpha: 0.65)),
       );
 }
 
@@ -648,9 +657,9 @@ class _ConsultationsTabState extends State<_ConsultationsTab> {
                     'سجّل الدخول لمتابعة استشاراتك');
               }
               if (!snap.hasData) {
-                return const Center(
+                return Center(
                     child: CircularProgressIndicator(
-                        color: kLegalAdvisorColor));
+                        color: legalInk(Theme.of(context).brightness)));
               }
               final items = snap.data!;
               if (items.isEmpty) {
@@ -688,7 +697,8 @@ class _ConsultationsTabState extends State<_ConsultationsTab> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon,
-                size: 54, color: kLegalAdvisorColor.withValues(alpha: 0.4)),
+                size: 54,
+                color: legalInk(theme.brightness).withValues(alpha: 0.4)),
             const SizedBox(height: 10),
             Text(text,
                 textAlign: TextAlign.center,
@@ -780,16 +790,16 @@ class ConsultationCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Row(
+                    Row(
                       children: [
                         Icon(Icons.verified_rounded,
-                            size: 14, color: kLegalAdvisorColor),
-                        SizedBox(width: 5),
+                            size: 14, color: legalInk(theme.brightness)),
+                        const SizedBox(width: 5),
                         Text('رد المستشار',
                             style: TextStyle(
                                 fontWeight: FontWeight.w900,
                                 fontSize: 12,
-                                color: kLegalAdvisorColor)),
+                                color: legalInk(theme.brightness))),
                       ],
                     ),
                     const SizedBox(height: 6),
@@ -892,7 +902,8 @@ class _LegalReferenceTab extends StatelessWidget {
                   decoration: BoxDecoration(
                       color: kLegalAdvisorColor.withValues(alpha: 0.10),
                       borderRadius: BorderRadius.circular(11)),
-                  child: Icon(topic.icon, size: 20, color: kLegalAdvisorColor),
+                  child: Icon(topic.icon,
+                      size: 20, color: legalInk(theme.brightness)),
                 ),
                 title: Text(topic.title,
                     style: const TextStyle(
@@ -955,7 +966,7 @@ class LegalTopicSheet extends StatelessWidget {
             const SizedBox(height: 14),
             Row(
               children: [
-                Icon(topic.icon, size: 22, color: kLegalAdvisorColor),
+                Icon(topic.icon, size: 22, color: legalInk(theme.brightness)),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(topic.title,
@@ -980,8 +991,8 @@ class LegalTopicSheet extends StatelessWidget {
                       child: Container(
                           width: 7,
                           height: 7,
-                          decoration: const BoxDecoration(
-                              color: kLegalAdvisorColor,
+                          decoration: BoxDecoration(
+                              color: legalInk(theme.brightness),
                               shape: BoxShape.circle)),
                     ),
                     const SizedBox(width: 9),
@@ -1000,12 +1011,12 @@ class LegalTopicSheet extends StatelessWidget {
               decoration: BoxDecoration(
                   color: kLegalAdvisorColor.withValues(alpha: 0.07),
                   borderRadius: BorderRadius.circular(12)),
-              child: const Text(kLegalReferenceDisclaimer,
+              child: Text(kLegalReferenceDisclaimer,
                   style: TextStyle(
                       fontSize: 11,
                       height: 1.6,
                       fontWeight: FontWeight.w700,
-                      color: kLegalAdvisorColor)),
+                      color: legalInk(theme.brightness))),
             ),
             const SizedBox(height: 14),
             SizedBox(
@@ -1272,7 +1283,7 @@ class _LawyerFormSheetState extends State<LawyerFormSheet> {
                                 fontWeight: FontWeight.w700, fontSize: 11.5)),
                         selectedColor:
                             kLegalAdvisorColor.withValues(alpha: 0.16),
-                        checkmarkColor: kLegalAdvisorColor,
+                        checkmarkColor: legalInk(theme.brightness),
                       ),
                   ],
                 ),

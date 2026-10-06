@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../models/data_models.dart';
 
 /// نظام موحّد لألوان وشارات الأدوار في كامل التطبيق.
@@ -94,6 +95,17 @@ class RoleStyle {
     if (seller != null) return seller;
     return adminNameColor(ownerRole);
   }
+
+  /// لون الدور **حبرًا** لا أرضيةً: في الفاتح كما هو تمامًا، وفي الداكن يُرفع
+  /// سطوعه محافظًا على درجته. الاستثناء الذهبي مقصود ومقاس: `#B8860B` تقيس
+  /// 5.15 على الأرضية الداكنة و`#C9A227` نحو 6.9 فتمرّان أصلًا، وتفتيحهما يحوّل
+  /// تمييز «المدير العام» إلى أصفر باهت. ما يفشل ويُفتَّح: الأحمر `#D32F2F`
+  /// (3.37) والتيل `#00897B` (3.84).
+  static Color nameInk(Color ink, Brightness brightness) {
+    if (brightness == Brightness.light) return ink;
+    if (ink == gold || ink == adminGold) return ink;
+    return AppColors.inkOn(ink, brightness);
+  }
 }
 
 /// نص اسم مزيّن بلون الدور + شارة (تاج/نجمة) عند الحاجة.
@@ -128,13 +140,16 @@ class RoleNameText extends StatelessWidget {
         ? RoleStyle.sellerNameColor(RoleStyle.parseSellerType(sellerType))
         : RoleStyle.adminNameColor(role);
     final badge = RoleStyle.badgeIcon(role);
+    final brightness = Theme.of(context).brightness;
     final text = Text(
       name.isEmpty ? 'مستخدم' : name,
       maxLines: maxLines,
       overflow: overflow,
       textAlign: textAlign,
       style: base.copyWith(
-        color: accent ?? base.color,
+        color: accent == null
+            ? base.color
+            : RoleStyle.nameInk(accent, brightness),
         fontWeight: accent != null ? FontWeight.w900 : base.fontWeight,
       ),
     );
@@ -144,7 +159,9 @@ class RoleNameText extends StatelessWidget {
       children: [
         Flexible(child: text),
         SizedBox(width: iconSize > 16 ? 4 : 3),
-        Icon(badge, size: iconSize, color: RoleStyle.badgeColor(role)),
+        Icon(badge,
+            size: iconSize,
+            color: RoleStyle.nameInk(RoleStyle.badgeColor(role), brightness)),
       ],
     );
   }

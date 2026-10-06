@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
 import '../../services/image_upload_service.dart';
@@ -117,8 +118,14 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
     final name = _nameController.text.trim();
     final phone = _phoneController.text.trim();
     if (name.isEmpty || phone.isEmpty) {
+      // أرضيات الشريط لون ثابت في السمتين بينما حبره الافتراضي يُقرأ من
+      // `onInverseSurface` وهو في الداكن داكن ⇒ الحبر يُثبَّت. والعنبري وحده
+      // لا يُقرأ عليه البياض (2.16) فحبره الداكن الزمردي (5.99).
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('الاسم ورقم الهاتف مطلوبان'), backgroundColor: Colors.orange),
+        SnackBar(
+            content: Text('الاسم ورقم الهاتف مطلوبان',
+                style: TextStyle(color: AppColors.onWarning)),
+            backgroundColor: AppColors.warning),
       );
       return;
     }
@@ -151,7 +158,10 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم حفظ الملف الشخصي بنجاح'), backgroundColor: Color(0xFF6F4E37)),
+        SnackBar(
+            content: const Text('تم حفظ الملف الشخصي بنجاح',
+                style: TextStyle(color: Colors.white)),
+            backgroundColor: AppColors.primary),
       );
 
       await NotificationService.subscribeToTopic('village_news');
@@ -171,7 +181,10 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ في الحفظ: ${e.toString()}'), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text('خطأ في الحفظ: ${e.toString()}',
+                  style: const TextStyle(color: Colors.white)),
+              backgroundColor: AppColors.error),
         );
       }
     } finally {

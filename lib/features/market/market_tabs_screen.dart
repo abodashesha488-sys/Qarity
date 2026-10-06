@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../core/constants/product_categories.dart';
 import '../../core/utils/contact_links.dart';
 import '../../core/utils/launch_link.dart';

@@ -202,7 +202,7 @@ class _AboutScreenState extends State<AboutScreen> {
           const SizedBox(height: 22),
           _sectionTitle(theme, 'بيانات المطور', Icons.code_rounded),
           const SizedBox(height: 10),
-          _developerCard(),
+          _developerCard(theme),
           const SizedBox(height: 24),
           _footer(theme),
         ],
@@ -285,13 +285,14 @@ class _AboutScreenState extends State<AboutScreen> {
   Widget _sectionTitle(ThemeData theme, String text, IconData icon) {
     return Row(
       children: [
-        Icon(icon, size: 19, color: AppColors.primary),
+        Icon(icon, size: 19, color: theme.colorScheme.primary),
         const SizedBox(width: 7),
         Expanded(
           child: Text(
             text,
             style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w900, color: AppColors.textPrimary),
+                fontWeight: FontWeight.w900,
+                color: theme.colorScheme.onSurface),
           ),
         ),
       ],
@@ -300,12 +301,12 @@ class _AboutScreenState extends State<AboutScreen> {
 
   /// بطاقة المطور: صورته تُكبّر بالضغط، والنبذة تحلّ محلّ الأرقام المكتوبة،
   /// والاتصالات الثلاثة أزرار فعلية برموزها.
-  Widget _developerCard() {
+  Widget _developerCard(ThemeData theme) {
     final wa = egyptianWhatsAppUrl(AboutScreen.developerPhone);
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.04),
+        color: theme.colorScheme.primary.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
             color: const Color(0xFFE3B873).withValues(alpha: 0.7), width: 1.4),
@@ -317,7 +318,7 @@ class _AboutScreenState extends State<AboutScreen> {
             children: [
               _developerPhoto(),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -326,15 +327,15 @@ class _AboutScreenState extends State<AboutScreen> {
                       style: TextStyle(
                           fontSize: 17.5,
                           fontWeight: FontWeight.w900,
-                          color: AppColors.textPrimary),
+                          color: theme.colorScheme.onSurface),
                     ),
-                    SizedBox(height: 2),
+                    const SizedBox(height: 2),
                     Text(
                       AboutScreen.developerRole,
                       style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.primary),
+                          color: theme.colorScheme.primary),
                     ),
                   ],
                 ),
@@ -344,14 +345,14 @@ class _AboutScreenState extends State<AboutScreen> {
           const SizedBox(height: 14),
           const _Divider(),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             AboutScreen.developerBio,
             textAlign: TextAlign.start,
             style: TextStyle(
                 fontSize: 13.5,
                 fontWeight: FontWeight.w600,
                 height: 1.75,
-                color: AppColors.textPrimary),
+                color: theme.colorScheme.onSurface),
           ),
           const SizedBox(height: 16),
           Row(
@@ -397,10 +398,10 @@ class _AboutScreenState extends State<AboutScreen> {
               _contactError!,
               key: const Key('dev-contact-error'),
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: kContactFailureRed),
+                  color: theme.colorScheme.error),
             ),
           ],
         ],
@@ -545,7 +546,7 @@ class _AboutScreenState extends State<AboutScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                   color:
@@ -568,10 +569,10 @@ class _AboutScreenState extends State<AboutScreen> {
                     section.title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w800,
-                        color: AppColors.textPrimary),
+                        color: theme.colorScheme.onSurface),
                   ),
                 ),
               ],
@@ -583,82 +584,82 @@ class _AboutScreenState extends State<AboutScreen> {
   }
 
   Widget _changelogCard(ThemeData theme) {
-    const additions = <(IconData, String, Color)>[
+    final additions = <(IconData, String, Color)>[
       (
         Icons.campaign_rounded,
         'صفحة «إعلانات القرية»: إعلانات تجارية وخدمية وإنشائية بصفحة تفاصيل لكل إعلان.',
-        Color(0xFF311B92)
+        const Color(0xFF311B92)
       ),
       (
         Icons.gavel_rounded,
         'صفحة «مستشار القرية»: سجل محامين واستشارات قانونية ومرجع «نظم القضاء المصري».',
-        Color(0xFF006064)
+        const Color(0xFF006064)
       ),
       (
         Icons.medical_services_rounded,
         'قسم «المستلزمات الطبية» في الخدمات الطبية، مع النظارات ومعامل التحاليل.',
-        Color(0xFF0097A7)
+        const Color(0xFF0097A7)
       ),
       (
         Icons.contact_page_rounded,
         'دليل الهاتف: ترتيب أبجدي عربي، وبطاقة لكل سجل، وزر واتساب برمز واتساب.',
-        Color(0xFF37474F)
+        const Color(0xFF37474F)
       ),
       (
         Icons.volunteer_activism_rounded,
         'سجل العزاء: بطاقة مشاركة مُصمَّمة بخلفيات اختيارية، ومواعيد الصلاة والعزاء، وقرابة تُكتب يدويًا.',
-        Color(0xFF455A64)
+        const Color(0xFF455A64)
       ),
       (
         Icons.school_rounded,
         'خدمات تعليمية: تسجيل كمدرس أو مدرسة مع اختيار المواد والمراحل و«امكانية تدريس خاص».',
-        Color(0xFF1565C0)
+        const Color(0xFF1565C0)
       ),
       (
         Icons.storefront_rounded,
         'سوق القرية: المحلات ككرتين في السطر، وعروض تنتهي تلقائيًا، ومنتجات لكل محل.',
-        Color(0xFFEF6C00)
+        const Color(0xFFEF6C00)
       ),
       (
         Icons.child_care_rounded,
         'ركن الأطفال: تسعة أنشطة تعليمية — حروف وأرقام ووضوء وصلاة وقصص وأخلاق وتلوين.',
-        Color(0xFFF9A825)
+        const Color(0xFFF9A825)
       ),
       (
         Icons.edit_note_rounded,
         'المالك يعدّل ويحذف إضافاته في كل قسم، والتعديل يعود إلى مراجعة الإدارة.',
-        Color(0xFF6F4E37)
+        AppColors.primary
       ),
       (
         Icons.notifications_active_rounded,
         'إشعار فوري عند الموافقة أو النشر، وإعجابات المندرة تصل صاحب المنشور.',
-        Color(0xFFD32F2F)
+        const Color(0xFFD32F2F)
       ),
       (
         Icons.system_update_alt_rounded,
         'زر «تحديث الآن» ينزّل التحديث ويثبّته فعليًا على الجهاز.',
-        Color(0xFF00897B)
+        const Color(0xFF00897B)
       ),
       (
         Icons.dashboard_customize_rounded,
         'لوحة التحكم: تبويبات مراجعة مصنّفة — المستلزمات الطبية وثلاث تبويبات لدليل الخدمات.',
-        Color(0xFF5E35B1)
+        const Color(0xFF5E35B1)
       ),
       (
         Icons.view_quilt_rounded,
         'هيدر موحّد لكل الصفحات، وزر إضافة أخضر في الأعلى، وشبكة رئيسية بستة عشر قسمًا.',
-        Color(0xFF6A1B9A)
+        const Color(0xFF6A1B9A)
       ),
       (
         Icons.wifi_off_rounded,
         'العمل بلا اتصال: المحتوى محفوظ محليًا ويظهر فور عودة الشبكة.',
-        Color(0xFF455A64)
+        const Color(0xFF455A64)
       ),
     ];
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
             color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
@@ -686,11 +687,11 @@ class _AboutScreenState extends State<AboutScreen> {
                   Expanded(
                     child: Text(
                       additions[i].$2,
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 13.5,
                           fontWeight: FontWeight.w600,
                           height: 1.6,
-                          color: AppColors.textPrimary),
+                          color: theme.colorScheme.onSurface),
                     ),
                   ),
                 ],
@@ -714,7 +715,7 @@ class _AboutScreenState extends State<AboutScreen> {
       required String subtitle,
       required VoidCallback onTap}) {
     return Material(
-      color: Colors.white,
+      color: theme.colorScheme.surface,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
@@ -743,14 +744,15 @@ class _AboutScreenState extends State<AboutScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(title,
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontSize: 14.5,
                             fontWeight: FontWeight.w800,
-                            color: AppColors.textPrimary)),
+                            color: theme.colorScheme.onSurface)),
                     const SizedBox(height: 2),
                     Text(subtitle,
-                        style: const TextStyle(
-                            fontSize: 12.5, color: AppColors.textSecondary)),
+                        style: TextStyle(
+                            fontSize: 12.5,
+                            color: theme.colorScheme.onSurfaceVariant)),
                   ],
                 ),
               ),
@@ -764,10 +766,10 @@ class _AboutScreenState extends State<AboutScreen> {
   }
 
   Widget _footer(ThemeData theme) {
-    return const Column(
+    return Column(
       children: [
-        _Divider(),
-        SizedBox(height: 12),
+        const _Divider(),
+        const SizedBox(height: 12),
         Text(
           'صُمّم ونُفّذ بعناية لخدمة أهالي قرية أبوديشيشة\n${AboutScreen.developerRole}: ${AboutScreen.developerName}',
           textAlign: TextAlign.center,
@@ -775,7 +777,7 @@ class _AboutScreenState extends State<AboutScreen> {
               fontSize: 12.5,
               fontWeight: FontWeight.w600,
               height: 1.7,
-              color: AppColors.textSecondary),
+              color: theme.colorScheme.onSurfaceVariant),
         ),
       ],
     );

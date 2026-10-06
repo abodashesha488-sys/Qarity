@@ -17,6 +17,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../core/constants/product_categories.dart';
 import '../../core/constants/promo_placements.dart';
 import '../../core/utils/file_export.dart';
@@ -97,62 +98,62 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   final Set<String> _busyActions = {};
   String? _selectedCat;
 
-  static const List<_Cat> _cats = [
-    _Cat(kAllPending, 'كل المعلّقات', Icons.layers_rounded, Color(0xFF6F4E37)),
-    _Cat('news', 'الأخبار', Icons.newspaper_rounded, Colors.blue),
-    _Cat('market_products', 'المنتجات', Icons.store_rounded, Colors.deepPurple),
+  static final List<_Cat> _cats = [
+    _Cat(kAllPending, 'كل المعلّقات', Icons.layers_rounded, AppColors.primary),
+    const _Cat('news', 'الأخبار', Icons.newspaper_rounded, Colors.blue),
+    const _Cat('market_products', 'المنتجات', Icons.store_rounded, Colors.deepPurple),
     // «المستلزمات الطبية» صفحة في الخدمات الطبية لا مجموعة: مستندات
     // `market_products` بتصنيف واحد، فالتبويب هنا عرض مُصفّى من المنتجات.
-    _Cat('tab_med_supplies', 'المستلزمات الطبية',
+    const _Cat('tab_med_supplies', 'المستلزمات الطبية',
         Icons.medical_services_rounded, Color(0xFF0097A7),
         source: 'market_products',
         filterField: 'category',
         filterValues: {kMedicalSuppliesCategory}),
-    _Cat('shops', 'المحلات', Icons.storefront_rounded, Colors.amber),
-    _Cat('obituaries', 'العزاء', Icons.volunteer_activism_rounded,
+    const _Cat('shops', 'المحلات', Icons.storefront_rounded, Colors.amber),
+    const _Cat('obituaries', 'العزاء', Icons.volunteer_activism_rounded,
         Colors.indigo),
-    _Cat('occasions', 'المناسبات', Icons.celebration_rounded, Colors.teal),
-    _Cat('forum_posts', 'المنتدى', Icons.forum_rounded, Colors.brown),
-    _Cat('seller_requests', 'طلبات المتاجر', Icons.storefront_rounded,
+    const _Cat('occasions', 'المناسبات', Icons.celebration_rounded, Colors.teal),
+    const _Cat('forum_posts', 'المنتدى', Icons.forum_rounded, Colors.brown),
+    const _Cat('seller_requests', 'طلبات المتاجر', Icons.storefront_rounded,
         Colors.orange),
-    _Cat('phone_directory', 'دليل الهاتف', Icons.phone_rounded, Colors.cyan),
+    const _Cat('phone_directory', 'دليل الهاتف', Icons.phone_rounded, Colors.cyan),
     // دليل الخدمات صفحةٌ لكل فئة؛ والتبويب هنا صفحةٌ كذلك، لا سجل واحد يخلط
     // الحرفيين بالزراعة بالتعليم. كلها `service_providers` بتصفية `category`.
-    _Cat('tab_svc_technicians', 'دليل الحرفيين', Icons.engineering_rounded,
+    const _Cat('tab_svc_technicians', 'دليل الحرفيين', Icons.engineering_rounded,
         Color(0xFFEF6C00),
         source: 'service_providers',
         filterField: 'category',
         filterValues: {ServiceCategory.technicians},
         takesRest: true),
-    _Cat('tab_svc_agricultural', 'خدمات زراعية', Icons.agriculture_rounded,
+    const _Cat('tab_svc_agricultural', 'خدمات زراعية', Icons.agriculture_rounded,
         Color(0xFFAD1457),
         source: 'service_providers',
         filterField: 'category',
         filterValues: {ServiceCategory.agricultural}),
-    _Cat('tab_svc_educational', 'خدمات تعليمية', Icons.school_rounded,
+    const _Cat('tab_svc_educational', 'خدمات تعليمية', Icons.school_rounded,
         Color(0xFF1565C0),
         source: 'service_providers',
         filterField: 'category',
         filterValues: {ServiceCategory.educational}),
-    _Cat('lost_items', 'المفقودات', Icons.search_rounded, Color(0xFF5E35B1)),
-    _Cat('village_ads', 'إعلانات القرية', Icons.campaign_rounded,
+    const _Cat('lost_items', 'المفقودات', Icons.search_rounded, Color(0xFF5E35B1)),
+    const _Cat('village_ads', 'إعلانات القرية', Icons.campaign_rounded,
         Color(0xFF311B92)),
-    _Cat('lawyers', 'سجل المحامين', Icons.gavel_rounded, Color(0xFF006064)),
-    _Cat('legal_consultations', 'الاستشارات القانونية',
+    const _Cat('lawyers', 'سجل المحامين', Icons.gavel_rounded, Color(0xFF006064)),
+    const _Cat('legal_consultations', 'الاستشارات القانونية',
         Icons.help_center_rounded, Color(0xFF00838F)),
-    _Cat('medical_center_clinics', 'عيادات المركز الخيري',
+    const _Cat('medical_center_clinics', 'عيادات المركز الخيري',
         Icons.local_hospital_rounded, Color(0xFF00695C)),
-    _Cat('village_clinics', 'عيادات القرية', Icons.add_business_rounded,
+    const _Cat('village_clinics', 'عيادات القرية', Icons.add_business_rounded,
         Color(0xFF00897B)),
     _Cat('pharmacies', 'الصيدليات', Icons.local_pharmacy_rounded,
-        Color(0xFF6F4E37)),
-    _Cat('medical_labs', 'معامل التحاليل', Icons.science_rounded,
+        AppColors.primary),
+    const _Cat('medical_labs', 'معامل التحاليل', Icons.science_rounded,
         Color(0xFF6A1B9A)),
-    _Cat('optical_shops', 'نظارات طبية', Icons.remove_red_eye_rounded,
+    const _Cat('optical_shops', 'نظارات طبية', Icons.remove_red_eye_rounded,
         Color(0xFF3949AB)),
-    _Cat('blood_requests', 'طلبات التبرع بالدم', Icons.bloodtype_rounded,
+    const _Cat('blood_requests', 'طلبات التبرع بالدم', Icons.bloodtype_rounded,
         Colors.red),
-    _Cat(
+    const _Cat(
         'blood_donors', 'المتبرعون بالدم', Icons.favorite_rounded, Colors.pink),
   ];
 
@@ -351,7 +352,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
               padding: const EdgeInsets.only(left: 4),
               child: Badge.count(
                 count: _totalPending,
-                backgroundColor: Colors.orange,
+                // العنبري رمز الحالة الوسيطة وهو مقصود هنا، أما الحبر فكان
+                // البياض الافتراضي (`onError`) فلا يُقرأ فوقه (2.16)؛ الحبر
+                // يُثبَّت على الزمردي الداكن الذي يجتاز 5.99 على العنبري.
+                backgroundColor: AppColors.warning,
+                textColor: AppColors.onWarning,
                 child: IconButton(
                   tooltip: '$_totalPending عنصر بانتظار المراجعة',
                   icon: const Icon(Icons.notifications_active_rounded),
@@ -388,10 +393,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
               controller: _tabController,
               isScrollable: true,
               tabAlignment: TabAlignment.start,
-              indicatorColor: const Color(0xFF6F4E37),
+              indicatorColor: theme.colorScheme.primary,
               indicatorWeight: 3,
-              labelColor: const Color(0xFF6F4E37),
-              unselectedLabelColor: Colors.grey,
+              labelColor: theme.colorScheme.primary,
+              unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
               labelStyle: const TextStyle(
                 fontWeight: FontWeight.w800,
                 fontSize: 13,
@@ -525,15 +530,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       ScaffoldMessenger.maybeOf(context)?.showSnackBar(
         SnackBar(
           content: Text(
-              'تم ${action == 'approve' ? 'الموافقة' : action == 'reject' ? 'الرفض' : 'الحذف'} بنجاح'),
-          backgroundColor: const Color(0xFF6F4E37),
+              'تم ${action == 'approve' ? 'الموافقة' : action == 'reject' ? 'الرفض' : 'الحذف'} بنجاح',
+              style: const TextStyle(color: Colors.white)),
+          backgroundColor: AppColors.primary,
         ),
       );
       _refreshStats();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          SnackBar(content: Text('خطأ: $e'), backgroundColor: Colors.red));
+          // أرضية الشريط لون ثابت في السمتين بينما حبره الافتراضي في الداكن
+          // داكن ⇒ البياض يُثبَّت، والأحمر هو الهادئ لا `Colors.red` الساطع.
+          SnackBar(
+              content: Text('خطأ: $e',
+                  style: const TextStyle(color: Colors.white)),
+              backgroundColor: AppColors.error));
     } finally {
       if (mounted) setState(() => _busyActions.remove(key));
     }

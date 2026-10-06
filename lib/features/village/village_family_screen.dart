@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../models/village_content_models.dart';
 import '../../services/village_extended_service.dart';
 import 'village_extended_admin.dart';
 import 'village_section_scaffold.dart';
 
-const Color kFamilyColor = Color(0xFF6F4E37);
+Color get kFamilyColor => AppColors.primary;
 
 /// «عائلات القرية» — أصول العائلات وفروعها وأماكن إقامتها.
 class VillageFamilyScreen extends StatelessWidget {

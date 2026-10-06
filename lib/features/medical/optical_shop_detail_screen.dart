@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/utils/launch_link.dart';
 import '../../models/data_models.dart';
@@ -227,10 +228,15 @@ class _OpticalShopDetailScreenState extends State<OpticalShopDetailScreen> {
                                         borderRadius:
                                             BorderRadius.circular(10)),
                                     child: Text(c,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                             fontSize: 11.5,
                                             fontWeight: FontWeight.w800,
-                                            color: kOpticalAccent)),
+                                            // التصنيف يكتب لون القسم حبرًا فوق
+                                            // تظليله: يبقى في الفاتح ويُفتَّح في
+                                            // الداكن محافظًا على درجة اللون.
+                                            color: AppColors.inkOn(
+                                                kOpticalAccent,
+                                                theme.brightness))),
                                   ))
                               .toList(),
                         ),
@@ -403,7 +409,12 @@ class _NoticeBanner extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.info_outline_rounded, size: 18, color: accent),
+          // الأيقونة تكتب لون القسم حبرًا فوق تظليله: يبقى كما هو في الفاتح
+          // ويُفتَّح في الداكن محافظًا على درجة اللون.
+          Icon(Icons.info_outline_rounded,
+              size: 18,
+              color: AppColors.inkOn(
+                  accent, Theme.of(context).brightness)),
           const SizedBox(width: 8),
           Expanded(
             child: Text(text,
@@ -528,10 +539,12 @@ class _ProductTile extends StatelessWidget {
                       product.hasActiveOffer
                           ? '${product.effectivePrice.toStringAsFixed(0)} ج'
                           : '${product.price.toStringAsFixed(0)} ج',
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontWeight: FontWeight.w900,
                           fontSize: 12.5,
-                          color: kOpticalAccent)),
+                          // السعر حبر بلون القسم فوق أرضية البطاقة الفاتحة/الداكنة.
+                          color:
+                              AppColors.inkOn(kOpticalAccent, theme.brightness))),
                 ],
               ),
             ),

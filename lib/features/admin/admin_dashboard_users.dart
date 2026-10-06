@@ -412,41 +412,56 @@ class _UsersPageState extends State<_UsersPage> {
                       // تصدير
                       PopupMenuButton<String>(
                         onSelected: _handleExport,
-                        itemBuilder: (ctx) => const [
-                          PopupMenuItem(
-                            value: 'excel',
-                            child: Row(
-                              children: [
-                                Icon(Icons.table_chart_rounded,
-                                    size: 18, color: Colors.green),
-                                SizedBox(width: 8),
-                                Text('Excel — القائمة الظاهرة'),
-                              ],
+                        itemBuilder: (ctx) {
+                          // الأيقونات رسومية بمقاس 18 فوق القائمة المنبثقة،
+                          // فحدّها 3.0: الأخضر 2.8 والبرتقالي 2.15 لا يُقرأّن
+                          // على البياض، فيُنزح سطوعهما وحده وتبقى دلالتهما.
+                          final b = Theme.of(ctx).brightness;
+                          return [
+                            PopupMenuItem(
+                              value: 'excel',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.table_chart_rounded,
+                                      size: 18,
+                                      color: AppColors.readableInk(
+                                          Colors.green, b,
+                                          minRatio: 3.0)),
+                                  const SizedBox(width: 8),
+                                  const Text('Excel — القائمة الظاهرة'),
+                                ],
+                              ),
                             ),
-                          ),
-                          PopupMenuItem(
-                            value: 'csv',
-                            child: Row(
-                              children: [
-                                Icon(Icons.table_chart_rounded,
-                                    size: 18, color: Colors.orange),
-                                SizedBox(width: 8),
-                                Text('CSV — القائمة الظاهرة'),
-                              ],
+                            PopupMenuItem(
+                              value: 'csv',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.table_chart_rounded,
+                                      size: 18,
+                                      color: AppColors.readableInk(
+                                          Colors.orange, b,
+                                          minRatio: 3.0)),
+                                  const SizedBox(width: 8),
+                                  const Text('CSV — القائمة الظاهرة'),
+                                ],
+                              ),
                             ),
-                          ),
-                          PopupMenuItem(
-                            value: 'json',
-                            child: Row(
-                              children: [
-                                Icon(Icons.code_rounded,
-                                    size: 18, color: Colors.blue),
-                                SizedBox(width: 8),
-                                Text('JSON — القائمة الظاهرة'),
-                              ],
+                            PopupMenuItem(
+                              value: 'json',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.code_rounded,
+                                      size: 18,
+                                      color: AppColors.readableInk(
+                                          Colors.blue, b,
+                                          minRatio: 3.0)),
+                                  const SizedBox(width: 8),
+                                  const Text('JSON — القائمة الظاهرة'),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
+                          ];
+                        },
                         child: Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 12, vertical: 8),
@@ -717,6 +732,9 @@ class _UsersPageState extends State<_UsersPage> {
   }
 
   Widget _miniStat(ThemeData theme, String label, String value, Color color) {
+    // التظليل والحدّ والظلّ تبقى على درجة القسم، وأما الرقم (18 ووزن 900، وهو
+    // دون سقف النص الكبير) فحبرٌ فوق الخلفية فيُنزل أو يُنار سطوعًا وحده.
+    final ink = AppColors.readableInk(color, theme.brightness);
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
@@ -736,7 +754,7 @@ class _UsersPageState extends State<_UsersPage> {
           children: [
             Text(value,
                 style: TextStyle(
-                    fontWeight: FontWeight.w900, color: color, fontSize: 18)),
+                    fontWeight: FontWeight.w900, color: ink, fontSize: 18)),
             const SizedBox(height: 2),
             Text(label,
                 style: TextStyle(
@@ -806,7 +824,11 @@ class _UsersPageState extends State<_UsersPage> {
                 backgroundImage:
                     photoUrl.isNotEmpty ? NetworkImage(photoUrl) : null,
                 child: photoUrl.isEmpty
-                    ? Icon(opt.$3, color: opt.$2, size: 20)
+                    ? Icon(opt.$3,
+                        color: AppColors.readableInk(
+                            opt.$2, theme.brightness,
+                            minRatio: 3.0),
+                        size: 20)
                     : null,
               ),
               const SizedBox(width: 10),
@@ -862,18 +884,24 @@ class _UsersPageState extends State<_UsersPage> {
     );
   }
 
-  Widget _badge(String text, Color color) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: color.withValues(alpha: 0.3))),
-        child: Text(text,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-                fontSize: 9.5, fontWeight: FontWeight.w800, color: color)),
-      );
+  Widget _badge(String text, Color color) {
+    // الشارة حبرٌ بمقاس 9.5 فوق تظليل الدرجة نفسها، فالدرجة وحدها لا تكفي
+    // على البطاقة البضاء (البرتقالي 2.15) فتُنزح سطوعًا لا لونًا.
+    final ink =
+        AppColors.readableInk(color, Theme.of(context).brightness);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color.withValues(alpha: 0.3))),
+      child: Text(text,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+              fontSize: 9.5, fontWeight: FontWeight.w800, color: ink)),
+    );
+  }
 
   static String _typeLabel(String t) {
     for (final e in SellerType.values) {
@@ -885,6 +913,9 @@ class _UsersPageState extends State<_UsersPage> {
   // ───────────────────── شاشة تفاصيل المستخدم ─────────────────────
   void _showUserDetail(Map<String, dynamic> u) {
     final theme = Theme.of(context);
+    // حذف الحساب فعلٌ لا رجعة فيه، فيبقى على الأحمر الهادئ لا `Colors.red`
+    // الخام؛ وفي الداكن تُنار درجته حتى تُقرأ الكتابة والحدّ معًا.
+    final deleteInk = AppColors.readableInk(AppColors.error, theme.brightness);
     final role = (u['role'] ?? 'user').toString();
     final opt = _roleOptions[role] ?? _roleOptions['user']!;
     final photoUrl = (u['photoUrl'] ?? '').toString();
@@ -935,7 +966,11 @@ class _UsersPageState extends State<_UsersPage> {
                         backgroundImage:
                             photoUrl.isNotEmpty ? NetworkImage(photoUrl) : null,
                         child: photoUrl.isEmpty
-                            ? Icon(opt.$3, color: opt.$2, size: 64)
+                            ? Icon(opt.$3,
+                                color: AppColors.readableInk(
+                                    opt.$2, theme.brightness,
+                                    minRatio: 3.0),
+                                size: 64)
                             : null,
                       ),
                     ),
@@ -1017,12 +1052,12 @@ class _UsersPageState extends State<_UsersPage> {
                     Expanded(
                       child: OutlinedButton.icon(
                         style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.red,
-                            side: const BorderSide(color: Colors.red)),
-                        icon: const Icon(Icons.delete_outline_rounded,
-                            color: Colors.red),
-                        label: const Text('حذف نهائياً',
-                            style: TextStyle(color: Colors.red)),
+                            foregroundColor: deleteInk,
+                            side: BorderSide(color: deleteInk)),
+                        icon: Icon(Icons.delete_outline_rounded,
+                            color: deleteInk),
+                        label: Text('حذف نهائياً',
+                            style: TextStyle(color: deleteInk)),
                         onPressed: () async {
                           Navigator.pop(ctx);
                           await _confirmDelete(context, u['id'] as String,
@@ -1063,7 +1098,11 @@ class _UsersPageState extends State<_UsersPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 20, color: color ?? theme.colorScheme.primary),
+          Icon(icon,
+              size: 20,
+              color: AppColors.readableInk(color ?? theme.colorScheme.primary,
+                  theme.brightness,
+                  minRatio: 3.0)),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -1084,16 +1123,21 @@ class _UsersPageState extends State<_UsersPage> {
     );
   }
 
-  Widget _detailBadge(String text, Color color) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: color.withValues(alpha: 0.3))),
-        child: Text(text,
-            style: TextStyle(
-                fontSize: 11, fontWeight: FontWeight.w800, color: color)),
-      );
+  Widget _detailBadge(String text, Color color) {
+    // مثل `_badge`: التظليل والحدّ بدرجة القسم، والكتابة بمقاس 11 حبرٌ يُنزح.
+    final ink =
+        AppColors.readableInk(color, Theme.of(context).brightness);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: color.withValues(alpha: 0.3))),
+      child: Text(text,
+          style: TextStyle(
+              fontSize: 11, fontWeight: FontWeight.w800, color: ink)),
+    );
+  }
 
   // ───────────────────── لوحة إدارة الحساب ─────────────────────
   Future<void> _manage(BuildContext context, Map<String, dynamic> u) async {
@@ -1107,6 +1151,10 @@ class _UsersPageState extends State<_UsersPage> {
     final service = widget.adminService;
     // حساب المدير العام محمي: الأدمن المساعد لا يغيّر دوره ولا يحذفه.
     final protected = _isProtectedGeneralAdmin(role);
+    // الحذف فعل لا رجعة فيه: الأحمر الهادئ لا `Colors.red` الخام، ويُزار
+    // سطوعه في الداكن حتى تُقرأ الكتابة والحدّ معًا.
+    final deleteInk =
+        AppColors.readableInk(AppColors.error, Theme.of(context).brightness);
 
     await showModalBottomSheet<void>(
       context: context,
@@ -1245,7 +1293,7 @@ class _UsersPageState extends State<_UsersPage> {
               SwitchListTile(
                 secondary: Icon(
                     active ? Icons.toggle_on_rounded : Icons.toggle_off_rounded,
-                    color: active ? const Color(0xFF6F4E37) : Colors.grey),
+                    color: active ? AppColors.success : Colors.grey),
                 title: const Text('الحساب مفعّل',
                     style: TextStyle(fontWeight: FontWeight.w700)),
                 subtitle: Text(
@@ -1269,8 +1317,8 @@ class _UsersPageState extends State<_UsersPage> {
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
                   child: OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red,
-                        side: const BorderSide(color: Colors.red)),
+                        foregroundColor: deleteInk,
+                        side: BorderSide(color: deleteInk)),
                     onPressed: () async {
                       Navigator.pop(ctx);
                       await _confirmDelete(context, uid, name, role: role);
@@ -1340,7 +1388,9 @@ class _UsersPageState extends State<_UsersPage> {
               onPressed: () => Navigator.pop(ctx, false),
               child: const Text('إلغاء')),
           FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.error,
+                  foregroundColor: Colors.white),
               onPressed: () => Navigator.pop(ctx, true),
               child: const Text('حذف')),
         ],

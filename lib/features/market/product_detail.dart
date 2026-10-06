@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../core/utils/comment_style.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/utils/launch_link.dart';
@@ -519,7 +520,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       isLiked
                           ? Icons.favorite_rounded
                           : Icons.favorite_border_rounded,
-                      color: Colors.red,
+                      // قلب الإعجاب حبر لا أرضية: في الداكن يُرفع سطوع الأحمر
+                      // الهادئ (2.5 خامًا) ليُقرأ، والتظليلات الباقية زخرفية.
+                      color: AppColors.inkOn(AppColors.error, theme.brightness),
                       size: 20),
                   const SizedBox(width: 6),
                   StreamBuilder<int>(
@@ -563,12 +566,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   leading: Icon(Icons.share_rounded),
                   title: Text('مشاركة عامة'),
                   dense: true)),
-          const PopupMenuItem(
+          PopupMenuItem(
               value: 'whatsapp',
               child: ListTile(
                   leading: Icon(Icons.chat_bubble_outline_rounded,
-                      color: Color(0xFF6F4E37)),
-                  title: Text('واتساب'),
+                      color: Theme.of(context).colorScheme.primary),
+                  title: const Text('واتساب'),
                   dense: true)),
           const PopupMenuItem(
               value: 'facebook',
@@ -795,7 +798,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(review.userName,
-                                style: CommentStyle.author),
+                                style: CommentStyle.author(context)),
                             Text(_formatDate(review.createdAt),
                                 style: theme.textTheme.labelSmall?.copyWith(
                                     color: theme.colorScheme.onSurfaceVariant)),
@@ -832,7 +835,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               color: Colors.amber,
                               size: 16))),
                   const SizedBox(height: 8),
-                  Text(review.comment, style: CommentStyle.body),
+                  Text(review.comment, style: CommentStyle.body(context)),
                   if (review.images.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     ImageGalleryWrap(urls: review.images, tileWidth: 72, radius: 8, spacing: 8),
@@ -936,11 +939,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                  color: const Color(0xFF6F4E37).withValues(alpha: 0.1),
+                                  color: theme.colorScheme.primary
+                                      .withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(6)),
                               child: Text('توفير ${savings.toStringAsFixed(0)}',
                                   style: theme.textTheme.labelSmall?.copyWith(
-                                      color: const Color(0xFF6F4E37),
+                                      color: theme.colorScheme.primary,
                                       fontWeight: FontWeight.w700)),
                             ),
                         ],
@@ -1039,13 +1043,19 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           _auth.currentUser!.uid, _product!.id);
       if (!mounted) return;
       setState(() => _isSubscribedToStockAlert = true);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('تم الاشتراك في التنبيهات'),
-          backgroundColor: Color(0xFF6F4E37)));
+      // أرضيات الشريط هنا ألوان ثابتة في السمتين بينما حبره الافتراضي يُقرأ من
+      // `onInverseSurface` وهو في الداكن داكن ⇒ الحبر يُثبَّت (البياض على
+      // الزمردي والأحمر الهادئ، والداكن على العنبري الذي لا يُقرأ عليه بياض).
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text('تم الاشتراك في التنبيهات',
+              style: TextStyle(color: Colors.white)),
+          backgroundColor: AppColors.primary));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ: $e'), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('خطأ: $e',
+              style: const TextStyle(color: Colors.white)),
+          backgroundColor: AppColors.error));
     }
   }
 
@@ -1056,12 +1066,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           _auth.currentUser!.uid, _product!.id);
       if (!mounted) return;
       setState(() => _isSubscribedToStockAlert = false);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('تم إلغاء الاشتراك'), backgroundColor: Colors.orange));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('تم إلغاء الاشتراك',
+              style: TextStyle(color: AppColors.onWarning)),
+          backgroundColor: AppColors.warning));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ: $e'), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('خطأ: $e',
+              style: const TextStyle(color: Colors.white)),
+          backgroundColor: AppColors.error));
     }
   }
 

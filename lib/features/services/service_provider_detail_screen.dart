@@ -138,7 +138,11 @@ class _ServiceProviderDetailScreenState
               onPressed: () => Navigator.pop(ctx, false),
               child: const Text('إلغاء')),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            // الأحمر الهادئ الموثّق للحذف لا `Colors.red` الساطع، والحبر مثبّت
+            // بياضًا لأن الأرضية لون ثابت في السمتين فلا يرث حبرًا داكنًا.
+            style: FilledButton.styleFrom(
+                backgroundColor: AppColors.error,
+                foregroundColor: Colors.white),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('حذف'),
           ),
@@ -157,8 +161,11 @@ class _ServiceProviderDetailScreenState
   void _snack(String msg, {bool error = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg),
-      backgroundColor: error ? Colors.red : const Color(0xFF6F4E37),
+      // الأرضيّتان هنا ثابتتان داكنتان (`primary` و`error`) في السمتين، بينما
+      // حبر شريط الإشعارات الافتراضي يُقرأ من `onInverseSurface` وهو في الداكن
+      // حبر داكن ⇒ لولا التثبيت لصار النص شبه أسودَ على أخضر/أحمر داكن.
+      content: Text(msg, style: const TextStyle(color: Colors.white)),
+      backgroundColor: error ? AppColors.error : AppColors.primary,
       behavior: SnackBarBehavior.floating,
     ));
   }
@@ -407,11 +414,11 @@ class _ServiceProviderDetailScreenState
                   Text(provider.displaySpecialty,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: _kBody,
                           height: 1.4,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary)),
+                          color: theme.colorScheme.onSurface)),
                 ],
               ],
             ),
@@ -429,6 +436,9 @@ class _ServiceProviderDetailScreenState
   static const double _kLabel = 13;
   static const double _kBody = 14.5;
 
+  /// التمييز بلون القسم **حبرًا** لا أرضيةً: يبقى كما هو في الفاتح ويُفتّح في الداكن.
+  Color _ink(Color accent) => AppColors.inkOn(accent, Theme.of(context).brightness);
+
   Widget _photo(ThemeData theme, ServiceProvider provider, Color accent) {
     // الصورة الافتراضية للسجل التعليمي = صورة الصفة (mal / femal) ملء الإطار،
     // وتُستعمل أيضًا حين يفسد رابط الصورة المرفوعة.
@@ -439,7 +449,7 @@ class _ServiceProviderDetailScreenState
             color: accent.withValues(alpha: 0.12),
             child: Center(
                 child: Icon(ServiceCategory.icon(provider.category),
-                    size: 30, color: accent)),
+                    size: 30, color: _ink(accent))),
           );
     // الارتفاع يُقاس من نسبة الصورة الحقيقية فتملأ إطارها كاملة بلا اقتصاص.
     return FullFitImage(
@@ -487,6 +497,7 @@ class _ServiceProviderDetailScreenState
 
   Widget _pill(String text, Color color,
       {Key? key, IconData? icon, String? mark, bool filled = false}) {
+    final ink = _ink(color);
     return Container(
       key: key,
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4.5),
@@ -502,7 +513,7 @@ class _ServiceProviderDetailScreenState
             EduKindMark(kind: mark, size: 14),
             const SizedBox(width: 4),
           ] else if (icon != null) ...[
-            Icon(icon, size: 14, color: filled ? Colors.white : color),
+            Icon(icon, size: 14, color: filled ? Colors.white : ink),
             const SizedBox(width: 4),
           ],
           Flexible(
@@ -510,7 +521,7 @@ class _ServiceProviderDetailScreenState
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                    color: filled ? Colors.white : color,
+                    color: filled ? Colors.white : ink,
                     fontWeight: FontWeight.w800,
                     fontSize: _kChipText)),
           ),
@@ -530,10 +541,10 @@ class _ServiceProviderDetailScreenState
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           Text('$label:',
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: _kLabel,
                   fontWeight: FontWeight.w900,
-                  color: AppColors.textPrimary)),
+                  color: theme.colorScheme.onSurface)),
           for (final v in values) _pill(v, color),
         ],
       ),
@@ -562,7 +573,7 @@ class _ServiceProviderDetailScreenState
         children: [
           Text('بيانات التدريس',
               style: theme.textTheme.titleSmall
-                  ?.copyWith(fontWeight: FontWeight.w900, color: accent)),
+                  ?.copyWith(fontWeight: FontWeight.w900, color: _ink(accent))),
           const SizedBox(height: 8),
           if (provider.eduTypesLine.isNotEmpty)
             _factLine(theme, 'النوع', provider.eduTypes, accent),
@@ -587,7 +598,7 @@ class _ServiceProviderDetailScreenState
         children: [
           Text('عن الخدمة',
               style: theme.textTheme.titleSmall
-                  ?.copyWith(fontWeight: FontWeight.w900, color: accent)),
+                  ?.copyWith(fontWeight: FontWeight.w900, color: _ink(accent))),
           const SizedBox(height: 6),
           Text(provider.description,
               maxLines: _descExpanded ? null : 3,
@@ -596,7 +607,7 @@ class _ServiceProviderDetailScreenState
                   fontSize: _kBody,
                   height: 1.6,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary)),
+                  color: theme.colorScheme.onSurface)),
           if (provider.description.length > 120)
             TextButton(
               style: TextButton.styleFrom(
@@ -635,6 +646,10 @@ class _ServiceProviderDetailScreenState
                 key: const Key('detail-call'),
                 style: FilledButton.styleFrom(
                     backgroundColor: kCallButtonColor,
+                    // الأرضية أخضر الاتصال الخام لا لون السمة، فالحبر يجب أن
+                    // يُثبَّت بياضًا: في الداكن يرث `onPrimary` الأخضر الداكن
+                    // فيصير شبه أسودَ فوق اللون نفسه ولا يُقرأ.
+                    foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(horizontal: 18)),
                 onPressed: () => _call(provider.phone),
                 icon: const Icon(Icons.call_rounded, size: 18),
@@ -654,17 +669,17 @@ class _ServiceProviderDetailScreenState
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
         children: [
-          Icon(icon, size: 17, color: accent),
+          Icon(icon, size: 17, color: _ink(accent)),
           const SizedBox(width: 7),
           Expanded(
             child: Text(value,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: _kBody,
                     height: 1.45,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary)),
+                    color: theme.colorScheme.onSurface)),
           ),
         ],
       ),
@@ -712,6 +727,9 @@ class _ServiceProviderDetailScreenState
             child: FilledButton.icon(
               style: FilledButton.styleFrom(
                   backgroundColor: accent,
+                  // الأرضية لون القسم الخام في السمتين، فالحبر يُثبَّت بياضًا
+                  // ليطابق الفاتح ولا يرث في الداكن `onPrimary` الأخضر الداكن.
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 18)),
               onPressed: _submitting ? null : _submitComment,
               icon: _submitting
@@ -793,7 +811,7 @@ class _ServiceProviderDetailScreenState
               c.photoUrl != null && c.photoUrl!.isNotEmpty
                   ? ''
                   : (c.userName.isNotEmpty ? c.userName.substring(0, 1) : '؟'),
-              style: TextStyle(color: accent, fontWeight: FontWeight.w900),
+              style: TextStyle(color: _ink(accent), fontWeight: FontWeight.w900),
             ),
           ),
           const SizedBox(width: 10),
@@ -804,7 +822,7 @@ class _ServiceProviderDetailScreenState
                 Row(
                   children: [
                     Expanded(
-                        child: Text(c.userName, style: CommentStyle.author)),
+                        child: Text(c.userName, style: CommentStyle.author(context))),
                     RatingBarIndicator(
                       rating: c.rating.toDouble(),
                       itemSize: 14,
@@ -828,7 +846,7 @@ class _ServiceProviderDetailScreenState
                 ),
                 if (c.text.isNotEmpty) ...[
                   const SizedBox(height: 5),
-                  Text(c.text, style: CommentStyle.body),
+                  Text(c.text, style: CommentStyle.body(context)),
                 ],
               ],
             ),

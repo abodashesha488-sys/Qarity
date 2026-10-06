@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../models/data_models.dart';
 import '../../services/image_upload_service.dart';
 import '../../services/phone_directory_service.dart';
@@ -86,9 +87,13 @@ class _AddPhoneDirectoryScreenState extends State<AddPhoneDirectoryScreen> {
         if (!mounted) return;
         setState(() => _isSaving = false);
         ScaffoldMessenger.of(context).showSnackBar(
+          // أرضيات الشريط هنا ألوان ثابتة في السمتين (`error` و`primary`)، بينما
+          // حبره الافتراضي يُقرأ من `onInverseSurface` وهو في الداكن داكن ⇒
+          // البياض يُثبَّت. الأحمر هنا الهادئ الموثّق لا `Colors.red` الساطع.
           SnackBar(
-            content: Text('هذا الرقم مسجل في الدليل تحت اسم: ${duplicate.name}'),
-            backgroundColor: Colors.red,
+            content: Text('هذا الرقم مسجل في الدليل تحت اسم: ${duplicate.name}',
+                style: const TextStyle(color: Colors.white)),
+            backgroundColor: AppColors.error,
           ),
         );
         return;
@@ -117,14 +122,18 @@ class _AddPhoneDirectoryScreenState extends State<AddPhoneDirectoryScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
             content: Text(editing == null
-                ? 'تم إرسال الطلب للمراجعة'
-                : 'تم حفظ التعديلات — عاد البيان للمراجعة'),
-            backgroundColor: const Color(0xFF6F4E37)));
+                    ? 'تم إرسال الطلب للمراجعة'
+                    : 'تم حفظ التعديلات — عاد البيان للمراجعة',
+                style: const TextStyle(color: Colors.white)),
+            backgroundColor: AppColors.primary));
       Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ: $e'), backgroundColor: Colors.red));
+          SnackBar(
+              content: Text('خطأ: $e',
+                  style: const TextStyle(color: Colors.white)),
+              backgroundColor: AppColors.error));
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }

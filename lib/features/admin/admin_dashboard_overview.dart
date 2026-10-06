@@ -50,7 +50,7 @@ class _OverviewPageState extends State<_OverviewPage> {
             icon: Icons.space_dashboard_rounded,
             title: 'نظرة عامة',
             subtitle: '${widget.stats['users'] ?? 0} مستخدم نشط',
-            color: const Color(0xFF6F4E37),
+            color: AppColors.primary,
             count: widget.totalPending > 0 ? widget.totalPending : null,
             countLabel: 'معلّق',
           ),
@@ -138,7 +138,7 @@ class _QuickStatsGrid extends StatelessWidget {
             label: 'معلّق',
             value: '$totalPending',
             icon: Icons.pending_actions_rounded,
-            color: totalPending > 0 ? Colors.orange : Colors.green,
+            color: totalPending > 0 ? AppColors.warning : AppColors.success,
             highlight: totalPending > 0),
         _StatCellOverview(
             label: 'طبي',
@@ -168,6 +168,11 @@ class _StatCellOverview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // التظليل والحدّ يبقيان على درجة القسم، وأما الرقم والأيقونة فحبرٌ على
+    // البطاقة: الرقم بمقاس 19 ووزن 900 فهو «نص كبير» وسقفه 3.0، فدرجة البنفسجي
+    // (1.81 على البطاقة الداكنة) تُنار والتركوازي 4.32 يبقى كما هو.
+    final ink = AppColors.readableInk(
+        color, Theme.of(context).brightness, minRatio: 3.0);
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
       decoration: BoxDecoration(
@@ -180,14 +185,14 @@ class _StatCellOverview extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: color, size: 16),
+          Icon(icon, color: ink, size: 16),
           const SizedBox(height: 4),
           FittedBox(
             fit: BoxFit.scaleDown,
             child: Text(
               value,
               style: TextStyle(
-                  fontWeight: FontWeight.w900, color: color, fontSize: 19),
+                  fontWeight: FontWeight.w900, color: ink, fontSize: 19),
             ),
           ),
           Text(
@@ -232,7 +237,7 @@ class _PendingReviewSection extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
         side: BorderSide(
-          color: Colors.orange.withValues(alpha: 0.3),
+          color: AppColors.warning.withValues(alpha: 0.3),
           width: 1.5,
         ),
       ),
@@ -243,8 +248,8 @@ class _PendingReviewSection extends StatelessWidget {
             begin: Alignment.topRight,
             end: Alignment.bottomLeft,
             colors: [
-              Colors.orange.withValues(alpha: 0.08),
-              Colors.orange.withValues(alpha: 0.03),
+              AppColors.warning.withValues(alpha: 0.08),
+              AppColors.warning.withValues(alpha: 0.03),
             ],
           ),
         ),
@@ -257,11 +262,15 @@ class _PendingReviewSection extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.15),
+                    color: AppColors.warning.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.pending_actions_rounded,
-                      color: Colors.orange, size: 18),
+                  // العنبري حبرًا فوق تظليله: درجته الخام 2.16 فلا تُقرأ،
+                  // فيُنزلها المحرّك سطوعًا وحده إلى سقف النص العادي.
+                  child: Icon(Icons.pending_actions_rounded,
+                      color: AppColors.readableInk(
+                          AppColors.warning, theme.brightness),
+                      size: 18),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -295,10 +304,12 @@ class _PendingReviewSection extends StatelessWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.6),
+                      // أرضية الشريحة تُقرأ من الثيم لا من البياض الخام: البياض
+                      // عند 0.6 يجعلها صفراء فاتحة في الداكن فيختفي اسم القسم.
+                      color: theme.colorScheme.surface.withValues(alpha: 0.6),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                          color: Colors.orange.withValues(alpha: 0.35)),
+                          color: AppColors.warning.withValues(alpha: 0.35)),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -311,14 +322,14 @@ class _PendingReviewSection extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 7, vertical: 1),
                           decoration: BoxDecoration(
-                            color: Colors.orange.withValues(alpha: 0.9),
+                            color: AppColors.warning.withValues(alpha: 0.9),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text('${e.value}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w900,
-                                  color: Colors.white)),
+                                  color: AppColors.onWarning)),
                         ),
                       ],
                     ),
@@ -369,6 +380,8 @@ class _QuickActionsGrid extends StatelessWidget {
           crossAxisSpacing: 10,
           mainAxisExtent: 74,
           children: [
+            // الأسماء هنا حبرٌ بمقاس 11، والدرجات تبقى دلالات أقسامها الخام
+            // لأن `_QuickActionCard` ينزاح بها سطوعًا إلى سقف النص العادي وحده.
             _QuickActionCard(
                 title: 'مستخدمون',
                 icon: Icons.people_rounded,
@@ -382,7 +395,7 @@ class _QuickActionsGrid extends StatelessWidget {
             _QuickActionCard(
                 title: 'تنبيهات',
                 icon: Icons.warning_amber_rounded,
-                color: Colors.orange,
+                color: AppColors.warning,
                 onTap: onOpenAlerts),
             _QuickActionCard(
                 title: 'إرسال',
@@ -412,6 +425,10 @@ class _QuickActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // التظليل والحدّ يبقيان على درجة القسم، وأما الأيقونة والاسم فحبرٌ بمقاس
+    // 11 ووزن 800 فهو نص عادي وسقفه 4.5؛ تُظلم الدرجة في الفاتح وتُنار في
+    // الداكن حتى تبلغ النسبة، فيبقى معنى القسم (لونه وتشبّعه) كما هو.
+    final ink = AppColors.readableInk(color, Theme.of(context).brightness);
     return Material(
       color: color.withValues(alpha: 0.1),
       borderRadius: BorderRadius.circular(14),
@@ -428,14 +445,14 @@ class _QuickActionCard extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(icon, color: color, size: 20),
+                Icon(icon, color: ink, size: 20),
                 const SizedBox(height: 6),
                 Text(
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: color,
+                    color: ink,
                     fontWeight: FontWeight.w800,
                     fontSize: 11,
                   ),
@@ -542,6 +559,10 @@ class _ActivityTile extends StatelessWidget {
     final title = (entry['targetTitle'] ?? entry['targetCollection'] ?? '—').toString();
     final collection = (entry['targetCollection'] ?? '').toString();
     final when = _formatWhen(entry['createdAt']);
+    // التظليل يبقى على درجة الإجراء، وأما الأيقونة (16px رسومية) فحبرٌ فوق
+    // البطاقة وسقفها 3.0، فالدرجات التي دونها في الداكن تُنار وحدها.
+    final ink =
+        AppColors.readableInk(spec.color, theme.brightness, minRatio: 3.0);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -553,7 +574,7 @@ class _ActivityTile extends StatelessWidget {
               color: spec.color.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(spec.icon, color: spec.color, size: 16),
+            child: Icon(spec.icon, color: ink, size: 16),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -605,7 +626,7 @@ class _ActivityTile extends StatelessWidget {
       case 'disable_user':
         return (icon: Icons.person_remove_rounded, label: 'تعطيل حساب', color: const Color(0xFF616161));
       default:
-        return (icon: Icons.history_rounded, label: action.isEmpty ? 'نشاط' : action, color: const Color(0xFF6F4E37));
+        return (icon: Icons.history_rounded, label: action.isEmpty ? 'نشاط' : action, color: AppColors.primary);
     }
   }
 

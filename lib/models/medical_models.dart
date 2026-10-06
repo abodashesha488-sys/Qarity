@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+import '../core/constants/app_colors.dart';
 import '../core/utils/firebase_ts.dart';
 
 // ═══════════════════════ فصائل الدم ═══════════════════════
@@ -629,10 +630,13 @@ class BloodRequest {
       };
 
   bool get isOpen => status == 'open';
+  /// ألوان الأولوية تُقرأ من الثوابت: الأحمر هو الهادئ الموثّق (لا
+  /// `Colors.red` الساطع الذي لا يُقرأ حبرًا على البياض 3.68) والعنبري هو
+  /// رمز الحالة الوسيطة، والاثنان يُستعملان طبقةً وحدًّا لا حبرًا.
   Color get urgencyColor => switch (urgency) {
-        'طارئ' => Colors.red,
-        'مستعجل' => Colors.orange,
-        _ => const Color(0xFF6F4E37),
+        'طارئ' => AppColors.error,
+        'مستعجل' => AppColors.warning,
+        _ => AppColors.success,
       };
   String get statusLabel => isOpen ? 'مفتوح' : 'مغلق';
 }

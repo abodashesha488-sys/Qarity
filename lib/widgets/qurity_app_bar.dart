@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../core/constants/app_colors.dart';
 import 'common_appbar_actions.dart';
 import 'header_action_buttons.dart';
 
 /// هيدر موحّد لكل شاشات التطبيق (عدا الشاشة الرئيسية):
 /// زر الرئيسية + اسم الصفحة + زر الإضافة (حيث للشاشة إجراء إضافة) + الجرس،
-/// بخلفية بنية #6F4E37 في كل الصفحات، وكتابة وأيقونات بيضاء، وارتفاع ثابت.
+/// بخلفية زمردية داكنة في كل الصفحات (أعمق في الوضع الداكن حتى لا تلسع على
+/// الأسود)، وكتابة وأيقونات بيضاء، وارتفاع ثابت.
 class QurityAppBar extends StatelessWidget implements PreferredSizeWidget {
   const QurityAppBar({
     super.key,
@@ -30,7 +32,13 @@ class QurityAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onAdd;
   final String addTooltip;
 
-  static const Color headerColor = Color(0xFF6F4E37);
+  static Color get headerColor => AppColors.primary;
+
+  /// خلفية الهيدر حسب الوضع: الزمردي نفسه في الفاتح، وأغمق منه في الداكن
+  /// (`darkPrimary`) لأن `colorScheme.primary` في الداكن صار فاتحًا عمدًا —
+  /// فهو يستعمل كتابةً وأيقونات في كل الشاشات، فلا يصلح أرضية للهيدر.
+  static Color headerColorFor(Brightness brightness) =>
+      brightness == Brightness.dark ? AppColors.darkPrimary : headerColor;
 
   @override
   Size get preferredSize =>
@@ -40,7 +48,7 @@ class QurityAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     final add = onAdd;
     return AppBar(
-      backgroundColor: headerColor,
+      backgroundColor: headerColorFor(Theme.of(context).brightness),
       foregroundColor: Colors.white,
       iconTheme: const IconThemeData(color: Colors.white),
       actionsIconTheme: const IconThemeData(color: Colors.white),

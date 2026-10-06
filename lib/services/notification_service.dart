@@ -13,6 +13,7 @@ import 'package:timezone/data/latest.dart' as tz_data;
 
 import '../../core/utils/navigator_key.dart';
 import '../../routes/app_routes.dart';
+import '../core/constants/app_colors.dart';
 import '../core/constants/app_config.dart';
 import '../core/utils/notification_deeplink.dart';
 import 'notification_inbox_service.dart';
@@ -194,16 +195,16 @@ class NotificationService {
       notification.hashCode,
       notification.title,
       notification.body,
-      const NotificationDetails(
+      NotificationDetails(
         android: AndroidNotificationDetails(
           'qarity_channel',
           'إشعارات قرية أبوديشيشة',
           importance: Importance.high,
           priority: Priority.high,
           icon: '@mipmap/ic_launcher',
-          color: Color(0xFF6F4E37),
+          color: AppColors.primary,
         ),
-        iOS: DarwinNotificationDetails(presentAlert: true, presentBadge: true, presentSound: true),
+        iOS: const DarwinNotificationDetails(presentAlert: true, presentBadge: true, presentSound: true),
       ),
       payload: _payloadFor(message.data),
     );

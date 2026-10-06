@@ -131,15 +131,15 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: isApproved ? const Color(0xFF6F4E37).withValues(alpha: 0.2) : Colors.orange.withValues(alpha: 0.2),
+                    color: (isApproved ? AppColors.success : Colors.orange).withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(isApproved ? Icons.check_circle_rounded : Icons.pending_rounded, color: isApproved ? const Color(0xFFF0E3D5) : Colors.orange.shade100, size: 14),
+                      Icon(isApproved ? Icons.check_circle_rounded : Icons.pending_rounded, color: isApproved ? AppColors.headerAccent : Colors.orange.shade100, size: 14),
                       const SizedBox(width: 4),
-                      Text(isApproved ? 'معتمد' : 'قيد المراجعة', style: TextStyle(color: isApproved ? const Color(0xFFF0E3D5) : Colors.orange.shade100, fontSize: 12, fontWeight: FontWeight.w700)),
+                      Text(isApproved ? 'معتمد' : 'قيد المراجعة', style: TextStyle(color: isApproved ? AppColors.headerAccent : Colors.orange.shade100, fontSize: 12, fontWeight: FontWeight.w700)),
                     ],
                   ),
                 ),
@@ -192,15 +192,15 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
             spacing: 8,
             runSpacing: 8,
             children: [
-              _buildActionFilled(theme, 'موافقة', Icons.check_rounded, const Color(0xFF6F4E37),
+              _buildActionFilled(theme, 'موافقة', Icons.check_rounded, AppColors.primary,
                   _isBusy('approve')
                       ? null
                       : () => _run('approve', () => _adminService.approveItem(widget.collection, widget.docId))),
-              _buildActionFilled(theme, 'رفض', Icons.close_rounded, Colors.orange,
+              _buildActionFilled(theme, 'رفض', Icons.close_rounded, AppColors.warning,
                   _isBusy('reject')
                       ? null
                       : () => _run('reject', () => _adminService.rejectItem(widget.collection, widget.docId))),
-              _buildActionFilled(theme, 'حذف', Icons.delete_rounded, Colors.red,
+              _buildActionFilled(theme, 'حذف', Icons.delete_rounded, AppColors.error,
                   _isBusy('delete')
                       ? null
                       : () async {
@@ -211,7 +211,7 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
                               content: const Text('هل أنت متأكد من حذف هذا العنصر؟'),
                               actions: [
                                 TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
-                                TextButton(onPressed: () => Navigator.pop(ctx, true), style: TextButton.styleFrom(foregroundColor: Colors.red), child: const Text('حذف')),
+                                TextButton(onPressed: () => Navigator.pop(ctx, true), style: TextButton.styleFrom(foregroundColor: AppColors.inkOn(AppColors.error, theme.brightness)), child: const Text('حذف')),
                               ],
                             ),
                           );
@@ -482,15 +482,21 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
 
   Widget _buildActionFilled(ThemeData theme, String label, IconData icon, Color color, VoidCallback? onPressed) {
     final isLoading = onPressed == null;
+    // الأرضية تظليل خفيف للتمييز نفسه، أما الحبر فقيمة مجرَّبة: العنبري
+    // كتابةً 2.16 فوق البياض فيُستبدل بالبرونزي، ثم `inkOn` وحده يرفعهما
+    // معًا في الداكن (وهو أحادي الاتجاه: الفاتح يمر كما هو).
+    final ink = AppColors.inkOn(
+        color == AppColors.warning ? AppColors.warningInk : color,
+        theme.brightness);
     return FilledButton.icon(
       onPressed: onPressed,
       style: FilledButton.styleFrom(
         backgroundColor: color.withValues(alpha: 0.12),
-        foregroundColor: color,
+        foregroundColor: ink,
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: color.withValues(alpha: 0.25))),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: ink.withValues(alpha: 0.35))),
       ),
-      icon: isLoading ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : Icon(icon, size: 18),
+      icon: isLoading ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: ink)) : Icon(icon, size: 18),
       label: Text(label),
     );
   }

@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../models/village_content_models.dart';
 import '../../services/remote_push_service.dart';
 import '../../services/village_extended_service.dart';
@@ -45,7 +46,13 @@ class _VillageContributionsReviewScreenState
     await _service.approveContribution(c.id, _adminUid);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('تم اعتماد المساهمة ✓'), backgroundColor: Colors.green));
+      // البياض يُثبَّت هنا لأن الأرضية ثابتة في السمتين بينما حبر `SnackBar`
+      // الافتراضي في الداكن داكن مثله (`onInverseSurface`) فلا يُقرأ فوقها —
+      // على النص نفسه لأن الصنف لا يعرف وسيط `contentColor`.
+      content: Text('تم اعتماد المساهمة ✓',
+          style: TextStyle(color: Colors.white)),
+      backgroundColor: AppColors.success,
+    ));
     unawaited(_notifyContributor(c, approved: true));
   }
 
@@ -53,8 +60,14 @@ class _VillageContributionsReviewScreenState
   Future<void> _reject(VillageContribution c) async {
     await _service.rejectContribution(c.id, _adminUid);
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('تم رفض المساهمة'), backgroundColor: Colors.orange));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      // الرفض قرار وسطي لا حذف خطير، فيأخذ العنبري لا الأحمر الهادئ (المخصَّص
+      // للحذف والخروج). العنبري أرضيةً يحتاج حبره الخاص: البياض فوقه 2.16،
+      // ويُثبَّت الحبر على النص لأن الصنف لا يعرف وسيط `contentColor`.
+      content: Text('تم رفض المساهمة',
+          style: TextStyle(color: AppColors.onWarning)),
+      backgroundColor: AppColors.warning,
+    ));
     unawaited(_notifyContributor(c, approved: false));
   }
 
@@ -95,7 +108,9 @@ class _VillageContributionsReviewScreenState
               onPressed: () => Navigator.pop(context, false),
               child: const Text('إلغاء')),
           FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.error,
+                  foregroundColor: Colors.white),
               onPressed: () => Navigator.pop(context, true),
               child: const Text('حذف')),
         ],
@@ -215,6 +230,16 @@ class _ContributionReviewCard extends StatelessWidget {
     final type = ContributionType.of(item.type);
     final pending = item.approvalStatus == 'pending';
     final rejected = item.approvalStatus == 'rejected';
+    // الأرضية تظليل خفيف للتمييز نفسه (وهو مقصود باهتًا)، أما الحبر فقيمة
+    // مجرَّبة: العنبري كتابةً 2.16 على البياض فيستبدل بالبرونزي (6.52)،
+    // والنجاح/الحذف يرفعهما inkOn في الداكن إلى ما يجتاز الحدّ على البطاقة.
+    final statusAccent = pending
+        ? AppColors.warning
+        : rejected
+            ? AppColors.error
+            : AppColors.success;
+    final statusInk = AppColors.inkOn(
+        pending ? AppColors.warningInk : statusAccent, theme.brightness);
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 1,
@@ -266,12 +291,7 @@ class _ContributionReviewCard extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                   decoration: BoxDecoration(
-                    color: (pending
-                            ? Colors.orange
-                            : rejected
-                                ? Colors.red
-                                : Colors.green)
-                        .withValues(alpha: 0.12),
+                    color: statusAccent.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -283,11 +303,7 @@ class _ContributionReviewCard extends StatelessWidget {
                     style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w800,
-                        color: pending
-                            ? Colors.orange
-                            : rejected
-                                ? Colors.red
-                                : Colors.green),
+                        color: statusInk),
                   ),
                 ),
               ],
@@ -321,7 +337,10 @@ class _ContributionReviewCard extends StatelessWidget {
                   Expanded(
                     child: FilledButton.icon(
                       style: FilledButton.styleFrom(
-                          backgroundColor: Colors.green,
+                          backgroundColor: AppColors.success,
+                          // البياض يُثبَّت لأن حبر `FilledButton` الافتراضي في
+                          // الداكن (`onPrimary`) أخضر فاتح فوق أرضية ثابتة.
+                          foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 8)),
                       icon: const Icon(Icons.check_rounded, size: 16),
                       label:
@@ -333,8 +352,10 @@ class _ContributionReviewCard extends StatelessWidget {
                 if (pending)
                   IconButton(
                     tooltip: 'رفض المساهمة',
-                    icon: const Icon(Icons.close_rounded,
-                        size: 19, color: Colors.orange),
+                    icon: Icon(Icons.close_rounded,
+                        size: 19,
+                        color: AppColors.inkOn(
+                            AppColors.warningInk, theme.brightness)),
                     onPressed: onReject,
                   ),
                 if (item.approvalStatus == 'approved')
@@ -355,8 +376,10 @@ class _ContributionReviewCard extends StatelessWidget {
                   ),
                 IconButton(
                   tooltip: 'حذف',
-                  icon: const Icon(Icons.delete_outline_rounded,
-                      size: 19, color: Colors.red),
+                  icon: Icon(Icons.delete_outline_rounded,
+                      size: 19,
+                      color:
+                          AppColors.inkOn(AppColors.error, theme.brightness)),
                   onPressed: onDelete,
                 ),
               ],

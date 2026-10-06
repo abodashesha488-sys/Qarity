@@ -97,8 +97,10 @@ class QarityApp extends StatelessWidget {
           supportedLocales: const [Locale('ar', 'EG')],
           locale: const Locale('ar', 'EG'),
           // الخلفية الموحّدة للتطبيق + الأساس الموحد للنصوص (Tajawal).
+          // تُقرأ من الثيم نفسه فلا تنقلب إلى البيج عند الوضع الداكن
+          // (السياق هنا أسفل `Theme` الذي يبنيه MaterialApp مباشرة).
           builder: (context, child) => ColoredBox(
-            color: const Color(0xFFF5F5DC),
+            color: Theme.of(context).scaffoldBackgroundColor,
             child: DefaultTextStyle(
               style: GoogleFonts.tajawal(),
               child: PromoHost(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../models/agriculture_content_model.dart';
 import '../../widgets/agriculture_content_panel.dart';
 import '../../widgets/agriculture_promo_banner.dart';
@@ -189,7 +190,12 @@ class _AgriculturalAdvisorScreenState extends State<AgriculturalAdvisorScreen> {
                     color: _selectedCategory == category
                         ? Colors.amber
                         : Colors.white,
-                    textColor: color,
+                    // الرقيقة لوحة مصمتة دائما (أبيض أو عنبري) لا سطح السمة،
+                    // فالرسم هنا لا يمر readableInk: الأخضر الداكن فوق
+                    // العنبري 2.14، وحبر الأرضيات العنبرية الموثق 7.93.
+                    textColor: _selectedCategory == category
+                        ? AppColors.onWarning
+                        : color,
                   ),
                 ),
             ],
@@ -202,6 +208,7 @@ class _AgriculturalAdvisorScreenState extends State<AgriculturalAdvisorScreen> {
   Widget _buildSectionTitle(ThemeData theme, String title, Color color) {
     return Row(
       children: [
+        // الشريط الزخرفي يبقى على لونه الأصلي: رسم 4×24 يكفيه 3.0 في السمتين.
         Container(
           width: 4,
           height: 24,
@@ -212,8 +219,9 @@ class _AgriculturalAdvisorScreenState extends State<AgriculturalAdvisorScreen> {
         ),
         const SizedBox(width: 10),
         Text(title,
-            style: theme.textTheme.titleMedium
-                ?.copyWith(fontWeight: FontWeight.w900, color: color)),
+            style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w900,
+                color: AppColors.readableInk(color, theme.brightness))),
       ],
     );
   }
@@ -485,6 +493,10 @@ class _GuidelineCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // عنوان الكارت حبر بحروف 16 ثخين فوق سطح الكارت، فقيمة هذا الأخضر
+    // الداكن على سطح الداكن 3.4 ولا تجتاز 4.5؛ الغسالة 0.15 والإطار 0.3
+    // زخرفيان فيبقى اللون الأصلي فيهما.
+    final ink = AppColors.readableInk(color, theme.brightness);
     return Card(
       elevation: 0,
       margin: const EdgeInsets.only(bottom: 12),
@@ -500,11 +512,11 @@ class _GuidelineCard extends StatelessWidget {
             color: color.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(guideline.icon, color: color, size: 24),
+          child: Icon(guideline.icon, color: ink, size: 24),
         ),
         title: Text(guideline.name,
             style: theme.textTheme.titleMedium
-                ?.copyWith(fontWeight: FontWeight.w900, color: color)),
+                ?.copyWith(fontWeight: FontWeight.w900, color: ink)),
         subtitle: Text('${guideline.season} • ${guideline.region}',
             style: theme.textTheme.bodySmall
                 ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
@@ -561,6 +573,9 @@ class _MonthCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // حرف الشهر وعنوانه وسطر الفصل وأيقونة السهم والعتبة — كلها حبر على
+    // سطح الكارت، فالأصلي 3.4 على سطح الداكن ولا يجتاز 4.5.
+    final ink = AppColors.readableInk(color, theme.brightness);
     return Card(
       elevation: 0,
       margin: const EdgeInsets.only(bottom: 10),
@@ -572,13 +587,13 @@ class _MonthCard extends StatelessWidget {
         leading: CircleAvatar(
           backgroundColor: color.withValues(alpha: 0.15),
           child: Text(month.month.substring(0, 1),
-              style: TextStyle(color: color, fontWeight: FontWeight.w900)),
+              style: TextStyle(color: ink, fontWeight: FontWeight.w900)),
         ),
         title: Text(month.month,
             style: theme.textTheme.titleMedium
-                ?.copyWith(fontWeight: FontWeight.w900, color: color)),
+                ?.copyWith(fontWeight: FontWeight.w900, color: ink)),
         subtitle: Text(month.season,
-            style: theme.textTheme.bodySmall?.copyWith(color: color)),
+            style: theme.textTheme.bodySmall?.copyWith(color: ink)),
         childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         expandedCrossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -586,7 +601,7 @@ class _MonthCard extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 3),
                 child: Row(
                   children: [
-                    Icon(Icons.arrow_right_rounded, size: 16, color: color),
+                    Icon(Icons.arrow_right_rounded, size: 16, color: ink),
                     const SizedBox(width: 8),
                     Expanded(child: Text(c, style: theme.textTheme.bodyMedium)),
                   ],
@@ -595,7 +610,7 @@ class _MonthCard extends StatelessWidget {
           const Divider(height: 16),
           Text('عمليات الشهر:',
               style: theme.textTheme.labelLarge
-                  ?.copyWith(color: color, fontWeight: FontWeight.w800)),
+                  ?.copyWith(color: ink, fontWeight: FontWeight.w800)),
           const SizedBox(height: 4),
           Text(month.operations, style: theme.textTheme.bodyMedium),
         ],
@@ -651,16 +666,19 @@ class _DetailRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // التسمية حبر بحروف 14 ثخين فقدرها 4.5، والأيقونة رسم 18 يكفيه 3.0؛
+    // يستعمل الحبر الموثق واحدا حتى لا يختلف لونهما في السطر نفسه.
+    final ink = AppColors.readableInk(color, theme.brightness);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: color),
+          Icon(icon, size: 18, color: ink),
           const SizedBox(width: 10),
           Text('$label: ',
               style: theme.textTheme.bodyMedium
-                  ?.copyWith(fontWeight: FontWeight.w700, color: color)),
+                  ?.copyWith(fontWeight: FontWeight.w700, color: ink)),
           Expanded(
               child: Text(value,
                   style: theme.textTheme.bodyMedium?.copyWith(height: 1.4))),

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -59,6 +61,27 @@ void main() {
     // الصورة الرئيسية أصل محلي
     final image = _assetImage(tester, 'assets/images/crops/wheat.jpg');
     expect(image, isNotNull);
+  });
+
+  test('كل سجل محصول يملك صورة محلية موجودة وسليمة في الحزمة', () {
+    final source =
+        File('lib/features/services/crops_screen.dart').readAsStringSync();
+    final refs = RegExp(r"image:\s*'(assets/images/crops/[^']+\.(?:jpg|jpeg|png))'")
+        .allMatches(source)
+        .map((m) => m.group(1)!)
+        .toList();
+
+    // 35 محصولًا: الأربعة عشر الأصلية + واحد وعشرون مضافة
+    expect(refs.length, 35, reason: 'عدد صور المحاصيل في المصدر');
+    expect(refs.toSet().length, refs.length,
+        reason: 'لا يجوز أن يتشارك محصولان نفس الصورة');
+
+    for (final asset in refs) {
+      final file = File(asset);
+      expect(file.existsSync(), isTrue, reason: 'ناقص: $asset');
+      final length = file.lengthSync();
+      expect(length, greaterThan(300), reason: 'حجم غير سليم: $asset ($length)');
+    }
   });
 }
 

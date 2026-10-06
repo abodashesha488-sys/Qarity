@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../models/village_content_models.dart';
 import '../../routes/app_routes.dart';
 import '../../services/remote_push_service.dart';
@@ -112,8 +113,11 @@ class _VillageContributionScreenState extends State<VillageContributionScreen> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('سجّل الدخول أولاً لإرسال مساهمة'),
-        backgroundColor: Colors.red,
+        // الأحمر الهادئ الموثّق بدل `Colors.red` الساطع، والبياض مثبّت لأن
+        // الأرضية لون ثابت في السمتين وحبر الشريط الافتراضي في الداكن داكن.
+        content: Text('سجّل الدخول أولاً لإرسال مساهمة',
+            style: TextStyle(color: Colors.white)),
+        backgroundColor: AppColors.error,
       ));
       return;
     }
@@ -136,15 +140,18 @@ class _VillageContributionScreenState extends State<VillageContributionScreen> {
       unawaited(RemotePushService.notifyAdmins('village_contributions'));
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('تم إرسال مساهمتك للمراجعة — شكراً لك!'),
-        backgroundColor: Colors.green,
+        // أخضر النجاح صريح مع حبر مثبّت بياضًا (5.5:1)، لا `Colors.green`
+        // الفاتح الذي لا يُقرأ عليه أي حبر.
+        content: Text('تم إرسال مساهمتك للمراجعة — شكراً لك!',
+            style: TextStyle(color: Colors.white)),
+        backgroundColor: AppColors.success,
       ));
       Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('خطأ: $e'),
-        backgroundColor: Colors.red,
+        content: Text('خطأ: $e', style: const TextStyle(color: Colors.white)),
+        backgroundColor: AppColors.error,
       ));
     } finally {
       if (mounted) setState(() => _submitting = false);

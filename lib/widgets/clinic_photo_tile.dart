@@ -1,6 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
+import '../core/constants/app_colors.dart';
+
 /// صورة عيادة المركز الطبي الخيري: مربّع مقسّح بزوايا ناعمة، وأيقونة بديلة
 /// حين لا توجد صورة أو فشل تحميلها — حتى لا يبدو السجل مكسوراً.
 class ClinicPhotoTile extends StatelessWidget {
@@ -17,7 +19,8 @@ class ClinicPhotoTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (imageUrl.isEmpty) return _fallback();
+    final brightness = Theme.of(context).brightness;
+    if (imageUrl.isEmpty) return _fallback(brightness);
     return ClipRRect(
       borderRadius: BorderRadius.circular(radius),
       child: CachedNetworkImage(
@@ -31,12 +34,13 @@ class ClinicPhotoTile extends StatelessWidget {
           height: side,
           color: accent.withValues(alpha: 0.08),
         ),
-        errorWidget: (_, __, ___) => _fallback(),
+        errorWidget: (_, __, ___) =>
+            _fallback(Theme.of(context).brightness),
       ),
     );
   }
 
-  Widget _fallback() {
+  Widget _fallback(Brightness brightness) {
     return Container(
       width: side,
       height: side,
@@ -45,7 +49,7 @@ class ClinicPhotoTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(radius),
       ),
       child: Icon(Icons.medical_services_rounded,
-          size: side * 0.45, color: accent),
+          size: side * 0.45, color: AppColors.inkOn(accent, brightness)),
     );
   }
 }

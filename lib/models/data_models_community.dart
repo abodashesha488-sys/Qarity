@@ -802,7 +802,7 @@ class ServiceRequest implements BaseModel {
   static const Map<String, Color> _statusColors = {
     'pending': Color(0xFFFF9800),
     'in_progress': Color(0xFF1E88E5),
-    'completed': Color(0xFF6F4E37),
+    'completed': AppColors.success,
     'cancelled': Color(0xFFE53935),
   };
 
@@ -1110,8 +1110,8 @@ class AppOrder implements BaseModel {
   static const Map<String, Color> _statusColors = {
     'pending': Color(0xFFFF9800),
     'processing': Color(0xFF1E88E5),
-    'shipped': Color(0xFF6F4E37),
-    'delivered': Color(0xFF6F4E37),
+    'shipped': AppColors.success,
+    'delivered': AppColors.success,
     'cancelled': Color(0xFFE53935),
   };
 

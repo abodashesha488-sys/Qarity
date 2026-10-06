@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../models/village_content_models.dart';
 import '../../services/village_extended_service.dart';
 import 'village_content_admin.dart';
@@ -80,7 +81,7 @@ class FamilyForm extends StatefulWidget {
 }
 
 class _FamilyFormState extends State<FamilyForm> {
-  static const _color = Color(0xFF6F4E37);
+  static Color get _color => AppColors.primary;
   static const _categories = {
     'notable': 'عائلات معروفة',
     'scholarly': 'عائلات علمية/أكاديمية',

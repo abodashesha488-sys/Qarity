@@ -90,15 +90,18 @@ Future<bool> showShopFormDialog(
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.08),
+                    color: AppColors.warning.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(12),
-                    border:
-                        Border.all(color: Colors.orange.withValues(alpha: 0.4))),
+                    border: Border.all(
+                        color: AppColors.warning
+                            .withValues(alpha: 0.4))),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.info_outline_rounded,
-                        size: 18, color: Colors.orange),
+                    Icon(Icons.info_outline_rounded,
+                        size: 18,
+                        color: AppColors.inkOn(
+                            AppColors.warningInk, theme.brightness)),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -296,14 +299,14 @@ class _ShopGridCard extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 7, vertical: 3),
                         decoration: BoxDecoration(
-                            color: Colors.orange.withValues(alpha: 0.92),
+                            color: AppColors.warning.withValues(alpha: 0.92),
                             borderRadius: BorderRadius.circular(9)),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(Icons.hourglass_top_rounded,
-                                size: 11, color: Colors.white),
-                            SizedBox(width: 4),
+                                size: 11, color: AppColors.onWarning),
+                            const SizedBox(width: 4),
                             Flexible(
                               child: Text('بانتظار موافقة الإدارة',
                                   maxLines: 1,
@@ -311,7 +314,7 @@ class _ShopGridCard extends StatelessWidget {
                                   style: TextStyle(
                                       fontSize: 9.5,
                                       fontWeight: FontWeight.w800,
-                                      color: Colors.white)),
+                                      color: AppColors.onWarning)),
                             ),
                           ],
                         ),

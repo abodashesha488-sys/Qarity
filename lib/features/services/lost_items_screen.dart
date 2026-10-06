@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../core/utils/contact_links.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/utils/launch_link.dart';
@@ -16,6 +17,11 @@ import '../../services/user_service.dart';
 import '../../widgets/document_field_editor.dart';
 import '../../widgets/owner_actions.dart';
 import '../../widgets/qurity_app_bar.dart';
+
+/// حبر القسم: في الفاتح هو بنفسجي المفقودات حرفيًا، وفي الداكن يُرفع سطوعه
+/// محافظًا على درجته — فالأصل 2.09 على البطاقة الداكنة فلا يُقرأ.
+Color lostInk(Brightness brightness) =>
+    AppColors.inkOn(kLostItemsColor, brightness);
 
 String _fmtDate(DateTime? d) => d == null
     ? ''
@@ -85,8 +91,10 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
   void _snack(String msg, {bool error = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg),
-      backgroundColor: error ? Colors.red : kLostItemsColor,
+      // الأرضية بنفسجية القسم/الأحمر الهادئ ثابتة في السمتين، وحبر الشريط
+      // الافتراضي في الداكن داكن ⇒ يُثبَّت البياض وإلا صار النص لا يُقرأ.
+      content: Text(msg, style: const TextStyle(color: Colors.white)),
+      backgroundColor: error ? AppColors.error : kLostItemsColor,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ));
@@ -99,7 +107,7 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
       onSelected: (_) => setState(() => _filter = value),
       avatar: Icon(icon,
           size: 16,
-          color: selected ? Colors.white : kLostItemsColor),
+          color: selected ? Colors.white : lostInk(Theme.of(context).brightness)),
       label: Text(label,
           style: TextStyle(
               fontWeight: FontWeight.w800,
@@ -128,8 +136,8 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
                   controller: _search,
                   decoration: InputDecoration(
                     hintText: 'ابحث: غرض، مكان، صاحب الإعلان…',
-                    prefixIcon: const Icon(Icons.search_rounded,
-                        color: kLostItemsColor, size: 20),
+                    prefixIcon: Icon(Icons.search_rounded,
+                        color: lostInk(theme.brightness), size: 20),
                     suffixIcon: _query.isNotEmpty
                         ? IconButton(
                             tooltip: 'مسح',
@@ -164,9 +172,9 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
               stream: _stream,
               builder: (context, snap) {
                 if (!snap.hasData) {
-                  return const Center(
+                  return Center(
                       child:
-                          CircularProgressIndicator(color: kLostItemsColor));
+                          CircularProgressIndicator(color: lostInk(theme.brightness)));
                 }
                 final items = _apply(snap.data!);
                 if (items.isEmpty) {
@@ -176,7 +184,8 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
                       children: [
                         Icon(Icons.wrong_location_rounded,
                             size: 54,
-                            color: kLostItemsColor.withValues(alpha: 0.4)),
+                            color:
+                                lostInk(theme.brightness).withValues(alpha: 0.4)),
                         const SizedBox(height: 10),
                         Text(
                           _query.isNotEmpty || _filter.isNotEmpty
@@ -305,13 +314,13 @@ class _LostItemCard extends StatelessWidget {
                         children: [
                           if (item.location.isNotEmpty)
                             _meta(Icons.place_rounded, item.location,
-                                _typeColor),
+                                AppColors.inkOn(_typeColor, theme.brightness)),
                           if (item.date != null)
                             _meta(Icons.event_rounded, _fmtDate(item.date),
-                                _typeColor),
+                                AppColors.inkOn(_typeColor, theme.brightness)),
                           if (item.userName.isNotEmpty)
                             _meta(Icons.person_rounded, item.userName,
-                                _typeColor),
+                                AppColors.inkOn(_typeColor, theme.brightness)),
                         ],
                       ),
                     ],
@@ -329,11 +338,10 @@ class _LostItemCard extends StatelessWidget {
 
   Widget _thumb(ThemeData theme) => ColoredBox(
         color: _typeColor.withValues(alpha: 0.12),
-        child: Icon(
-            item.isLostType
-                ? Icons.help_outline_rounded
-                : Icons.search_rounded,
-            color: _typeColor,
+        child: Icon(item.isLostType
+            ? Icons.help_outline_rounded
+            : Icons.search_rounded,
+            color: AppColors.inkOn(_typeColor, theme.brightness),
             size: 26),
       );
 
@@ -420,8 +428,11 @@ class _LostItemDetailScreenState extends State<LostItemDetailScreen> {
       if (mounted) {
         setState(() => _busy = false);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('تعذّر التحديث: $e'),
-            backgroundColor: Colors.red));
+            // الأرضية `error` ثابتة في السمتين وحبر الشريط الافتراضي في الداكن
+            // داكن ⇒ يُثبَّت البياض.
+            content: Text('تعذّر التحديث: $e',
+                style: const TextStyle(color: Colors.white)),
+            backgroundColor: AppColors.error));
       }
     }
   }
@@ -513,7 +524,8 @@ class _LostItemDetailScreenState extends State<LostItemDetailScreen> {
                           style: TextStyle(
                               fontSize: 11.5,
                               fontWeight: FontWeight.w700,
-                              color: typeColor)),
+                              color:
+                                  AppColors.inkOn(typeColor, theme.brightness))),
                     ],
                   ),
                 ),
@@ -529,11 +541,11 @@ class _LostItemDetailScreenState extends State<LostItemDetailScreen> {
                   height: 230,
                   width: double.infinity,
                   fit: BoxFit.cover,
-                  placeholder: (_, __) => const SizedBox(
+                  placeholder: (_, __) => SizedBox(
                       height: 230,
                       child: Center(
                           child: CircularProgressIndicator(
-                              color: kLostItemsColor))),
+                              color: lostInk(theme.brightness)))),
                   errorWidget: (_, __, ___) => const SizedBox.shrink()),
             ),
           ],
@@ -600,8 +612,11 @@ class _LostItemDetailScreenState extends State<LostItemDetailScreen> {
             OutlinedButton.icon(
               onPressed: _busy ? null : _toggleResolved,
               style: OutlinedButton.styleFrom(
-                foregroundColor:
-                    item.isResolved ? Colors.blueGrey : const Color(0xFF00897B),
+                foregroundColor: AppColors.inkOn(
+                    item.isResolved
+                        ? Colors.blueGrey
+                        : const Color(0xFF00897B),
+                    theme.brightness),
                 side: BorderSide(
                     color: item.isResolved
                         ? Colors.blueGrey
@@ -649,7 +664,8 @@ class _LostItemDetailScreenState extends State<LostItemDetailScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 17, color: kLostItemsColor),
+          Icon(icon,
+              size: 17, color: lostInk(Theme.of(context).brightness)),
           const SizedBox(width: 9),
           SizedBox(
               width: 100,
@@ -773,9 +789,10 @@ class _LostItemFormSheetState extends State<LostItemFormSheet> {
         setState(() => _saving = false);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(editing == null
-                ? 'خطأ في الإرسال: $e'
-                : 'تعذّر حفظ التعديلات: $e'),
-            backgroundColor: Colors.red));
+                    ? 'خطأ في الإرسال: $e'
+                    : 'تعذّر حفظ التعديلات: $e',
+                style: const TextStyle(color: Colors.white)),
+            backgroundColor: AppColors.error));
       }
     }
   }
@@ -860,8 +877,8 @@ class _LostItemFormSheetState extends State<LostItemFormSheet> {
                   decoration: _dec('التاريخ'),
                   child: Row(
                     children: [
-                      const Icon(Icons.event_rounded,
-                          size: 18, color: kLostItemsColor),
+                      Icon(Icons.event_rounded,
+                          size: 18, color: lostInk(theme.brightness)),
                       const SizedBox(width: 7),
                       Text(_date == null
                           ? 'التاريخ (اختياري)'
@@ -937,13 +954,18 @@ class _LostItemFormSheetState extends State<LostItemFormSheet> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(icon,
-                size: 17, color: selected ? Colors.white : color),
+                size: 17,
+                color: selected
+                    ? Colors.white
+                    : AppColors.inkOn(color, Theme.of(context).brightness)),
             const SizedBox(width: 6),
             Text(label,
                 style: TextStyle(
                     fontWeight: FontWeight.w800,
                     fontSize: 12.5,
-                    color: selected ? Colors.white : color)),
+                    color: selected
+                        ? Colors.white
+                        : AppColors.inkOn(color, Theme.of(context).brightness))),
           ],
         ),
       ),

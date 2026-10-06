@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../core/constants/app_colors.dart';
 import '../core/constants/promo_placements.dart';
 import '../core/utils/helpers.dart';
 import '../core/utils/launch_link.dart';
@@ -266,7 +267,7 @@ class PromoOverlayView extends StatelessWidget {
                           color: Colors.white,
                           shape: BoxShape.circle,
                           border: Border.all(
-                              color: const Color(0xFF6F4E37), width: 2),
+                              color: AppColors.primary, width: 2),
                           boxShadow: const [
                             BoxShadow(
                                 color: Color(0x66000000),
@@ -274,8 +275,8 @@ class PromoOverlayView extends StatelessWidget {
                                 offset: Offset(0, 3))
                           ],
                         ),
-                        child: const Icon(Icons.close_rounded,
-                            color: Color(0xFF6F4E37), size: 22),
+                        child: Icon(Icons.close_rounded,
+                            color: AppColors.primary, size: 22),
                       ),
                     ),
                   ),

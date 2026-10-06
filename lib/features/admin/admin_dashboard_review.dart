@@ -454,6 +454,11 @@ class _CategoryChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // التحديد صمغٌ بلون القسم كان يُنتج بياضًا 12px فوق العنبري 1.63 والبرتقالي
+    // 2.16 والسماوي 2.30 والوردي 4.35 — لا تجتاز 4.5 بحال، ولا يُصلحها الحبر لأن
+    // الأرضية مصمتة. فتبقى درجة القسم كما طلب صاحبها وتُنتقل الدلالة إلى تظليل
+    // + إطار غليظ، ويكتب القسمُ نفسُه حبرَه المجرَّب.
+    final ink = AppColors.readableInk(cat.color, theme.brightness);
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
@@ -462,7 +467,7 @@ class _CategoryChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
           color: selected
-              ? cat.color
+              ? cat.color.withValues(alpha: 0.18)
               : theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
@@ -488,14 +493,13 @@ class _CategoryChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(cat.icon,
-                size: 16, color: selected ? Colors.white : cat.color),
+            Icon(cat.icon, size: 16, color: ink),
             const SizedBox(width: 6),
             Text(
               cat.label,
               style: TextStyle(
-                fontWeight: FontWeight.w800,
-                color: selected ? Colors.white : theme.colorScheme.onSurface,
+                fontWeight: selected ? FontWeight.w900 : FontWeight.w800,
+                color: selected ? ink : theme.colorScheme.onSurface,
                 fontSize: 12,
               ),
             ),
@@ -504,14 +508,13 @@ class _CategoryChip extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: selected
-                      ? Colors.white.withValues(alpha: 0.25)
-                      : Colors.red.withValues(alpha: 0.12),
+                  // عدّاد المعلّقات حالة وسيطة لا خطأ، فيأخذ العنبري (كما في
+                  // شارة اللوحة)، وأما حبره فبرونزي مجرَّب لأن #FF9800 كتابةً
+                  // 2.16 فوق البياض.
+                  color: AppColors.warning.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: selected
-                        ? Colors.white.withValues(alpha: 0.4)
-                        : Colors.red.withValues(alpha: 0.3),
+                    color: AppColors.warning.withValues(alpha: 0.3),
                   ),
                 ),
                 child: Text(
@@ -519,7 +522,8 @@ class _CategoryChip extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w900,
-                    color: selected ? Colors.white : Colors.red,
+                    color: AppColors.readableInk(
+                        AppColors.warningInk, theme.brightness),
                   ),
                 ),
               ),
@@ -603,7 +607,10 @@ class _ErrorReview extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.cloud_off_rounded, size: 56, color: color),
+            Icon(Icons.cloud_off_rounded,
+                size: 56,
+                color: AppColors.readableInk(color, theme.brightness,
+                    minRatio: 3.0)),
             const SizedBox(height: 16),
             Text(
               'تعذّر تحميل العناصر',
@@ -786,7 +793,13 @@ class _ReviewCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final id = item['id'] as String;
-    final statusColor = _isApproved ? const Color(0xFF6F4E37) : Colors.orange;
+    final statusColor = _isApproved ? AppColors.success : Colors.orange;
+    // الشريتان ترسمان لونهما **حبرًا** فوق تظليل 0.12 من نفس اللون. البرتقالي
+    // 2.16 فوق البياض لا يُقرأ عند 10px، ودرجات الأقسام الفاتحة (العنبري
+    // والسماوي والبرتقالي) كذلك — فيُزحزح السطوع وحده حتى تجتاز 4.5 مع بقاء
+    // اللون والتشبّع، لأن التظليل خفيف فلا يُغني عن قياس الحبر.
+    final sourceInk = AppColors.readableInk(sourceColor, theme.brightness);
+    final statusInk = AppColors.readableInk(statusColor, theme.brightness);
     final isBusy =
         busyActions.any((k) => k.endsWith('${collection}_$id'));
 
@@ -868,13 +881,13 @@ class _ReviewCard extends StatelessWidget {
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Icon(sourceIcon,
-                                          size: 11, color: sourceColor),
+                                          size: 11, color: sourceInk),
                                       const SizedBox(width: 4),
                                       Text('القسم: $sourceLabel',
                                           style: TextStyle(
                                               fontSize: 10,
                                               fontWeight: FontWeight.w900,
-                                              color: sourceColor)),
+                                              color: sourceInk)),
                                     ],
                                   ),
                                 ),
@@ -1007,7 +1020,7 @@ class _ReviewCard extends StatelessWidget {
                                     style: TextStyle(
                                         fontSize: 10,
                                         fontWeight: FontWeight.w800,
-                                        color: statusColor)),
+                                        color: statusInk)),
                               ),
                               const SizedBox(width: 8),
                               if (_createdAt != null)
@@ -1070,13 +1083,13 @@ class _ReviewCard extends StatelessWidget {
               context,
               'موافقة',
               Icons.check_rounded,
-              const Color(0xFF6F4E37),
+              AppColors.primary,
               () => onAction(collection, id, 'approve'),
               isBusy),
         ),
         const SizedBox(width: 6),
         Expanded(
-          child: _btn(context, 'رفض', Icons.close_rounded, Colors.orange,
+          child: _btn(context, 'رفض', Icons.close_rounded, AppColors.warning,
               () => onAction(collection, id, 'reject'), isBusy),
         ),
         const SizedBox(width: 6),
@@ -1089,7 +1102,7 @@ class _ReviewCard extends StatelessWidget {
           onChanged();
         }),
         const SizedBox(width: 6),
-        _icon(context, Icons.delete_rounded, Colors.red,
+        _icon(context, Icons.delete_rounded, AppColors.error,
             () => onAction(collection, id, 'delete'),
             busy: isBusy),
       ],
@@ -1098,6 +1111,9 @@ class _ReviewCard extends StatelessWidget {
 
   Widget _thumb(ThemeData theme) {
     final url = _image;
+    // الأيقونة رسمٌ لا نصّ فوق تظليل القسم (0.12)، فحدّها 3.0 وحده المجرَّب.
+    final ink =
+        AppColors.readableInk(cat.color, theme.brightness, minRatio: 3.0);
     return ClipRRect(
       borderRadius: BorderRadius.circular(10),
       child: SizedBox(
@@ -1107,14 +1123,14 @@ class _ReviewCard extends StatelessWidget {
             ? Container(
                 color: cat.color.withValues(alpha: 0.12),
                 alignment: Alignment.center,
-                child: Icon(cat.icon, color: cat.color, size: 22),
+                child: Icon(cat.icon, color: ink, size: 22),
               )
             : Image.network(url,
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => Container(
                     color: cat.color.withValues(alpha: 0.12),
                     alignment: Alignment.center,
-                    child: Icon(cat.icon, color: cat.color))),
+                    child: Icon(cat.icon, color: ink))),
       ),
     );
   }
@@ -1122,6 +1138,10 @@ class _ReviewCard extends StatelessWidget {
   Widget _btn(BuildContext context, String label, IconData icon, Color color,
       VoidCallback onTap, bool busy) {
     final theme = Theme.of(context);
+    // الأرضية تظليل خفيف (0.1) للتمييز نفسه، أما الحبر فيُشتق من التمييز
+    // بحدّ النص العادي: العنبري كتابةً 2.16 فوق البياض، و`inkOn` لا يحرّك
+    // شيئًا في الفاتح، فيبقى الزر غير مقروء في السمَتين.
+    final ink = AppColors.readableInk(color, theme.brightness);
     return SizedBox(
       height: 36,
       child: busy
@@ -1130,7 +1150,7 @@ class _ReviewCard extends StatelessWidget {
                   width: 18,
                   height: 18,
                   child:
-                      CircularProgressIndicator(strokeWidth: 2, color: color)))
+                      CircularProgressIndicator(strokeWidth: 2, color: ink)))
           : InkWell(
               onTap: onTap,
               borderRadius: BorderRadius.circular(8),
@@ -1138,15 +1158,15 @@ class _ReviewCard extends StatelessWidget {
                 decoration: BoxDecoration(
                     color: color.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: color.withValues(alpha: 0.25))),
+                    border: Border.all(color: ink.withValues(alpha: 0.25))),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(icon, size: 14, color: color),
+                    Icon(icon, size: 14, color: ink),
                     const SizedBox(width: 4),
                     Text(label,
                         style: theme.textTheme.labelSmall?.copyWith(
-                            fontWeight: FontWeight.w800, color: color)),
+                            fontWeight: FontWeight.w800, color: ink)),
                   ],
                 ),
               ),
@@ -1157,6 +1177,10 @@ class _ReviewCard extends StatelessWidget {
   Widget _icon(
       BuildContext context, IconData icon, Color color, VoidCallback onTap,
       {bool busy = false}) {
+    // نفس فصل الحبر عن التظليل في `_btn`: الأرضية باهتة عمدًا، والحبر أيقونةٌ
+    // رسومية وحدّها 3.0، فيُزحزح سطوعها وحدها في السمَتين إن قصرت.
+    final ink = AppColors.readableInk(color, Theme.of(context).brightness,
+        minRatio: 3.0);
     return SizedBox(
       width: 36,
       height: 36,
@@ -1166,7 +1190,7 @@ class _ReviewCard extends StatelessWidget {
                   width: 18,
                   height: 18,
                   child:
-                      CircularProgressIndicator(strokeWidth: 2, color: color)))
+                      CircularProgressIndicator(strokeWidth: 2, color: ink)))
           : InkWell(
               onTap: onTap,
               borderRadius: BorderRadius.circular(8),
@@ -1174,8 +1198,8 @@ class _ReviewCard extends StatelessWidget {
                 decoration: BoxDecoration(
                     color: color.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: color.withValues(alpha: 0.25))),
-                child: Icon(icon, size: 16, color: color),
+                    border: Border.all(color: ink.withValues(alpha: 0.25))),
+                child: Icon(icon, size: 16, color: ink),
               ),
             ),
     );

@@ -112,7 +112,7 @@ class _SellerReviewsScreenState extends State<SellerReviewsScreen> {
                     const SizedBox(width: 10),
                     Text(
                       r['userName'] ?? 'مستخدم',
-                      style: CommentStyle.author,
+                      style: CommentStyle.author(context),
                     ),
                   ],
                 ),
@@ -129,7 +129,7 @@ class _SellerReviewsScreenState extends State<SellerReviewsScreen> {
               const SizedBox(height: 10),
               Text(
                 r['comment'] as String,
-                style: CommentStyle.body,
+                style: CommentStyle.body(context),
               ),
             ],
             _buildDateRow(theme, r['createdAt']),

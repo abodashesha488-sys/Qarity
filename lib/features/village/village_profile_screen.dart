@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
 import '../../services/cache_service.dart';
@@ -12,7 +13,7 @@ import '../../widgets/qurity_app_bar.dart';
 import '../../widgets/village_ornament.dart';
 import 'village_content_admin.dart';
 
-const Color kVillageProfileColor = Color(0xFF6F4E37);
+Color get kVillageProfileColor => AppColors.primary;
 
 /// «عن أبودشيشة» — بطاقة تعريف القرية الكاملة:
 /// صورة، سبب التسمية، الموقع، التبعية الإدارية، الطبيعة، ما اشتهرت به،
@@ -236,7 +237,7 @@ class _VillageProfileScreenState extends State<VillageProfileScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(children: [
-                      const Icon(Icons.menu_book_rounded,
+                      Icon(Icons.menu_book_rounded,
                           size: 18, color: kVillageProfileColor),
                       const SizedBox(width: 8),
                       Text('نبذة عن القرية',
@@ -340,7 +341,7 @@ class _StatChip extends StatelessWidget {
           Text(value,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w900,
                   color: kVillageProfileColor)),
@@ -391,7 +392,7 @@ class _IdentityRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(title,
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w900,
                           color: kVillageProfileColor)),

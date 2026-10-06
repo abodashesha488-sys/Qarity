@@ -3,6 +3,7 @@ import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:qurity/core/constants/app_colors.dart';
+import 'package:qurity/core/theme/app_theme.dart';
 import 'package:qurity/features/news/view.dart';
 import 'package:qurity/models/data_models.dart';
 import 'package:qurity/services/news_service.dart';
@@ -49,6 +50,9 @@ void main() {
 
     final navKey = GlobalKey<NavigatorState>();
     await tester.pumpWidget(MaterialApp(
+      // ثيم التطبيق نفسه: الحبر صار يُقرأ من الثيم، فالثيم الافتراضي كان
+      // يقيس تعليق الشاشة على أرضية لا يراها المستخدم أبدًا.
+      theme: AppTheme.lightTheme,
       navigatorKey: navKey,
       home: const SizedBox.shrink(),
     ));

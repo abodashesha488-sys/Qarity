@@ -104,6 +104,7 @@ class _OwnerActionsState extends State<OwnerActions> {
         widget.ownerId, widget.currentUserId, widget.isAdmin)) {
       return const SizedBox.shrink();
     }
+    final scheme = Theme.of(context).colorScheme;
     return Row(
       children: [
         Expanded(
@@ -111,8 +112,8 @@ class _OwnerActionsState extends State<OwnerActions> {
             key: _k('edit'),
             onPressed: _busy ? null : widget.onEdit,
             style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.primary,
-              side: const BorderSide(color: AppColors.primary, width: 1.4),
+              foregroundColor: scheme.primary,
+              side: BorderSide(color: scheme.primary, width: 1.4),
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
             icon: const Icon(Icons.edit_rounded, size: 18),
@@ -127,8 +128,8 @@ class _OwnerActionsState extends State<OwnerActions> {
             key: _k('delete'),
             onPressed: _busy ? null : _confirmAndDelete,
             style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.error,
-              side: const BorderSide(color: AppColors.error, width: 1.4),
+              foregroundColor: scheme.error,
+              side: BorderSide(color: scheme.error, width: 1.4),
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
             icon: const Icon(Icons.delete_rounded, size: 18),

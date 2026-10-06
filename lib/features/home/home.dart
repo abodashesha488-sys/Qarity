@@ -118,14 +118,22 @@ class _HomeIdentityBarState extends State<HomeIdentityBar> {
 
   @override
   Widget build(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
     final photo = _user?.photoUrl ?? '';
     final name = (_user?.name ?? '').trim();
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF6F4E37),
+        // نفس زوج الأرضيتين اللتين تحملان الهيدر وشريط التنقل في السمتين
+        // (`appBarTheme` و`bottomNavigationBarTheme`)؛ `colorScheme.primary`
+        // وحده لا يصلح أرضيةً هنا لأنه في الداكن الأخضر المشرق (#34D399)
+        // والبياض فوقه 2.13، أما الزمردي الداكن فيجتاز 12 على أي من القيمتين.
+        color: brightness == Brightness.dark
+            ? AppColors.darkPrimary
+            : AppColors.primary,
         borderRadius: BorderRadius.circular(26),
-        border:
-            Border.all(color: Colors.white.withValues(alpha: 0.35)),
+        border: Border.all(
+            color: Colors.white.withValues(
+                alpha: brightness == Brightness.dark ? 0.18 : 0.35)),
         boxShadow: const [
           BoxShadow(
               color: Color(0x33000000),
@@ -203,7 +211,7 @@ class HomeDrawer extends StatelessWidget {
           padding: EdgeInsets.zero,
           children: [
             DrawerHeader(
-              decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
+              decoration: BoxDecoration(gradient: AppColors.primaryGradient),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 InkWell(
                   borderRadius: BorderRadius.circular(28),
@@ -613,7 +621,7 @@ class _HeroHeader extends StatelessWidget {
   Widget _pill({required Widget child}) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
         decoration: BoxDecoration(
-          color: const Color(0xE66F4E37),
+          color: const Color(0xE604392B),
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
               color: Colors.white.withValues(alpha: 0.4)),
@@ -645,13 +653,13 @@ class _HeroHeader extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: Stack(
         children: [
-          // 1) أرضية بديلة بلون الخلفية (تظهر فقط إن تعذّر تحميل الصورة)
-          const Positioned.fill(
-            child: ColoredBox(color: Color(0xFFF5F5DC)),
-          ),
-          // 2) صورة الهيدر كما هي — بلا أي حجابات أو تأثيرات
+          // 1) أرضية بديلة بالزمردي الأغمق (تظهر فقط إن تعذّر تحميل الصورة)
           Positioned.fill(
-            child: Image.asset('assets/images/heder.jpg',
+            child: ColoredBox(color: AppColors.primaryDark),
+          ),
+          // 2) راية القرية الخضراء — كما هي بلا أي حجابات أو تأثيرات
+          Positioned.fill(
+            child: Image.asset('assets/images/0.jpg',
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => const SizedBox.shrink()),
           ),
@@ -1094,9 +1102,10 @@ class _ProductCard extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                          color: Colors.red.shade700,
-                          borderRadius: BorderRadius.circular(7)),
+                      decoration: const BoxDecoration(
+                          color: AppColors.error,
+                          borderRadius:
+                              BorderRadius.all(Radius.circular(7))),
                       child: const Text('عرض',
                           style: TextStyle(
                               color: Colors.white,

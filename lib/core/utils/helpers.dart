@@ -2,18 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/constants/app_colors.dart';
 import 'navigator_key.dart';
 
 class AppHelpers {
   AppHelpers._();
+
+  /// أرضية شريط الإشعارات هنا ألوان ثابتة داكنة في السمتين (`primary` و
+  /// `success` و`error` والرمادي المحايد)، بينما حبر الشريط الافتراضي يُقرأ من
+  /// `onInverseSurface` وهو في الوضع الداكن حبرٌ داكن ⇒ يُثبَّت البياض وإلا صار
+  /// النص شبه أسودَ على أرضيته. في الفاتح البياض هو الحبر نفسه عمليًا.
+  static const TextStyle _snackInk =
+      TextStyle(color: Colors.white, fontWeight: FontWeight.w600);
 
   static void showToast(String message, {bool isError = false}) {
     final ctx = navigatorKey.currentContext;
     if (ctx != null && ctx.mounted) {
       ScaffoldMessenger.of(ctx).showSnackBar(
         SnackBar(
-          content: Text(message, style: const TextStyle(fontWeight: FontWeight.w600)),
-          backgroundColor: isError ? const Color(0xFFE53935) : const Color(0xFF323232),
+          content: Text(message, style: _snackInk),
+          backgroundColor: isError ? AppColors.error : const Color(0xFF323232),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           margin: const EdgeInsets.all(16),
@@ -25,8 +33,8 @@ class AppHelpers {
   static void showSnackBar(BuildContext context, String message, {bool isError = false, bool isSuccess = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, style: const TextStyle(fontWeight: FontWeight.w600)),
-        backgroundColor: isError ? const Color(0xFFE53935) : isSuccess ? const Color(0xFF6F4E37) : const Color(0xFF6F4E37),
+        content: Text(message, style: _snackInk),
+        backgroundColor: isError ? AppColors.error : isSuccess ? AppColors.success : AppColors.primary,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         margin: const EdgeInsets.all(16),

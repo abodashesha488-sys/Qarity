@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../core/utils/role_style.dart';
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
@@ -172,7 +173,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ في الحفظ: $e'), backgroundColor: Colors.red),
+          // أرضيات الشريط والأزرار هنا ألوان ثابتة في السمتين، وحبر الشريط
+          // الافتراضي في الداكن داكن ⇒ البياض يُثبَّت. والأحمر هو الهادئ
+          // الموثّق للحذف والخروج لا `Colors.red` الساطع (3.7 مع البياض).
+          SnackBar(
+              content: Text('خطأ في الحفظ: $e',
+                  style: const TextStyle(color: Colors.white)),
+              backgroundColor: AppColors.error),
         );
       }
     } finally {
@@ -291,13 +298,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
       await _marketService.submitSellerRequest(request);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم إرسال طلبك بنجاح! سنراجعه قريباً'), backgroundColor: Color(0xFF6F4E37)),
+        SnackBar(
+            content: const Text('تم إرسال طلبك بنجاح! سنراجعه قريباً',
+                style: TextStyle(color: Colors.white)),
+            backgroundColor: AppColors.primary),
       );
       await _fetchData();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ: $e'), backgroundColor: Colors.red),
+        SnackBar(
+            content: Text('خطأ: $e',
+                style: const TextStyle(color: Colors.white)),
+            backgroundColor: AppColors.error),
       );
     } finally {
       if (mounted) setState(() => _checkingRequest = false);
@@ -385,7 +398,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 icon: const Icon(Icons.logout, color: Colors.white),
                 label: const Text('تسجيل الخروج', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
+                  // أحمر الخروج الهادئ الموثّق مع بياض مثبّت (`Colors.red`
+                  // الساطع يعطي 3.7 مع البياض لا 6.6).
+                  backgroundColor: AppColors.error,
+                  foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
               ),
@@ -674,6 +690,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       'seller' => ('بائع', Colors.deepPurple, Icons.store_rounded),
       _ => ('مستخدم', Colors.teal, Icons.person_rounded),
     };
+    // الشارة تظليلٌ من اللون (0.12) فالرمز والنص فوقها حبرٌ لا أرضية: التركوازي
+    // 3.67 والبرتقالي 2.16 فوق البياض لا يجتازان حدّ النص عند 11px، وفي الداكن
+    // يسقط البياض نفسه. يُزحزح السطوع وحده فيبقى لون الدور دلالته.
+    final ink = AppColors.readableInk(color, theme.brightness);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
@@ -683,17 +703,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 13, color: color),
+          Icon(icon, size: 13, color: ink),
           const SizedBox(width: 5),
           Text(label,
               style: TextStyle(
-                  fontSize: 11, fontWeight: FontWeight.w800, color: color)),
+                  fontSize: 11, fontWeight: FontWeight.w800, color: ink)),
         ],
       ),
     );
   }
 
   Widget _sellerTypeBadge(ThemeData theme, SellerType t) {
+    // نفس قاعدة شارة الدور: البني أرضيةٌ تظليل لا طبقة مصمتة، وحبره فوق الداكن
+    // يسقط (1.97) فلا يُقرأ اسم النوع ولا عدد الصور.
+    final ink = AppColors.readableInk(Colors.brown, theme.brightness);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
@@ -703,13 +726,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(t.icon, size: 13, color: Colors.brown),
+          Icon(t.icon, size: 13, color: ink),
           const SizedBox(width: 5),
           Text('${t.label} • حتى ${t.maxImages} صور',
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
-                  color: Colors.brown)),
+                  color: ink)),
         ],
       ),
     );
@@ -749,6 +772,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       );
     } else if (_sellerRequest?.isPending == true) {
+      // التظليل هنا خفيف (0.1) فالرمز والعنوان حبرٌ فوق أرضية قريبة من البياض:
+      // البرتقالي 2.16 لا يُقرأ عند 13px، و«البرتقالي الغامق» 3.08 لا يجتاز هو
+      // الآخر — فيُشتق حبرٌ واحد منهما معًا ويبقى اللون دلالته على التعليق.
+      final pendingInk =
+          AppColors.readableInk(AppColors.warning, theme.brightness);
       sellerAction = Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -758,13 +786,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         child: Row(
           children: [
-            const Icon(Icons.hourglass_empty_rounded, color: Colors.orange),
+            Icon(Icons.hourglass_empty_rounded, color: pendingInk),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('طلبك قيد المراجعة', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: Colors.orange[800])),
+                  Text('طلبك قيد المراجعة', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: pendingInk)),
                   Text('سيتم مراجعة طلبك من قبل الإدارة', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
                 ],
               ),

@@ -752,12 +752,12 @@ class _CommentsSheetState extends State<CommentsSheet> {
                       subtitleBuilder: (context) => [
                         Text(
                           data['userName'] as String? ?? 'مستخدم',
-                          style: CommentStyle.author,
+                          style: CommentStyle.author(context),
                         ),
                         const SizedBox(height: 5),
                         Text(
                           data['text'] as String? ?? '',
-                          style: CommentStyle.body,
+                          style: CommentStyle.body(context),
                         ),
                       ],
                     );

@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:qurity/core/constants/app_colors.dart';
 import 'package:qurity/routes/app_routes.dart';
 import 'package:qurity/widgets/qurity_app_bar.dart';
 import 'package:qurity/widgets/qurity_logo.dart';
@@ -100,12 +101,14 @@ void main() {
       expect(plus.size, greaterThan(24));
     });
 
-    testWidgets('خلفية الهيدر بنية ثابتة لا تتغيّر من شاشة لشاشة',
+    testWidgets('خلفية الهيدر تتبع لون العائلة وتبقى موحّدة بين الشاشات',
         (tester) async {
       await _pumpBar(tester, const QurityAppBar(title: 'مناسبات القرية'));
       final bar = tester.widget<AppBar>(find.byType(AppBar).first);
       expect(bar.backgroundColor, QurityAppBar.headerColor);
-      expect(QurityAppBar.headerColor, const Color(0xFF6F4E37));
+      // الموحد هو «لون العائلة» لا بنية ثابتة: المطلوب أن يسمن الهيدر مع
+      // اختيار المظهر، فالحارس هنا أنه يأخذ رمز العائلة نفسه في كل الشاشات.
+      expect(QurityAppBar.headerColor, AppColors.primary);
     });
 
     testWidgets('زر الرئيسية يغلق كل المسارات فوقها', (tester) async {

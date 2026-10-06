@@ -267,8 +267,11 @@ void main() {
           reason: 'الثوابت مستعملة فعلًا لا معرّفة فقط');
     });
 
-    test('نصوص السجل سوداء واضحة لا رمادية باهتة', () {
-      expect(src, contains('AppColors.textPrimary'));
+    test('نصوص السجل تُقرأ من حبر الثيم فتبقى مقروءة في السمتين', () {
+      // الحبر من `colorScheme.onSurface` لا من ثابت مجمّد: في الفاتح هو حبر
+      // العائلة الداكن وفي الداكن حبر فاتح، فثابت «أسود» واحد كان يجعل
+      // بطاقة التفاصيل غير مقروءة في الوضع الداكن.
+      expect(src, contains('theme.colorScheme.onSurface'));
       expect(src.contains('textTheme.bodySmall'), isFalse,
           reason: 'لا تعليق صغير باهت في بطاقة التفاصيل');
     });

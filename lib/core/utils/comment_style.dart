@@ -1,8 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
-import '../constants/app_colors.dart';
-
 /// تنسيق موحّد لنص التعليقات والمراجعات والتعازي في كل التطبيق.
 ///
 /// كان كل موضع يمرّر `bodySmall`/`bodyMedium` من الثيم، وكلاهما يُحسب ~14 بكسل
@@ -10,18 +8,24 @@ import '../constants/app_colors.dart';
 class CommentStyle {
   CommentStyle._();
 
-  static const TextStyle body = TextStyle(
+  static const TextStyle _body = TextStyle(
     fontSize: 15.5,
     height: 1.6,
     fontWeight: FontWeight.w600,
-    color: AppColors.textPrimary,
   );
 
-  static const TextStyle author = TextStyle(
+  static const TextStyle _author = TextStyle(
     fontSize: 13.5,
     fontWeight: FontWeight.w800,
-    color: AppColors.primary,
   );
+
+  /// الحبر يُقرأ من الثيم لا من ثابت: في الفاتح هو `textPrimary` نفسه وفي
+  /// الداكن حبر فاتح، وإلا بقي النص الأسود غير مقروء على البطاقات الداكنة.
+  static TextStyle body(BuildContext context) =>
+      _body.copyWith(color: Theme.of(context).colorScheme.onSurface);
+
+  static TextStyle author(BuildContext context) =>
+      _author.copyWith(color: Theme.of(context).colorScheme.primary);
 
   static const double avatarRadius = 20;
 

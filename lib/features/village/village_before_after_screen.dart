@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../models/village_content_models.dart';
 import '../../services/village_extended_service.dart';
 import 'village_extended_admin.dart';
@@ -136,7 +137,8 @@ class _NoImage extends StatelessWidget {
       width: double.infinity,
       color: kBeforeAfterColor.withValues(alpha: 0.08),
       child: Icon(Icons.image_not_supported_outlined,
-          color: kBeforeAfterColor.withValues(alpha: 0.4)),
+          color: AppColors.inkOn(kBeforeAfterColor, Theme.of(context).brightness)
+              .withValues(alpha: 0.4)),
     );
   }
 }

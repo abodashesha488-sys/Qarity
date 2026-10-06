@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/constants/app_colors.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/utils/launch_link.dart';
 
@@ -240,7 +241,7 @@ class _ContactCard extends StatelessWidget {
             IconButton.filled(
               onPressed: onCall,
               icon: const Icon(Icons.call_rounded, size: 18),
-              style: IconButton.styleFrom(backgroundColor: const Color(0xFF6F4E37).withValues(alpha: 0.15)),
+              style: IconButton.styleFrom(backgroundColor: AppColors.primary.withValues(alpha: 0.15)),
             ),
           ],
         ),

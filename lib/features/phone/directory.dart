@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../core/utils/contact_links.dart';
 import '../../core/utils/launch_link.dart';
 import '../../models/data_models.dart';
@@ -224,6 +225,12 @@ class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
 
   Widget _buildContactCard(ThemeData theme, PhoneDirectoryEntry entry) {
     final isApproved = entry.isApproved;
+    // الرمز والنص هنا حبرٌ فوق بياض الكرت لا فوق تظليل، والبرتقالي 2.16 فوق
+    // البياض لا يجتاز سقف الرسم ولا حدّ النص — فيُزحزح سطوعه وحده حتى يجتاز
+    // الاثنين مع بقاء اللون والتشبّع، لأن الاطمئنان أن السجل معلّق لا أن اسمه
+    // صار برتقاليا غامقا.
+    final pendingInk =
+        AppColors.readableInk(AppColors.warning, theme.brightness);
     return Card(
       elevation: 0,
       // الصفوف متلاصقة: لا هامش للكرت والفراغ بينهما هو فاصل القائمة وحده (4).
@@ -261,13 +268,13 @@ class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
                         padding: const EdgeInsets.only(top: 4),
                         child: Row(
                           children: [
-                            const Icon(Icons.pending_rounded,
-                                size: 14, color: Colors.orange),
+                            Icon(Icons.pending_rounded,
+                                size: 14, color: pendingInk),
                             const SizedBox(width: 4),
                             Text(
                               'قيد المراجعة',
                               style: theme.textTheme.labelSmall?.copyWith(
-                                color: Colors.orange,
+                                color: pendingInk,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -302,28 +309,39 @@ class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
                       _rejectEntry(entry);
                     }
                   },
-                  itemBuilder: (BuildContext context) => <PopupMenuItem<String>>[
-                    const PopupMenuItem<String>(
-                      value: 'approve',
-                      child: Row(
-                        children: [
-                          Icon(Icons.check_circle_rounded, color: Color(0xFF6F4E37)),
-                          SizedBox(width: 8),
-                          Text('موافقة'),
-                        ],
+                  itemBuilder: (BuildContext context) {
+                    // الأيقونتان تُرسمان حبرا فوق خلفية القائمة نفسها (البياض في
+                    // الفاتح والداكن في الداكن) فلا تظليل يسندهما هنا: البرتقالي
+                    // لا يُقرأ على أيّ منهما، فيُزحزح سطوعه وحده.
+                    final Brightness brightness =
+                        Theme.of(context).brightness;
+                    return <PopupMenuItem<String>>[
+                      PopupMenuItem<String>(
+                        value: 'approve',
+                        child: Row(
+                          children: [
+                            Icon(Icons.check_circle_rounded,
+                                color: AppColors.readableInk(
+                                    AppColors.success, brightness)),
+                            const SizedBox(width: 8),
+                            const Text('موافقة'),
+                          ],
+                        ),
                       ),
-                    ),
-                    const PopupMenuItem<String>(
-                      value: 'reject',
-                      child: Row(
-                        children: [
-                          Icon(Icons.cancel_rounded, color: Colors.orange),
-                          SizedBox(width: 8),
-                          Text('رفض'),
-                        ],
+                      PopupMenuItem<String>(
+                        value: 'reject',
+                        child: Row(
+                          children: [
+                            Icon(Icons.cancel_rounded,
+                                color: AppColors.readableInk(
+                                    AppColors.warning, brightness)),
+                            const SizedBox(width: 8),
+                            const Text('رفض'),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ];
+                  },
                 ),
             ],
           ),
@@ -395,14 +413,16 @@ class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
       await _adminService.approveItem('phone_directory', entry.id);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم قبول الدخول في الدليل'), backgroundColor: Color(0xFF6F4E37)),
+        SnackBar(
+            content: const Text('تم قبول الدخول في الدليل'),
+            backgroundColor: AppColors.primary),
       );
       _loadEntries();
       _loadPendingCount();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ: $e'), backgroundColor: Colors.red),
+        SnackBar(content: Text('خطأ: $e'), backgroundColor: AppColors.error),
       );
     }
   }
@@ -414,14 +434,15 @@ class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
       await _adminService.rejectItem('phone_directory', entry.id);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم رفض الدخول'), backgroundColor: Colors.red),
+        const SnackBar(
+            content: Text('تم رفض الدخول'), backgroundColor: AppColors.error),
       );
       _loadEntries();
       _loadPendingCount();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ: $e'), backgroundColor: Colors.red),
+        SnackBar(content: Text('خطأ: $e'), backgroundColor: AppColors.error),
       );
     }
   }
@@ -437,6 +458,7 @@ class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
         child: StatefulBuilder(
           builder: (context, setCardState) {
             void report(String message) => setCardState(() => cardError = message);
+            final scheme = Theme.of(context).colorScheme;
             return SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -445,7 +467,7 @@ class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
               // صورة كبيرة
               CircleAvatar(
                 radius: 64,
-                backgroundColor: const Color(0xFF6F4E37).withValues(alpha: 0.1),
+                backgroundColor: scheme.primary.withValues(alpha: 0.1),
                 foregroundImage: entry.photoUrl != null && entry.photoUrl!.isNotEmpty
                     ? CachedNetworkImageProvider(entry.photoUrl!)
                     : null,
@@ -453,7 +475,7 @@ class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
                     ? null
                     : Text(
                         entry.name.isNotEmpty ? entry.name[0] : '',
-                        style: const TextStyle(fontSize: 48, fontWeight: FontWeight.w800, color: Color(0xFF6F4E37)),
+                        style: TextStyle(fontSize: 48, fontWeight: FontWeight.w800, color: scheme.primary),
                       ),
               ),
               const SizedBox(height: 16),
@@ -514,10 +536,10 @@ class _PhoneDirectoryScreenState extends State<PhoneDirectoryScreen> {
                   cardError!,
                   key: const Key('phone-card-error'),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFFB71C1C),
+                    color: scheme.error,
                   ),
                 ),
               ],
@@ -775,28 +797,39 @@ class _PendingEntryCardState extends State<_PendingEntryCard> {
                       widget.onReject(widget.entry);
                     }
                   },
-                  itemBuilder: (BuildContext context) => <PopupMenuItem<String>>[
-                    const PopupMenuItem<String>(
-                      value: 'approve',
-                      child: Row(
-                        children: [
-                          Icon(Icons.check_circle_rounded, color: Color(0xFF6F4E37)),
-                          SizedBox(width: 8),
-                          Text('موافقة'),
-                        ],
+                  itemBuilder: (BuildContext context) {
+                    // الأيقونتان تُرسمان حبرا فوق خلفية القائمة نفسها (البياض في
+                    // الفاتح والداكن في الداكن) فلا تظليل يسندهما هنا: البرتقالي
+                    // لا يُقرأ على أيّ منهما، فيُزحزح سطوعه وحده.
+                    final Brightness brightness =
+                        Theme.of(context).brightness;
+                    return <PopupMenuItem<String>>[
+                      PopupMenuItem<String>(
+                        value: 'approve',
+                        child: Row(
+                          children: [
+                            Icon(Icons.check_circle_rounded,
+                                color: AppColors.readableInk(
+                                    AppColors.success, brightness)),
+                            const SizedBox(width: 8),
+                            const Text('موافقة'),
+                          ],
+                        ),
                       ),
-                    ),
-                    const PopupMenuItem<String>(
-                      value: 'reject',
-                      child: Row(
-                        children: [
-                          Icon(Icons.cancel_rounded, color: Colors.orange),
-                          SizedBox(width: 8),
-                          Text('رفض'),
-                        ],
+                      PopupMenuItem<String>(
+                        value: 'reject',
+                        child: Row(
+                          children: [
+                            Icon(Icons.cancel_rounded,
+                                color: AppColors.readableInk(
+                                    AppColors.warning, brightness)),
+                            const SizedBox(width: 8),
+                            const Text('رفض'),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ];
+                  },
                 ),
               ],
             ),

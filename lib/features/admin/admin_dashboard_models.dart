@@ -97,6 +97,14 @@ class _PageHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // الشارة تكتب لون الترويسة **حبرًا** فوق تظليله: يبقى كما هو في الفاتح إن
+    // اجتاز حدّ النص العادي، وإلا زحزح سطوعه وحده حتى يجتازه — لأن العنبري
+    // `#FF9800` مثلًا 2.16 فوق البياض فلا يُقرأ، و`inkOn` لا يحرّك شيئًا في
+    // الفاتح أصلًا.
+    final badgeInk = AppColors.readableInk(color, theme.brightness);
+    // القرص المصمت خلف الأيقونة يرسم التمييز نفسه، فيُفتَّح سطوعه وحده حتى
+    // يجتاز البياضُ فوقه 3.0 — وإلا اختفت أيقونة العنبري والسماوي.
+    final plate = AppColors.readablePlate(color);
     final hasCount = count != null || countLabel != null;
     final badge = hasCount
         ? Container(
@@ -113,7 +121,7 @@ class _PageHeader extends StatelessWidget {
                     ? Icons.pending_actions_rounded
                     : Icons.check_circle_rounded,
                     size: 14,
-                    color: color),
+                    color: badgeInk),
                 const SizedBox(width: 5),
                 Text(
                   count != null
@@ -122,7 +130,7 @@ class _PageHeader extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
-                    color: color,
+                    color: badgeInk,
                   ),
                 ),
               ],
@@ -150,7 +158,11 @@ class _PageHeader extends StatelessWidget {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [color, Color.alphaBlend(color.withValues(alpha: 0.25), Colors.black)],
+                colors: [
+                  plate,
+                  Color.alphaBlend(
+                      plate.withValues(alpha: 0.25), Colors.black),
+                ],
               ),
               borderRadius: BorderRadius.circular(14),
               boxShadow: [

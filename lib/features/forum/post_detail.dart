@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../core/utils/comment_style.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/utils/role_style.dart';
@@ -144,7 +145,11 @@ class _ForumPostDetailScreenState extends State<ForumPostDetailScreen> {
             child: const Text('إلغاء'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            // أرضية الحذف هادئة موثّقة، والبياض يُثبَّت لأن حبر `FilledButton`
+            // الافتراضي في الداكن داكن (`onPrimary`) فوقها فلا يُقرأ.
+            style: FilledButton.styleFrom(
+                backgroundColor: AppColors.error,
+                foregroundColor: Colors.white),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('حذف'),
           ),
@@ -493,11 +498,11 @@ class _ForumPostDetailScreenState extends State<ForumPostDetailScreen> {
               subtitleBuilder: (context) => [
                 Text(
                   data['userName'] as String? ?? 'زائر',
-                  style: CommentStyle.author,
+                  style: CommentStyle.author(context),
                 ),
                 const SizedBox(height: 5),
                 // نص التعليق: أسود بحجم واضح (تنسيق موحّد لكل التعليقات)
-                Text(commentText, style: CommentStyle.body),
+                Text(commentText, style: CommentStyle.body(context)),
               ],
               trailing: canDelete
                   ? IconButton(

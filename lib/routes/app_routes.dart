@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter/material.dart';
 
+import '../core/constants/app_colors.dart';
 import '../core/constants/app_config.dart';
 import '../features/admin/admin_dashboard.dart';
 import '../features/admin/admin_detail.dart';
@@ -457,8 +458,12 @@ class AdminGuard extends StatelessWidget {
                   Navigator.of(context).pushReplacementNamed(AppRoutes.home);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('غير مصرح لك بالوصول إلى لوحة الإدارة'),
-                      backgroundColor: Colors.red,
+                      // الأحمر الهادئ الموثّق للحالات الفاشلة بدل `Colors.red`
+                      // الساطع، وحبر الشريط مثبّت بياضًا لأن الأرضية لون ثابت في
+                      // السمتين بينما حبره الافتراضي في الداكن داكن.
+                      content: Text('غير مصرح لك بالوصول إلى لوحة الإدارة',
+                          style: TextStyle(color: Colors.white)),
+                      backgroundColor: AppColors.error,
                     ),
                   );
                 }

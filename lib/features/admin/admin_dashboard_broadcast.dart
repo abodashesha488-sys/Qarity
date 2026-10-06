@@ -30,7 +30,12 @@ class _BroadcastPageState extends State<_BroadcastPage> {
 
     if (title.isEmpty || body.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('العنوان والنص مطلوبان'), backgroundColor: Colors.red),
+        // أرضيات الشريط ألوان ثابتة في السمتين وحبره الافتراضي في الداكن داكن
+        // ⇒ البياض يُثبَّت، والأحمر هو الهادئ لا `Colors.red` الساطع.
+        const SnackBar(
+            content: Text('العنوان والنص مطلوبان',
+                style: TextStyle(color: Colors.white)),
+            backgroundColor: AppColors.error),
       );
       return;
     }
@@ -46,8 +51,9 @@ class _BroadcastPageState extends State<_BroadcastPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('تم إرسال الإشعار الإذاعي لجميع المستخدمين${_sendAlert ? ' (تنبيه عاجل)' : ''}'),
-          backgroundColor: const Color(0xFF6F4E37),
+          content: Text('تم إرسال الإشعار الإذاعي لجميع المستخدمين${_sendAlert ? ' (تنبيه عاجل)' : ''}',
+              style: const TextStyle(color: Colors.white)),
+          backgroundColor: AppColors.primary,
         ),
       );
       _titleController.clear();
@@ -57,7 +63,10 @@ class _BroadcastPageState extends State<_BroadcastPage> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطأ: $e'), backgroundColor: Colors.red),
+        SnackBar(
+            content: Text('خطأ: $e',
+                style: const TextStyle(color: Colors.white)),
+            backgroundColor: AppColors.error),
       );
     } finally {
       if (mounted) setState(() => _isSending = false);
@@ -132,7 +141,8 @@ class _BroadcastPageState extends State<_BroadcastPage> {
                     subtitle: const Text('استخدم للحالات الطارئة فقط'),
                     value: _sendAlert,
                     onChanged: (v) => setState(() => _sendAlert = v),
-                    activeThumbColor: Colors.red,
+                    activeThumbColor:
+                        AppColors.inkOn(AppColors.error, theme.brightness),
                   ),
                   const SizedBox(height: 16),
                   SizedBox(
@@ -147,7 +157,12 @@ class _BroadcastPageState extends State<_BroadcastPage> {
                           : const Icon(Icons.send_rounded),
                       label: Text(_isSending ? 'جاري الإرسال...' : 'إرسال للجميع الآن'),
                       style: FilledButton.styleFrom(
-                        backgroundColor: _sendAlert ? Colors.red : const Color(0xFF6F4E37),
+                        // الأرضية ثابتة في السمتين بينما `onPrimary` في الداكن
+                        // داكن (1.4 فوق الزمردي) ⇒ البياض يُثبَّت، والتنبيه
+                        // العاجل بأحمر الهادئ لا `Colors.red` الساطع.
+                        backgroundColor:
+                            _sendAlert ? AppColors.error : AppColors.primary,
+                        foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
                     ),
@@ -206,7 +221,7 @@ class _QuickTemplatesState extends State<_QuickTemplates> {
           children: templates.map((t) {
             return ActionChip(
               avatar: Icon(t['alert'] as bool ? Icons.warning_amber_rounded : Icons.content_copy_rounded,
-                  size: 16, color: (t['alert'] as bool) ? Colors.red : theme.colorScheme.primary),
+                  size: 16, color: (t['alert'] as bool) ? AppColors.inkOn(AppColors.error, theme.brightness) : theme.colorScheme.primary),
               label: Text(t['title'] as String),
               onPressed: () {
                 widget.onSelectTemplate(

@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../core/utils/contact_links.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/utils/launch_link.dart';
@@ -289,7 +290,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                 theme,
                 icon: Icons.chat_bubble_outline_rounded,
                 label: 'واتساب',
-                color: const Color(0xFF6F4E37),
+                color: theme.colorScheme.primary,
                 onTap: () => _openWhatsApp(profile.phone),
               ),
             ],
@@ -529,17 +530,20 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
+                            // اللوحة مصمتة فوق صورة المنتج فلا تصلح غسالة
+                            // شفافة: البياض فوق العنبري 1.63، بينما حبر
+                            // الأرضيات العنبرية الموثّق يجتاز 7.93 في السمتين.
                             color: Colors.amber,
                             borderRadius: BorderRadius.circular(10)),
-                        child: const Row(
+                        child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(Icons.star_rounded,
-                                  size: 12, color: Colors.white),
-                              SizedBox(width: 4),
+                                  size: 12, color: AppColors.onWarning),
+                              const SizedBox(width: 4),
                               Text('مميز',
                                   style: TextStyle(
-                                      color: Colors.white,
+                                      color: AppColors.onWarning,
                                       fontSize: 10,
                                       fontWeight: FontWeight.w800))
                             ]),

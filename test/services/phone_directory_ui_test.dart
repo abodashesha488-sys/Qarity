@@ -4,6 +4,7 @@ import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:qurity/core/theme/app_theme.dart';
 import 'package:qurity/core/utils/arabic_sort_key.dart';
 import 'package:qurity/core/utils/contact_links.dart';
 import 'package:qurity/features/phone/directory.dart';
@@ -126,6 +127,10 @@ void main() {
         {String phone = '01001234567'}) async {
       final svc = PhoneDirectoryService(await seedPage(phone: phone));
       await tester.pumpWidget(MaterialApp(
+        // ثيم التطبيق: الأحمر الدلالي يُقرأ من `colorScheme.error` حتى يبقى
+        // مقروءًا في الوضع الداكن، فالقياس بلا الثيم كان يقيس أرضية غير أرضية
+        // المستخدم.
+        theme: AppTheme.lightTheme,
         locale: const Locale('ar'),
         home: Directionality(textDirection: TextDirection.rtl,
             child: PhoneDirectoryScreen(embedded: true, service: svc)),

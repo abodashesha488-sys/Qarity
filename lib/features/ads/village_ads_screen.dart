@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../core/utils/relative_time.dart';
 import '../../models/village_ad_model.dart';
 import '../../routes/app_routes.dart';
@@ -181,8 +182,8 @@ class _VillageAdsScreenState extends State<VillageAdsScreen> {
                   controller: _search,
                   decoration: InputDecoration(
                     hintText: 'ابحث: نشاط، وصف، مكان…',
-                    prefixIcon: const Icon(Icons.search_rounded,
-                        color: kVillageAdsColor, size: 20),
+                    prefixIcon: Icon(Icons.search_rounded,
+                        color: adsInk(theme.brightness), size: 20),
                     suffixIcon: _query.isNotEmpty
                         ? IconButton(
                             tooltip: 'مسح',
@@ -235,9 +236,9 @@ class _VillageAdsScreenState extends State<VillageAdsScreen> {
                       theme, Icons.lock_outline_rounded, 'سجّل الدخول لترى إعلاناتك');
                 }
                 if (!snap.hasData) {
-                  return const Center(
+                  return Center(
                       child: CircularProgressIndicator(
-                          color: kVillageAdsColor));
+                          color: adsInk(theme.brightness)));
                 }
                 final items = _apply(snap.data!);
                 if (items.isEmpty) {
@@ -280,7 +281,8 @@ class _VillageAdsScreenState extends State<VillageAdsScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon,
-                size: 54, color: kVillageAdsColor.withValues(alpha: 0.4)),
+                size: 54,
+                color: adsInk(theme.brightness).withValues(alpha: 0.4)),
             const SizedBox(height: 10),
             Text(text,
                 textAlign: TextAlign.center,
@@ -354,10 +356,10 @@ class VillageAdCard extends StatelessWidget {
                     Text(ad.businessName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontSize: 12.5,
                             fontWeight: FontWeight.w800,
-                            color: kVillageAdsColor)),
+                            color: adsInk(theme.brightness))),
                   ],
                   if (ad.description.isNotEmpty) ...[
                     const SizedBox(height: 7),
@@ -401,8 +403,8 @@ class VillageAdCard extends StatelessWidget {
                           IconButton(
                             key: Key('ad-delete-${ad.id}'),
                             tooltip: 'حذف الإعلان',
-                            icon: const Icon(Icons.delete_outline_rounded,
-                                size: 19, color: kAdsDeleteRed),
+                            icon: Icon(Icons.delete_outline_rounded,
+                                size: 19, color: theme.colorScheme.error),
                             onPressed: onDelete,
                           ),
                       ],
@@ -459,7 +461,9 @@ class _StatusMark extends StatelessWidget {
           border: Border.all(color: color.withValues(alpha: 0.5))),
       child: Text(approved ? 'منشور للقرية ✓' : 'بانتظار موافقة الإدارة',
           style: TextStyle(
-              fontSize: 10.5, fontWeight: FontWeight.w900, color: color)),
+              fontSize: 10.5,
+              fontWeight: FontWeight.w900,
+              color: AppColors.inkOn(color, Theme.of(context).brightness))),
     );
   }
 }
@@ -473,7 +477,7 @@ class _Meta extends StatelessWidget {
   Widget build(BuildContext context) => Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 13, color: kVillageAdsColor),
+          Icon(icon, size: 13, color: adsInk(Theme.of(context).brightness)),
           const SizedBox(width: 4),
           Flexible(
             child: Text(text,
@@ -689,8 +693,8 @@ class _VillageAdFormSheetState extends State<VillageAdFormSheet> {
                 Text(
                   key: const Key('ad-upload-error'),
                   _uploadError,
-                  style: const TextStyle(
-                      color: kAdsDeleteRed,
+                  style: TextStyle(
+                      color: theme.colorScheme.error,
                       fontWeight: FontWeight.w800,
                       fontSize: 12),
                 ),
@@ -734,10 +738,11 @@ class _VillageAdFormSheetState extends State<VillageAdFormSheet> {
             color: kAdsDeleteRed.withValues(alpha: 0.07),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: kAdsDeleteRed.withValues(alpha: 0.35))),
-        child: const Row(
+        child: Row(
           children: [
-            Icon(Icons.warning_amber_rounded, color: kAdsDeleteRed, size: 20),
-            SizedBox(width: 8),
+            Icon(Icons.warning_amber_rounded,
+                color: theme.colorScheme.error, size: 20),
+            const SizedBox(width: 8),
             Expanded(
               child: Text(
                 'يظهر الإعلان للقرية بعد موافقة الإدارة، ولا يُقبل إعلان مخالف '
@@ -745,7 +750,7 @@ class _VillageAdFormSheetState extends State<VillageAdFormSheet> {
                 style: TextStyle(
                     fontSize: 11.5,
                     fontWeight: FontWeight.w800,
-                    color: kAdsDeleteRed,
+                    color: theme.colorScheme.error,
                     height: 1.5),
               ),
             ),
@@ -772,7 +777,11 @@ class _VillageAdFormSheetState extends State<VillageAdFormSheet> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 16, color: selected ? Colors.white : kVillageAdsColor),
+            Icon(icon,
+                size: 16,
+                color: selected
+                    ? Colors.white
+                    : adsInk(Theme.of(context).brightness)),
             const SizedBox(width: 5),
             Flexible(
               child: Text(kind,
@@ -781,7 +790,9 @@ class _VillageAdFormSheetState extends State<VillageAdFormSheet> {
                   style: TextStyle(
                       fontWeight: FontWeight.w800,
                       fontSize: 12,
-                      color: selected ? Colors.white : kVillageAdsColor)),
+                      color: selected
+                          ? Colors.white
+                          : adsInk(Theme.of(context).brightness))),
             ),
           ],
         ),
@@ -793,3 +804,8 @@ class _VillageAdFormSheetState extends State<VillageAdFormSheet> {
 /// أحمر الإعلانات المخالفة/الحذف — مستقل عن أخضر «منشور».
 const Color kAdsDeleteRed = Color(0xFFB71C1C);
 const Color kAdsPendingOrange = Color(0xFFEF6C00);
+
+/// حبر القسم: في الفاتح هو بنفسجي القسم حرفيًا، وفي الداكن يُرفع سطوعه
+/// محافظًا على درجته — فالأصل 1.36 على البطاقة الداكنة فلا يُقرأ.
+Color adsInk(Brightness brightness) =>
+    AppColors.inkOn(kVillageAdsColor, brightness);

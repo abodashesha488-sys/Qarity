@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:excel/excel.dart';
+import '../../core/constants/app_colors.dart';
 
 /// الورقة التي يولّدها `Excel.createExcel()` دائمًا. تبقى في المجلد فارغة إن لم
 /// تُحذف قبل `encode()`، فيُفتح الملف على صفحة بيضاء بدل بيانات التقرير.
@@ -43,7 +44,7 @@ Uint8List buildTableXlsx({
       ..cellStyle = CellStyle(
         bold: true,
         fontColorHex: ExcelColor.white,
-        backgroundColorHex: ExcelColor.fromInt(0xFF6F4E37),
+        backgroundColorHex: ExcelColor.fromInt(AppColors.primary.toARGB32()),
         horizontalAlign: HorizontalAlign.Center,
       );
   }

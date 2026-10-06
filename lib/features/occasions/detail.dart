@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../core/widgets/shared_cards.dart';
 import '../../models/data_models.dart';
 import '../../services/engagement_service.dart';
@@ -275,7 +276,13 @@ class _AttendanceSectionState extends State<_AttendanceSection> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('يرجى تسجيل الدخول أولاً'), backgroundColor: Colors.red),
+        // أرضية الشريط لون ثابت في السمتين بينما حبره الافتراضي يُقرأ من
+        // `onInverseSurface` وهو في الداكن داكن ⇒ الحبر يُثبَّت. الأحمر هنا
+        // الهادئ الموثّق لا `Colors.red` الساطع، والعنبري حبره الداكن وحده.
+        const SnackBar(
+            content: Text('يرجى تسجيل الدخول أولاً',
+                style: TextStyle(color: Colors.white)),
+            backgroundColor: AppColors.error),
       );
       return;
     }
@@ -285,7 +292,10 @@ class _AttendanceSectionState extends State<_AttendanceSection> {
         await _engagement.cancelAttendance(occasionId: widget.occasionId, userId: user.uid);
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تم إلغاء الحضور'), backgroundColor: Colors.orange),
+          SnackBar(
+              content: Text('تم إلغاء الحضور',
+                  style: TextStyle(color: AppColors.onWarning)),
+              backgroundColor: AppColors.warning),
         );
       } else {
         await _engagement.attendOccasion(
@@ -295,13 +305,16 @@ class _AttendanceSectionState extends State<_AttendanceSection> {
         );
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تم تسجيل حضورك 🎉'), backgroundColor: Color(0xFF6F4E37)),
+          SnackBar(content: const Text('تم تسجيل حضورك 🎉'), backgroundColor: AppColors.primary),
         );
       }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('تعذر التنفيذ: $e'), backgroundColor: Colors.red),
+        SnackBar(
+            content: Text('تعذر التنفيذ: $e',
+                style: const TextStyle(color: Colors.white)),
+            backgroundColor: AppColors.error),
       );
     }
   }

@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/utils/launch_link.dart';
 import '../../models/service_provider_model.dart';
@@ -198,7 +199,7 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: error ? Colors.red : const Color(0xFF6F4E37),
+      backgroundColor: error ? AppColors.error : AppColors.primary,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ));
@@ -207,6 +208,11 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
   /// رأس كارت «بحث وتصفية» + جسمه القابل للطي.
   Widget _filterCard(ThemeData theme) {
     final summary = _filterSummaryParts;
+    // أرضية الكارت تظليلٌ من تمييز القسم فتبقى كما هي، أما الأيقونة والعنوان
+    // فحبرٌ فوقها: في الداكن يُرفع سطوع التمييز (4.5+) وفي الفاتح يبقى حرفيًا.
+    final Color accentInk = AppColors.inkOn(_color, theme.brightness);
+    final Color clearInk =
+        AppColors.inkOn(const Color(0xFFB71C1C), theme.brightness);
     return Material(
       color: _color.withValues(alpha: 0.06),
       child: Column(
@@ -219,13 +225,13 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
               child: Row(
                 children: [
                   Icon(_filtersOpen ? Icons.tune_rounded : Icons.search_rounded,
-                      size: 17, color: _color),
+                      size: 17, color: accentInk),
                   const SizedBox(width: 7),
                   Text('بحث وتصفية',
                       style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w900,
-                          color: _color)),
+                          color: accentInk)),
                   if (_activeFilterCount > 0) ...[
                     const SizedBox(width: 6),
                     Container(
@@ -252,10 +258,10 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
                             : summary.join(' · '),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontSize: 11.5,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF4B4038)),
+                            color: theme.colorScheme.onSurfaceVariant),
                       ),
                     ),
                   ),
@@ -264,15 +270,15 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
                       key: const Key('filters-clear'),
                       tooltip: 'مسح الكل',
                       visualDensity: VisualDensity.compact,
-                      icon: const Icon(Icons.layers_clear_rounded,
-                          size: 18, color: Color(0xFFB71C1C)),
+                      icon: Icon(Icons.layers_clear_rounded,
+                          size: 18, color: clearInk),
                       onPressed: _clearAllFilters,
                     ),
                   AnimatedRotation(
                     turns: _filtersOpen ? 0.5 : 0,
                     duration: const Duration(milliseconds: 180),
-                    child:
-                        Icon(Icons.expand_more_rounded, size: 18, color: _color),
+                    child: Icon(Icons.expand_more_rounded,
+                        size: 18, color: accentInk),
                   ),
                 ],
               ),
@@ -304,6 +310,7 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
   }
 
   Widget _searchField(ThemeData theme) {
+    final Color accentInk = AppColors.inkOn(_color, theme.brightness);
     return TextField(
       key: const Key('provider-search'),
       controller: _search,
@@ -314,7 +321,7 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
           ServiceCategory.agricultural => 'ابحث في السجلات: اسم أو خدمة…',
           _ => 'ابحث: اسم، مادة، مرحلة، تخصص جامعي…',
         },
-        prefixIcon: Icon(Icons.search_rounded, color: _color, size: 19),
+        prefixIcon: Icon(Icons.search_rounded, color: accentInk, size: 19),
         suffixIcon: _query.isNotEmpty
             ? IconButton(
                 tooltip: 'مسح',
@@ -324,7 +331,10 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
             : null,
         isDense: true,
         filled: true,
-        fillColor: Colors.white,
+        // الأرضية من السمة لا من حرف أبيض: `surfaceContainerLowest` بياضٌ خالص
+        // في الفاتح (كما كان حرفيًا) وأغمق سطح في الداكن، فالحقل لا يبقى لوحة
+        // بيضاء فوق صفحة داكنة.
+        fillColor: theme.colorScheme.surfaceContainerLowest,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
         border: OutlineInputBorder(
@@ -335,7 +345,7 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
             borderSide: BorderSide(color: _color.withValues(alpha: 0.35))),
         focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: _color, width: 1.4)),
+            borderSide: BorderSide(color: accentInk, width: 1.4)),
       ),
     );
   }
@@ -352,6 +362,14 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
     bool searchable = false,
   }) {
     final active = value.isNotEmpty;
+    final theme = Theme.of(context);
+    // التمييز حبرٌ فوق أرضية مظلّلة، فسطوعه يُرفع في الداكن ويبقى حرفيًا في الفاتح.
+    final Color accentInk = AppColors.inkOn(_color, theme.brightness);
+    // حبر الحالة الخاملة بنيٌّ قديم: يبقى كما هو فوق البياض في الفاتح، وفي الداكن
+    // يرث لون النص الثانوي وإلا كان شبه أسودَ فوق لوحة داكنة.
+    final Color idleInk = theme.brightness == Brightness.dark
+        ? theme.colorScheme.onSurfaceVariant
+        : const Color(0xFF5B4E45);
     return InkWell(
       key: key,
       borderRadius: BorderRadius.circular(11),
@@ -367,14 +385,16 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
         height: 34,
         padding: const EdgeInsets.symmetric(horizontal: 7),
         decoration: BoxDecoration(
-          color: active ? _color.withValues(alpha: 0.12) : Colors.white,
+          color: active
+              ? _color.withValues(alpha: 0.12)
+              : theme.colorScheme.surfaceContainerLowest,
           borderRadius: BorderRadius.circular(11),
-          border:
-              Border.all(color: active ? _color : _color.withValues(alpha: 0.3)),
+          border: Border.all(
+              color: active ? accentInk : _color.withValues(alpha: 0.3)),
         ),
         child: Row(
           children: [
-            Icon(icon, size: 14, color: _color),
+            Icon(icon, size: 14, color: accentInk),
             const SizedBox(width: 4),
             Expanded(
               child: Text(active ? value : '$label: $allLabel',
@@ -383,12 +403,9 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
                   style: TextStyle(
                       fontSize: 11,
                       fontWeight: active ? FontWeight.w900 : FontWeight.w600,
-                      color: active
-                          ? _color
-                          : const Color(0xFF5B4E45))),
+                      color: active ? accentInk : idleInk)),
             ),
-            const Icon(Icons.expand_more_rounded,
-                size: 15, color: Color(0xFF5B4E45)),
+            Icon(Icons.expand_more_rounded, size: 15, color: idleInk),
           ],
         ),
       ),
@@ -451,6 +468,12 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
   /// مرشّحات الخدمات التعليمية: رقائق الصفة والتدريس الخاص في سطر،
   /// والمرشّحات الثلاثة في سطر واحد كأزرار مضغوطة.
   List<Widget> _eduFilters(ThemeData theme) {
+    // رقائق الحالة المختارة: الأرضية تظليلٌ من التمييز (0.16) وحبرها التمييز
+    // نفسه، فالسمة الخاملة لا ترفع الأرضية إلا قليلًا — لذا يُرفع سطوع الحبر
+    // والحرف في الداكن ويبقيان حرفيين في الفاتح.
+    final Color kindInk = AppColors.inkOn(_color, theme.brightness);
+    final Color privateInk =
+        AppColors.inkOn(kEduPrivateTagColor, theme.brightness);
     return [
       Wrap(
         spacing: 6,
@@ -471,14 +494,14 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
               selectedColor: _color.withValues(alpha: 0.16),
               side: BorderSide(
                   color: _kindFilter == k
-                      ? _color
+                      ? kindInk
                       : theme.colorScheme.outlineVariant),
               labelStyle: TextStyle(
                   fontSize: 11.5,
                   fontWeight:
                       _kindFilter == k ? FontWeight.w900 : FontWeight.w600,
                   color: _kindFilter == k
-                      ? _color
+                      ? kindInk
                       : theme.colorScheme.onSurfaceVariant),
               onSelected: (_) => setState(() => _kindFilter = k),
             ),
@@ -493,18 +516,18 @@ class _ProviderCategoryScreenState extends State<ProviderCategoryScreen> {
             avatar: Icon(Icons.cast_for_education_rounded,
                 size: 14,
                 color: _privateOnly
-                    ? kEduPrivateTagColor
+                    ? privateInk
                     : theme.colorScheme.onSurfaceVariant),
             selectedColor: kEduPrivateTagColor.withValues(alpha: 0.16),
             side: BorderSide(
                 color: _privateOnly
-                    ? kEduPrivateTagColor
+                    ? privateInk
                     : theme.colorScheme.outlineVariant),
             labelStyle: TextStyle(
                 fontSize: 11.5,
                 fontWeight: _privateOnly ? FontWeight.w900 : FontWeight.w600,
                 color: _privateOnly
-                    ? kEduPrivateTagColor
+                    ? privateInk
                     : theme.colorScheme.onSurfaceVariant),
             onSelected: (v) => setState(() => _privateOnly = v),
           ),
@@ -704,6 +727,11 @@ class _FilterOptionSheetState extends State<_FilterOptionSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // ورقة الخيارات سطحُها `colorScheme.surface`، فالتمييز فوقها حبرٌ لا أرضية.
+    final Color accentInk = AppColors.inkOn(widget.accent, theme.brightness);
+    final Color mutedInk = theme.brightness == Brightness.dark
+        ? theme.colorScheme.onSurfaceVariant
+        : const Color(0xFF6B5F57);
     final matches = _query.isEmpty
         ? widget.options
         : widget.options
@@ -718,7 +746,7 @@ class _FilterOptionSheetState extends State<_FilterOptionSheet> {
             padding: const EdgeInsets.fromLTRB(16, 14, 8, 4),
             child: Row(
               children: [
-                Icon(Icons.filter_alt_rounded, size: 18, color: widget.accent),
+                Icon(Icons.filter_alt_rounded, size: 18, color: accentInk),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text('مرشّح ${widget.title}',
@@ -765,10 +793,10 @@ class _FilterOptionSheetState extends State<_FilterOptionSheet> {
                     padding: const EdgeInsets.all(18),
                     child: Text('لا خيار مطابق لـ «$_query»',
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF6B5F57))),
+                            color: mutedInk)),
                   ),
                 for (final o in matches) _optionTile(theme, o, o),
               ],
@@ -781,19 +809,25 @@ class _FilterOptionSheetState extends State<_FilterOptionSheet> {
 
   Widget _optionTile(ThemeData theme, String value, String label) {
     final selected = widget.value == value;
+    final Color accentInk = AppColors.inkOn(widget.accent, theme.brightness);
+    // حبر الخيار غير المختار بنيٌّ داين: يبقى كما هو فوق ورقة فاتحة، وفي الداكن
+    // يرث نص السمة الأساسي وإلا كان شبه أسودَ على السطح الداكن.
+    final Color idleInk = theme.brightness == Brightness.dark
+        ? theme.colorScheme.onSurface
+        : const Color(0xFF2B2118);
     return ListTile(
       dense: true,
       visualDensity: const VisualDensity(vertical: -1),
       contentPadding: const EdgeInsets.symmetric(horizontal: 14),
       leading: selected
-          ? Icon(Icons.check_circle_rounded, size: 19, color: widget.accent)
+          ? Icon(Icons.check_circle_rounded, size: 19, color: accentInk)
           : const Icon(Icons.circle_outlined,
               size: 19, color: Color(0xFFB9AEA6)),
       title: Text(label,
           style: TextStyle(
               fontSize: 13.5,
               fontWeight: selected ? FontWeight.w900 : FontWeight.w600,
-              color: selected ? widget.accent : const Color(0xFF2B2118))),
+              color: selected ? accentInk : idleInk)),
       onTap: () => Navigator.of(context).pop(value),
     );
   }
@@ -817,11 +851,16 @@ class _MiniHead extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // التمييز هنا حبرٌ (أيقونة وعنوان وعدد) لا أرضية، فيُزحزح سطوعه وحده حتى
+    // يجتاز حدّ النص في الوضعين: العنبري `#FFC107` والأصفر الفاتح لا يُقرآن فوق
+    // البياض عند 11px، و`inkOn` لا يحرّك شيئًا في الفاتح أصلًا. أما شارة العدّ
+    // فتظليلٌ من التمييز (0.12) فتبقى كما هي.
+    final Color ink = AppColors.readableInk(color, theme.brightness);
     return Padding(
       padding: const EdgeInsets.fromLTRB(2, 10, 2, 6),
       child: Row(
         children: [
-          Icon(icon, size: 17, color: color),
+          Icon(icon, size: 17, color: ink),
           const SizedBox(width: 7),
           Expanded(
             child: Column(
@@ -830,7 +869,7 @@ class _MiniHead extends StatelessWidget {
               children: [
                 Text(title,
                     style: theme.textTheme.titleSmall
-                        ?.copyWith(fontWeight: FontWeight.w900, color: color)),
+                        ?.copyWith(fontWeight: FontWeight.w900, color: ink)),
                 if (subtitle != null)
                   Text(subtitle!,
                       style: theme.textTheme.labelSmall?.copyWith(
@@ -846,7 +885,7 @@ class _MiniHead extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10)),
               child: Text('$count',
                   style: TextStyle(
-                      fontSize: 11, fontWeight: FontWeight.w900, color: color)),
+                      fontSize: 11, fontWeight: FontWeight.w900, color: ink)),
             ),
         ],
       ),
@@ -868,6 +907,8 @@ class _ProviderCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final color = _color;
+    final eduTags =
+        provider.isEducational ? _eduTags(theme) : const <Widget>[];
     return Card(
       elevation: 0,
       margin: const EdgeInsets.only(top: 8),
@@ -900,7 +941,7 @@ class _ProviderCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _headline(),
+                    _headline(theme),
                     if (provider.ratingCount > 0) ...[
                       const SizedBox(height: 3),
                       Row(
@@ -910,16 +951,20 @@ class _ProviderCard extends StatelessWidget {
                           const SizedBox(width: 2),
                           Text(
                               '${provider.rating.toStringAsFixed(1)} (${provider.ratingCount})',
-                              style: const TextStyle(
+                              // رقم وتعداد بحروف 10.5: العنبري حبرًا فوق
+                              // أبيض 1.63 فلا يُقرأ. النجمة تبقى عنبرية
+                              // لأن شكلها يحمل المعنى.
+                              style: TextStyle(
                                   fontSize: 10.5,
                                   fontWeight: FontWeight.w700,
-                                  color: Colors.amber)),
+                                  color: AppColors.readableInk(
+                                      Colors.amber, theme.brightness))),
                         ],
                       ),
                     ],
-                    if (provider.isEducational && _eduTags.isNotEmpty) ...[
+                    if (eduTags.isNotEmpty) ...[
                       const SizedBox(height: 5),
-                      Wrap(spacing: 4, runSpacing: 4, children: _eduTags),
+                      Wrap(spacing: 4, runSpacing: 4, children: eduTags),
                     ],
                     if (provider.description.isNotEmpty) ...[
                       const SizedBox(height: 4),
@@ -944,7 +989,7 @@ class _ProviderCard extends StatelessWidget {
   }
 
   /// الاسم + شارة الصفة + شارة «مميز».
-  Widget _headline() {
+  Widget _headline(ThemeData theme) {
     final color = _color;
     final kind = provider.isSchool ? kEduKindSchool : kEduKindTeacher;
     return Row(
@@ -958,7 +1003,7 @@ class _ProviderCard extends StatelessWidget {
         ),
         if (provider.isEducational) ...[
           const SizedBox(width: 5),
-          _tag(kind, color, mark: kind),
+          _tag(theme, kind, color, mark: kind),
         ],
         if (provider.isFeatured) ...[
           const SizedBox(width: 5),
@@ -1030,6 +1075,10 @@ class _ProviderCard extends StatelessWidget {
         onPressed: onTap,
         style: FilledButton.styleFrom(
             backgroundColor: color,
+            // الأرضية لونُ العلامة الخام (أخضر المكالمة/أزرق المشاركة) لا لون
+            // السمة، فالحبر يجب أن يُثبَّت بياضًا صريحًا: في الداكن يرث `onPrimary`
+            // الأخضر الداكن فيصير شبه أسودَ فوق اللون نفسه ولا يُقرأ.
+            foregroundColor: Colors.white,
             visualDensity: VisualDensity.compact,
             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             shape: RoundedRectangleBorder(
@@ -1071,25 +1120,32 @@ class _ProviderCard extends StatelessWidget {
   }
 
   /// محتوى العمود التعليمي: سطر المواد + رقائق المراحل/الأنواع/التدريس الخاص.
-  List<Widget> get _eduTags {
+  List<Widget> _eduTags(ThemeData theme) {
     final color = _color;
+    // سطر المواد حبرٌ فوق أرضية البطاقة لا لوحةٌ من التمييز.
+    final Color subjectInk = AppColors.inkOn(color, theme.brightness);
     return [
       if (provider.displaySpecialty.isNotEmpty)
         Text(provider.displaySpecialty,
             style: TextStyle(
-                fontSize: 11, fontWeight: FontWeight.w700, color: color)),
+                fontSize: 11, fontWeight: FontWeight.w700, color: subjectInk)),
       for (final s in provider.stageChips)
-        _tag(s, color, icon: Icons.school_rounded),
+        _tag(theme, s, color, icon: Icons.school_rounded),
       for (final t in provider.eduTypes)
-        _tag(t, const Color(0xFF6A1B9A), icon: Icons.category_rounded),
+        _tag(theme, t, const Color(0xFF6A1B9A), icon: Icons.category_rounded),
       if (provider.offersPrivateTutoring)
-        _tag('تدريس خاص', kEduPrivateTagColor,
+        _tag(theme, 'تدريس خاص', kEduPrivateTagColor,
             icon: Icons.cast_for_education_rounded, filled: true),
     ];
   }
 
-  Widget _tag(String text, Color color,
+  Widget _tag(ThemeData theme, String text, Color color,
       {IconData? icon, String? mark, bool filled = false}) {
+    // المصمتة لوحةٌ من التمييز فحبرها بياض في السمتين؛ غير المصمتة تظليلٌ
+    // (0.1) وحبرها التمييز نفسه، فسطوعه يُرفع في الداكن ويبقى حرفيًا في الفاتح.
+    final Color ink = filled
+        ? Colors.white
+        : AppColors.inkOn(color, theme.brightness);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
@@ -1103,14 +1159,14 @@ class _ProviderCard extends StatelessWidget {
           if (mark != null)
             EduKindMark(kind: mark, size: 12)
           else if (icon != null)
-            Icon(icon, size: 9, color: filled ? Colors.white : color),
+            Icon(icon, size: 9, color: ink),
           if (mark != null || icon != null) const SizedBox(width: 3),
           Text(text,
               style: TextStyle(
                   fontSize: 9,
                   height: 1.25,
                   fontWeight: FontWeight.w800,
-                  color: filled ? Colors.white : color)),
+                  color: ink)),
         ],
       ),
     );
@@ -1136,8 +1192,12 @@ class _ProviderCard extends StatelessWidget {
         alignment: Alignment.center,
         child: Text(
           provider.name.isNotEmpty ? provider.name.substring(0, 1) : '\u061F',
+          // الحرف يكتب لون القسم حبرًا فوق تظليل منه: يبقى كما هو في الفاتح
+          // ويُفتَّح في الداكن محافظًا على درجة اللون.
           style: TextStyle(
-              color: accent, fontWeight: FontWeight.w900, fontSize: 34),
+              color: AppColors.inkOn(accent, theme.brightness),
+              fontWeight: FontWeight.w900,
+              fontSize: 34),
         ),
       );
 }
@@ -1157,7 +1217,11 @@ class _EmptyCategory extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(ServiceCategory.icon(category),
-                size: 64, color: color.withValues(alpha: 0.35)),
+                size: 64,
+                // الأيقونة الزخرفية تُفتح في الداكن وإلا اختفت على الأرضية
+                // الداكنة عند هذه الشفافية، بينما تبقى كما هي في الفاتح.
+                color: AppColors.inkOn(color, theme.brightness)
+                    .withValues(alpha: 0.35)),
             const SizedBox(height: 14),
             Text(
               'لا توجد ${ServiceCategory.label(category)} معتمدة بعد',
@@ -1265,6 +1329,11 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
 
   Color get _accent => ServiceCategory.color(widget.category);
 
+  /// حبر التمييز في نموذج الإضافة: كل مواضعه هنا أيقونةٌ أو عنوانٌ أو حدٌّ فوق
+  /// أرضية النموذج لا لوحةٌ مصمتة، فسطوعه يُرفع في الداكن ويبقى اللون نفسه
+  /// حرفيًا في الفاتح (حيث `inkOn` يُرجعه كما هو).
+  Color get _accentInk => AppColors.inkOn(_accent, Theme.of(context).brightness);
+
   @override
   void initState() {
     super.initState();
@@ -1302,7 +1371,7 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
   Widget _defaultPhotoMark() {
     final path = _isEdu ? EduKindMark.imageOf(_kind) : null;
     if (path == null) {
-      return Icon(Icons.person_rounded, size: 36, color: _accent);
+      return Icon(Icons.person_rounded, size: 36, color: _accentInk);
     }
     return ClipOval(
       child: Image.asset(
@@ -1312,7 +1381,7 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
         fit: BoxFit.cover,
         cacheWidth: 240,
         errorBuilder: (_, __, ___) =>
-            Icon(Icons.person_rounded, size: 36, color: _accent),
+            Icon(Icons.person_rounded, size: 36, color: _accentInk),
       ),
     );
   }
@@ -1322,8 +1391,13 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
     ScaffoldMessenger.of(context)
       ..removeCurrentSnackBar()
       ..showSnackBar(SnackBar(
-          content: Text(msg),
-          backgroundColor: Colors.orange,
+          content: Text(msg,
+              style: TextStyle(color: AppColors.onWarning)),
+          // منعه قبل الحفظ حالة وسيطة لا خطأ، فيأخذ العنبري. حبر `SnackBar`
+          // الافتراضي في الفاتح فاتح نفسه (`onInverseSurface`) فوق العنبري
+          // فلا يُقرأ (1.07)، بينما الزمردي الداكن يجتاز 5.99 في السمتين —
+          // والحبر يُثبَّت على النص لأن الصنف لا يعرف وسيط `contentColor`.
+          backgroundColor: AppColors.warning,
           behavior: SnackBarBehavior.floating));
   }
 
@@ -1395,6 +1469,9 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isEdu = widget.category == ServiceCategory.educational;
+    // الحبر الأحمر للتنبيه: يبقى `#B71C1C` في الفاتح حرفيًا، وفي الداكن يُرفع
+    // سطوعه (6.07 على البطاقة الداكنة) فالحقل والحد والنص والأيقونة لون واحد.
+    final Color redInk = AppColors.inkOn(const Color(0xFFB71C1C), theme.brightness);
     return Padding(
       padding: EdgeInsets.fromLTRB(
           16, 16, 16, MediaQuery.of(context).viewInsets.bottom + 16),
@@ -1406,7 +1483,7 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
             Row(
               children: [
                 Icon(ServiceCategory.icon(widget.category),
-                    color: _accent, size: 22),
+                    color: _accentInk, size: 22),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -1529,23 +1606,20 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFB71C1C).withValues(alpha: 0.07),
+                color: redInk.withValues(alpha: 0.07),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                    color: const Color(0xFFB71C1C).withValues(alpha: 0.35)),
+                border: Border.all(color: redInk.withValues(alpha: 0.35)),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.warning_amber_rounded,
-                      size: 18, color: Color(0xFFB71C1C)),
+                  Icon(Icons.warning_amber_rounded, size: 18, color: redInk),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'ستتم مراجعة الإضافة من الإدارة قبل نشرها في الدليل',
                       style: theme.textTheme.bodySmall?.copyWith(
-                          color: const Color(0xFFB71C1C),
-                          fontWeight: FontWeight.w700),
+                          color: redInk, fontWeight: FontWeight.w700),
                     ),
                   ),
                 ],
@@ -1555,6 +1629,10 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
             FilledButton.icon(
               style: FilledButton.styleFrom(
                   backgroundColor: _accent,
+                  // لوحةُ الحفظ لونُ القسم الخام لا لون السمة، فالحبر يجب أن
+                  // يُثبَّت بياضًا: في الداكن يرث `onPrimary` الأخضر الداكن ولا
+                  // يُقرأ فوق اللون نفسه. في الفاتح البياض هو الموروث أصلًا.
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14)),
               onPressed: _saving ? null : _submit,
               icon: Icon(_isEdit ? Icons.save_rounded : Icons.send_rounded,
@@ -1579,7 +1657,7 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
       maxLines: maxLines,
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, color: _accent, size: 20),
+        prefixIcon: Icon(icon, color: _accentInk, size: 20),
         isDense: true,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       ),
@@ -1593,7 +1671,7 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
       padding: const EdgeInsets.only(bottom: 7),
       child: Row(
         children: [
-          Icon(icon, size: 17, color: _accent),
+          Icon(icon, size: 17, color: _accentInk),
           const SizedBox(width: 6),
           Expanded(
             child: Column(
@@ -1618,7 +1696,7 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
                   style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w900,
-                      color: _accent)),
+                      color: _accentInk)),
             ),
         ],
       ),
@@ -1653,14 +1731,14 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
               backgroundColor: theme.colorScheme.surface,
               side: BorderSide(
                   color: selected.contains(o)
-                      ? _accent
+                      ? _accentInk
                       : theme.colorScheme.outlineVariant),
               labelStyle: TextStyle(
                 fontSize: 12,
                 fontWeight:
                     selected.contains(o) ? FontWeight.w800 : FontWeight.w600,
                 color: selected.contains(o)
-                    ? _accent
+                    ? _accentInk
                     : theme.colorScheme.onSurfaceVariant,
               ),
               onSelected: (v) {
@@ -1710,7 +1788,8 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
           onChanged: (v) => setState(() => _subjectQuery = v),
           decoration: InputDecoration(
             hintText: 'ابحث عن مادة…',
-            prefixIcon: Icon(Icons.search_rounded, size: 19, color: _accent),
+            prefixIcon:
+                Icon(Icons.search_rounded, size: 19, color: _accentInk),
             suffixIcon: q.isNotEmpty
                 ? IconButton(
                     tooltip: 'مسح',
@@ -1789,7 +1868,7 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                             color: _kind == k
-                                ? _accent
+                                ? _accentInk
                                 : theme.colorScheme.outlineVariant,
                             width: _kind == k ? 1.6 : 1),
                       ),
@@ -1802,7 +1881,7 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
                                   fontSize: 12.5,
                                   fontWeight: FontWeight.w800,
                                   color: _kind == k
-                                      ? _accent
+                                      ? _accentInk
                                       : theme.colorScheme.onSurfaceVariant)),
                         ],
                       ),
@@ -1818,18 +1897,22 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
 
   /// مفتاح «تدريس خاص» — يظهر للمدرّس فقط.
   Widget _privateTutoringTile(ThemeData theme) {
+    // التظليل (0.07) يبقى لون التركوازي الخام في السمتين، أما الحد والأيقونة
+    // وإصبع المفتاح فسطوعها يُرفع في الداكن ولا يمس الفاتح.
+    final Color privateInk =
+        AppColors.inkOn(kEduPrivateTagColor, theme.brightness);
     return Container(
       key: const Key('edu-private-tile'),
       padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
       decoration: BoxDecoration(
         color: (_privateTutoring
-                ? const Color(0xFF00695C)
+                ? kEduPrivateTagColor
                 : theme.colorScheme.onSurfaceVariant)
             .withValues(alpha: 0.07),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
             color: _privateTutoring
-                ? const Color(0xFF00695C)
+                ? privateInk
                 : theme.colorScheme.outlineVariant),
       ),
       child: Row(
@@ -1837,7 +1920,7 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
           Icon(Icons.cast_for_education_rounded,
               size: 20,
               color: _privateTutoring
-                  ? const Color(0xFF00695C)
+                  ? privateInk
                   : theme.colorScheme.onSurfaceVariant),
           const SizedBox(width: 9),
           Expanded(
@@ -1856,7 +1939,7 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
           Switch(
             key: const Key('edu-private-toggle'),
             value: _privateTutoring,
-            activeThumbColor: const Color(0xFF00695C),
+            activeThumbColor: privateInk,
             onChanged: (v) => setState(() => _privateTutoring = v),
           ),
         ],
@@ -1871,7 +1954,7 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
       isExpanded: true,
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, color: _accent, size: 20),
+        prefixIcon: Icon(icon, color: _accentInk, size: 20),
         isDense: true,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       ),

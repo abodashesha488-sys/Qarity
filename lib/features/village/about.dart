@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../models/data_models.dart';
 import '../../models/village_content_models.dart';
 import '../../routes/app_routes.dart';
@@ -15,7 +16,7 @@ import 'village_content_admin.dart';
 import 'village_contribution_screen.dart';
 import 'village_hub_card.dart';
 
-const Color kVillageAboutColor = Color(0xFF6F4E37);
+Color get kVillageAboutColor => AppColors.primary;
 
 /// «تعرف على القرية» — المركز الرئيسي لمرجع قرية أبودشيشة:
 /// بطاقة تعريف القرية + مداخل الأقسام (عن أبودشيشة، التاريخ، الذاكرة،
@@ -267,7 +268,7 @@ class _VillageIdCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.badge_outlined,
+              Icon(Icons.badge_outlined,
                   size: 18, color: kVillageAboutColor),
               const SizedBox(width: 8),
               Expanded(
@@ -336,7 +337,7 @@ class _IdChip extends StatelessWidget {
           Icon(icon, size: 13, color: kVillageAboutColor),
           const SizedBox(width: 5),
           Text(text,
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 10.5,
                   fontWeight: FontWeight.w800,
                   color: kVillageAboutColor)),
@@ -592,57 +593,57 @@ class _VillageEntry {
   final String route;
 }
 
-const List<_VillageEntry> _entries = [
+List<_VillageEntry> get _entries => [
   _VillageEntry(
     title: 'عن أبودشيشة',
     subtitle: 'بطاقة تعريف القرية: الاسم والموقع والسكان والمساحة',
     icon: Icons.menu_book_rounded,
-    color: Color(0xFF6F4E37),
+    color: AppColors.primary,
     route: AppRoutes.villageProfile,
   ),
-  _VillageEntry(
+  const _VillageEntry(
     title: 'تاريخ القرية',
     subtitle: 'العصور والأحداث الكبرى في خط زمني ذهبي',
     icon: Icons.history_edu_rounded,
     color: Color(0xFF5D4037),
     route: AppRoutes.villageHistory,
   ),
-  _VillageEntry(
+  const _VillageEntry(
     title: 'ذاكرة القرية',
     subtitle: 'الصور القديمة والحكايات والوثائق والفيديوهات',
     icon: Icons.auto_stories_rounded,
     color: Color(0xFF6A1B9A),
     route: AppRoutes.villageMemory,
   ),
-  _VillageEntry(
+  const _VillageEntry(
     title: 'أهل أبودشيشة',
     subtitle: 'العائلات والشخصيات البارزة وسجل الراحلين',
     icon: Icons.family_restroom_rounded,
     color: Color(0xFF00695C),
     route: AppRoutes.villagePeople,
   ),
-  _VillageEntry(
+  const _VillageEntry(
     title: 'تراث القرية',
     subtitle: 'العادات والتقاليد والمأكولات والأمثال والحرف',
     icon: Icons.festival_rounded,
     color: Color(0xFFBF360C),
     route: AppRoutes.villageHeritage,
   ),
-  _VillageEntry(
+  const _VillageEntry(
     title: 'معالم وحياة القرية',
     subtitle: 'المعالم والخدمات والزراعة والتعليم والتطور',
     icon: Icons.location_city_rounded,
     color: Color(0xFF1565C0),
     route: AppRoutes.villageLife,
   ),
-  _VillageEntry(
+  const _VillageEntry(
     title: 'المناسبات والأعراس',
     subtitle: 'أفراح القرية وطقوس مناسباتها',
     icon: Icons.celebration_rounded,
     color: Color(0xFFAD1457),
     route: AppRoutes.occasionsList,
   ),
-  _VillageEntry(
+  const _VillageEntry(
     title: 'الأرشيف الرقمي',
     subtitle: 'مكتبة موحّدة لكل مواد المرجع مع بحث وفلترة',
     icon: Icons.inventory_2_rounded,

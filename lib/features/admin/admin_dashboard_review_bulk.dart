@@ -103,16 +103,21 @@ mixin _ReviewBulkMixin on State<_ReviewPage> {
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
               child: const Text('إلغاء')),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(
-                backgroundColor: action == 'delete' ? Colors.red : null),
-            child: Text(action == 'approve'
-                ? 'موافقة'
-                : action == 'reject'
-                    ? 'رفض'
-                    : 'حذف'),
-          ),
+          if (action == 'delete')
+            // الحذف وحده أرضية حمراء هادئة، ومعها البياض يُثبَّت لأن
+            // `onPrimary` في الداكن داكنٌ مثله فلا يُقرأ فوق الأحمر.
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.error,
+                  foregroundColor: Colors.white),
+              child: const Text('حذف'),
+            )
+          else
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(action == 'approve' ? 'موافقة' : 'رفض'),
+            ),
         ],
       ),
     );
@@ -131,13 +136,13 @@ mixin _ReviewBulkMixin on State<_ReviewPage> {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                _bulkBtn('موافقة', Icons.check_rounded, const Color(0xFF6F4E37),
+                _bulkBtn('موافقة', Icons.check_rounded, AppColors.primary,
                     () => bulkAction('approve')),
                 const SizedBox(width: 8),
-                _bulkBtn('رفض', Icons.close_rounded, Colors.orange,
+                _bulkBtn('رفض', Icons.close_rounded, AppColors.warning,
                     () => bulkAction('reject')),
                 const SizedBox(width: 8),
-                _bulkBtn('حذف', Icons.delete_rounded, Colors.red,
+                _bulkBtn('حذف', Icons.delete_rounded, AppColors.error,
                     () => bulkAction('delete')),
                 const SizedBox(width: 8),
                 _bulkBtn('إلغاء', Icons.clear_rounded, Colors.grey,
@@ -152,6 +157,9 @@ mixin _ReviewBulkMixin on State<_ReviewPage> {
 
   Widget _bulkBtn(
       String label, IconData icon, Color color, VoidCallback onTap) {
+    final ink = AppColors.inkOn(
+        color == AppColors.warning ? AppColors.warningInk : color,
+        Theme.of(context).brightness);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
@@ -160,16 +168,16 @@ mixin _ReviewBulkMixin on State<_ReviewPage> {
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
+          border: Border.all(color: ink.withValues(alpha: 0.3)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: color),
+            Icon(icon, size: 16, color: ink),
             const SizedBox(width: 6),
             Text(label,
                 style: TextStyle(
-                    fontWeight: FontWeight.w800, color: color, fontSize: 12)),
+                    fontWeight: FontWeight.w800, color: ink, fontSize: 12)),
           ],
         ),
       ),

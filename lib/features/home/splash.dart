@@ -82,8 +82,12 @@ class _SplashScreenState extends State<SplashScreen>
         final ctx = navigatorKey.currentContext;
         if (ctx != null) {
           ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
-            content: Text('تم تعطيل حسابك — يرجى التواصل مع إدارة القرية'),
-            backgroundColor: Colors.red,
+            // الأرضية لون ثابت في السمتين بينما حبر الشريط الافتراضي في الداكن
+            // داكن ⇒ البياض يُثبَّت، والأحمر هو الهادئ الموثّق لا `Colors.red`
+            // الساطع (3.7 مع البياض).
+            content: Text('تم تعطيل حسابك — يرجى التواصل مع إدارة القرية',
+                style: TextStyle(color: Colors.white)),
+            backgroundColor: AppColors.error,
           ));
         }
       });
@@ -136,7 +140,7 @@ class _SplashScreenState extends State<SplashScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       body: DecoratedBox(
-        decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
+        decoration: BoxDecoration(gradient: AppColors.primaryGradient),
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,

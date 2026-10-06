@@ -85,11 +85,15 @@ class _ManagedAlertCardState extends State<_ManagedAlertCard> {
     }
   }
 
-  void _snack(String msg, {Color? color}) {
+  /// أرضيات الشريط هنا ألوان ثابتة في السمتين بينما حبره الافتراضي يُقرأ من
+  /// `onInverseSurface` وهو في الداكن داكن ⇒ البياض يُثبَّت على الأرضيات
+  /// الداكنة. والعنبري وحده لا يصحّ عليه البياض (2.16) فحبره الداكن
+  /// الزمردي `onWarning` (5.99 في السمتين).
+  void _snack(String msg, {Color? color, Color ink = Colors.white}) {
     if (!mounted) return;
     ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
-        content: Text(msg),
-        backgroundColor: color ?? const Color(0xFF6F4E37)));
+        content: Text(msg, style: TextStyle(color: ink)),
+        backgroundColor: color ?? AppColors.primary));
   }
 
   Future<void> _run(Future<void> Function() action, String okMsg) async {
@@ -100,7 +104,7 @@ class _ManagedAlertCardState extends State<_ManagedAlertCard> {
       await _load();
       _snack(okMsg);
     } catch (e) {
-      _snack('خطأ: $e', color: Colors.red);
+      _snack('خطأ: $e', color: AppColors.error);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -109,7 +113,8 @@ class _ManagedAlertCardState extends State<_ManagedAlertCard> {
   Future<void> _enable() {
     final text = _controller.text.trim();
     if (text.isEmpty) {
-      _snack('اكتب نص التنبيه أولاً', color: Colors.orange);
+      _snack('اكتب نص التنبيه أولاً',
+          color: AppColors.warning, ink: AppColors.onWarning);
       return Future.value();
     }
     final expiresAt = _validHours == 0
@@ -129,7 +134,8 @@ class _ManagedAlertCardState extends State<_ManagedAlertCard> {
   Future<void> _saveSilent() {
     final text = _controller.text.trim();
     if (text.isEmpty) {
-      _snack('اكتب النص أولاً', color: Colors.orange);
+      _snack('اكتب النص أولاً',
+          color: AppColors.warning, ink: AppColors.onWarning);
       return Future.value();
     }
     return _run(

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../core/constants/app_colors.dart';
 import '../models/data_models.dart';
 import '../widgets/obituary_share_card.dart';
 
@@ -125,10 +126,10 @@ class ShareService {
     const size = Size(800, 900);
 
     final bg = Paint()
-      ..shader = const LinearGradient(
+      ..shader = LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [Color(0xFF00695C), Color(0xFF6F4E37)],
+        colors: [const Color(0xFF00695C), AppColors.primary],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
     canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), bg);
 
@@ -188,7 +189,12 @@ class ShareService {
       if (kDebugMode) debugPrint('Share error: $e');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تعذر مشاركة الدعوة'), backgroundColor: Colors.red),
+          // الأرضية `error` ثابتة في السمتين وحبر الشريط الافتراضي في الداكن
+          // داكن ⇒ يُثبَّت البياض.
+          const SnackBar(
+              content: Text('تعذر مشاركة الدعوة',
+                  style: TextStyle(color: Colors.white)),
+              backgroundColor: AppColors.error),
         );
       }
     }

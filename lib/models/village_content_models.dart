@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+import '../core/constants/app_colors.dart';
 import '../core/utils/firebase_ts.dart';
 
 // ═══════════════ عقد مشترك للعناصر القابلة للإدارة ═══════════════
@@ -139,7 +140,7 @@ class FigureCategory {
 
   static Color color(String c) => switch (c) {
         mp => const Color(0xFF1565C0),
-        mayor => const Color(0xFF6F4E37),
+        mayor => AppColors.primary,
         elders => const Color(0xFF00695C),
         influencers => const Color(0xFFAD1457),
         _ => Colors.blueGrey,
@@ -305,7 +306,7 @@ class FamilyCategory {
       };
 
   static Color color(String c) => switch (c) {
-        notable => const Color(0xFF6F4E37),
+        notable => AppColors.primary,
         scholarly => const Color(0xFF1565C0),
         merchant => const Color(0xFFEF6C00),
         agricultural => const Color(0xFF558B2F),

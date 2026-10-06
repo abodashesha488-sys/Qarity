@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../models/village_content_models.dart';
 import '../../services/village_content_service.dart';
 import '../../widgets/qurity_app_bar.dart';
@@ -84,7 +85,9 @@ class _VillageHistoryScreenState extends State<VillageHistoryScreen> {
                     child: Column(mainAxisSize: MainAxisSize.min, children: [
                       Icon(Icons.history_rounded,
                           size: 54,
-                          color: kVillageHistoryColor.withValues(alpha: 0.35)),
+                          color: AppColors.inkOn(
+                                  kVillageHistoryColor, theme.brightness)
+                              .withValues(alpha: 0.35)),
                       const SizedBox(height: 10),
                       Text('لم يُضف محتوى تاريخي بعد',
                           style: TextStyle(

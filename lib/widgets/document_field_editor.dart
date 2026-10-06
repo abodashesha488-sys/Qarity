@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../core/constants/app_colors.dart';
 import '../models/data_models.dart';
 import '../services/image_upload_service.dart';
 
@@ -743,8 +744,11 @@ class _ImageListEditorState extends State<ImageListEditor> {
               child: Text(
                 _error!,
                 key: ValueKey('img-error-${widget.fieldKey}'),
-                style: const TextStyle(
-                    color: Color(0xFFB71C1C), fontWeight: FontWeight.w700),
+                style: TextStyle(
+                    color: AppColors.inkOn(
+                        const Color(0xFFB71C1C),
+                        Theme.of(context).brightness),
+                    fontWeight: FontWeight.w700),
               ),
             ),
         ],

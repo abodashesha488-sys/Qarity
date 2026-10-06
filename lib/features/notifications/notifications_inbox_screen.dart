@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../core/utils/notification_deeplink.dart';
 import '../../routes/app_routes.dart';
 import '../../services/notification_inbox_service.dart';
@@ -54,7 +55,7 @@ class _NotificationsInboxScreenState extends State<NotificationsInboxScreen> {
                   itemBuilder: (context, i) {
                     final n = items[i];
                     final color = switch (n.kind) {
-                      'approve' => const Color(0xFF6F4E37),
+                      'approve' => AppColors.success,
                       'reject' => Colors.orange,
                       _ => theme.colorScheme.primary,
                     };
@@ -63,6 +64,12 @@ class _NotificationsInboxScreenState extends State<NotificationsInboxScreen> {
                       'reject' => Icons.warning_amber_rounded,
                       _ => Icons.notifications_rounded,
                     };
+                    // الرمز حبرٌ فوق تظليل 0.12 من اللون نفسه، والبرتقالي 2.16
+                    // فوق البياض لا يجتاز حتى سقف الرسم 3.0 — فيُزحزح سطوعه وحده
+                    // مع بقاء اللون والتشبّع. بقية الفروع تمرّ فتبقى كما هي.
+                    final iconInk =
+                        AppColors.readableInk(color, theme.brightness,
+                            minRatio: 3.0);
                     return Card(
                       elevation: 0,
                       margin: EdgeInsets.zero,
@@ -93,7 +100,7 @@ class _NotificationsInboxScreenState extends State<NotificationsInboxScreen> {
                           decoration: BoxDecoration(
                               color: color.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(12)),
-                          child: Icon(icon, color: color),
+                          child: Icon(icon, color: iconInk),
                         ),
                         title: Text(n.title,
                             style: theme.textTheme.titleSmall

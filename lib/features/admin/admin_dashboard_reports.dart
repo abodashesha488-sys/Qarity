@@ -85,11 +85,11 @@ class _ReportsPageState extends State<_ReportsPage> {
               padding: const EdgeInsets.all(16),
               children: [
                 // عنوان الصفحة الموحّد
-                const _PageHeader(
+                _PageHeader(
                   icon: Icons.assessment_rounded,
                   title: 'التقارير والإحصائيات',
                   subtitle: 'عرض شامل لأداء التطبيق',
-                  color: Color(0xFF6F4E37),
+                  color: AppColors.primary,
                 ),
                 const SizedBox(height: 20),
 
@@ -288,7 +288,7 @@ class _ReportsPageState extends State<_ReportsPage> {
       _StatItem('عيادات القرية', '${stats['village_clinics'] ?? 0}',
           Icons.add_business_rounded, const Color(0xFF00897B)),
       _StatItem('الصيدليات', '${stats['pharmacies'] ?? 0}',
-          Icons.local_pharmacy_rounded, const Color(0xFF6F4E37)),
+          Icons.local_pharmacy_rounded, AppColors.primary),
       _StatItem('معامل التحاليل', '${stats['medical_labs'] ?? 0}',
           Icons.science_rounded, const Color(0xFF6A1B9A)),
       _StatItem('نظارات طبية', '${stats['optical_shops'] ?? 0}',
@@ -428,7 +428,10 @@ class _ReportsPageState extends State<_ReportsPage> {
                     icon: const Icon(Icons.table_chart_rounded, size: 18),
                     label: const Text('Excel'),
                     style: FilledButton.styleFrom(
-                      backgroundColor: Colors.green,
+                      backgroundColor: AppColors.success,
+                      // البياض يُثبَّت: `Colors.green` كانت 2.08 فوقها، وأرضية
+                      // `FilledButton` في الداكن تأخذ حبراً داكناً (`onPrimary`).
+                      foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                   ),
@@ -582,7 +585,7 @@ class _ReportsPageState extends State<_ReportsPage> {
         horizontalAlign: HorizontalAlign.Center,
         fontColorHex: bold ? ExcelColor.white : ExcelColor.black,
         backgroundColorHex:
-            bold ? ExcelColor.fromInt(0xFF6F4E37) : ExcelColor.none,
+            bold ? ExcelColor.fromInt(AppColors.primary.toARGB32()) : ExcelColor.none,
       );
     }
   }
@@ -621,12 +624,15 @@ class _ReportsPageState extends State<_ReportsPage> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-          content: Text(message), backgroundColor: const Color(0xFF6F4E37)),
+          content: Text(message), backgroundColor: AppColors.primary),
     );
   }
 
   Widget _buildSection(
       ThemeData theme, String title, IconData icon, Color color, Widget child) {
+    // التظليل وحده يبقى على درجة القسم، أما الأيقونة وعنوان القسم (titleMedium
+    // بمقاس 16 ووزن 900 فهو نص عادي عند سقف 4.5) فحبرٌ على البطاقة.
+    final ink = AppColors.readableInk(color, theme.brightness);
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -647,12 +653,12 @@ class _ReportsPageState extends State<_ReportsPage> {
                     color: color.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(icon, color: color, size: 20),
+                  child: Icon(icon, color: ink, size: 20),
                 ),
                 const SizedBox(width: 10),
                 Text(title,
                     style: theme.textTheme.titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w900, color: color)),
+                        ?.copyWith(fontWeight: FontWeight.w900, color: ink)),
               ],
             ),
             const SizedBox(height: 16),
@@ -681,6 +687,10 @@ class _SummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // التظليل والحدّ يبقيان على درجة القسم كما هي، وأما الأيقونة والرقم فحبرٌ:
+    // الرقم بمقاس 24 فهو «نص كبير» وسقفه 3.0 لا 4.5، فدرجة القسم الخام تبقى
+    // حيّة أينما بلغت النسبة، وتنزاح سطوعًا وحدها (لا لونًا) حين لا تبلغها.
+    final ink = AppColors.readableInk(color, theme.brightness, minRatio: 3.0);
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -700,7 +710,7 @@ class _SummaryCard extends StatelessWidget {
                     color: color.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(icon, color: color, size: 22),
+                  child: Icon(icon, color: ink, size: 22),
                 ),
                 const Spacer(),
               ],
@@ -708,7 +718,7 @@ class _SummaryCard extends StatelessWidget {
             const SizedBox(height: 12),
             Text(value,
                 style: TextStyle(
-                    fontWeight: FontWeight.w900, color: color, fontSize: 24)),
+                    fontWeight: FontWeight.w900, color: ink, fontSize: 24)),
             const SizedBox(height: 4),
             Text(subtitle,
                 style: theme.textTheme.bodySmall
@@ -741,6 +751,9 @@ class _StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // الرقم هنا بمقاس 16 فهو نص عادي وسقفه 4.5، فدرجات مثل العنبري 1.97
+    // والسماوي 2.30 لا تُقرأ على البطاقة البضاء فتُنزل سطوعًا وحده.
+    final ink = AppColors.readableInk(item.color, theme.brightness);
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -752,13 +765,13 @@ class _StatCard extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(item.icon, color: item.color, size: 24),
+            Icon(item.icon, color: ink, size: 24),
             const SizedBox(height: 6),
             Text(
               item.value,
               style: TextStyle(
                 fontWeight: FontWeight.w900,
-                color: item.color,
+                color: ink,
                 fontSize: 16,
               ),
             ),

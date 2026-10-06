@@ -29,8 +29,12 @@ class _PromosPageState extends State<_PromosPage> {
   void _snack(String msg) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg),
-      backgroundColor: QurityAppBar.headerColor,
+      // الأرضية زمردية ثابتة في السمتين، وحبر `SnackBar` الافتراضي في الداكن
+      // داكن نفسه (`onInverseSurface`) فيختفي النص فوقها — البياض يُثبَّت على
+      // النص نفسه لأن الصنف لا يعرف وسيط `contentColor`.
+      content: Text(msg, style: const TextStyle(color: Colors.white)),
+      backgroundColor:
+          QurityAppBar.headerColorFor(Theme.of(context).brightness),
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ));
@@ -47,8 +51,9 @@ class _PromosPageState extends State<_PromosPage> {
               onPressed: () => Navigator.pop(ctx, false),
               child: const Text('إلغاء')),
           FilledButton(
-              style:
-                  FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
+              style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.error,
+                  foregroundColor: Colors.white),
               onPressed: () => Navigator.pop(ctx, true),
               child: const Text('حذف')),
         ],
@@ -108,7 +113,10 @@ class _PromosPageState extends State<_PromosPage> {
                       children: [
                         Icon(Icons.campaign_rounded,
                             size: 56,
-                            color: QurityAppBar.headerColor.withValues(alpha: 0.35)),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withValues(alpha: 0.35)),
                         const SizedBox(height: 10),
                         Text(
                           'لا توجد إعلانات بعد\nأنشئ إعلاناً اختيارياً وخصّص شاشته ومدته',
@@ -156,7 +164,7 @@ _PromoStatus _promoStatus(Promo p) {
     return const _PromoStatus('مجدول', Color(0xFF1565C0));
   }
   if (!now.isBefore(p.endsAt)) {
-    return const _PromoStatus('منتهي', Color(0xFF6F4E37));
+    return _PromoStatus('منتهي', AppColors.primary);
   }
   return const _PromoStatus('مباشر الآن', Color(0xFF00897B));
 }
@@ -214,14 +222,16 @@ class _PromoCard extends StatelessWidget {
                       fit: BoxFit.cover,
                       placeholder: (_, __) => ColoredBox(
                           color: theme.colorScheme.surfaceContainerHighest,
-                          child: const Center(
-                              child: Icon(Icons.image_rounded,
-                                  size: 22, color: Colors.black26))),
-                      errorWidget: (_, __, ___) => const ColoredBox(
-                          color: Colors.black12,
                           child: Center(
-                              child:
-                                  Icon(Icons.broken_image_rounded, size: 22))),
+                              child: Icon(Icons.image_rounded,
+                                  size: 22,
+                                  color: theme.colorScheme.onSurfaceVariant))),
+                      errorWidget: (_, __, ___) => ColoredBox(
+                          color: theme.colorScheme.surfaceContainerHighest,
+                          child: Center(
+                              child: Icon(Icons.broken_image_rounded,
+                                  size: 22,
+                                  color: theme.colorScheme.onSurfaceVariant))),
                     ),
                   ),
                 ),
@@ -240,15 +250,23 @@ class _PromoCard extends StatelessWidget {
                         spacing: 6,
                         runSpacing: 4,
                         children: [
-                          _miniChip(status.label, status.color, solid: true),
-                          _miniChip(promoPlacementLabel(promo.placement),
-                              QurityAppBar.headerColor),
-                          _miniChip(promo.showOnce ? 'مرة واحدة' : 'كل زيارة',
-                              const Color(0xFF1565C0)),
+                          _miniChip(
+                              status.label, status.color, theme.brightness,
+                              solid: true),
+                          _miniChip(
+                              promoPlacementLabel(promo.placement),
+                              QurityAppBar.headerColor, theme.brightness),
+                          _miniChip(
+                              promo.showOnce ? 'مرة واحدة' : 'كل زيارة',
+                              const Color(0xFF1565C0), theme.brightness),
                           if (promo.playSound)
-                            _miniChip('🔊 صوت', Colors.black38),
+                            _miniChip('🔊 صوت',
+                                theme.colorScheme.onSurfaceVariant,
+                                theme.brightness),
                           if (promo.vibrate)
-                            _miniChip('📳 اهتزاز', Colors.black38),
+                            _miniChip('📳 اهتزاز',
+                                theme.colorScheme.onSurfaceVariant,
+                                theme.brightness),
                         ],
                       ),
                     ],
@@ -288,8 +306,10 @@ class _PromoCard extends StatelessWidget {
                   tooltip: 'حذف',
                   visualDensity: VisualDensity.compact,
                   onPressed: onDelete,
-                  icon: const Icon(Icons.delete_outline_rounded,
-                      size: 18, color: Colors.red),
+                  icon: Icon(Icons.delete_outline_rounded,
+                      size: 18,
+                      color: AppColors.inkOn(
+                          AppColors.error, theme.brightness)),
                 ),
               ],
             ),
@@ -299,20 +319,23 @@ class _PromoCard extends StatelessWidget {
     );
   }
 
-  Widget _miniChip(String text, Color color, {bool solid = false}) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
-        decoration: BoxDecoration(
-          color: solid ? color : color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(8),
-          border:
-              solid ? null : Border.all(color: color.withValues(alpha: 0.35)),
-        ),
-        child: Text(text,
-            style: TextStyle(
-                fontSize: 9,
-                fontWeight: FontWeight.w900,
-                color: solid ? Colors.white : color)),
-      );
+  Widget _miniChip(String text, Color color, Brightness brightness,
+      {bool solid = false}) {
+    final ink = solid
+        ? Colors.white
+        : AppColors.inkOn(color, brightness);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+      decoration: BoxDecoration(
+        color: solid ? color : color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: solid ? null : Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Text(text,
+          style: TextStyle(
+              fontSize: 9, fontWeight: FontWeight.w900, color: ink)),
+    );
+  }
 }
 
 /// نموذج إنشاء/تعديل إعلان دعائي.
@@ -399,8 +422,7 @@ class _PromoFormSheetState extends State<_PromoFormSheet> {
       lastDate: now.add(const Duration(days: 365 * 2)),
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
-            dialogTheme: const
-                DialogThemeData(backgroundColor: Color(0xFF6F4E37))),
+            dialogTheme: DialogThemeData(backgroundColor: AppColors.primary)),
         child: child!,
       ),
     );
@@ -518,8 +540,8 @@ class _PromoFormSheetState extends State<_PromoFormSheet> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.calendar_month_rounded,
-                    size: 16, color: QurityAppBar.headerColor),
+                Icon(Icons.calendar_month_rounded,
+                    size: 16, color: Theme.of(context).colorScheme.primary),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Column(
@@ -527,10 +549,12 @@ class _PromoFormSheetState extends State<_PromoFormSheet> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(title,
-                          style: const TextStyle(
+                          style: TextStyle(
                               fontSize: 9.5,
                               fontWeight: FontWeight.w800,
-                              color: Colors.black54)),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant)),
                       Text(
                           d == null
                               ? 'حدّد'
@@ -603,17 +627,17 @@ class _PromoFormSheetState extends State<_PromoFormSheet> {
                       ? const Center(
                           child: CircularProgressIndicator(strokeWidth: 2.6))
                       : _imageUrl.isEmpty
-                          ? const Column(
+                          ? Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Icon(Icons.add_photo_alternate_rounded,
-                                    size: 30, color: QurityAppBar.headerColor),
-                                SizedBox(height: 6),
+                                    size: 30, color: theme.colorScheme.primary),
+                                const SizedBox(height: 6),
                                 Text('اضغط لاختيار صورة الإعلان',
                                     style: TextStyle(
                                         fontWeight: FontWeight.w800,
                                         fontSize: 12,
-                                        color: QurityAppBar.headerColor)),
+                                        color: theme.colorScheme.primary)),
                               ],
                             )
                           : Stack(
@@ -767,9 +791,9 @@ class _PromoFormSheetState extends State<_PromoFormSheet> {
                     child: OutlinedButton.icon(
                       onPressed: _uploading ? null : _preview,
                       style: OutlinedButton.styleFrom(
-                          foregroundColor: QurityAppBar.headerColor,
-                          side: const BorderSide(
-                              color: QurityAppBar.headerColor, width: 1.4),
+                          foregroundColor: theme.colorScheme.primary,
+                          side: BorderSide(
+                              color: theme.colorScheme.primary, width: 1.4),
                           padding: const EdgeInsets.symmetric(vertical: 14)),
                       icon: const Icon(Icons.visibility_rounded, size: 18),
                       label: const Text('معاينة حية',

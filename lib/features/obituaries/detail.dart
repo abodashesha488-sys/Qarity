@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../core/utils/comment_style.dart';
 import '../../core/utils/obituary_card_assets.dart';
 import '../../core/utils/relative_time.dart';
@@ -589,14 +590,21 @@ class _CondolenceSectionState extends State<_CondolenceSection> {
   Future<void> _submit() async {
     final message = _messageController.text.trim();
     if (message.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('اكتب رسالة التعزية'), backgroundColor: Colors.orange));
+      // أرضيات الشريط لون ثابت في السمتين بينما حبره الافتراضي يُقرأ من
+      // `onInverseSurface` وهو في الداكن داكن ⇒ الحبر يُثبَّت. والعنبري وحده
+      // لا يُقرأ عليه البياض (2.16) فحبره الداكن الزمردي (5.99).
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('اكتب رسالة التعزية',
+              style: TextStyle(color: AppColors.onWarning)),
+          backgroundColor: AppColors.warning));
       return;
     }
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('يرجى تسجيل الدخول أولاً'), backgroundColor: Colors.red));
+          content: Text('يرجى تسجيل الدخول أولاً',
+              style: TextStyle(color: Colors.white)),
+          backgroundColor: AppColors.error));
       return;
     }
     setState(() => _submitting = true);
@@ -606,8 +614,8 @@ class _CondolenceSectionState extends State<_CondolenceSection> {
         if (!mounted) return;
         setState(() => _submitting = false);
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('لقد قدّمت تعازيك بالفعل لهذا الفقيد — جزاك الله خيراً'),
-            backgroundColor: Colors.blueGrey));
+            content:
+                Text('لقد قدّمت تعازيك بالفعل لهذا الفقيد — جزاك الله خيراً')));
         return;
       }
       await _engagement.addCondolence(
@@ -620,12 +628,16 @@ class _CondolenceSectionState extends State<_CondolenceSection> {
       if (!mounted) return;
       _messageController.clear();
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('تم تقديم التعزية'), backgroundColor: Color(0xFF6F4E37)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text('تم تقديم التعزية',
+              style: TextStyle(color: Colors.white)),
+          backgroundColor: AppColors.primary));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('تعذر الإرسال: $e'), backgroundColor: Colors.red));
+          content: Text('تعذر الإرسال: $e',
+              style: const TextStyle(color: Colors.white)),
+          backgroundColor: AppColors.error));
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -839,7 +851,7 @@ class _CondolenceTile extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Expanded(child: Text(c.userName, style: CommentStyle.author)),
+                    Expanded(child: Text(c.userName, style: CommentStyle.author(context))),
                     if (time.isNotEmpty)
                       Text(time,
                           style: theme.textTheme.labelSmall?.copyWith(
@@ -847,7 +859,7 @@ class _CondolenceTile extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 5),
-                Text(c.message, style: CommentStyle.body),
+                Text(c.message, style: CommentStyle.body(context)),
               ],
             ),
           ),

@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/theme/app_themes.dart';
 import '../../routes/app_routes.dart';
 import '../../services/theme_service.dart';
 import '../../services/update_service.dart';
@@ -31,6 +32,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             padding: const EdgeInsets.all(16),
             children: [
               _buildSectionCard(theme, 'المظهر', Icons.palette_rounded, [
+                _familyHeading(theme),
+                ...AppThemes.all.map((f) => _ThemeFamilyCard(
+                      family: f,
+                      selected: f.id == _themeService.family.id,
+                      onTap: () => _themeService.setFamily(f),
+                    )),
                 SwitchListTile(
                   title: Text('الوضع الليلي', style: GoogleFonts.tajawal(fontWeight: FontWeight.w700)),
                   subtitle: Text('تفعيل المظهر الداكن للتطبيق', style: GoogleFonts.tajawal()),
@@ -39,12 +46,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   secondary: Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: _themeService.isDarkMode ? AppColors.purple.withValues(alpha: 1.0) : AppColors.warning.withValues(alpha: 1.0),
+                      // الأرضية كانت التمييز نفسه معتما والرمز من نفس لونه،
+                      // فالرمز غير مرئي إطلاقا في الحالتين. صارت الأرضية تظليلا
+                      // خفيفا من التمييز والرمز حبرا مقروءا مشتقا منه.
+                      color: (_themeService.isDarkMode
+                              ? AppColors.purple
+                              : AppColors.warning)
+                          .withValues(alpha: 0.14),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
                       _themeService.isDarkMode ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
-                      color: _themeService.isDarkMode ? AppColors.purple : AppColors.warning,
+                      color: AppColors.readableInk(
+                          _themeService.isDarkMode
+                              ? AppColors.purple
+                              : AppColors.warning,
+                          theme.brightness),
                     ),
                   ),
                 ),
@@ -125,6 +142,134 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 8),
             ...children,
           ],
+        ),
+      ),
+    );
+  }
+
+  /// سطر مقدمة لمجموعة بطاقات المظهر، ونصّه حرف ما طلبه صاحبه.
+  Widget _familyHeading(ThemeData theme) {
+    final scheme = theme.colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, bottom: 6),
+      child: Row(
+        children: [
+          Icon(Icons.brush_rounded, size: 16, color: scheme.onSurfaceVariant),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              'تخصيص مظهر التطبيق',
+              style: GoogleFonts.tajawal(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w800,
+                color: scheme.onSurface,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// بطاقة عائلة مظهر واحدة: دوائر ألوانها ثم اسمها ووصفها، ومارّة تحديد في
+/// طرفها. المحدَّدة تحمل إطارًا وعنوانًا من [AppColors.readableInk] لا من لون
+/// العائلة الخام.
+///
+/// القياس الذي فرض ذلك: `family.primary` فوق أرضية عائلتها الفاتحة **9.64 /
+/// 17.85 / 7.10** فيكفي، أما فوق أرضية داكنة فخمًا **1.74 / 1.03 / 2.40** — أي
+/// أن العنوان والإطار يذوبان في الوضع الداكن إن استُعمل الخام. `readableInk`
+/// يزحزح السطوع وحده فيقاس فوق أرضية الكارت الداكنة **10.12 / 6.98 / 7.68**.
+/// والتظليل الاختياري `primary@0.06` يترك الخام نفسه **6.46** فأكثر (أدناهُ
+/// للتراكوتا)، فلا يتضرر أي نص فوقه.
+///
+/// أما دائرتا `mint` و`page` فتقيسان **1.01–1.15** مقابل الكارت، أي أنهما تبدوان
+/// زائرتين لولا الحدّ؛ فكلٌّ يحمل `scheme.outline` كاملًا (بلا شفافية) فيقاس
+/// **3.41 / 3.72 / 3.41** في الفاتح و**4.52 / 4.48 / 4.17** في الداكن — وهذا هو
+/// سقف حدود التحكّم المطلوب (3.0). ونفس الحدّ صار لإطار البطاقة غير المحدَّدة،
+/// لأن `outlineVariant` (= فاصل العائلة) لا يقيس مقابل سطح الكارت أكثر من
+/// **1.27 / 1.29 / 1.31**.
+class _ThemeFamilyCard extends StatelessWidget {
+  const _ThemeFamilyCard({
+    required this.family,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final AppThemeFamily family;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final dark = theme.brightness == Brightness.dark;
+    final ink = AppColors.readableInk(family.primary, theme.brightness);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+          decoration: BoxDecoration(
+            color: selected
+                ? family.primary.withValues(alpha: dark ? 0.10 : 0.06)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: selected ? ink : scheme.outline,
+              width: selected ? 1.8 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              ...family.swatch.map(
+                (color) => Padding(
+                  padding: const EdgeInsetsDirectional.only(end: 6),
+                  child: Container(
+                    width: 18,
+                    height: 18,
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: scheme.outline),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 2),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      family.title,
+                      style: GoogleFonts.tajawal(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: selected ? ink : scheme.onSurface,
+                      ),
+                    ),
+                    Text(
+                      family.caption,
+                      style: GoogleFonts.tajawal(
+                        fontSize: 11.5,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(
+                selected ? Icons.check_circle_rounded : Icons.circle_outlined,
+                size: 22,
+                color: selected ? ink : scheme.outline,
+              ),
+            ],
+          ),
         ),
       ),
     );

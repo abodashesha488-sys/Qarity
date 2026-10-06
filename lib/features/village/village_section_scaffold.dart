@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../models/village_content_models.dart';
 import '../../widgets/qurity_app_bar.dart';
 import '../../widgets/village_ornament.dart';
@@ -231,7 +232,11 @@ class _VillageSectionScaffoldState<T extends VillageContentItem>
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.inbox_rounded,
-                size: 52, color: accent.withValues(alpha: 0.3)),
+                size: 52,
+                // الأيقونة الزخرفية تُفتح في الداكن وإلا اختفت على الأرضية
+                // الداكنة عند هذه الشفافية، بينما تبقى كما هي في الفاتح.
+                color: AppColors.inkOn(accent, theme.brightness)
+                    .withValues(alpha: 0.3)),
             const SizedBox(height: 10),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -303,7 +308,9 @@ class VillageInfoCard extends StatelessWidget {
                     style: TextStyle(
                         fontSize: 14.5,
                         fontWeight: FontWeight.w900,
-                        color: accent)),
+                        // عنوان البطاقة حبر بلون القسم فوق أرضية البطاقة
+                        // الفاتحة أو الداكنة.
+                        color: AppColors.inkOn(accent, theme.brightness))),
                 if (subtitle.isNotEmpty) ...[
                   const SizedBox(height: 5),
                   Text(subtitle,

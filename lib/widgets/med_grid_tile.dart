@@ -2,6 +2,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
+import '../core/constants/app_colors.dart';
+
 /// شبكة بطاقات الدليل — عمودان في كل سطر.
 ///
 /// الارتفاع مطلق (`mainAxisExtent`) لا نسبة: البطاقة صورة معلومة الارتفاع ثم
@@ -81,10 +83,11 @@ class MedGridTile extends StatelessWidget {
                       fit: BoxFit.cover,
                       memCacheWidth: 520,
                       placeholder: (_, __) => const SizedBox.shrink(),
-                      errorWidget: (_, __, ___) => Icon(icon, color: accent),
+                      errorWidget: (_, __, ___) =>
+                          Icon(icon, color: AppColors.inkOn(accent, theme.brightness)),
                     )
                   else
-                    Icon(icon, color: accent),
+                    Icon(icon, color: AppColors.inkOn(accent, theme.brightness)),
                 ],
               ),
             ),

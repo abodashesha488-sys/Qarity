@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_config.dart';
 import '../../services/weather_service.dart';
 import '../../widgets/qurity_app_bar.dart';
@@ -67,8 +68,8 @@ class _WeatherDetailScreenState extends State<WeatherDetailScreen> {
         ],
       ),
       body: _loading
-          ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFF6F4E37)))
+          ? Center(
+              child: CircularProgressIndicator(color: AppColors.headerAccent))
           : _offline
               ? Center(
                   child: Column(
@@ -90,7 +91,7 @@ class _WeatherDetailScreenState extends State<WeatherDetailScreen> {
                 )
               : RefreshIndicator(
                   onRefresh: () => _load(force: true),
-                  color: const Color(0xFF1976D2),
+                  color: AppColors.headerAccent,
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
                     children: [

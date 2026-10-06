@@ -185,7 +185,7 @@ class _SellerDetailScreenState extends State<SellerDetailScreen> {
                       context,
                       icon: Icons.call_rounded,
                       label: 'اتصال',
-                      color: const Color(0xFF6F4E37),
+                      color: theme.colorScheme.primary,
                       onTap: () async {
                         final error = await launchPhoneCall(phone);
                         if (error != null) AppHelpers.showToast(error, isError: true);

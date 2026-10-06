@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../core/constants/product_categories.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/utils/launch_link.dart';
@@ -43,12 +44,12 @@ class MedicalHomeScreen extends StatelessWidget {
     ('المستلزمات الطبية', 'assets/images/doctor5.jpg'),
   ];
 
-  static const List<Color> colors = [
-    Color(0xFF00695C),
-    Color(0xFFC62828),
-    Color(0xFF00897B),
-    Color(0xFF6F4E37),
-    Color(0xFF6A1B9A),
+  static List<Color> get colors => [
+    const Color(0xFF00695C),
+    const Color(0xFFC62828),
+    const Color(0xFF00897B),
+    AppColors.primary,
+    const Color(0xFF6A1B9A),
     kOpticalAccent,
     kMedicalSuppliesAccent,
   ];
@@ -623,6 +624,9 @@ class _Pill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // الوسم يكتب لونه حبرًا: يبقى كما هو في الفاتح ويُفتَّح في الداكن محافظًا
+    // على درجة اللون، بينما يبقى التظليل والإطار بدرجة اللون الخام.
+    final ink = AppColors.inkOn(color, Theme.of(context).brightness);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
@@ -633,7 +637,7 @@ class _Pill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 13, color: color),
+          Icon(icon, size: 13, color: ink),
           const SizedBox(width: 5),
           Flexible(
             child: Text(text,
@@ -642,7 +646,7 @@ class _Pill extends StatelessWidget {
                 style: TextStyle(
                     fontSize: 11.5,
                     fontWeight: FontWeight.w800,
-                    color: color)),
+                    color: ink)),
           ),
         ],
       ),
@@ -759,8 +763,13 @@ class _BloodBankTabState extends State<_BloodBankTab> {
               children: [
                 Expanded(
                   child: FilledButton.icon(
-                    style:
-                        FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
+                    // الأرضية لون ثابت في السمتين أما حبر `FilledButton`
+                    // الافتراضي في الداكن داكن (1.5 على أحمر هادئ) فالبياض
+                    // يُثبَّت. والأحمر هنا هو الهادئ الموثّق لا `Colors.red`
+                    // الساطع (3.7 مع البياض).
+                    style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.error,
+                        foregroundColor: Colors.white),
                     onPressed: _showDonorDialog,
                     icon: const Icon(Icons.favorite_rounded, size: 18),
                     label: const Text('سجّل كمتبرع'),
@@ -924,8 +933,13 @@ class _OpenRequestsList extends StatelessWidget {
                               color: Colors.red.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(10)),
                           child: Text(r.bloodType.code,
-                              style: const TextStyle(
-                                  color: Colors.red, fontWeight: FontWeight.w900)),
+                              // الطبقة الشفّافة زخرفية فتبقى على لونها، أما
+                              // الحبر فـ`Colors.red` لا يُقرأ على البياض (3.68)
+                              // فيُقرأ من الأحمر الهادئ حسب السمت.
+                              style: TextStyle(
+                                  color: AppColors.inkOn(AppColors.error,
+                                      Theme.of(context).brightness),
+                                  fontWeight: FontWeight.w900)),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
@@ -940,10 +954,14 @@ class _OpenRequestsList extends StatelessWidget {
                               color: r.urgencyColor.withValues(alpha: 0.14),
                               borderRadius: BorderRadius.circular(8)),
                           child: Text(r.urgency,
+                              // التلميح اللوني يبقى في الطبقة والحدّ؛ أما حبر
+                              // 11px فلو أُخذ من العنبري نفسه لخرج 2.16 فوق
+                              // البياض، فيُقرأ من حبر السمة على أرضيته.
                               style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w800,
-                                  color: r.urgencyColor)),
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface)),
                         ),
                       ],
                     ),
@@ -1078,8 +1096,10 @@ class _DonorCard extends StatelessWidget {
             leading: CircleAvatar(
               backgroundColor: Colors.red.withValues(alpha: 0.12),
               child: Text(donor.bloodType.code,
-                  style:
-                      const TextStyle(color: Colors.red, fontWeight: FontWeight.w900)),
+                  style: TextStyle(
+                      color: AppColors.inkOn(
+                          AppColors.error, Theme.of(context).brightness),
+                      fontWeight: FontWeight.w900)),
             ),
             title: Text(donor.name,
                 style: const TextStyle(fontWeight: FontWeight.w800)),
@@ -1306,7 +1326,7 @@ class _PharmacyCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    const accent = Color(0xFF6F4E37);
+    final accent = AppColors.primary;
     return MedGridTile(
       title: pharmacy.name,
       imageUrl: pharmacy.imageUrl,
@@ -1320,11 +1340,11 @@ class _PharmacyCard extends StatelessWidget {
               decoration: BoxDecoration(
                   color: accent.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(8)),
-              child: const Text('٢٤ ساعة',
+              child: Text('٢٤ ساعة',
                   style: TextStyle(
                       fontSize: 9.5,
                       fontWeight: FontWeight.w800,
-                      color: accent)),
+                      color: AppColors.inkOn(accent, theme.brightness))),
             )
           : null,
       tags: [
@@ -1359,7 +1379,11 @@ class _Tag extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
-              fontSize: 10.5, fontWeight: FontWeight.w800, color: color)),
+              fontSize: 10.5,
+              fontWeight: FontWeight.w800,
+              // الوسم يكتب لونه حبرًا فوق تظليل منه ١٢٪: يبقى كما هو في الفاتح
+              // ويُفتَّح في الداكن محافظًا على درجة اللون.
+              color: AppColors.inkOn(color, Theme.of(context).brightness))),
     );
   }
 }
@@ -1460,11 +1484,11 @@ class _LabCard extends StatelessWidget {
               decoration: BoxDecoration(
                   color: accent.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8)),
-              child: const Text('سحب منزلي',
+              child: Text('سحب منزلي',
                   style: TextStyle(
                       fontSize: 9.5,
                       fontWeight: FontWeight.w800,
-                      color: accent)),
+                      color: AppColors.inkOn(accent, theme.brightness))),
             )
           : null,
       tags: [
@@ -1851,9 +1875,12 @@ class _OpticalCard extends StatelessWidget {
                             imageUrl: shop.imageUrl,
                             fit: BoxFit.cover,
                             errorWidget: (_, __, ___) => Icon(
-                                Icons.remove_red_eye_rounded, color: accent),
+                                Icons.remove_red_eye_rounded,
+                                color:
+                                    AppColors.inkOn(accent, theme.brightness)),
                           )
-                        : Icon(Icons.remove_red_eye_rounded, color: accent),
+                        : Icon(Icons.remove_red_eye_rounded,
+                            color: AppColors.inkOn(accent, theme.brightness)),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
