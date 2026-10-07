@@ -201,6 +201,10 @@ class _BuyRequestsTabState extends State<_BuyRequestsTab> {
     final uid = BuyRequestService.viewerUid();
     return OfflineStreamBuilder<List<BuyRequest>>(
       stream: _service.getOpenRequestsStream(),
+      // cacheFirst=false: فرع «غير متصل» في OfflineStreamBuilder يعيد الكتالوج
+      // المخزَّن ولا يتحدّث ما دامت الراية عالقة، فيظهر التبويب أقدم من قرار
+      // الإدارة بينما اللوحة الحيّة تُظهر السجل. الستريم هو المصدر والكاش ملاذ.
+      cacheFirst: false,
       onlineBuilder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -591,6 +595,9 @@ class _DonationsTabState extends State<_DonationsTab> {
     final uid = DonationService.viewerUid();
     return OfflineStreamBuilder<List<Donation>>(
       stream: _service.getAvailableDonationsStream(),
+      // نفس سبب «مطلوب»: فرع offline يعرض الكتالوج المخزَّن ولا يتقدّم ما دامت
+      // الراية عالقة، فيتأخر التبويب عن قرار الإدارة الذي تعرضه اللوحة فورًا.
+      cacheFirst: false,
       onlineBuilder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());

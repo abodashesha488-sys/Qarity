@@ -62,28 +62,32 @@ class BuyRequestService {
     return ref.id;
   }
 
+  static List<BuyRequest> _openVisible(List<BuyRequest> items, String? uid) =>
+      visibleToViewer(items.where((r) => r.isOpen).toList(), uid)
+        ..sort(_newestFirst);
+
   Future<List<BuyRequest>> getOpenRequests({bool forceRefresh = false}) async {
     if (!forceRefresh) {
       final cached = await CacheService.getBuyRequests();
       if (cached != null) {
-        return visibleToViewer(
+        return _openVisible(
             cached.map((json) => BuyRequest.fromJson(json, 'cache')).toList(),
             viewerUid());
       }
     }
-    final snap = await _col.where('status', isEqualTo: 'open').get();
+    final snap = await _col.get();
     final fetched =
         snap.docs.map((d) => BuyRequest.fromJson(d.data(), d.id)).toList();
     await CacheService.saveBuyRequests(fetched.map((r) => r.toJson()).toList());
-    return visibleToViewer([...fetched]..sort(_newestFirst), viewerUid());
+    return _openVisible(fetched, viewerUid());
   }
 
   Stream<List<BuyRequest>> getOpenRequestsStream() {
     final uid = viewerUid();
-    return _col
-        .where('status', isEqualTo: 'open')
-        .snapshots()
-        .map((s) {
+    // لا where('status', …) على الخادم: قاعدة Firestore تُسقط صامتًا أي وثيقة لا
+    // تملك الحقل المُصفَّى عليه، فيغيب معلّق أو مُعتمَد عن التبويب بلا أي خطأ،
+    // بينما لوحة الإدارة — التي تقرأ المجموعة كاملة — تُظهره.
+    return _col.snapshots().map((s) {
       final all =
           s.docs.map((d) => BuyRequest.fromJson(d.data(), d.id)).toList();
       // الكاش يُكتب من الستريم نفسه: فرع OfflineStreamBuilder عند انقطاع الشبكة
@@ -91,7 +95,7 @@ class BuyRequestService {
       // طلبات مخزنة» رغم موافقة الإدارة. الكتالوج كاملًا لا المرشَّح.
       unawaited(
           CacheService.saveBuyRequests(all.map((r) => r.toJson()).toList()));
-      return visibleToViewer(all, uid)..sort(_newestFirst);
+      return _openVisible(all, uid);
     });
   }
 

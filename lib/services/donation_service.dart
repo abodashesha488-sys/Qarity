@@ -61,35 +61,39 @@ class DonationService {
     return ref.id;
   }
 
+  static List<Donation> _availableVisible(List<Donation> items, String? uid) =>
+      visibleToViewer(items.where((d) => d.isAvailable).toList(), uid)
+        ..sort(_newestFirst);
+
   Future<List<Donation>> getAvailableDonations({bool forceRefresh = false}) async {
     if (!forceRefresh) {
       final cached = await CacheService.getDonations();
       if (cached != null) {
-        return visibleToViewer(
+        return _availableVisible(
             cached.map((json) => Donation.fromJson(json, 'cache')).toList(),
             viewerUid());
       }
     }
-    final snap = await _col.where('status', isEqualTo: 'available').get();
+    final snap = await _col.get();
     final fetched =
         snap.docs.map((d) => Donation.fromJson(d.data(), d.id)).toList();
     await CacheService.saveDonations(fetched.map((d) => d.toJson()).toList());
-    return visibleToViewer([...fetched]..sort(_newestFirst), viewerUid());
+    return _availableVisible(fetched, viewerUid());
   }
 
   Stream<List<Donation>> getAvailableDonationsStream() {
     final uid = viewerUid();
-    return _col
-        .where('status', isEqualTo: 'available')
-        .snapshots()
-        .map((s) {
+    // لا where('status', …) على الخادم: قاعدة Firestore تُسقط صامتًا أي وثيقة لا
+    // تملك الحقل المُصفَّى عليه، فيغيب معلّق أو مُعتمَد عن التبويب بلا أي خطأ،
+    // بينما لوحة الإدارة — التي تقرأ المجموعة كاملة — تُظهره.
+    return _col.snapshots().map((s) {
       final all = s.docs.map((d) => Donation.fromJson(d.data(), d.id)).toList();
       // الكاش يُكتب من الستريم نفسه: فرع OfflineStreamBuilder عند انقطاع الشبكة
       // يقرأ CacheService.getDonations() وحده، وبلا كتابة هنا يعرض «لا توجد
       // تبرعات مخزنة» رغم موافقة الإدارة. الكتالوج كاملًا لا المرشَّح.
       unawaited(
           CacheService.saveDonations(all.map((d) => d.toJson()).toList()));
-      return visibleToViewer(all, uid)..sort(_newestFirst);
+      return _availableVisible(all, uid);
     });
   }
 

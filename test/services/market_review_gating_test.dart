@@ -12,6 +12,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 String src(String path) => File(path).readAsStringSync();
 
+/// يُسقط تعليقات الأسطر ليبقى الكود وحده: التعليقات في خدمتَي «مطلوب / تبرعات»
+/// تسمّي مرشّح الحالة نهيًا عنها، فمسح النص كاملًا كان يثبّت ما ينفيه.
+String stripComments(String text) => text
+    .split('\n')
+    .map((line) {
+      final cut = line.indexOf('//');
+      return cut < 0 ? line : line.substring(0, cut);
+    })
+    .join('\n');
+
 /// يقطع جسم دالة من **نص** مصدري إلى أول سطر يبدأ بالوسم التالي (بإزاحة العضو
 /// الاعتيادية: سطرين). العقد سطر واحد لأن ملفات المستودع CRLF، فأي `contains`
 /// متعدد الأسطر لا يطابق.
@@ -608,6 +618,101 @@ void main() {
           reason: 'القصّ بالنافذة الثابتة كان يبتلع الكتلة التالية');
       expect(buy.contains('allow create'), true);
       expect(buy.contains('allow delete'), true);
+    });
+  });
+
+  group('قراءة التبويب بعد الاعتماد: الحالة كلاينتًا والكاش ملاذًا', () {
+    test('معتمد بلا حقل الحالة يصل إلى السوق، والمغلق وحده يُخفى', () async {
+      final fs = FakeFirebaseFirestore();
+      final bare = <String, dynamic>{
+        ...req(title: 'بلا حالة', approved: true).toJson(),
+      }..remove('status');
+      await fs.collection('buy_requests').add(bare);
+      await fs.collection('buy_requests').add(<String, dynamic>{
+        ...req(title: 'مغلق', approved: true).toJson(),
+        'status': 'closed',
+      });
+
+      final open = await BuyRequestService(fs).getOpenRequests(
+          forceRefresh: true);
+      expect(open.map((r) => r.title), ['بلا حالة'],
+          reason: 'غياب الحالة يعني «مفتوح» إرثيًا، فلا يُعاقب السجل بالاختفاء');
+      expect(bare.containsKey('status'), false);
+    });
+
+    test('نفس القراءة للتبرعات: بلا حالة = معروضة، ومنتهية = مخفية', () async {
+      final fs = FakeFirebaseFirestore();
+      final bare = <String, dynamic>{
+        ...don(title: 'بلا حالة', approved: true).toJson(),
+      }..remove('status');
+      await fs.collection('donations').add(bare);
+      await fs.collection('donations').add(<String, dynamic>{
+        ...don(title: 'تُبرع بها', approved: true).toJson(),
+        'status': 'donated',
+      });
+
+      final open = await DonationService(fs).getAvailableDonations(
+          forceRefresh: true);
+      expect(open.map((d) => d.title), ['بلا حالة']);
+    });
+
+    test('الستريم نفسه يقرأ المجموعة كاملة ثم يفرز كلاينتًا', () async {
+      final fs = FakeFirebaseFirestore();
+      await fs.collection('buy_requests').add(<String, dynamic>{
+        ...req(title: 'بلا حالة', approved: true).toJson(),
+      }..remove('status'));
+
+      final seen = await BuyRequestService(fs).getOpenRequestsStream().first;
+      expect(seen.map((r) => r.title), ['بلا حالة']);
+
+      final donSeen = await DonationService(fs)
+          .getAvailableDonationsStream()
+          .first;
+      expect(donSeen, isEmpty, reason: 'المجموعة خالية فلا قائمة مفبركة');
+    });
+
+    test('كود الخدمة لا يذكر مرشّح الحالة على الخادم في أي من المجموعتين', () {
+      for (final file in [
+        'lib/services/buy_request_service.dart',
+        'lib/services/donation_service.dart',
+      ]) {
+        final code = stripComments(src(file));
+        expect(code, isNot(contains("where('status'")),
+            reason: 'مساواة على حقل قد يغيب تُسقط الوثيقة صامتًا فتغيب عن '
+                'التبويب بينما اللوحة الحيّة تقرأ المجموعة كاملة');
+        expect(code, contains('_col.snapshots()'));
+        expect(code, contains('_col.get()'));
+      }
+    });
+
+    test('التبويبان يقرأان الستريم أولًا ولا يستسلمان للراية العالقة', () {
+      final tab = src('lib/features/market/market_tab_buy_donate.dart');
+      expect(RegExp('cacheFirst: false').allMatches(tab).length, 2,
+          reason: 'موضعان فقط في الملف: «مطلوب» و«تبرعات»');
+      for (final marker in [
+        'OfflineStreamBuilder<List<BuyRequest>>(',
+        'OfflineStreamBuilder<List<Donation>>(',
+      ]) {
+        final from = tab.indexOf(marker);
+        expect(from, isNonNegative, reason: 'لا وجود لـ$marker');
+        final body = tab.substring(from);
+        expect(body.indexOf('cacheFirst: false'), lessThan(
+            body.indexOf('onlineBuilder:')),
+            reason: 'الوسيط يجب أن يسبق الفرعين ليطبّق عليهما');
+      }
+    });
+
+    test('فرع cacheFirst=false لا يستشير الشبكة أبدًا', () {
+      final w = src('lib/widgets/offline_stream_builder.dart');
+      final start = w.indexOf('if (!widget.cacheFirst) {');
+      expect(start, isNonNegative);
+      final branch =
+          w.substring(start, w.indexOf('return StreamBuilder<bool>(', start));
+      expect(branch, contains('StreamBuilder<T>('));
+      expect(branch, isNot(contains('ConnectivityManager')),
+          reason: 'لا بوابة اتصال تُعلَق فتُرسم لقطة أقدم من قرار الإدارة');
+      expect(branch, isNot(contains('cacheBuilder(')),
+          reason: 'الكاش يبقى ملاذ ما قبل أول انبعاثة داخل _onlineView');
     });
   });
 }
