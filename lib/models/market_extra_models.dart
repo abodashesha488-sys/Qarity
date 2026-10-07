@@ -120,6 +120,7 @@ class BuyRequest {
   final String budget;
   final List<String> imageUrls;
   final String status; // open | closed
+  final bool isApproved;
   final String? userRole;
   final String? userSellerType;
   final DateTime? createdAt;
@@ -133,6 +134,7 @@ class BuyRequest {
     this.budget = '',
     this.imageUrls = const [],
     this.status = 'open',
+    this.isApproved = false,
     this.userRole,
     this.userSellerType,
     this.createdAt,
@@ -149,6 +151,7 @@ class BuyRequest {
       imageUrls:
           (json['imageUrls'] as List<dynamic>?)?.cast<String>() ?? const [],
       status: json['status'] as String? ?? 'open',
+      isApproved: json['isApproved'] as bool? ?? true,
       userRole: json['userRole'] as String?,
       userSellerType: json['userSellerType'] as String?,
       createdAt: json['createdAt'] != null ? tsOrNow(json['createdAt']) : null,
@@ -163,6 +166,7 @@ class BuyRequest {
         'budget': budget,
         'imageUrls': imageUrls,
         'status': status,
+        'isApproved': isApproved,
         if (userRole != null) 'userRole': userRole,
         if (userSellerType != null) 'userSellerType': userSellerType,
         'createdAt': createdAt != null
@@ -187,6 +191,7 @@ class Donation {
   final List<String> imageUrls;
   final String contactPhone;
   final String status; // available | donated
+  final bool isApproved;
   final String? userRole;
   final String? userSellerType;
   final DateTime? createdAt;
@@ -201,6 +206,7 @@ class Donation {
     this.imageUrls = const [],
     this.contactPhone = '',
     this.status = 'available',
+    this.isApproved = false,
     this.userRole,
     this.userSellerType,
     this.createdAt,
@@ -218,6 +224,7 @@ class Donation {
           (json['imageUrls'] as List<dynamic>?)?.cast<String>() ?? const [],
       contactPhone: json['contactPhone'] as String? ?? '',
       status: json['status'] as String? ?? 'available',
+      isApproved: json['isApproved'] as bool? ?? true,
       userRole: json['userRole'] as String?,
       userSellerType: json['userSellerType'] as String?,
       createdAt: json['createdAt'] != null ? tsOrNow(json['createdAt']) : null,
@@ -233,6 +240,7 @@ class Donation {
         'imageUrls': imageUrls,
         'contactPhone': contactPhone,
         'status': status,
+        'isApproved': isApproved,
         if (userRole != null) 'userRole': userRole,
         if (userSellerType != null) 'userSellerType': userSellerType,
         'createdAt': createdAt != null

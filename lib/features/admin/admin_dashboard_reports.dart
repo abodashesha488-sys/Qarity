@@ -245,7 +245,9 @@ class _ReportsPageState extends State<_ReportsPage> {
     final topProducts =
         _reportData['topProducts'] as List<Map<String, dynamic>>? ?? [];
     final items = <_StatItem>[
-      _StatItem('المنتجات', '${stats['products'] ?? 0}', Icons.store_rounded,
+      // المفتاح الحقيقي في `getStatistics()` هو اسم المجموعة (`market_products`)
+      // لا `products`، وكانت البطاقة تُطبع صفرًا أبدًا من هذا الخطأ وحده.
+      _StatItem('المنتجات', '${stats['market_products'] ?? 0}', Icons.store_rounded,
           Colors.deepPurple),
       _StatItem('المحلات', '${stats['shops'] ?? 0}', Icons.storefront_rounded,
           Colors.amber),

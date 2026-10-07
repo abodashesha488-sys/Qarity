@@ -17,6 +17,21 @@ class DonationService {
   CollectionReference<Map<String, dynamic>> get _col =>
       _firestore.collection('donations');
 
+  static String? viewerUid() {
+    try {
+      return FirebaseAuth.instance.currentUser?.uid;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static List<Donation> visibleToViewer(List<Donation> items, String? uid) {
+    final mine = uid != null && uid.isNotEmpty;
+    return items
+        .where((d) => d.isApproved || (mine && d.userId == uid))
+        .toList();
+  }
+
   Future<String> create(Donation donation) async {
     String? uid;
     try {
@@ -24,7 +39,9 @@ class DonationService {
     } catch (_) {
       // FirebaseAuth not initialized (e.g., in tests)
     }
-    final ref = await _col.add(donation.toJson());
+    // الاعتماد قرار إداري محض: تُجبر الوثيقة على التعليق مهما حمل نموذج الجهاز،
+    // فالقواعد ترفض ذلك على الخادم لكن الكاش المحلي لا يمرّ بها.
+    final ref = await _col.add(donation.toJson()..['isApproved'] = false);
     await CacheService.invalidateDonations();
     unawaited(RemotePushService.notifyAdmins('donations'));
     await NotificationService.showLocalNotification(
@@ -48,26 +65,30 @@ class DonationService {
     if (!forceRefresh) {
       final cached = await CacheService.getDonations();
       if (cached != null) {
-        return cached.map((json) => Donation.fromJson(json, 'cache')).toList();
+        return visibleToViewer(
+            cached.map((json) => Donation.fromJson(json, 'cache')).toList(),
+            viewerUid());
       }
     }
     final snap = await _col.where('status', isEqualTo: 'available').get();
-    final donations = snap.docs.map((d) => Donation.fromJson(d.data(), d.id)).toList()
-      ..sort((a, b) => (b.createdAt ?? DateTime(1970)).compareTo(a.createdAt ?? DateTime(1970)));
-    await CacheService.saveDonations(donations.map((d) => d.toJson()).toList());
-    return donations;
+    final fetched =
+        snap.docs.map((d) => Donation.fromJson(d.data(), d.id)).toList();
+    await CacheService.saveDonations(fetched.map((d) => d.toJson()).toList());
+    return visibleToViewer([...fetched]..sort(_newestFirst), viewerUid());
   }
 
   Stream<List<Donation>> getAvailableDonationsStream() {
+    final uid = viewerUid();
     return _col
         .where('status', isEqualTo: 'available')
         .snapshots()
-        .map((s) => s.docs
-            .map((d) => Donation.fromJson(d.data(), d.id))
-            .toList()
-          ..sort((a, b) => (b.createdAt ?? DateTime(1970))
-              .compareTo(a.createdAt ?? DateTime(1970))));
+        .map((s) => visibleToViewer(
+            s.docs.map((d) => Donation.fromJson(d.data(), d.id)).toList(), uid)
+          ..sort(_newestFirst));
   }
+
+  static int _newestFirst(Donation a, Donation b) =>
+      (b.createdAt ?? DateTime(1970)).compareTo(a.createdAt ?? DateTime(1970));
 
   Stream<List<Donation>> getMyDonationsStream(String userId) {
     return _col

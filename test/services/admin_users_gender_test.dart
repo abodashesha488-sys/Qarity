@@ -181,6 +181,31 @@ void main() {
       expect(File('lib/core/utils/user_gender_groups.dart').readAsStringSync(),
           contains('if (g == kGenderMale) return kGenderGroupMale;'));
     });
+
+    test('البحث سطرٌ كامل العرض وحده والرقائق في Wrap', () {
+      final bar = src.substring(src.indexOf('// ── شريط الأدوات'),
+          src.indexOf('// ── قائمة المستخدمين'));
+      final head = bar.substring(bar.indexOf('child: Column('),
+          bar.indexOf('Wrap('));
+      // القياس الحيّ على 390dp: كان Expanded(TextField) يترك للبحث 38.20dp،
+      // و8.62dp مع أطول تسمية دور «أدمن مساعد» + «RenderFlex overflowed by
+      // 5.9 pixels» — أي دائرة عدسة بلا تلميح. الآن search=358.00 وoverflow=0.
+      expect(head, contains("key: const Key('users-search-field')"));
+      expect(head, isNot(contains('Expanded(')),
+          reason: 'المرن في الصف كان هو من ينضغط حتى يختفي الحقل');
+      expect(head, isNot(contains('Row(')),
+          reason: 'البحث فوق الرقائق لا بجانبها');
+      expect(bar, contains("key: const Key('users-tools-row')"));
+      expect(bar.indexOf('Wrap('), lessThan(bar.indexOf('Tooltip(')),
+          reason: 'الرقائق أبناء لـWrap فتلتفّ أسطرًا إن طالت التسميات');
+      expect(bar, contains('spacing: 8,'));
+      expect(bar, contains('runSpacing: 8,'));
+      expect(bar, isNot(contains('Expanded(')),
+          reason: 'لا شيء في الشريط كله يعود إلى التقلّص');
+      // الحشو الرأسي يطابق ثيم الحقول (14) فلا يُبتر المظهر المعبّأ الموروث.
+      expect(bar, contains('horizontal: 16, vertical: 14'),
+          reason: 'الارتفاع المقيس 44.00dp بدل 40.00 المضغوط');
+    });
   });
 
   group('البند ٥: وسم النوع الفردي', () {

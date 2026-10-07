@@ -275,30 +275,33 @@ class _UsersPageState extends State<_UsersPage> {
               ),
               child: Column(
                 children: [
-                  Row(
+                  // البحث سطرٌ كامل العرض وحده: في صفٍّ واحد مع الرقائق الثلاث
+                  // كان يتقلّص إلى 38dp (وإلى 8.6dp مع أطول تسمية دور «أدمن
+                  // مساعد» فيفيض الصف) فلا يظهر منه إلا دائرة العدسة بلا التلميح.
+                  TextField(
+                    key: const Key('users-search-field'),
+                    controller: _search,
+                    onChanged: (_) => setState(() {}),
+                    textInputAction: TextInputAction.search,
+                    decoration: InputDecoration(
+                      hintText: 'ابحث بالاسم أو البريد أو الهاتف...',
+                      isDense: true,
+                      prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                      suffixIcon: q.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear_rounded, size: 18),
+                              onPressed: () => _search.clear())
+                          : null,
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 14),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    key: const Key('users-tools-row'),
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
-                      // بحث
-                      Expanded(
-                        child: TextField(
-                          controller: _search,
-                          onChanged: (_) => setState(() {}),
-                          decoration: InputDecoration(
-                            hintText: 'ابحث بالاسم أو البريد أو الهاتف...',
-                            isDense: true,
-                            prefixIcon:
-                                const Icon(Icons.search_rounded, size: 20),
-                            suffixIcon: q.isNotEmpty
-                                ? IconButton(
-                                    icon: const Icon(Icons.clear_rounded,
-                                        size: 18),
-                                    onPressed: () => _search.clear())
-                                : null,
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 12),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
                       // تصفية
                       Tooltip(
                         message: 'تصفية حسب الدور',
@@ -346,7 +349,6 @@ class _UsersPageState extends State<_UsersPage> {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
                       // ترتيب
                       Tooltip(
                         message: 'ترتيب النتائج',
@@ -408,7 +410,6 @@ class _UsersPageState extends State<_UsersPage> {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
                       // تصدير
                       PopupMenuButton<String>(
                         onSelected: _handleExport,

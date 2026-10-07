@@ -173,6 +173,8 @@ class AdminService {
       'forum_posts',
       'seller_requests',
       'shops',
+      'buy_requests',
+      'donations',
       'phone_directory',
       'service_providers',
       'lost_items',
@@ -775,6 +777,12 @@ class AdminService {
           '/services/lost-items'
         ),
       'shops' => ('🏬 محل جديد في السوق', preview, '/market'),
+      // «مطلوب» و«تبرعات»: عنوان صحيح ومسار صحيح في جرس الأدمن وصندوق
+      // إشعاراته، **بلا موضوع قرية** — لم يطلب المستخدم بثّ كل إضافة إلى
+      // آلاف الأجهزة، فبقي الظهور في تبويب السوق كما هو الحال مع
+      // `legal_consultations` (المرجع في `kPushTopicForCollection`).
+      'buy_requests' => ('🛍️ طلب شراء جديد (مطلوب)', preview, '/market'),
+      'donations' => ('🎁 تبرع جديد في السوق', preview, '/market'),
       'village_ads' => ('📢 إعلان جديد في القرية', preview, '/ads'),
       'lawyers' => ('⚖️ محامٍ جديد في السجل', preview, '/legal'),
       'legal_consultations' => ('⚖️ استشارة قانونية جديدة', preview, '/legal'),
@@ -869,6 +877,10 @@ class AdminService {
       CacheService.invalidatePhoneDirectory();
     } else if (collection == 'shops') {
       CacheService.invalidateShops();
+    } else if (collection == 'buy_requests') {
+      CacheService.invalidateBuyRequests();
+    } else if (collection == 'donations') {
+      CacheService.invalidateDonations();
     }
   }
 
@@ -917,6 +929,8 @@ class AdminService {
       _pendingCountOnce('village_ads'),
       _pendingCountOnce('lawyers'),
       _pendingCountOnce('legal_consultations'),
+      _pendingCountOnce('buy_requests'),
+      _pendingCountOnce('donations'),
     ]);
     return {
       'news': results[0],
@@ -939,6 +953,8 @@ class AdminService {
       'village_ads': results[17],
       'lawyers': results[18],
       'legal_consultations': results[19],
+      'buy_requests': results[20],
+      'donations': results[21],
     };
   }
 

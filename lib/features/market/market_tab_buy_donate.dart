@@ -198,7 +198,7 @@ class _BuyRequestsTabState extends State<_BuyRequestsTab> {
 
   @override
   Widget build(BuildContext context) {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = BuyRequestService.viewerUid();
     return OfflineStreamBuilder<List<BuyRequest>>(
       stream: _service.getOpenRequestsStream(),
       onlineBuilder: (context, snapshot) {
@@ -221,8 +221,11 @@ class _BuyRequestsTabState extends State<_BuyRequestsTab> {
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
-          final items =
-              (snapshot.data ?? []).map((j) => BuyRequest.fromJson(j, 'cache')).toList();
+          final items = BuyRequestService.visibleToViewer(
+              (snapshot.data ?? [])
+                  .map((j) => BuyRequest.fromJson(j, 'cache'))
+                  .toList(),
+              uid);
           if (items.isEmpty) {
             return const _TabEmpty(
                 icon: Icons.request_quote_rounded, message: 'لا توجد طلبات مخزنة');
@@ -289,7 +292,9 @@ class _BuyRequestsTabState extends State<_BuyRequestsTab> {
                             const SizedBox(width: 6),
                             _StatusChip(
                                 label: mine
-                                    ? 'طلبك • ${r.statusLabel}'
+                                    ? (r.isApproved
+                                        ? 'طلبك • ${r.statusLabel}'
+                                        : 'طلبك • بانتظار موافقة الإدارة')
                                     : r.statusLabel,
                                 color: _buyAccent),
                           ],
@@ -392,7 +397,7 @@ class _BuyRequestDetailPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final r = request;
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = BuyRequestService.viewerUid();
     final mine = uid != null && r.userId == uid;
 
     return Scaffold(
@@ -446,7 +451,11 @@ class _BuyRequestDetailPage extends StatelessWidget {
                     style: const TextStyle(
                         fontWeight: FontWeight.w900, fontSize: 19)),
               ),
-              _StatusChip(label: r.statusLabel, color: _buyAccent),
+              _StatusChip(
+                  label: mine && !r.isApproved
+                      ? 'بانتظار موافقة الإدارة'
+                      : r.statusLabel,
+                  color: _buyAccent),
             ],
           ),
           const SizedBox(height: 10),
@@ -579,7 +588,7 @@ class _DonationsTabState extends State<_DonationsTab> {
 
   @override
   Widget build(BuildContext context) {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = DonationService.viewerUid();
     return OfflineStreamBuilder<List<Donation>>(
       stream: _service.getAvailableDonationsStream(),
       onlineBuilder: (context, snapshot) {
@@ -602,9 +611,11 @@ class _DonationsTabState extends State<_DonationsTab> {
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
-          final items = (snapshot.data ?? [])
-              .map((j) => Donation.fromJson(j, 'cache'))
-              .toList();
+          final items = DonationService.visibleToViewer(
+              (snapshot.data ?? [])
+                  .map((j) => Donation.fromJson(j, 'cache'))
+                  .toList(),
+              uid);
           if (items.isEmpty) {
             return const _TabEmpty(
                 icon: Icons.volunteer_activism_rounded,
@@ -665,7 +676,9 @@ class _DonationsTabState extends State<_DonationsTab> {
                             const SizedBox(width: 6),
                             _StatusChip(
                                 label: mine
-                                    ? 'تبرعك • ${d.statusLabel}'
+                                    ? (d.isApproved
+                                        ? 'تبرعك • ${d.statusLabel}'
+                                        : 'تبرعك • بانتظار موافقة الإدارة')
                                     : d.statusLabel,
                                 color: _donateInk),
                           ],
@@ -811,7 +824,7 @@ class _DonationDetailPageState extends State<_DonationDetailPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final d = widget.donation;
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = DonationService.viewerUid();
     final mine = uid != null && d.userId == uid;
 
     return Scaffold(
@@ -843,7 +856,11 @@ class _DonationDetailPageState extends State<_DonationDetailPage> {
                     style: const TextStyle(
                         fontWeight: FontWeight.w900, fontSize: 19)),
               ),
-              _StatusChip(label: d.statusLabel, color: _donateInk),
+              _StatusChip(
+                  label: mine && !d.isApproved
+                      ? 'بانتظار موافقة الإدارة'
+                      : d.statusLabel,
+                  color: _donateInk),
             ],
           ),
           const SizedBox(height: 10),

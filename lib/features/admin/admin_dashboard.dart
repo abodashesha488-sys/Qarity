@@ -110,6 +110,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         filterField: 'category',
         filterValues: {kMedicalSuppliesCategory}),
     const _Cat('shops', 'المحلات', Icons.storefront_rounded, Colors.amber),
+    // «مطلوب» و«تبرعات» تبويبا سوق القرية: مجموعتان حقيقيتان (`buy_requests`
+    // و`donations`) تملكان `isApproved` مثل بقية المحتوى، فمراجعهما هنا هي
+    // البوابة الوحيدة لظهورهما للعامة.
+    const _Cat('buy_requests', 'المطلوب', Icons.request_quote_rounded,
+        Color(0xFF0288D1)),
+    const _Cat('donations', 'التبرعات', Icons.redeem_rounded, Color(0xFFE64A19)),
     const _Cat('obituaries', 'العزاء', Icons.volunteer_activism_rounded,
         Colors.indigo),
     const _Cat('occasions', 'المناسبات', Icons.celebration_rounded, Colors.teal),

@@ -363,6 +363,10 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
       'subtitle': 'المحتوى',
       'description': 'الوصف',
       'message': 'الرسالة',
+      'details': 'التفاصيل',
+      'budget': 'الميزانية',
+      'contactPhone': 'هاتف التواصل',
+      'status': 'الحالة',
       'deceasedName': 'اسم المتوفى',
       'location': 'الموقع',
       'date': 'التاريخ',
@@ -414,6 +418,10 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
         return Icons.store_rounded;
       case 'shops':
         return Icons.storefront_rounded;
+      case 'buy_requests':
+        return Icons.request_quote_rounded;
+      case 'donations':
+        return Icons.redeem_rounded;
       case 'obituaries':
         return Icons.grade_rounded;
       case 'occasions':
@@ -451,6 +459,10 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
         return 'منتج';
       case 'shops':
         return 'محل';
+      case 'buy_requests':
+        return 'طلب شراء (مطلوب)';
+      case 'donations':
+        return 'تبرع بسلعة';
       case 'obituaries':
         return 'عزاء';
       case 'occasions':

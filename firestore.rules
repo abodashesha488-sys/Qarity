@@ -479,20 +479,44 @@ service cloud.firestore {
       allow delete: if isAdmin() || ownerDelete(resource.data.ownerUid);
     }
 
-    // سلع مطلوبة
+    // سلع مطلوبة (تبويب «مطلوب» في سوق القرية) — كل طلب يبدأ غير معتمد ومن
+    // صاحبه نفسه، والاعتماد قرار إداري لا يملك المالك كتابته لنفسه.
     match /buy_requests/{docId} {
       allow list, get: if true;
-      allow create: if accountActive() && request.auth.uid == request.resource.data.userId;
-      allow update: if isAdmin() || resource.data.userId == request.auth.uid;
-      allow delete: if isAdmin() || resource.data.userId == request.auth.uid;
+      allow create: if accountActive()
+                    && request.auth.uid == request.resource.data.userId
+                    && request.resource.data.isApproved == false;
+      // الأدمن: مراجعة كاملة. المالك: يبدّل حالته (مفتوح/مغلق) بعد الاعتماد —
+      // حالة لا تعدّل المضمون فلا تستحق مراجعة ثانية، أو يزامن اسمه المطبّق من
+      // ملفه، أو يعدّل طلبَه في أي وقت فيعود للمراجعة دون لمس نسبه، ويحذفه فورًا.
+      allow update: if isAdmin()
+                    || (accountActive() && resource.data.userId == request.auth.uid
+                        && request.resource.data.diff(resource.data)
+                             .affectedKeys().hasOnly(['status']))
+                    || (accountActive() && resource.data.userId == request.auth.uid
+                        && request.resource.data.diff(resource.data)
+                             .affectedKeys().hasOnly(['userName']))
+                    || ownerEdit(resource.data.userId, request.resource.data.userId);
+      allow delete: if isAdmin() || ownerDelete(resource.data.userId);
     }
 
-    // تبرعات
+    // تبرعات (تبويب «تبرعات» في سوق القرية) — نفس عقد «مطلوب» حرفيًا.
     match /donations/{docId} {
       allow list, get: if true;
-      allow create: if accountActive() && request.auth.uid == request.resource.data.userId;
-      allow update: if isAdmin() || resource.data.userId == request.auth.uid;
-      allow delete: if isAdmin() || resource.data.userId == request.auth.uid;
+      allow create: if accountActive()
+                    && request.auth.uid == request.resource.data.userId
+                    && request.resource.data.isApproved == false;
+      // الحالة هنا هي «متاحة/تم التبرع بها» لا قرار الإدارة، فليست مقيّدة
+      // بالاعتماد حتى تبقى بطاقة «تبرعاتي» عاملة بعد النشر.
+      allow update: if isAdmin()
+                    || (accountActive() && resource.data.userId == request.auth.uid
+                        && request.resource.data.diff(resource.data)
+                             .affectedKeys().hasOnly(['status']))
+                    || (accountActive() && resource.data.userId == request.auth.uid
+                        && request.resource.data.diff(resource.data)
+                             .affectedKeys().hasOnly(['userName']))
+                    || ownerEdit(resource.data.userId, request.resource.data.userId);
+      allow delete: if isAdmin() || ownerDelete(resource.data.userId);
     }
 
     // ───────────────────────── سجل الأسعار ─────────────────────────
