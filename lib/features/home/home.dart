@@ -657,9 +657,9 @@ class _HeroHeader extends StatelessWidget {
           Positioned.fill(
             child: ColoredBox(color: AppColors.primaryDark),
           ),
-          // 2) راية القرية الخضراء — كما هي بلا أي حجابات أو تأثيرات
+          // 2) صورة الهيدر (heder.jpg) — كما هي بلا أي حجابات أو تأثيرات
           Positioned.fill(
-            child: Image.asset('assets/images/0.jpg',
+            child: Image.asset('assets/images/heder.jpg',
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => const SizedBox.shrink()),
           ),

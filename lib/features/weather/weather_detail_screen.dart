@@ -53,6 +53,46 @@ class _WeatherDetailScreenState extends State<WeatherDetailScreen> {
     return dt.format24h();
   }
 
+  /// أرضية موحّدة لكل بطاقات الشاشة: زجاجية فوق الأزرق الداكن.
+  BoxDecoration get _panel => BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+      );
+
+  /// عنوان قسم موحّد: شريط ذهبي قصير + عنوان سميك + ملاحظة اختيارية.
+  Widget _sectionTitle(String title, {String? note}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 4,
+              height: 18,
+              decoration: BoxDecoration(
+                color: AppColors.headerAccent,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(title,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15.5,
+                    fontWeight: FontWeight.w900)),
+          ],
+        ),
+        if (note != null) ...[
+          const SizedBox(height: 4),
+          Text(note,
+              style: const TextStyle(
+                  fontSize: 10.5, color: Colors.white70, height: 1.3)),
+        ],
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -95,27 +135,25 @@ class _WeatherDetailScreenState extends State<WeatherDetailScreen> {
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
                     children: [
+                      _sectionTitle('الآن في القرية'),
+                      const SizedBox(height: 10),
                       _hero(theme),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 20),
+                      _sectionTitle('تفاصيل الحالة'),
+                      const SizedBox(height: 10),
                       _detailsGrid(theme),
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 20),
+                      _sectionTitle('الطقس اليوم'),
+                      const SizedBox(height: 10),
                       _astroRow(theme),
-                      const SizedBox(height: 18),
-                      Text('الأيام القادمة',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white)),
-                      const SizedBox(height: 4),
-                      Text('تجميع يومي من بيانات كل ٣ ساعات (متاح ~٥ أيام من الخدمة المجانية)',
-                          style: theme.textTheme.labelSmall
-                              ?.copyWith(color: Colors.white54)),
+                      const SizedBox(height: 20),
+                      _sectionTitle('الأيام القادمة',
+                          note:
+                              'تجميع يومي من بيانات كل ٣ ساعات (متاح ~٥ أيام من الخدمة المجانية)'),
                       const SizedBox(height: 10),
                       _dailyList(theme),
-                      const SizedBox(height: 18),
-                      Text('توقع الساعات القادمة',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white)),
+                      const SizedBox(height: 20),
+                      _sectionTitle('توقع الساعات القادمة'),
                       const SizedBox(height: 10),
                       _forecastList(theme),
                     ],
@@ -176,8 +214,8 @@ class _WeatherDetailScreenState extends State<WeatherDetailScreen> {
                       WeatherFormat.iconUrl(weather['icon'], big: true),
                   width: 100,
                   height: 100,
-                  errorWidget: (_, __, ___) => const Icon(
-                      Icons.cloud_rounded,
+                  errorWidget: (_, __, ___) => Icon(
+                      WeatherFormat.iconGlyph(weather['icon']),
                       size: 72,
                       color: Colors.white)),
             ],
@@ -247,11 +285,7 @@ class _WeatherDetailScreenState extends State<WeatherDetailScreen> {
   Widget _tile(ThemeData theme, IconData icon, String label, String value) {
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
-      ),
+      decoration: _panel,
       child: Row(
         children: [
           Icon(icon, size: 18, color: Colors.white),
@@ -280,35 +314,69 @@ class _WeatherDetailScreenState extends State<WeatherDetailScreen> {
 
   Widget _astroRow(ThemeData theme) {
     final sys = (_current!['sys'] as Map?) ?? const {};
+    final w = (_current!['weather'] as List).first as Map;
+    final iconId = (w['icon'] ?? '').toString();
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+      decoration: _panel,
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _astro(Icons.wb_sunny_rounded, 'الشروق',
-              sys['sunrise'] != null ? _fmtTime(sys['sunrise']) : '—'),
-          _astro(Icons.nights_stay_rounded, 'الغروب',
-              sys['sunset'] != null ? _fmtTime(sys['sunset']) : '—'),
-          _astro(Icons.cloud_queue_rounded, 'الطقس',
-              (_current!['weather'] as List).first['main'] ?? ''),
+          Expanded(
+            child: _astro(
+              const Icon(Icons.wb_sunny_rounded,
+                  color: Colors.white, size: 22),
+              'الشروق',
+              sys['sunrise'] != null ? _fmtTime(sys['sunrise']) : '—',
+            ),
+          ),
+          _astroDivider(),
+          Expanded(
+            child: _astro(
+              const Icon(Icons.nights_stay_rounded,
+                  color: Colors.white, size: 22),
+              'الغروب',
+              sys['sunset'] != null ? _fmtTime(sys['sunset']) : '—',
+            ),
+          ),
+          _astroDivider(),
+          Expanded(
+            child: _astro(
+              // أيقونة الحالة كما يقدّمها المزود نفسه — لا رمز مختار يدويًا
+              CachedNetworkImage(
+                  imageUrl: WeatherFormat.iconUrl(iconId),
+                  width: 28,
+                  height: 28,
+                  errorWidget: (_, __, ___) => Icon(
+                      WeatherFormat.iconGlyph(iconId),
+                      color: Colors.white,
+                      size: 22)),
+              'الحالة',
+              WeatherFormat.conditionAr(
+                  iconId, (w['description'] ?? '').toString()),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _astro(IconData icon, String label, String value) => Column(
+  Widget _astroDivider() => Container(
+        width: 1,
+        height: 34,
+        color: Colors.white.withValues(alpha: 0.18),
+      );
+
+  Widget _astro(Widget icon, String label, String value) => Column(
         children: [
-          Icon(icon, color: Colors.white, size: 22),
+          SizedBox(height: 28, child: Center(child: icon)),
           const SizedBox(height: 6),
           Text(label,
               style:
                   const TextStyle(fontSize: 11, color: Colors.white70)),
           Text(value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
               style: const TextStyle(
                   color: Colors.white, fontWeight: FontWeight.w800)),
         ],
@@ -385,11 +453,7 @@ class _WeatherDetailScreenState extends State<WeatherDetailScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
-      ),
+      decoration: _panel,
       child: Row(
         children: [
           SizedBox(
@@ -412,8 +476,8 @@ class _WeatherDetailScreenState extends State<WeatherDetailScreen> {
               imageUrl: WeatherFormat.iconUrl(w['icon']),
               width: 42,
               height: 42,
-              errorWidget: (_, __, ___) =>
-                  const Icon(Icons.cloud_rounded, color: Colors.white)),
+              errorWidget: (_, __, ___) => Icon(
+                  WeatherFormat.iconGlyph(w['icon']), color: Colors.white)),
           const SizedBox(width: 8),
           Expanded(
             child: Text((w['description'] ?? '').toString(),
@@ -443,9 +507,7 @@ class _WeatherDetailScreenState extends State<WeatherDetailScreen> {
     if (list.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(14)),
+        decoration: _panel,
         child: Center(
           child: Text('لا تتوفر بيانات التوقع',
               style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70)),
@@ -466,12 +528,7 @@ class _WeatherDetailScreenState extends State<WeatherDetailScreen> {
           return Container(
             width: 78,
             padding: const EdgeInsets.symmetric(vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(14),
-              border:
-                  Border.all(color: Colors.white.withValues(alpha: 0.18)),
-            ),
+            decoration: _panel,
             child: Column(
               children: [
                 Text(_fmtTime((it['dt'] as num).toInt()),
@@ -482,8 +539,9 @@ class _WeatherDetailScreenState extends State<WeatherDetailScreen> {
                     imageUrl: WeatherFormat.iconUrl(w['icon']),
                     width: 40,
                     height: 40,
-                    errorWidget: (_, __, ___) =>
-                        const Icon(Icons.cloud_rounded, color: Colors.white)),
+                    errorWidget: (_, __, ___) => Icon(
+                        WeatherFormat.iconGlyph(w['icon']),
+                        color: Colors.white)),
                 const SizedBox(height: 4),
                 Text('${(main['temp'] as num).round()}°',
                     style: const TextStyle(

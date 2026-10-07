@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -142,6 +143,55 @@ class WeatherFormat {
   }
 
   static String pressureHpa(num hpa) => '${hpa.round()} hPa';
+
+  /// سلة الحالة من مفتاح أيقونة المزود — مصدر واحد للتسمية ولرمز الرجوع،
+  /// فالتسميات والرموز لا تتفارق عند إضافة مفتاح جديد.
+  static String _bucketOf(String? iconId) {
+    if (iconId == null || iconId.length < 2) return 'other';
+    return switch (iconId.substring(0, 2)) {
+      '01' => 'sun',
+      '02' => 'few',
+      '03' => 'cloud',
+      '04' => 'overcast',
+      '09' || '10' => 'rain',
+      '11' => 'storm',
+      '13' => 'snow',
+      '50' => 'fog',
+      _ => 'other',
+    };
+  }
+
+  /// الحالة بالعربية من مفتاح أيقونة المزود، مع رجوع صادق إلى وصفه العربي.
+  static String conditionAr(String? iconId, String? apiDesc) {
+    final label = switch (_bucketOf(iconId)) {
+      'sun' => 'مشمس',
+      'few' => 'غائم جزئيًا',
+      'cloud' => 'غائم',
+      'overcast' => 'غائم كليًا',
+      'rain' => 'ممطر',
+      'storm' => 'عاصفة رعدية',
+      'snow' => 'ثلوج',
+      'fog' => 'ضباب',
+      _ => '',
+    };
+    if (label.isNotEmpty) return label;
+    final desc = apiDesc?.trim();
+    return (desc == null || desc.isEmpty) ? '—' : desc;
+  }
+
+  /// رمز يرجع محل صورة المزود عند تعذّرها — لكل حالة رمزها، فلا سحابة واحدة
+  /// تُخفي اختلاف الطقس بين المشمس والثلج.
+  static IconData iconGlyph(String? iconId) => switch (_bucketOf(iconId)) {
+        'sun' => Icons.wb_sunny_rounded,
+        'few' => Icons.wb_cloudy_rounded,
+        'cloud' => Icons.cloud_rounded,
+        'overcast' => Icons.cloud_queue_rounded,
+        'rain' => Icons.water_drop_rounded,
+        'storm' => Icons.thunderstorm_rounded,
+        'snow' => Icons.ac_unit_rounded,
+        'fog' => Icons.blur_on_rounded,
+        _ => Icons.cloud_rounded,
+      };
 
   static String visibility(num m) =>
       m >= 1000 ? '${(m / 1000).toStringAsFixed(1)} كم' : '${m.round()} م';

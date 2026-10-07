@@ -407,6 +407,166 @@ void main() {
     });
   });
 
+  group('السجل الذي بلا الحقل يبقى قابلًا للقرار', () {
+    /// وثيقة كُتبت قبل بوابة الاعتماد: لا تحمل `isApproved` إطلاقًا. كانت
+    /// استعلامات اللوحة (`where isEqualTo: false`) تُسقطها صامتة فلا تصل
+    /// للمراجعة أبدًا، بينما يقرأها النموذج `true` فتظهر في السوق.
+    Future<void> seedLegacy(FirebaseFirestore fs, String collection,
+        String title, String status) async {
+      await fs.collection(collection).add({
+        'title': title,
+        'status': status,
+        'userId': 'u9',
+        'userName': 'مصري القرية',
+        'createdAt': Timestamp.fromDate(_seedAt),
+      });
+    }
+
+    test('طابور المراجعة يرى المعلّق بلا حقل ويخرج بعد الاعتماد', () async {
+      final fs = FakeFirebaseFirestore();
+      await seedLegacy(fs, 'buy_requests', 'طمّام قديم', 'open');
+      await seedLegacy(fs, 'donations', 'بطانية قديمة', 'available');
+      final admin = AdminService.withFirestore(fs);
+
+      final pendingBuy =
+          await admin.itemsStream('buy_requests', pendingOnly: true).first;
+      expect(pendingBuy, hasLength(1),
+          reason: 'غياب الحقل كان يُسقط الوثيقة من الاستعلام المرتَّب عليها');
+      expect(pendingBuy.single['title'], 'طمّام قديم');
+
+      final counts = await admin.fetchPendingCounts();
+      expect(counts['buy_requests'], 1);
+      expect(counts['donations'], 1);
+
+      // كل انبعاثة تُطلقها مجموعةٌ وصول بياناتها، فلا تُقرأ القائمة الموحّدة
+      // من أولها — اللوحة تستمع حيًّا فترى المجموعتين في الانبعاثة الأخيرة.
+      final emissions = <List<Map<String, dynamic>>>[];
+      final mergedSub =
+          admin.allPendingStream(['buy_requests', 'donations']).listen(
+              emissions.add);
+      await Future<void>.delayed(const Duration(milliseconds: 80));
+      await mergedSub.cancel();
+      expect(emissions, isNotEmpty);
+      expect(emissions.last, hasLength(2),
+          reason: 'المجموعتان تُجمعان في قائمة واحدة بلا استعلام '
+              'مرتَّب على حقل قد يغيب');
+      expect(emissions.last.map((e) => e['_collection']).toSet(),
+          {'buy_requests', 'donations'});
+
+      await fs
+          .collection('buy_requests')
+          .doc(pendingBuy.single['id'] as String)
+          .update({'isApproved': true});
+      expect(
+          await admin.itemsStream('buy_requests', pendingOnly: true).first,
+          isEmpty);
+      expect((await admin.fetchPendingCounts())['buy_requests'], 0);
+    });
+
+    test('سجل بلا حقل: ظاهرٌ في السوق ومنتظرٌ قرارًا في اللوحة', () async {
+      final fs = FakeFirebaseFirestore();
+      await seedLegacy(fs, 'buy_requests', 'طمّام قديم', 'open');
+      final visible = await BuyRequestService(fs).getOpenRequestsStream().first;
+      expect(visible, hasLength(1),
+          reason: 'البوابة العامة تقرأ الغائب معتمدًا حتى لا تختفي إضافات '
+              'القرية دفعةً واحدة، واللوحة تطلب له قرارًا — فرق مقصود');
+      expect(
+          await AdminService.withFirestore(fs)
+              .itemsStream('buy_requests', pendingOnly: true)
+              .first,
+          hasLength(1));
+    });
+
+    test('الستريم نفسه يكتب الكاش: فرع offline لا يكون فارغًا', () async {
+      final fs = FakeFirebaseFirestore();
+      await fs
+          .collection('buy_requests')
+          .add(req(title: 'مروحة معلّقة').toJson());
+      await fs
+          .collection('buy_requests')
+          .add(req(title: 'كمامة معتمدة', approved: true).toJson());
+
+      final visible = await BuyRequestService(fs).getOpenRequestsStream().first;
+      await Future<void>.delayed(const Duration(milliseconds: 80));
+
+      final cached = await CacheService.getBuyRequests();
+      expect(cached, isNotNull,
+          reason: 'كانت writers الكاش لا تُنادى من أي مسار حيّ');
+      expect(cached!.map((e) => e['title']).toSet(),
+          {'مروحة معلّقة', 'كمامة معتمدة'},
+          reason: 'الكتالوج كاملًا لا المرشَّح، وإلا جفّ كل قارئ آخر');
+      expect(visible.map((e) => e.title), ['كمامة معتمدة'],
+          reason: 'التصفية تبقى طبقة عرض بعد الكاش');
+    });
+
+    test('تبرعات: نفس الكتابة الكاشية من الستريم', () async {
+      final fs = FakeFirebaseFirestore();
+      await fs.collection('donations').add(don(title: 'بطانية معلّقة').toJson());
+      await fs
+          .collection('donations')
+          .add(don(title: 'فرشة معتمدة', approved: true).toJson());
+
+      final visible =
+          await DonationService(fs).getAvailableDonationsStream().first;
+      await Future<void>.delayed(const Duration(milliseconds: 80));
+
+      final cached = await CacheService.getDonations();
+      expect(cached, isNotNull);
+      expect(cached!.map((e) => e['title']).toSet(),
+          {'بطانية معلّقة', 'فرشة معتمدة'});
+      expect(visible.map((e) => e.title), ['فرشة معتمدة']);
+    });
+  });
+
+  group('عقد المصدر: الفرز الكلاينت للمعلّق', () {
+    test('المجموعتان المحجوزتان للفرز الكلاينت هما هاتان فقط', () {
+      final admin = src('lib/services/admin_service.dart');
+      final decl = bodyOf(admin,
+          'static const Set<String> _clientFilteredPending = {',
+          'static bool _isPendingDoc');
+      expect(decl, contains("'buy_requests'"));
+      expect(decl, contains("'donations'"));
+      expect(RegExp("'[a-z_]+',").allMatches(decl).length, 2,
+          reason: 'لا مجموعة مراجعة أخرى تُنقل إلى الكلاينت بغير قياس');
+      expect(admin, contains("data['isApproved'] != true"),
+          reason: 'الحالة الوحيدة التي تجعل بلا-حقل معلّقًا لا معتمدًا');
+    });
+
+    test('الستريم والعدّ كلاهما يمرّ بالمجموعة كاملة', () {
+      final admin = src('lib/services/admin_service.dart');
+      final stream = bodyOf(admin,
+          'Stream<List<Map<String, dynamic>>> _pendingStream(String collection) {',
+          'Stream<List<Map<String, dynamic>>> _approvedStream');
+      expect(stream, contains('_allStream(collection)'));
+      expect(stream, contains('where(_isPendingDoc)'),
+          reason: 'الفرع الكلاينت هو وحده من يرى بلا-حقل معلّقًا');
+      expect(stream, contains('_clientFilteredPending.contains(collection)'),
+          reason: 'فرع الخادم يبقى لبقية المجموعات كما كان');
+
+      final count = bodyOf(admin, 'Future<int> _pendingCountOnce(',
+          'Stream<List<Map<String, dynamic>>> getPendingNewsStream');
+      expect(count, contains('_clientFilteredPending.contains(collection)'));
+      expect(count, contains('.count()'),
+          reason: 'بقية المجموعات يبقى عدّها aggregation رخيصًا');
+    });
+
+    test('كتابات الكاش موصولة بمسار الستريم الحيّ، لا بالمرة الواحدة', () {
+      final buy = bodyOf(
+          src('lib/services/buy_request_service.dart'),
+          'Stream<List<BuyRequest>> getOpenRequestsStream() {',
+          'Stream<List<BuyRequest>> getMyRequestsStream');
+      final don = bodyOf(
+          src('lib/services/donation_service.dart'),
+          'Stream<List<Donation>> getAvailableDonationsStream() {',
+          'Stream<List<Donation>> getMyDonationsStream');
+      expect(buy, contains('CacheService.saveBuyRequests('));
+      expect(don, contains('CacheService.saveDonations('));
+      expect(buy, contains('unawaited('),
+          reason: 'الكتابة الكاشية لا تُنتظر قبل تسليم القائمة للواجهة');
+      expect(don, contains('unawaited('));
+    });
+  });
+
   group('قواعد Firestore', () {
     test('الإنشاء يبدأ غير معتمد ومن صاحبه، في المجموعتين', () {
       for (final c in ['buy_requests', 'donations']) {

@@ -88,10 +88,10 @@ class _VillageProfileScreenState extends State<VillageProfileScreen> {
                   imageUrl: info!.imageUrl,
                   fit: BoxFit.cover,
                   errorWidget: (context, url, error) =>
-                      Image.asset('assets/images/About.jpg', fit: BoxFit.cover),
+                      Image.asset('assets/images/0.jpg', fit: BoxFit.cover),
                 )
               else
-                Image.asset('assets/images/About.jpg', fit: BoxFit.cover),
+                Image.asset('assets/images/0.jpg', fit: BoxFit.cover),
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(

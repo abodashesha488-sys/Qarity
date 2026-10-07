@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
+import '../core/constants/app_colors.dart';
 import '../models/village_alert.dart';
 import '../services/alert_service.dart';
 import '../services/alert_sound_service.dart';
@@ -91,7 +92,7 @@ class _VillageWeatherBarState extends State<VillageWeatherBar> {
     final windDir = windDeg != null ? _windDirection(windDeg) : '--';
     final iconId = weather?['icon'] as String? ?? '01d';
     final description = (weather?['description'] as String? ?? '').trim();
-    final arabicDesc = _conditionAr(iconId, description);
+    final arabicDesc = WeatherFormat.conditionAr(iconId, description);
 
     final breaking = _breaking;
     if (breaking != null && breaking.liveAt(DateTime.now())) {
@@ -207,6 +208,12 @@ class _VillageWeatherBarState extends State<VillageWeatherBar> {
     required String windDir,
     required String iconId,
   }) {
+    // أرضية الكارت ثابتة فاتحة في الوضعين، فحبرها يُقاس عليها هي لا على أرضية
+    // السمة: `readableInk` يزحزح درجة التمييز حتى تجتاز الحدّ فوق أرضية الثيم،
+    // وفي الداكن تُرسل أرضيته حبرًا فاتحًا فيصير نصّ الكارت بلون خلفيته.
+    const floor = Color(0xFFD1F4BE);
+    final ink = AppColors.textPrimary;
+    final inkMuted = Color.alphaBlend(ink.withValues(alpha: 0.78), floor);
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 2, 14, 6),
       child: Material(
@@ -217,121 +224,98 @@ class _VillageWeatherBarState extends State<VillageWeatherBar> {
           child: Container(
             constraints: const BoxConstraints(minHeight: 58),
             clipBehavior: Clip.antiAlias,
-            decoration: const BoxDecoration(
-              borderRadius: BorderRadius.all(Radius.circular(16)),
-              image: DecorationImage(
-                image: AssetImage('assets/images/wither.jpg'),
-                fit: BoxFit.cover,
-              ),
+            decoration: BoxDecoration(
+              borderRadius: const BorderRadius.all(Radius.circular(16)),
+              color: floor,
+              border: Border.all(color: ink.withValues(alpha: 0.14)),
             ),
-            child: ColoredBox(
-              color: Colors.black.withValues(alpha: 0.38),
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                child: Row(
-                  children: [
-                    CachedNetworkImage(
-                      imageUrl:
-                          'https://openweathermap.org/img/wn/$iconId@2x.png',
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              child: Row(
+                children: [
+                  // أيقونة الحالة كما يرسلها المزود، داخل دائرة بيضاء ناعمة
+                  Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.62),
+                      shape: BoxShape.circle,
+                      border:
+                          Border.all(color: ink.withValues(alpha: 0.10)),
+                    ),
+                    child: CachedNetworkImage(
+                      imageUrl: WeatherFormat.iconUrl(iconId),
                       fit: BoxFit.contain,
-                      width: 36,
-                      height: 36,
-                      errorWidget: (_, __, ___) => const Icon(
-                          Icons.cloud_rounded,
-                          color: Colors.white,
-                          size: 22),
+                      width: 32,
+                      height: 32,
+                      errorWidget: (_, __, ___) => Icon(
+                          WeatherFormat.iconGlyph(iconId),
+                          color: ink,
+                          size: 20),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Row(
-                            children: [
-                              const Expanded(
-                                child: Text('طقس قرية أبودشيشة',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w900,
-                                        height: 1.1)),
-                              ),
-                              Text(
-                                temp != null ? '$temp°م' : '—',
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w900,
-                                    height: 1.1),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '$arabicDesc  •  العظمى ${tempMax != null ? '$tempMax°' : '—'} / الصغرى ${tempMin != null ? '$tempMin°' : '—'}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 9,
-                                fontWeight: FontWeight.w700,
-                                height: 1.2),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'رطوبة ${humidity ?? 0}%  •  رياح $windSpeed م/ث $windDir',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 8.5,
-                                fontWeight: FontWeight.w600,
-                                height: 1.1),
-                          ),
-                        ],
-                      ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text('طقس قرية أبودشيشة',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                      color: ink,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w900,
+                                      height: 1.1)),
+                            ),
+                            Text(
+                              temp != null ? '$temp°م' : '—',
+                              style: TextStyle(
+                                  color: ink,
+                                  fontSize: 16.5,
+                                  fontWeight: FontWeight.w900,
+                                  height: 1.1),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          arabicDesc,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              color: ink,
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w800,
+                              height: 1.2),
+                        ),
+                        const SizedBox(height: 1),
+                        Text(
+                          'العظمى ${tempMax != null ? '$tempMax°' : '—'} • الصغرى ${tempMin != null ? '$tempMin°' : '—'} • رطوبة ${humidity ?? 0}% • رياح $windSpeed م/ث $windDir',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              color: inkMuted,
+                              fontSize: 8.5,
+                              fontWeight: FontWeight.w600,
+                              height: 1.1),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 6),
-                    const Icon(Icons.chevron_left_rounded,
-                        size: 18, color: Colors.white70),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(Icons.chevron_left_rounded, size: 18, color: ink),
+                ],
               ),
             ),
           ),
         ),
       ),
     );
-  }
-
-  String _conditionAr(String? iconId, String? apiDesc) {
-    if (iconId != null && iconId.length >= 2) {
-      switch (iconId.substring(0, 2)) {
-        case '01':
-          return 'مشمس';
-        case '02':
-          return 'غائم جزئيًا';
-        case '03':
-          return 'غائم';
-        case '04':
-          return 'غائم كليًا';
-        case '09':
-        case '10':
-          return 'ممطر';
-        case '11':
-          return 'عاصفة رعدية';
-        case '13':
-          return 'ثلوج';
-        case '50':
-          return 'ضباب';
-      }
-    }
-    return apiDesc ?? '—';
   }
 
   String _windDirection(num deg) {

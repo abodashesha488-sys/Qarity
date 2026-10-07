@@ -134,7 +134,7 @@ class _AboutHero extends StatelessWidget {
         // الخلفية: صورة القرية (شبكة أو أصل محلي) + تدرّج داكن
         Positioned.fill(
           child: Image.asset(
-            'assets/images/About.jpg',
+            'assets/images/0.jpg',
             fit: BoxFit.cover,
             errorBuilder: (_, __, ___) =>
                 Container(color: kVillageAboutColor.withValues(alpha: 0.9)),

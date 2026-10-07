@@ -83,10 +83,16 @@ class BuyRequestService {
     return _col
         .where('status', isEqualTo: 'open')
         .snapshots()
-        .map((s) => visibleToViewer(
-            s.docs.map((d) => BuyRequest.fromJson(d.data(), d.id)).toList(),
-            uid)
-          ..sort(_newestFirst));
+        .map((s) {
+      final all =
+          s.docs.map((d) => BuyRequest.fromJson(d.data(), d.id)).toList();
+      // الكاش يُكتب من الستريم نفسه: فرع OfflineStreamBuilder عند انقطاع الشبكة
+      // يقرأ CacheService.getBuyRequests() وحده، وبلا كتابة هنا يعرض «لا توجد
+      // طلبات مخزنة» رغم موافقة الإدارة. الكتالوج كاملًا لا المرشَّح.
+      unawaited(
+          CacheService.saveBuyRequests(all.map((r) => r.toJson()).toList()));
+      return visibleToViewer(all, uid)..sort(_newestFirst);
+    });
   }
 
   static int _newestFirst(BuyRequest a, BuyRequest b) =>

@@ -69,7 +69,7 @@ class GeoPatternPainter extends CustomPainter {
       oldDelegate.color != color;
 }
 
-/// ترويسة قسم مزخرفة: تدرج + نقوش هندسية + عنوان Amiri + خط ذهبي.
+/// ترويسة قسم مزخرفة: صورة القرية + تدرج لون القسم + نقوش هندسية + عنوان Amiri + خط ذهبي.
 class VillageSectionHeader extends StatelessWidget {
   const VillageSectionHeader({
     super.key,
@@ -88,27 +88,39 @@ class VillageSectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       height: height,
-      decoration: BoxDecoration(
-        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(28)),
-        gradient: LinearGradient(
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
-          colors: [
-            accent,
-            Color.alphaBlend(
-                Colors.black.withValues(alpha: 0.35), accent),
-          ],
-        ),
-      ),
       child: ClipRRect(
         borderRadius: const BorderRadius.vertical(bottom: Radius.circular(28)),
         child: Stack(
+          fit: StackFit.expand,
           children: [
+            // أرضية بلون القسم: تظهر وحدها إن تعذّر تحميل الصورة
+            ColoredBox(color: accent),
+            // صورة القرية الموحّدة كهيدر لكل أقسام المرجع
             Positioned.fill(
-              child: CustomPaint(painter: GeoPatternPainter()),
+              child: Image.asset('assets/images/0.jpg',
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const SizedBox.shrink()),
             ),
+            // هوية القسم تبقى فوق الصورة حتى يظل العنوان الأبيض مقروءًا
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topRight,
+                    end: Alignment.bottomLeft,
+                    colors: [
+                      accent.withValues(alpha: 0.78),
+                      Color.alphaBlend(
+                          Colors.black.withValues(alpha: 0.45), accent)
+                          .withValues(alpha: 0.88),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            CustomPaint(painter: GeoPatternPainter()),
             const Positioned(
               left: 0,
               right: 0,

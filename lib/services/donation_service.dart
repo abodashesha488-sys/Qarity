@@ -82,9 +82,15 @@ class DonationService {
     return _col
         .where('status', isEqualTo: 'available')
         .snapshots()
-        .map((s) => visibleToViewer(
-            s.docs.map((d) => Donation.fromJson(d.data(), d.id)).toList(), uid)
-          ..sort(_newestFirst));
+        .map((s) {
+      final all = s.docs.map((d) => Donation.fromJson(d.data(), d.id)).toList();
+      // الكاش يُكتب من الستريم نفسه: فرع OfflineStreamBuilder عند انقطاع الشبكة
+      // يقرأ CacheService.getDonations() وحده، وبلا كتابة هنا يعرض «لا توجد
+      // تبرعات مخزنة» رغم موافقة الإدارة. الكتالوج كاملًا لا المرشَّح.
+      unawaited(
+          CacheService.saveDonations(all.map((d) => d.toJson()).toList()));
+      return visibleToViewer(all, uid)..sort(_newestFirst);
+    });
   }
 
   static int _newestFirst(Donation a, Donation b) =>

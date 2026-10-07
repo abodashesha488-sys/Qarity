@@ -91,11 +91,34 @@ class AdminService {
   Future<int> getPendingCountFuture(String collection) =>
       _pendingCountOnce(collection);
 
+  /// مجموعتان قد تحمل سجلاتهما القديمة `isApproved` **غائبًا** لا `false`:
+  /// الإنشاء قبل بوابة الاعتماد لم يكن يكتبه إطلاقًا. وقراءة الخادم
+  /// `where('isApproved', isEqualTo: false)` تُسقط صامتًا كل وثيقة بلا الحقل،
+  /// فتبقى معلّقة أبدًا لا في قائمة المراجعة ولا في الشارة، بينما تعرضها
+  /// واجهة السوق عامةً لأن النموذج يقرأ الغائب `true`. تُقرأ المجموعتان
+  /// كاملتين ويُفرَز في الكلاينت (وهما الأصغر في اللوحة)، فيصير لكل سجلّ
+  /// معلّق قرارٌ متاح.
+  static const Set<String> _clientFilteredPending = {
+    'buy_requests',
+    'donations',
+  };
+
+  /// الوثيقة معلّقة ما لم تحمل `isApproved == true` صراحةً. الفرق عن بوابة
+  /// العرض مقصود: السوق يُظهر السجل القديم الذي بلا حقل (حتى لا تختفي
+  /// إضافات القرية دفعةً واحدة)، واللوحة تطلب له قرارًا — فالحذف أو الرفض
+  /// بيد الإدارة هو من يحسمه، لا غياب الحقل.
+  static bool _isPendingDoc(Map<String, dynamic> data) =>
+      data['isApproved'] != true;
+
   /// عدّ لحظي رخيص عبر count() aggregation (يقرأ مداخل الفهرس فقط ولا
   /// يحمّل المستندات) — كان كل عدّ يحمّل كل مستندات المجموعة المؤجلة.
   Future<int> _pendingCountOnce(String collection,
       {bool strict = false}) async {
     try {
+      if (_clientFilteredPending.contains(collection)) {
+        final snap = await _firestore.collection(collection).get();
+        return snap.docs.where((d) => _isPendingDoc(d.data())).length;
+      }
       final snap = await _firestore
           .collection(collection)
           .where('isApproved', isEqualTo: false)
@@ -520,6 +543,9 @@ class AdminService {
   }
 
   Stream<List<Map<String, dynamic>>> _pendingStream(String collection) {
+    if (_clientFilteredPending.contains(collection)) {
+      return _allStream(collection).map((docs) => docs.where(_isPendingDoc).toList());
+    }
     return _firestore
         .collection(collection)
         .where('isApproved', isEqualTo: false)
