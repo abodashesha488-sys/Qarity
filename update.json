@@ -1,7 +1,7 @@
 {
-  "versionCode": 2033,
-  "versionName": "1.1.33",
+  "versionCode": 2034,
+  "versionName": "1.1.34",
   "apkUrl": "https://github.com/abodashesha488-sys/Qarity/releases/latest/download/Qarity.apk",
   "forceUpdate": false,
-  "releaseNotes": "كارت طقس القرية بثلاثة أعمدة متمركزة والعمود الأول بلا اقتصاص، مع احتمال سقوط الأمطار من توقّع المزود. وإشعارات «مطلوب / تبرعات» تفتح تبويبها في سوق القرية بعد موافقة الأدمن."
+  "releaseNotes": "نشر كامل مع إصلاحات مطلوب/تبرعات وجميع التحسينات"
 }
