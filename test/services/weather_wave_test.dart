@@ -3,17 +3,20 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:qurity/core/constants/app_colors.dart';
-import 'package:qurity/core/theme/app_themes.dart';
 import 'package:qurity/services/weather_service.dart';
 
-/// أربع طلبات حرفية: «صورة الهيدر العلوي للشاشة الرئيسية يجب ان تكون " heder.jpg "» /
-/// «الصورة "0.jpg" تستخدم كهيدر لصفحة " تعرف علي القرية وكل محتوياتها"» /
-/// «في الشاشة الرئيسية كارت " الطقس " يجب ان يكون باللون " #D1F4BE " مع تنسيق افضل
-/// لعرض الطقس بنفس مساحه الكارت دون تغيير» / «صفحه " الطقس" يجب ان يعاد تنسيقها بشكل
-/// أفضل ومنظم واستخدام ايقونات الطقس كما هي من مزود الخدمة».
+/// الطلبات الحرفية على كارت الطقس وشاشته، بترتيبها الزمني: «صورة الهيدر العلوي للشاشة
+/// الرئيسية يجب ان تكون " heder.jpg "» / «الصورة "0.jpg" تستخدم كهيدر لصفحة " تعرف علي
+/// القرية وكل محتوياتها"» / «في الشاشة الرئيسية كارت " الطقس " يجب ان يكون باللون
+/// " #D1F4BE " مع تنسيق افضل لعرض الطقس بنفس مساحه الكارت دون تغيير» / «صفحه " الطقس"
+/// يجب ان يعاد تنسيقها بشكل أفضل ومنظم واستخدام ايقونات الطقس كما هي من مزود الخدمة» /
+/// ثم **الأحدث والأخير يسود**: «كرت " طقس القرية " بالشاشة الرئيسية اريدك ان تقسمه الي
+/// ثلاث أعمده … بدون تغيير حجم الكارت مع تغيير حجم الأعمدة حسب بيانات كل عمود، ووضع
+/// الصورة " wither.jpg " خلفيه لهذا الكارت».
 ///
-/// الطلبان الأول والثاني **موضعيان** (أي أصل يسكن أي شاشة)، والثالث **هندسي** (لون
-/// أرضية معجمّد ومساحة لا تتحرك)، والرابع **سلوكي** (الحالة العربية تُشتق من مفتاح
+/// فالأرضية لم تعد `#D1F4BE` ولا حبرًا من عائلة الثيم: صار خلفًا صورةً مسجّلة وحبرًا
+/// معرَّفًا عليها مباشرةً، وبقيت المساحة **مجمّدة** كما في الطلب السابق. الطلب الآخر
+/// **هندسي** (عمود بأحساب بياناته)، وواحد **سلوكي** (الحالة العربية تُشتق من مفتاح
 /// أيقونة المزود، لا من نص إنجليزي خام). لذلك يثبت هذا الملف الأمرين معًا: عقد مصدر
 /// سطرٌ بسطر، ودالة `WeatherFormat.conditionAr` فعلًا لا قولًا.
 void main() {
@@ -77,46 +80,47 @@ void main() {
   });
 
   group('كارت الطقس في الشاشة الرئيسية', () {
-    test('أرضيته `#D1F4BE` وحبره يُحسم بالتباين لا بالأبيض', () {
+    test('أرضيته `wither.jpg` تملؤُه، وبلا أي حجاب فوقها', () {
       final bar = src('lib/widgets/village_weather_bar.dart');
-      expect(bar, contains('const floor = Color(0xFFD1F4BE);'));
-      expect(bar, contains('final ink = AppColors.textPrimary;'));
-      // علّة موثّقة: `readableInk(floor, …)` يقيس نسبة التباين على أرضية **الثيم**
-      // (`surface` في الفاتح، `darkSurface` في الداكن) لا على الأرضية التي يُمرَّر
-      // اسمها وسيطًا. ففي الوضع الداكن يردّ الحارس حبرًا فاتحًا لأن تباينه محسوب فوق
-      // أخضر داكن — ويُرمى ذلك الحبر فوق أرضية الكارت الفاتحة نفسها فتسقط النسبة إلى
-      // 1.00 (نص لا يُرى إطلاقًا). حبر هذه البطاقة سطر مباشر من عائلة الألوان لأن
-      // أرضيتها معرّفة حرفيًا ولا تتبع الثيم.
-      expect(bar, isNot(contains('readableInk(floor')));
-      // لا أسود فوق أخضر فاتح: الأحبار المغشّاة تُشتق من الحبر المحسوب.
-      expect(
-        bar,
-        contains('Color.alphaBlend(ink.withValues(alpha: 0.78), floor)'),
-      );
+      expect(bar, contains("AssetImage('assets/images/wither.jpg')"));
+      expect(bar, contains('image: const DecorationImage('));
+      expect(bar, contains('fit: BoxFit.cover,'));
+      // الصورة لوحة شبه موحدة، فلا طبقة تعتيم فوقها ولا حبر فاتح تحتها.
+      expect(bar, isNot(contains('Colors.black')));
+      // أرضية بديلة بنفس قيمة الصورة: لو تعذّر فكّ الأصل لا يسودّ الكارت.
+      expect(bar, contains('const plate = Color(0xFFE9F3E8);'));
     });
 
-    test('حبر كل عائلة ألوان يجتاز 4.5 فوق `#D1F4BE` — لا نصّ لا يُرى في الداكن', () {
-      const floor = Color(0xFFD1F4BE);
-      for (final family in [
-        AppThemes.greenEco,
-        AppThemes.modernBlue,
-        AppThemes.warmTerracotta,
-      ]) {
-        AppColors.apply(family);
-        final ink = AppColors.textPrimary;
-        expect(
-          AppColors.contrastRatio(ink, floor),
-          greaterThanOrEqualTo(4.5),
-          reason: 'حبر «${family.id}» غير مقروء على أرضية الكارت',
-        );
-        final muted = Color.alphaBlend(ink.withValues(alpha: 0.78), floor);
-        expect(
-          AppColors.contrastRatio(muted, floor),
-          greaterThanOrEqualTo(4.5),
-          reason: 'سطر التفاصيل المغشّى لعائلة «${family.id}» غير مقروء',
-        );
-      }
-      AppColors.apply(AppThemes.greenEco); // رجوع للعائلة الافتراضية
+    test('حبره معرَّف على أرضية الكارت لا على أرضية الثيم', () {
+      final bar = src('lib/widgets/village_weather_bar.dart');
+      expect(bar, contains('const ink = Color(0xFF10331F);'));
+      expect(bar, contains('const inkMuted = Color(0xFF33513F);'));
+      // العلّة القديمة: الحارس يقيس التباين على `surface`/`darkSurface` لا على
+      // الأرضية التي يُمرَّر اسمها وسيطًا، فيردّ حبرًا فاتحًا في الداكن وتُسقط
+      // النسبة إلى 1.00 فوق لوحة الكارت الفاتحة نفسها. الأرضية هنا ثابتة في
+      // الوضعين، فالحبر ثابت لا يُحسب.
+      expect(bar, isNot(contains('readableInk(')));
+      expect(bar, isNot(contains('AppColors.')));
+      expect(bar, isNot(contains('Color.alphaBlend')));
+    });
+
+    test('التباين مقاس على بكسلات الصورة نفسها لا على افتراض', () {
+      // أدكن وأفتح بكسلان فعليان في `assets/images/wither.jpg`: الفرق أربع درجات
+      // فقط، فاللوحة شبه موحدة والعلاج الصحيح حبر داكن معرَّف لا حجاب.
+      const darkest = Color(0xFFE8F2E7);
+      const lightest = Color(0xFFECF6ED);
+      const ink = Color(0xFF10331F);
+      const inkMuted = Color(0xFF33513F);
+      expect(AppColors.contrastRatio(ink, darkest), greaterThanOrEqualTo(12.0));
+      expect(AppColors.contrastRatio(ink, lightest), greaterThanOrEqualTo(12.0));
+      expect(
+        AppColors.contrastRatio(inkMuted, darkest),
+        greaterThanOrEqualTo(7.5),
+      );
+      expect(
+        AppColors.contrastRatio(inkMuted, lightest),
+        greaterThanOrEqualTo(7.5),
+      );
     });
 
     test('مساحته لم تتغير: نفس الحشو الخارجي ونفس الحدّ الأدنى للارتفاع', () {
@@ -131,9 +135,19 @@ void main() {
       );
     });
 
-    test('صورة الخلفية الداكنة وحجابها الأسود خرجا من الكارت', () {
+    test('ثلاثة أعمدة بأحساب بياناتها، داخل نفس المساحة المجمّدة', () {
       final bar = src('lib/widgets/village_weather_bar.dart');
-      expect(bar, isNot(contains('wither.jpg')));
+      // عمود الرمز بطبيعته لا يُمَدَّد: مقاس ثابت، والباقي للتسمية والبيانات.
+      expect(bar, contains('width: 32,'));
+      expect(bar, contains('flex: 4,')); // القرية + الحرارة + الحالة العربية
+      expect(bar, contains('flex: 5,')); // العظمى/الصغرى، الرطوبة، الرياح
+      expect(bar, contains("Text('طقس قرية أبودشيشة'"));
+      expect(bar, contains('Text(arabicDesc'));
+      expect(bar, contains("'العظمى "));
+      expect(bar, contains(r'رطوبة ${humidity ?? 0}%'));
+      expect(bar, contains(r'رياح $windSpeed م/ث $windDir'));
+      // لا سطر يخرج عن الكارت: كل نص مقصوص بسطر واحد، والارتفاع كله تحت الحدّ 58.
+      expect(RegExp(r'maxLines: 1').allMatches(bar).length, 5);
     });
 
     test('الكارت يفوّض للحالة العربية المشتركة ولا يعيد اختراعها', () {

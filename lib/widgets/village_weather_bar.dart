@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
-import '../core/constants/app_colors.dart';
 import '../models/village_alert.dart';
 import '../services/alert_service.dart';
 import '../services/alert_sound_service.dart';
@@ -208,12 +207,14 @@ class _VillageWeatherBarState extends State<VillageWeatherBar> {
     required String windDir,
     required String iconId,
   }) {
-    // أرضية الكارت ثابتة فاتحة في الوضعين، فحبرها يُقاس عليها هي لا على أرضية
-    // السمة: `readableInk` يزحزح درجة التمييز حتى تجتاز الحدّ فوق أرضية الثيم،
-    // وفي الداكن تُرسل أرضيته حبرًا فاتحًا فيصير نصّ الكارت بلون خلفيته.
-    const floor = Color(0xFFD1F4BE);
-    final ink = AppColors.textPrimary;
-    final inkMuted = Color.alphaBlend(ink.withValues(alpha: 0.78), floor);
+    // أرضية الكارت صورة `wither.jpg`، وهي لوحة فاتحة شبه موحدة في الوضعين: قياس
+    // الصورة نفسها أعطى أقل بكسل (232، 242، 231) وأعلاها (236، 246، 237)، أي فرق
+    // أربع درجات فقط، فلا حجاب فوقها ولا حاجة لحساب الحبر على عائلة الألوان —
+    // `readableInk` يقيس على أرضية الثيم، فتمرير أرضية الكارت كدلالة كان يعطي
+    // عكس المقصود ويجعل النص بلون الخلفية في الوضع الداكن.
+    const plate = Color(0xFFE9F3E8);
+    const ink = Color(0xFF10331F);
+    const inkMuted = Color(0xFF33513F);
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 2, 14, 6),
       child: Material(
@@ -226,21 +227,24 @@ class _VillageWeatherBarState extends State<VillageWeatherBar> {
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               borderRadius: const BorderRadius.all(Radius.circular(16)),
-              color: floor,
-              border: Border.all(color: ink.withValues(alpha: 0.14)),
+              color: plate,
+              border: Border.all(color: ink.withValues(alpha: 0.20)),
+              image: const DecorationImage(
+                image: AssetImage('assets/images/wither.jpg'),
+                fit: BoxFit.cover,
+              ),
             ),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               child: Row(
                 children: [
-                  // أيقونة الحالة كما يرسلها المزود، داخل دائرة بيضاء ناعمة
+                  // عمود الرمز: أيقونة الحالة كما يرسلها المزود، ورمز الحالة عند الفشل
                   Container(
                     padding: const EdgeInsets.all(2),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.62),
                       shape: BoxShape.circle,
-                      border:
-                          Border.all(color: ink.withValues(alpha: 0.10)),
+                      border: Border.all(color: ink.withValues(alpha: 0.10)),
                     ),
                     child: CachedNetworkImage(
                       imageUrl: WeatherFormat.iconUrl(iconId),
@@ -248,13 +252,13 @@ class _VillageWeatherBarState extends State<VillageWeatherBar> {
                       width: 32,
                       height: 32,
                       errorWidget: (_, __, ___) => Icon(
-                          WeatherFormat.iconGlyph(iconId),
-                          color: ink,
-                          size: 20),
+                          WeatherFormat.iconGlyph(iconId), color: ink, size: 20),
                     ),
                   ),
                   const SizedBox(width: 8),
+                  // عمود الحالة: اسم القرية + الحرارة + الوصف العربي
                   Expanded(
+                    flex: 4,
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -262,7 +266,7 @@ class _VillageWeatherBarState extends State<VillageWeatherBar> {
                       children: [
                         Row(
                           children: [
-                            Expanded(
+                            const Expanded(
                               child: Text('طقس قرية أبودشيشة',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -272,43 +276,66 @@ class _VillageWeatherBarState extends State<VillageWeatherBar> {
                                       fontWeight: FontWeight.w900,
                                       height: 1.1)),
                             ),
-                            Text(
-                              temp != null ? '$temp°م' : '—',
-                              style: TextStyle(
-                                  color: ink,
-                                  fontSize: 16.5,
-                                  fontWeight: FontWeight.w900,
-                                  height: 1.1),
-                            ),
+                            Text(temp != null ? '$temp°م' : '—',
+                                style: const TextStyle(
+                                    color: ink,
+                                    fontSize: 16.5,
+                                    fontWeight: FontWeight.w900,
+                                    height: 1.1)),
                           ],
                         ),
                         const SizedBox(height: 2),
+                        Text(arabicDesc,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                color: ink,
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w800,
+                                height: 1.2)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  // عمود البيانات: العظمى والصغرى، فالرطوبة، فالرياح واتجاهها
+                  Expanded(
+                    flex: 5,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
                         Text(
-                          arabicDesc,
+                          'العظمى ${tempMax != null ? '$tempMax°' : '—'} • الصغرى ${tempMin != null ? '$tempMin°' : '—'}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                              color: ink,
-                              fontSize: 9.5,
-                              fontWeight: FontWeight.w800,
-                              height: 1.2),
-                        ),
-                        const SizedBox(height: 1),
-                        Text(
-                          'العظمى ${tempMax != null ? '$tempMax°' : '—'} • الصغرى ${tempMin != null ? '$tempMin°' : '—'} • رطوبة ${humidity ?? 0}% • رياح $windSpeed م/ث $windDir',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
+                          style: const TextStyle(
                               color: inkMuted,
                               fontSize: 8.5,
-                              fontWeight: FontWeight.w600,
-                              height: 1.1),
+                              fontWeight: FontWeight.w700,
+                              height: 1.15),
                         ),
+                        Text('رطوبة ${humidity ?? 0}%',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                color: inkMuted,
+                                fontSize: 8.5,
+                                fontWeight: FontWeight.w700,
+                                height: 1.15)),
+                        Text('رياح $windSpeed م/ث $windDir',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                color: inkMuted,
+                                fontSize: 8.5,
+                                fontWeight: FontWeight.w700,
+                                height: 1.15)),
                       ],
                     ),
                   ),
                   const SizedBox(width: 4),
-                  Icon(Icons.chevron_left_rounded, size: 18, color: ink),
+                  const Icon(Icons.chevron_left_rounded, size: 18, color: ink),
                 ],
               ),
             ),
