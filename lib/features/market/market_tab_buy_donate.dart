@@ -196,19 +196,38 @@ class _BuyRequestsTab extends StatefulWidget {
 class _BuyRequestsTabState extends State<_BuyRequestsTab> {
   final BuyRequestService _service = BuyRequestService();
 
+  // الستريم والكاش يُبنى مرة واحدة في الحالة لا في build: مع cacheFirst=false
+  // كانت أول لقطة waiting بلا بيانات فتسقط في فرع الكاش (offline_stream_builder
+  // :51)، وكان الكاش يُقرأ من Future جديد كل بناء فلا يُملأ إلا من الستريم الذي
+  // لفظته تلك اللقطة — حلقة تُبقي «لا توجد طلبات مخزنة» إلى الأبد.
+  Stream<List<BuyRequest>>? _stream;
+  Future<List<Map<String, dynamic>>?>? _cacheFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _attach();
+  }
+
+  void _attach() {
+    _stream = _service.getOpenRequestsStream();
+    _cacheFuture = CacheService.getBuyRequests();
+  }
+
   @override
   Widget build(BuildContext context) {
     final uid = BuyRequestService.viewerUid();
     return OfflineStreamBuilder<List<BuyRequest>>(
-      stream: _service.getOpenRequestsStream(),
-      // cacheFirst=false: فرع «غير متصل» في OfflineStreamBuilder يعيد الكتالوج
-      // المخزَّن ولا يتحدّث ما دامت الراية عالقة، فيظهر التبويب أقدم من قرار
-      // الإدارة بينما اللوحة الحيّة تُظهر السجل. الستريم هو المصدر والكاش ملاذ.
+      stream: _stream!,
       cacheFirst: false,
+      progressBuilder: (_) =>
+          const Center(child: CircularProgressIndicator()),
+      errorBuilder: (context, error, _) => _TabLoadError(
+        icon: Icons.request_quote_rounded,
+        message: 'تعذّر تحميل السلع المطلوبة — تحقّق من الاتصال.',
+        onRetry: () => setState(_attach),
+      ),
       onlineBuilder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
         final items = snapshot.data ?? [];
         if (items.isEmpty) {
           return const _TabEmpty(
@@ -220,7 +239,7 @@ class _BuyRequestsTabState extends State<_BuyRequestsTab> {
         return _buildBuyRequestsList(uid, items);
       },
       cacheBuilder: (context) => FutureBuilder(
-        future: CacheService.getBuyRequests(),
+        future: _cacheFuture,
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
@@ -590,18 +609,36 @@ class _DonationsTab extends StatefulWidget {
 class _DonationsTabState extends State<_DonationsTab> {
   final DonationService _service = DonationService();
 
+  // نفس سبب «مطلوب»: الستريم والكاش يُبنى مرة واحدة، والخطأ يُعلَن لا يُستبدل
+  // بكاش فارغ، وأول لقطة waiting تعرض نحلة صادقة لا «لا توجد تبرعات مخزنة».
+  Stream<List<Donation>>? _stream;
+  Future<List<Map<String, dynamic>>?>? _cacheFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _attach();
+  }
+
+  void _attach() {
+    _stream = _service.getAvailableDonationsStream();
+    _cacheFuture = CacheService.getDonations();
+  }
+
   @override
   Widget build(BuildContext context) {
     final uid = DonationService.viewerUid();
     return OfflineStreamBuilder<List<Donation>>(
-      stream: _service.getAvailableDonationsStream(),
-      // نفس سبب «مطلوب»: فرع offline يعرض الكتالوج المخزَّن ولا يتقدّم ما دامت
-      // الراية عالقة، فيتأخر التبويب عن قرار الإدارة الذي تعرضه اللوحة فورًا.
+      stream: _stream!,
       cacheFirst: false,
+      progressBuilder: (_) =>
+          const Center(child: CircularProgressIndicator()),
+      errorBuilder: (context, error, _) => _TabLoadError(
+        icon: Icons.volunteer_activism_rounded,
+        message: 'تعذّر تحميل التبرعات — تحقّق من الاتصال.',
+        onRetry: () => setState(_attach),
+      ),
       onlineBuilder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
         final items = snapshot.data ?? [];
         if (items.isEmpty) {
           return const _TabEmpty(
@@ -613,7 +650,7 @@ class _DonationsTabState extends State<_DonationsTab> {
         return _buildDonationsList(uid, items);
       },
       cacheBuilder: (context) => FutureBuilder(
-        future: CacheService.getDonations(),
+        future: _cacheFuture,
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
@@ -1039,6 +1076,45 @@ class _StatusChip extends StatelessWidget {
               fontSize: 9,
               fontWeight: FontWeight.w900,
               color: Colors.white)),
+    );
+  }
+}
+
+class _TabLoadError extends StatelessWidget {
+  const _TabLoadError({
+    required this.icon,
+    required this.message,
+    required this.onRetry,
+  });
+  final IconData icon;
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 56, color: theme.colorScheme.error),
+            const SizedBox(height: 12),
+            Text(message,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: theme.colorScheme.error)),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('إعادة المحاولة'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

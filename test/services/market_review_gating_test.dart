@@ -714,5 +714,71 @@ void main() {
       expect(branch, isNot(contains('cacheBuilder(')),
           reason: 'الكاش يبقى ملاذ ما قبل أول انبعاثة داخل _onlineView');
     });
+    group('STREAM-PIN-AND-ERROR-ANNOUNCED', () {
+      const bodies = <String, String>{
+        'BUY': 'class _BuyRequestsTabState extends State<_BuyRequestsTab> {',
+        'DON': 'class _DonationsTabState extends State<_DonationsTab> {',
+      };
+      const file = 'lib/features/market/market_tab_buy_donate.dart';
+
+      String tabBody(String key) => bodyOf(
+          src(file),
+          bodies[key]!,
+          key == 'BUY' ? 'Widget _buildBuyRequestsList' : 'Widget _buildDonationsList');
+
+      test('الستريم والكاش يُبنى مرة واحدة في الحالة لا في build', () {
+        for (final key in bodies.keys) {
+          final b = tabBody(key);
+          expect(b, contains('? _stream;'),
+              reason: '$key: الحقل nullable لا يُبنى داخل build');
+          expect(b, contains('? _cacheFuture;'));
+          expect(RegExp('_stream = ').allMatches(b).length, 1,
+              reason: 'نداء واحد داخل _attach: لو بُني الستريم في build لُفظت '
+                  'كل انبعاثة وأُعيد الاشتراك بلا نهاية');
+          expect(RegExp('_cacheFuture = ').allMatches(b).length, 1);
+          expect(b, contains('initState()'));
+          expect(b, contains('_attach();'));
+          expect(b, contains('stream: _stream!'));
+        }
+      });
+
+      test('أول لقطة waiting تعرض نحلة صادقة لا رسالة كاش فارغ', () {
+        for (final key in bodies.keys) {
+          final b = tabBody(key);
+          expect(b, contains('progressBuilder: (_) =>'),
+              reason: '$key: بلا منتظر صادق أول لقطة بلا بيانات تسقط في فرع '
+                  'الكاش عند offline_stream_builder:51');
+          expect(b, isNot(contains('ConnectionState.waiting')),
+              reason: 'فرع الانتظار داخل onlineBuilder لا يُبلَّغ أبدًا');
+        }
+      });
+
+      test('خطأ الستريم يُعلَن بوجه قابل لإعادة المحاولة', () {
+        for (final key in bodies.keys) {
+          final b = tabBody(key);
+          expect(b, contains('errorBuilder: (context, error, _) => '
+              '_TabLoadError('),
+              reason: '$key: offline_stream_builder:47 يعيد cacheBuilder حين '
+                  'يكون errorBuilder null، فكان العطل يُرسَم كاشًا فارغًا إلى '
+                  'الأبد رغم موافقة الإدارة');
+          expect(b, contains('onRetry: () => setState(_attach)'));
+        }
+        final w = src('lib/widgets/offline_stream_builder.dart');
+        expect(w, contains('if (snapshot.hasError && widget.errorBuilder != '
+            'null)'));
+      });
+
+      test('ودج الخطأ معرّف قبل الودج الفارغ ويسمّي إعادة المحاولة', () {
+        final tab = src(file);
+        final err =
+            tab.indexOf('class _TabLoadError extends StatelessWidget {');
+        expect(err, isNonNegative);
+        expect(tab.indexOf('class _TabEmpty extends StatelessWidget {'),
+            greaterThan(err));
+        expect(tab, contains("label: const Text('إعادة المحاولة'),"));
+        expect(RegExp(r'_TabLoadError\(').allMatches(tab).length, 3,
+            reason: 'تعريف + موضعان: مطلوب وتبرعات');
+      });
+    });
   });
 }
