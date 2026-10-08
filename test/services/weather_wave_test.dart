@@ -135,19 +135,66 @@ void main() {
       );
     });
 
-    test('ثلاثة أعمدة بأحساب بياناتها، داخل نفس المساحة المجمّدة', () {
+    test('ثلاثة أعمدة بأحساب بياناتها، متمركزة، وأولها بلا أي اقتصاص', () {
       final bar = src('lib/widgets/village_weather_bar.dart');
+      // العقد كله يُقطع من منطقة الكارت وحدها: شريط الخبر العاجل يحتفظ
+      // بمحاذاته من جانب البداية وبسطرين، فمنعُهما عقدٌ كاذب على ملف سليم.
+      final from = bar.indexOf('Widget _weatherStrip({');
+      final to = bar.indexOf('String _windDirection(num deg) {');
+      expect(from, greaterThan(-1));
+      expect(to, greaterThan(from));
+      final strip = bar.substring(from, to);
+
       // عمود الرمز بطبيعته لا يُمَدَّد: مقاس ثابت، والباقي للتسمية والبيانات.
-      expect(bar, contains('width: 32,'));
-      expect(bar, contains('flex: 4,')); // القرية + الحرارة + الحالة العربية
-      expect(bar, contains('flex: 5,')); // العظمى/الصغرى، الرطوبة، الرياح
-      expect(bar, contains("Text('طقس قرية أبودشيشة'"));
-      expect(bar, contains('Text(arabicDesc'));
-      expect(bar, contains("'العظمى "));
-      expect(bar, contains(r'رطوبة ${humidity ?? 0}%'));
-      expect(bar, contains(r'رياح $windSpeed م/ث $windDir'));
-      // لا سطر يخرج عن الكارت: كل نص مقصوص بسطر واحد، والارتفاع كله تحت الحدّ 58.
-      expect(RegExp(r'maxLines: 1').allMatches(bar).length, 5);
+      expect(strip, contains('width: 32,'));
+      expect(strip, contains('flex: 4,')); // التسمية والحالة
+      expect(strip, contains('flex: 2,')); // الحرارة واحتمال الأمطار
+      expect(strip, contains('flex: 3,')); // باقي البيانات
+      expect(strip, isNot(contains('flex: 5,')));
+
+      // «في منتصف كل عمود» نُفِّذ بالحذف لا بالكتابة: محاذاة العمود الافتراضية
+      // هي المركز أصلًا، وكتابتها حرفيًا ترمي تكرار الحجة الافتراضية، فيُثبَّت
+      // التمركز الرأسي بالحجة الصريحة الوحيدة غير الافتراضية في كل عمود.
+      expect(strip, isNot(contains('crossAxisAlignment')));
+      expect(
+        RegExp(r'mainAxisAlignment: MainAxisAlignment\.center')
+            .allMatches(strip)
+            .length,
+        3,
+      );
+
+      // العمود الأول بلا اقتصاص: لا `maxLines` ولا `overflow` في نطاقه.
+      final firstCol = strip.substring(
+        strip.indexOf('flex: 4,'),
+        strip.indexOf('flex: 2,'),
+      );
+      expect(firstCol, contains("Text('طقس قرية أبودشيشة'"));
+      expect(firstCol, contains('Text(arabicDesc'));
+      expect(firstCol, isNot(contains('maxLines')));
+      expect(firstCol, isNot(contains('overflow')));
+
+      // العمود الثالث: سطر مستقل لكل بيان، فكل مقصوص بسطر واحد هو سطر بيانات.
+      expect(strip, contains("'العظمى "));
+      expect(strip, contains("'الصغرى "));
+      expect(strip, contains(r'رطوبة ${humidity ?? 0}%'));
+      expect(strip, contains(r'رياح $windSpeed م/ث $windDir'));
+      expect(
+        RegExp(r'maxLines: 1').allMatches(strip).length,
+        5,
+      ); // الأمطار + الأربعة
+    });
+
+    test('احتمال سقوط الأمطار يُقرأ من توقّع المزود وغيابه يبقى صادقًا', () {
+      final bar = src('lib/widgets/village_weather_bar.dart');
+      expect(bar, contains('int? _rainChance'));
+      expect(bar, contains('WeatherService.instance.getForecast()'));
+      expect(bar, contains('rainChance: _rainChance'));
+      expect(bar, contains('required int? rainChance'));
+      expect(bar, contains(r"rainChance != null ? 'أمطار $rainChance%'"));
+      // null يبقى null: لا صفر مخترع ولا نسبة من `getCurrent` (لا تحمل `pop`).
+      expect(bar, contains('static int? _nearestRainChance'));
+      expect(bar, contains('static int? _chanceOf'));
+      expect(bar, contains('if (slots == null || slots.isEmpty) return null'));
     });
 
     test('الكارت يفوّض للحالة العربية المشتركة ولا يعيد اختراعها', () {

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../core/utils/notification_deeplink.dart';
 import '../models/market_extra_models.dart';
 import 'cache_service.dart';
 import 'notification_inbox_service.dart';
@@ -48,14 +49,14 @@ class BuyRequestService {
     await NotificationService.showLocalNotification(
       title: '📝 طلب شراء جديد',
       body: 'تم إرسال "${request.title}" للمراجعة',
-      payload: '/market',
+      payload: NotificationDeepLink.encode('/market', 'buy_requests', ref.id),
     );
     if (uid != null) {
       unawaited(NotificationInboxService.instance.push(
         userId: uid,
         title: '📝 تم إرسال طلبك',
         body: 'تم إرسال طلب الشراء "${request.title}" للمراجعة وسيظهر بعد موافقة الإدارة',
-        route: '/market',
+        route: NotificationDeepLink.encode('/market', 'buy_requests', ref.id),
         kind: 'info',
       ));
     }

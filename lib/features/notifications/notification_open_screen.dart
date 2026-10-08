@@ -20,6 +20,22 @@ class NotificationOpenScreen extends StatefulWidget {
   /// قابل للحقن لاختبار الموجّه دون Firebase حقيقي.
   final FirebaseFirestore? firestore;
 
+  /// تبويب سوق القرية الذي يسكنه هذا النوع من الوثائق.
+  /// بلا مجموعة سوق ⇒ null، فيبقى الرجوع كما كان بلا وسائط.
+  static int? marketTabFor(String collection) {
+    switch (collection) {
+      case 'market_products':
+        return 0;
+      case 'shops':
+        return 1;
+      case 'buy_requests':
+        return 2;
+      case 'donations':
+        return 3;
+    }
+    return null;
+  }
+
   @override
   State<NotificationOpenScreen> createState() => _NotificationOpenScreenState();
 }
@@ -114,7 +130,9 @@ class _NotificationOpenScreenState extends State<NotificationOpenScreen> {
     } catch (_) {}
     if (!mounted) return;
     if (fallback.isNotEmpty) {
-      Navigator.pushReplacementNamed(context, fallback);
+      final tab = NotificationOpenScreen.marketTabFor(collection);
+      Navigator.pushReplacementNamed(context, fallback,
+          arguments: tab == null ? null : <String, dynamic>{'tab': tab});
     } else {
       Navigator.pop(context);
     }

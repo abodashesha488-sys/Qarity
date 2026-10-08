@@ -18,6 +18,7 @@ class VillageWeatherBar extends StatefulWidget {
 class _VillageWeatherBarState extends State<VillageWeatherBar> {
   final AlertService _alerts = AlertService();
   Map<String, dynamic>? _weather;
+  int? _rainChance;
   Timer? _refreshTimer;
   Timer? _breakingExpiryTimer;
   StreamSubscription<VillageAlert?>? _breakingSubscription;
@@ -73,7 +74,32 @@ class _VillageWeatherBarState extends State<VillageWeatherBar> {
 
   Future<void> _loadWeather() async {
     final data = await WeatherService.instance.getCurrent();
-    if (mounted) setState(() => _weather = data);
+    final forecast = await WeatherService.instance.getForecast();
+    if (mounted) {
+      setState(() {
+        _weather = data;
+        _rainChance = _nearestRainChance(forecast);
+      });
+    }
+  }
+
+  /// احتمال سقوط الأمطار لأقرب فتحة ثلاثية ساعات من الآن، أو null عند غياب
+  /// البيانات — والكارت يعرض «—» الصادقة لا صفرًا مخترعًا.
+  static int? _nearestRainChance(Map<String, dynamic>? forecast) {
+    final slots = (forecast?['list'] as List?)?.whereType<Map>();
+    if (slots == null || slots.isEmpty) return null;
+    final nowSeconds = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    for (final slot in slots) {
+      final dt = slot['dt'];
+      if (dt is num && dt >= nowSeconds) return _chanceOf(slot['pop']);
+    }
+    return _chanceOf(slots.first['pop']);
+  }
+
+  static int? _chanceOf(Object? pop) {
+    final value = pop is num ? pop : null;
+    if (value == null) return null;
+    return (value * 100).clamp(0, 100).round();
   }
 
   @override
@@ -100,6 +126,7 @@ class _VillageWeatherBarState extends State<VillageWeatherBar> {
     return _weatherStrip(
       arabicDesc: arabicDesc,
       temp: temp,
+      rainChance: _rainChance,
       tempMax: tempMax,
       tempMin: tempMin,
       humidity: humidity,
@@ -200,6 +227,7 @@ class _VillageWeatherBarState extends State<VillageWeatherBar> {
   Widget _weatherStrip({
     required String arabicDesc,
     required int? temp,
+    required int? rainChance,
     required int? tempMax,
     required int? tempMin,
     required int? humidity,
@@ -256,38 +284,21 @@ class _VillageWeatherBarState extends State<VillageWeatherBar> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  // عمود الحالة: اسم القرية + الحرارة + الوصف العربي
+                  // العمود الأول: اسم القرية ثم حالتها العربية، بلا أي اقتصاص للنص
                   Expanded(
                     flex: 4,
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Row(
-                          children: [
-                            const Expanded(
-                              child: Text('طقس قرية أبودشيشة',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                      color: ink,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w900,
-                                      height: 1.1)),
-                            ),
-                            Text(temp != null ? '$temp°م' : '—',
-                                style: const TextStyle(
-                                    color: ink,
-                                    fontSize: 16.5,
-                                    fontWeight: FontWeight.w900,
-                                    height: 1.1)),
-                          ],
-                        ),
+                        const Text('طقس قرية أبودشيشة',
+                            style: TextStyle(
+                                color: ink,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w900,
+                                height: 1.1)),
                         const SizedBox(height: 2),
                         Text(arabicDesc,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                                 color: ink,
                                 fontSize: 9.5,
@@ -297,24 +308,54 @@ class _VillageWeatherBarState extends State<VillageWeatherBar> {
                     ),
                   ),
                   const SizedBox(width: 6),
-                  // عمود البيانات: العظمى والصغرى، فالرطوبة، فالرياح واتجاهها
+                  // العمود الثاني: درجة الحرارة ثم احتمال سقوط الأمطار
                   Expanded(
-                    flex: 5,
+                    flex: 2,
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          'العظمى ${tempMax != null ? '$tempMax°' : '—'} • الصغرى ${tempMin != null ? '$tempMin°' : '—'}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              color: inkMuted,
-                              fontSize: 8.5,
-                              fontWeight: FontWeight.w700,
-                              height: 1.15),
-                        ),
+                        Text(temp != null ? '$temp°م' : '—',
+                            style: const TextStyle(
+                                color: ink,
+                                fontSize: 16.5,
+                                fontWeight: FontWeight.w900,
+                                height: 1.1)),
+                        Text(rainChance != null ? 'أمطار $rainChance%' : 'أمطار —',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                color: inkMuted,
+                                fontSize: 8.5,
+                                fontWeight: FontWeight.w700,
+                                height: 1.15)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  // العمود الثالث: باقي البيانات — سطر لكل قيمة
+                  Expanded(
+                    flex: 3,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('العظمى ${tempMax != null ? '$tempMax°' : '—'}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                color: inkMuted,
+                                fontSize: 8.5,
+                                fontWeight: FontWeight.w700,
+                                height: 1.15)),
+                        Text('الصغرى ${tempMin != null ? '$tempMin°' : '—'}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                color: inkMuted,
+                                fontSize: 8.5,
+                                fontWeight: FontWeight.w700,
+                                height: 1.15)),
                         Text('رطوبة ${humidity ?? 0}%',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,

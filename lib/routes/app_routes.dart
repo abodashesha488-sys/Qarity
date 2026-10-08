@@ -317,6 +317,16 @@ obituariesAdd: (_) => const AddObituaryScreen(),
         settings,
       );
     }
+    if (settings.name == marketProducts || settings.name == marketTabs) {
+      final args = settings.arguments as Map<String, dynamic>? ?? {};
+      final raw = args['tab'];
+      final tab = raw is int ? raw : int.tryParse('$raw') ?? 0;
+      return _buildSlideRoute(
+        (_) => MarketTabsScreen(
+            initialIndex: tab >= 0 && tab <= 3 ? tab : 0),
+        settings,
+      );
+    }
     if (settings.name == medicalSection) {
       final index = settings.arguments is int ? settings.arguments as int : 0;
       return _buildSlideRoute(

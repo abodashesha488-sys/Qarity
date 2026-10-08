@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../core/utils/notification_deeplink.dart';
 import '../models/market_extra_models.dart';
 import 'cache_service.dart';
 import 'notification_inbox_service.dart';
@@ -47,14 +48,14 @@ class DonationService {
     await NotificationService.showLocalNotification(
       title: '🎁 تبرع جديد',
       body: 'تم إرسال "${donation.title}" للمراجعة',
-      payload: '/market',
+      payload: NotificationDeepLink.encode('/market', 'donations', ref.id),
     );
     if (uid != null) {
       unawaited(NotificationInboxService.instance.push(
         userId: uid,
         title: '🎁 تم إرسال طلبك',
         body: 'تم إرسال التبرع "${donation.title}" للمراجعة وسيظهر بعد موافقة الإدارة',
-        route: '/market',
+        route: NotificationDeepLink.encode('/market', 'donations', ref.id),
         kind: 'info',
       ));
     }

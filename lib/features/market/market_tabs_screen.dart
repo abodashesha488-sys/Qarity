@@ -35,7 +35,10 @@ part 'market_tab_shops.dart';
 
 /// سوق القرية — أربع تبويبات مترابطة: السوق، المحلات، سلع مطلوبة، تبرعات.
 class MarketTabsScreen extends StatefulWidget {
-  const MarketTabsScreen({super.key});
+  const MarketTabsScreen({super.key, this.initialIndex = 0});
+
+  /// التبويب الذي يُفتح مباشرة (0 السوق / 1 المحلات / 2 مطلوب / 3 تبرعات).
+  final int initialIndex;
 
   @override
   State<MarketTabsScreen> createState() => _MarketTabsScreenState();
@@ -98,7 +101,7 @@ class _MarketTabsScreenState extends State<MarketTabsScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 4, vsync: this, initialIndex: widget.initialIndex);
     _loadSellerType();
   }
 
