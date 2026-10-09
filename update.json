@@ -1,7 +1,7 @@
 {
-  "versionCode": 2034,
-  "versionName": "1.1.34",
+  "versionCode": 2035,
+  "versionName": "1.1.35",
   "apkUrl": "https://github.com/abodashesha488-sys/Qarity/releases/latest/download/Qarity.apk",
   "forceUpdate": false,
-  "releaseNotes": "نشر كامل مع إصلاحات مطلوب/تبرعات وجميع التحسينات"
+  "releaseNotes": "إعادة توزيع أعمدة كارت طقس القرية الثلاثة بالتمركز وبحجم يظهر كل بياناتها"
 }
