@@ -284,33 +284,45 @@ class _VillageWeatherBarState extends State<VillageWeatherBar> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  // العمود الأول: اسم القرية ثم حالتها العربية، بلا أي اقتصاص للنص
+                  // الأعمدة محسوبة بالتناسب مع العرض الحقيقي لمحتواها (قيس بمقاييس
+                  // Tajawal على 390dp: 113.9 / 42.6 / 102.7 من 264dp متاحة)، فالأول
+                  // والثالث يظهران كامل بياناتهما والثاني أصغرهما كما طُلب.
+                  // العمود الأول: اسم القرية ثم حالتها العربية — يصغر مقاسًا إن ضاق
+                  // الموضع بدل أن يُبتَر بحروف ellipsis.
                   Expanded(
-                    flex: 4,
+                    flex: 8,
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text('طقس قرية أبودشيشة',
-                            style: TextStyle(
-                                color: ink,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w900,
-                                height: 1.1)),
+                        const FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text('طقس قرية أبودشيشة',
+                              maxLines: 1,
+                              style: TextStyle(
+                                  color: ink,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w900,
+                                  height: 1.1)),
+                        ),
                         const SizedBox(height: 2),
-                        Text(arabicDesc,
-                            style: const TextStyle(
-                                color: ink,
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.w800,
-                                height: 1.2)),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(arabicDesc,
+                              maxLines: 1,
+                              style: const TextStyle(
+                                  color: ink,
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w800,
+                                  height: 1.2)),
+                        ),
                       ],
                     ),
                   ),
                   const SizedBox(width: 6),
-                  // العمود الثاني: درجة الحرارة ثم احتمال سقوط الأمطار
+                  // العمود الثاني: درجة الحرارة ثم احتمال سقوط الأمطار (أصغر الأعمدة)
                   Expanded(
-                    flex: 2,
+                    flex: 3,
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       mainAxisSize: MainAxisSize.min,
@@ -333,45 +345,53 @@ class _VillageWeatherBarState extends State<VillageWeatherBar> {
                     ),
                   ),
                   const SizedBox(width: 6),
-                  // العمود الثالث: باقي البيانات — سطر لكل قيمة
+                  // العمود الثالث: باقي البيانات — سطر لكل قيمة، وكلها تُرى كاملة
                   Expanded(
-                    flex: 3,
+                    flex: 7,
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text('العظمى ${tempMax != null ? '$tempMax°' : '—'}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                color: inkMuted,
-                                fontSize: 8.5,
-                                fontWeight: FontWeight.w700,
-                                height: 1.15)),
-                        Text('الصغرى ${tempMin != null ? '$tempMin°' : '—'}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                color: inkMuted,
-                                fontSize: 8.5,
-                                fontWeight: FontWeight.w700,
-                                height: 1.15)),
-                        Text('رطوبة ${humidity ?? 0}%',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                color: inkMuted,
-                                fontSize: 8.5,
-                                fontWeight: FontWeight.w700,
-                                height: 1.15)),
-                        Text('رياح $windSpeed م/ث $windDir',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                color: inkMuted,
-                                fontSize: 8.5,
-                                fontWeight: FontWeight.w700,
-                                height: 1.15)),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text('العظمى ${tempMax != null ? '$tempMax°' : '—'}',
+                              maxLines: 1,
+                              style: const TextStyle(
+                                  color: inkMuted,
+                                  fontSize: 8.5,
+                                  fontWeight: FontWeight.w700,
+                                  height: 1.15)),
+                        ),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text('الصغرى ${tempMin != null ? '$tempMin°' : '—'}',
+                              maxLines: 1,
+                              style: const TextStyle(
+                                  color: inkMuted,
+                                  fontSize: 8.5,
+                                  fontWeight: FontWeight.w700,
+                                  height: 1.15)),
+                        ),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text('رطوبة ${humidity ?? 0}%',
+                              maxLines: 1,
+                              style: const TextStyle(
+                                  color: inkMuted,
+                                  fontSize: 8.5,
+                                  fontWeight: FontWeight.w700,
+                                  height: 1.15)),
+                        ),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text('رياح $windSpeed م/ث $windDir',
+                              maxLines: 1,
+                              style: const TextStyle(
+                                  color: inkMuted,
+                                  fontSize: 8.5,
+                                  fontWeight: FontWeight.w700,
+                                  height: 1.15)),
+                        ),
                       ],
                     ),
                   ),

@@ -147,9 +147,19 @@ void main() {
 
       // عمود الرمز بطبيعته لا يُمَدَّد: مقاس ثابت، والباقي للتسمية والبيانات.
       expect(strip, contains('width: 32,'));
-      expect(strip, contains('flex: 4,')); // التسمية والحالة
-      expect(strip, contains('flex: 2,')); // الحرارة واحتمال الأمطار
-      expect(strip, contains('flex: 3,')); // باقي البيانات
+      // الأعمدة الثلاثة بالأحساب المقاسة من عرض نصّها الحقيقي (Tajawal عند 390dp):
+      // 113.9 للأول و42.6 للثاني و102.7 للثالث من 264dp متاحة، فتوزيع 8:3:7 يعطي
+      // 117.3 / 44.0 / 102.7 — أي الأول والثالث يظهر كامل بياناتهما والثاني أقلّهما.
+      final flexes = RegExp(r'flex: (\d+),')
+          .allMatches(strip)
+          .map((m) => int.parse(m.group(1)!))
+          .toList();
+      expect(flexes, [8, 3, 7]);
+      expect(flexes[1], lessThan(flexes[0]));
+      expect(flexes[1], lessThan(flexes[2]));
+      // توزيع 4:2:3 السابق لا يعود: كان يترك للعمود الأول أقلّ من حاجته.
+      expect(strip, isNot(contains('flex: 4,')));
+      expect(strip, isNot(contains('flex: 2,')));
       expect(strip, isNot(contains('flex: 5,')));
 
       // «في منتصف كل عمود» نُفِّذ بالحذف لا بالكتابة: محاذاة العمود الافتراضية
@@ -163,15 +173,20 @@ void main() {
         3,
       );
 
-      // العمود الأول بلا اقتصاص: لا `maxLines` ولا `overflow` في نطاقه.
+      // «يظهر كامل بياناته» في العمودين الأول والثالث: لا `overflow` إطلاقًا في
+      // الكارت، وبدله `FittedBox(scaleDown)` يصغّر الحروف عند الضيق فلا يُبتَر نص.
       final firstCol = strip.substring(
-        strip.indexOf('flex: 4,'),
-        strip.indexOf('flex: 2,'),
+        strip.indexOf('flex: 8,'),
+        strip.indexOf('flex: 3,'),
       );
       expect(firstCol, contains("Text('طقس قرية أبودشيشة'"));
       expect(firstCol, contains('Text(arabicDesc'));
-      expect(firstCol, isNot(contains('maxLines')));
+      expect(RegExp(r'FittedBox\(').allMatches(firstCol).length, 2);
       expect(firstCol, isNot(contains('overflow')));
+      final thirdCol = strip.substring(strip.indexOf('flex: 7,'));
+      expect(RegExp(r'FittedBox\(').allMatches(thirdCol).length, 4);
+      expect(thirdCol, isNot(contains('overflow')));
+      expect(RegExp(r'BoxFit\.scaleDown').allMatches(strip).length, 6);
 
       // العمود الثالث: سطر مستقل لكل بيان، فكل مقصوص بسطر واحد هو سطر بيانات.
       expect(strip, contains("'العظمى "));
@@ -180,8 +195,8 @@ void main() {
       expect(strip, contains(r'رياح $windSpeed م/ث $windDir'));
       expect(
         RegExp(r'maxLines: 1').allMatches(strip).length,
-        5,
-      ); // الأمطار + الأربعة
+        7,
+      ); // اثنان للأول + الأمطار + الأربعة للثالث
     });
 
     test('احتمال سقوط الأمطار يُقرأ من توقّع المزود وغيابه يبقى صادقًا', () {
