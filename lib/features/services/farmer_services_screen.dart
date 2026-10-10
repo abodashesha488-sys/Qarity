@@ -125,16 +125,25 @@ class _ServiceTile extends StatelessWidget {
         child: InkWell(
           borderRadius: radius,
           onTap: () => Navigator.pushNamed(context, service.route),
-          child: Image.asset(
-            service.image,
-            width: double.infinity,
-            height: double.infinity,
-            fit: BoxFit.cover,
-            // بلاطتان في السطر: العرض الفعلي ~172dp ⇒ ~520px عند DPR 3
-            cacheWidth: 520,
-            semanticLabel: '${service.title}: ${service.description}',
-            errorBuilder: (context, error, stackTrace) => Center(
-              child: Text(service.title, textAlign: TextAlign.center),
+          // بلاطة الشبكة تفرض قيودًا محكمة، فالتصغير يكون للصورة نفسها لا
+          // للإطار: Center يُرخي القيود فتأخذ البلاطة 70% من مساحة البلاطة
+          // وتبقى في منتصفها، بينما يظل الإطار والأرضية ومنطقة النقر كاملة.
+          child: Center(
+            child: FractionallySizedBox(
+              widthFactor: 0.7,
+              heightFactor: 0.7,
+              child: Image.asset(
+                service.image,
+                width: double.infinity,
+                height: double.infinity,
+                fit: BoxFit.cover,
+                // بلاطتان في السطر: العرض الفعلي ~172dp ⇒ ~520px عند DPR 3
+                cacheWidth: 520,
+                semanticLabel: '${service.title}: ${service.description}',
+                errorBuilder: (context, error, stackTrace) => Center(
+                  child: Text(service.title, textAlign: TextAlign.center),
+                ),
+              ),
             ),
           ),
         ),

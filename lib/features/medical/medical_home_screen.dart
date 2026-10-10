@@ -59,9 +59,9 @@ class MedicalHomeScreen extends StatelessWidget {
     return Scaffold(
       appBar: const QurityAppBar(
           title: 'الخدمات الطبية'),
-      // أربع صفوف في الشاشة الواحدة كما طلب المستخدم: ارتفاع البلاطة يُحسب من
-      // ارتفاع الجسم المتاح (لا من نسبة ثابتة)، فيبقى السطر الرابع ظاهرًا على أي
-      // مقاس شاشة. المحتوى والمسارات والصور لم تتغيّر — التنسيق وحده.
+      // البلاطات ومرتِّب الشبكة وحشوه ومساراتها كما كانت — التعديل الوحيد هنا هو
+      // حجم الأيقونة نفسها: تُرسم عند 70% من بلاطتها (تصغير 30%) وسط البلاطة على
+      // أرضيتها، فلا يُقصّ أي سجل وتبقى الشاشة كما هي.
       body: LayoutBuilder(builder: (context, box) {
         const vPadding = 16.0 + 28.0;
         const spacing = 16.0;
@@ -114,16 +114,22 @@ class _MedicalSectionTile extends StatelessWidget {
           borderRadius: radius,
           onTap: () =>
               Navigator.pushNamed(context, '/medical/section', arguments: index),
-          child: Image.asset(
-            image,
-            width: double.infinity,
-            height: double.infinity,
-            fit: BoxFit.cover,
-            // بلاطتان في السطر: العرض الفعلي ~172dp ⇒ ~520px عند DPR 3
-            cacheWidth: 520,
-            semanticLabel: label,
-            errorBuilder: (context, error, stackTrace) => Center(
-              child: Text(label, textAlign: TextAlign.center),
+          child: Center(
+            child: FractionallySizedBox(
+              widthFactor: 0.7,
+              heightFactor: 0.7,
+              child: Image.asset(
+                image,
+                width: double.infinity,
+                height: double.infinity,
+                fit: BoxFit.cover,
+                // بلاطتان في السطر: العرض الفعلي ~172dp ⇒ ~520px عند DPR 3
+                cacheWidth: 520,
+                semanticLabel: label,
+                errorBuilder: (context, error, stackTrace) => Center(
+                  child: Text(label, textAlign: TextAlign.center),
+                ),
+              ),
             ),
           ),
         ),

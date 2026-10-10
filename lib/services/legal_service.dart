@@ -71,15 +71,20 @@ class LawyerService {
   Future<void> delete(String id) =>
       OwnerContentService.remove(_firestore, 'lawyers', id);
 
-  /// المحامون المعتمدون — الأحدث أولاً. الشرط على الخادم يوفّر القراءة،
-  /// والترتيب كلاينت لأن `orderBy('createdAt')` يُسقط أي وثيقة بلا الحقل.
+  /// المحامون المعتمدون — الأحدث أولاً، وبنفس عقد قراءات المشروع: المجموعة
+  /// كاملة ثم البوابة والفرز في الكلاينت. `asBroadcastStream` هي الإصلاح
+  /// الحاسم هنا: تبويب الصفحة يُبدّل اشتراك `StreamBuilder` بين هذا التدفّق
+  /// و«تسجيلي»، والأصل بعد `.map` أحادي الاشتراك فيرمي عند العودة إليه
+  /// «Stream has already been listened to» فيبقى التبويب دوّارًا بلا سجلّات.
   Stream<List<Lawyer>> watchApproved() {
     return _col
-        .where('isApproved', isEqualTo: true)
         .snapshots()
         .map((s) => _newestFirst<Lawyer>(
-            s.docs.map((d) => Lawyer.fromJson(d.data(), d.id)).toList(),
-            (l) => l.createdAt));
+            s.docs
+                .map((d) => Lawyer.fromJson(d.data(), d.id))
+                .where((l) => l.isApproved)
+                .toList(), (l) => l.createdAt))
+        .asBroadcastStream();
   }
 
   /// سجلات المستخدم نفسه بكل حالاتها (لمتابعة المعلّق منها).
@@ -89,7 +94,8 @@ class LawyerService {
         .snapshots()
         .map((s) => _newestFirst<Lawyer>(
             s.docs.map((d) => Lawyer.fromJson(d.data(), d.id)).toList(),
-            (l) => l.createdAt));
+            (l) => l.createdAt))
+        .asBroadcastStream();
   }
 
   Future<Lawyer?> getById(String id) async {
@@ -143,15 +149,21 @@ class LegalConsultationService {
   Future<void> delete(String id) =>
       OwnerContentService.remove(_firestore, 'legal_consultations', id);
 
-  /// الاستشارات المعتمدة — الأحدث أولاً (المرشَّح على الخادم حتى لا تُقرأ
-  /// الأسئلة المعلّقة لغير أصحابها).
+  /// الاستشارات المعتمدة — الأحدث أولاً، بالقراءة الكلاينتية كما في سجل المحامين.
+  /// `asBroadcastStream` هي الإصلاح الحاسم هنا: التبويب يُبدّل اشتراك
+  /// `StreamBuilder` بين هذا التدفّق و«استشاراتي»، والأصل بعد `.map` أحادي
+  /// الاشتراك فيرمي عند العودة إليه «Stream has already been listened to».
+  /// سرّ السؤال المعلَّق لم يعد مرهونًا بـ`where` على الخادم — بل بقواعد
+  /// `legal_consultations` التي تسمح لكل موقَّع بوثائقه المعتمدة أو بأسئلته.
   Stream<List<LegalConsultation>> watchApproved() {
     return _col
-        .where('isApproved', isEqualTo: true)
         .snapshots()
         .map((s) => _newestFirst<LegalConsultation>(
-            s.docs.map((d) => LegalConsultation.fromJson(d.data(), d.id))
-                .toList(), (c) => c.createdAt));
+            s.docs
+                .map((d) => LegalConsultation.fromJson(d.data(), d.id))
+                .where((c) => c.isApproved)
+                .toList(), (c) => c.createdAt))
+        .asBroadcastStream();
   }
 
   Stream<List<LegalConsultation>> watchMine(String userId) {
@@ -161,6 +173,7 @@ class LegalConsultationService {
         .map((s) => _newestFirst<LegalConsultation>(
             s.docs
                 .map((d) => LegalConsultation.fromJson(d.data(), d.id))
-                .toList(), (c) => c.createdAt));
+                .toList(), (c) => c.createdAt))
+        .asBroadcastStream();
   }
 }

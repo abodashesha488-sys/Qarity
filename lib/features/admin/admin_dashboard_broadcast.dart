@@ -23,6 +23,32 @@ class _BroadcastPageState extends State<_BroadcastPage> {
     super.dispose();
   }
 
+  /// سبب الفشل بعبارة عربية مستقلة لكل حالة — **بلا أرقام داخلية في الواجهة**
+  /// (رمز الوضع وخيط العامل يبقى في `PushSendResult` لمن يحتاجه، لا في الشريط).
+  String _broadcastFailureText(PushSendResult result) {
+    const prefix = 'لم يُرسل الإشعار — ';
+    final reason = switch (result.status) {
+      PushSendStatus.sent => 'قُبل الطلب',
+      PushSendStatus.noEndpoint =>
+        'وجه خدمة الإشعارات غير مضبوط في هذا البناء.',
+      PushSendStatus.noSession =>
+        'لا جلسة تسجيل دخول محفوظة على هذا الجهاز، والإرسال الإذاعي يتطلب أدمنًا مسجّلًا.',
+      PushSendStatus.timeout =>
+        'انتهت مهلة الوصول إلى خدمة الإشعارات — أعد المحاولة بعد لحظات.',
+      PushSendStatus.network =>
+        'لا يمكن الوصول إلى خدمة الإشعارات — تحقّق من الاتصال ثم أعد المحاولة.',
+      PushSendStatus.rejected =>
+        'رفضت خدمة الإشعارات هذا الحساب — الإرسال الإذاعي للمدير العام أو المدير المساعد فقط.',
+      PushSendStatus.badRequest =>
+        'رفضت خدمة الإشعارات الطلب — تحقّق من العنوان والنص ثم أعد المحاولة.',
+      PushSendStatus.serverFailed =>
+        'فشل الإرسال داخل خدمة الإشعارات — أعد المحاولة بعد لحظات.',
+      PushSendStatus.badResponse =>
+        'جاء جواب غير مفهوم من خدمة الإشعارات فلم تُؤكَّد الوصول.',
+    };
+    return '$prefix$reason';
+  }
+
   Future<void> _sendBroadcast() async {
     final title = _titleController.text.trim();
     final body = _bodyController.text.trim();
@@ -41,17 +67,22 @@ class _BroadcastPageState extends State<_BroadcastPage> {
     }
 
     setState(() => _isSending = true);
-    try {
-      await RemotePushService.broadcastToAllUsers(
-        title: title,
-        body: body,
-        route: route.isEmpty ? null : route,
-        alert: _sendAlert,
-      );
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+    // `broadcastToAllUsers` **لا ترمي أبدًا**: الحالة تُقرأ من الناتج، فلا حاجة
+    // إلى try/catch كان يصل إلى فرع «خطأ: $e» الميت بينما كل فشل صامت يُبلَّغ
+    // كنجاح.
+    final result = await RemotePushService.broadcastToAllUsers(
+      title: title,
+      body: body,
+      route: route.isEmpty ? null : route,
+      alert: _sendAlert,
+    );
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context)..clearSnackBars();
+    if (result.isSent) {
+      messenger.showSnackBar(
         SnackBar(
-          content: Text('تم إرسال الإشعار الإذاعي لجميع المستخدمين${_sendAlert ? ' (تنبيه عاجل)' : ''}',
+          content: Text(
+              'تم إرسال الإشعار الإذاعي لجميع المستخدمين${_sendAlert ? ' (تنبيه عاجل)' : ''}',
               style: const TextStyle(color: Colors.white)),
           backgroundColor: AppColors.primary,
         ),
@@ -60,17 +91,15 @@ class _BroadcastPageState extends State<_BroadcastPage> {
       _bodyController.clear();
       _routeController.clear();
       setState(() => _sendAlert = false);
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+    } else {
+      messenger.showSnackBar(
         SnackBar(
-            content: Text('خطأ: $e',
+            content: Text(_broadcastFailureText(result),
                 style: const TextStyle(color: Colors.white)),
             backgroundColor: AppColors.error),
       );
-    } finally {
-      if (mounted) setState(() => _isSending = false);
     }
+    setState(() => _isSending = false);
   }
 
   @override

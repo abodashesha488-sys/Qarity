@@ -56,6 +56,30 @@ void main() {
       expect(tester.getSize(find.byType(FullFitImage)), const Size(90, 90));
     });
 
+    testWidgets('مقاس مثبّت: الإطار عند الارتفاع المعلوم ولا قياس للنسبة',
+        (tester) async {
+      await _pump(
+          tester,
+          FullFitImage(
+            imageUrl: 'https://example.invalid/tall.jpg',
+            width: 100,
+            fixedHeight: 120,
+            fallback: Container(key: const Key('بديل'), color: Colors.blue),
+          ));
+
+      // الارتفاع المعلوم يُطاع حرفيًا ولو كانت النسبة ستعطي غيرَه — وهذا جوهر
+      // «ثبّت الحجم للجميع في الكروت».
+      expect(tester.getSize(find.byType(FullFitImage)), const Size(100, 120));
+    });
+
+    test('المقاس المثبّت يُعفي من القياس (عقد المصدر)', () {
+      final src = _read('lib/widgets/full_fit_image.dart');
+      expect(src, contains('if (widget.fixedHeight != null) return;'),
+          reason: 'لا فكّ للصورة ولا كاش نسبة when الارتفاع معلوم — بطاقة القائمة');
+      expect(src, contains('if (widget.fixedHeight != null) return widget.fixedHeight!;'),
+          reason: 'الارتفاع المثبّت يُطاع قبل فرع الفراغ والفشل');
+    });
+
     test('فشل الصورة يرجع للبديل لا لمربّع فارغ (عقد المصدر)', () {
       final src = _read('lib/widgets/full_fit_image.dart');
       expect(src, contains('errorWidget: (_, __, ___) {'));
@@ -98,6 +122,21 @@ void main() {
       }
     });
 
+    test('كروت القائمة بمقاس صورة مثبّت، والتفاصيل بقيت بمساحة محسوبة', () {
+      // «لا تجعل الكارت يغيّر حجمه بناءً على صورة الفني» = الارتفاع يُمرَّر
+      // ثابتًا في البطاقة؛ «ولكنها تتغير في التفاصيل وتظهر بمساحة محسوبة» =
+      // شاشة التفاصيل لا تمرّر مقاسًا فتقيس النسبة وترسم بها.
+      final cardSrc = _read(card);
+      expect(cardSrc, contains('fixedHeight: _kImageSide'),
+          reason: 'بطاقة القائمة: مربّع مثبّت لكل السجلات');
+      expect(_read(detail).contains('fixedHeight'), isFalse,
+          reason: 'التفاصيل تُقاس نسبتها فلا تفقّر المساحة المحسوبة');
+
+      // العرض وحده لا يكفي: بلا تجميد الارتفاع كانت البطاقة تطول وتقصر.
+      final cardUses = RegExp('fixedHeight: _kImageSide').allMatches(cardSrc);
+      expect(cardUses.length, 1, reason: 'موضع البطاقة وحده في القائمة');
+    });
+
     test('هيدر التفاصيل لا يحمل بانرًا مصوَّرًا، والصورة كاملة في _heroPhoto',
         () {
       final src = _read(detail);
@@ -128,6 +167,85 @@ void main() {
             isTrue,
             reason: 'BoxFit.cover عند السطر ${i + 1} بلا مربّع مربوطة به');
       }
+    });
+  });
+
+  group('عقد المصدر — البطاقة لا تتجاوز خمسة أسطر', () {
+    // «عدم تجاوز الكارت حجم 5 أسطر» عند رسم البطاقة: سطر العنوان، سطر
+    // التقييم، سطر الرقائق، سطر النبذة، شريط الأزرار. فما كان ينمو بعدد
+    // مراحل السجل وأنواع تعليمه (الرقائق) وبسطرين للنبذة هو من يُجمَّد،
+    // لا الحشو ولا مقاس الصورة.
+    const card = 'lib/features/services/service_directory_screen.dart';
+    final src = _read(card);
+
+    test('سطر المواد على سطرٍ واحد والاقتصار عليه صريح', () {
+      final start = src.indexOf('List<Widget> _eduTags(ThemeData theme) {');
+      expect(start, greaterThan(-1));
+      final tags =
+          src.substring(start, src.indexOf('List<Widget> _cardChips', start));
+      expect(tags, contains('provider.displaySpecialty'),
+          reason: 'سطر المواد هو ما كان يلتفّ فيطيل الكارت');
+      expect(tags, contains('maxLines: 1'));
+      expect(tags, contains('overflow: TextOverflow.ellipsis'));
+    });
+
+    test('النبذة سطرٌ واحد في البطاقة التعليمية وسطران لغيرها', () {
+      expect(
+          src,
+          contains('maxLines: provider.isEducational ? 1 : 2'),
+          reason: '«5 أسطر» تُحسب على البطاقة التعليمية لا على حرفي');
+      // النص الكامل يبقى حيث يُقرأ: تفاصيل السجل ونص المشاركة.
+      expect(_read('lib/features/services/service_provider_detail_screen.dart'),
+          contains('provider.description'));
+      expect(src, contains('provider.description'),
+          reason: 'نص المشاركة يبني أسطره من نفس النموذج');
+    });
+
+    test('رقائق البطاقة بمعدودٍ معلن يشمل رقيقة العدّ', () {
+      expect(src, contains('static const int _kMaxCardChips = 3;'));
+      final start = src.indexOf('List<Widget> _cardChips(ThemeData theme) {');
+      expect(start, greaterThan(-1));
+      final chips =
+          src.substring(start, src.indexOf('Widget _tag(ThemeData theme', start));
+      // السقف جمعٌ لا حذف: ما خرج عن المعدود يُعلَن رقمًا ظاهرًا.
+      expect(chips, contains("'+\$hidden'"),
+          reason: 'الباقي يُعدّ ولا يُسقَط في صمت');
+      expect(chips, contains('if (total <= _kMaxCardChips)'),
+          reason: 'ما لا يتجاوز السقف يُرسم كله كما هو');
+      // رقيقة العدّ تأكل خانةً من السقف، فلا يُرسم أبدًا أربعة.
+      expect(chips, contains('final keep = private == null ? _kMaxCardChips - 1 : 1;'),
+          reason: 'ثلاثة مرسومة فعلًا لا ثلاثة + عدّ');
+      expect(chips, contains('leading.take(keep)'));
+      // «تدريس خاص» في موضع محفوظ: هو ما تفتحه مرشّحات الصفحة.
+      expect(chips, contains('if (private != null) private'));
+      expect(chips, contains("'تدريس خاص'"));
+    });
+
+    test('مقاس الصورة مثبّت عند ضلعٍ واحد لكل البطاقات', () {
+      expect(src, contains('static const double _kImageSide = 104;'));
+      // صورة الصفة الافتراضية تلبس نفس الضلع، فالبلا صورة لا تطيل الكارت.
+      expect(src, contains('width: _kImageSide'));
+      expect(src, contains('height: _kImageSide'));
+    });
+
+    test('زرّا الاتصال والمشاركة بقيا على تصميمهما المصمت بمقاس مصغّر', () {
+      // لم تكن هذه مصغَّرة في هذه الموجة — هي كذلك منذ التزامٍ سابق؛ العقد
+      // هنا يمنع رجوعها ضخمة مع بقاء ألوانها ورموزها كما هي.
+      final start = src.indexOf('Widget _miniAction(');
+      expect(start, greaterThan(-1));
+      final mini = src.substring(start, src.indexOf('_share()', start));
+      // المقاس المُصمَّت يُقرأ من سطر الحجة نفسه: المترسّق يضعه في سطرٍ مستقل،
+      // فمطابقة «SizedBox(height: 32» لن تطابق أبدًا بلا إعادة تنسيق الكود.
+      expect(mini, contains('return SizedBox('));
+      expect(mini, contains('height: 32,'));
+      expect(mini, contains('VisualDensity.compact'));
+      expect(mini, contains('MaterialTapTargetSize.shrinkWrap'));
+      expect(mini, contains('FilledButton.icon'), reason: 'نفس تصميم الزر');
+      for (final color in ['kCallButtonColor', 'kShareButtonColor']) {
+        expect(src, contains('$color,'), reason: '$color يصل الزر كما كان');
+      }
+      expect(src, contains('Icons.call_rounded'));
+      expect(src, contains('Icons.share_rounded'));
     });
   });
 

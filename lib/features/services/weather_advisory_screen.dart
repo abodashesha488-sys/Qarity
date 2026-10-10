@@ -279,7 +279,7 @@ class _WeatherAdvisoryScreenState extends State<WeatherAdvisoryScreen> {
                     icon: Icons.speed_rounded,
                     label: 'رياح',
                     value:
-                        '${windSpeed.toStringAsFixed(1)} م/ث ${WeatherFormat.windDirection(windDeg)}',
+                        '${WeatherFormat.windSpeedKmh(windSpeed)} ${WeatherFormat.windDirection(windDeg)}',
                     color: color),
                 const SizedBox(width: 12),
                 _WeatherMetric(
@@ -391,13 +391,14 @@ class _WeatherAdvisoryScreenState extends State<WeatherAdvisoryScreen> {
           '🏜️ رطوبة منخفضة (<30%): إجهاد مائي — زيادة تردد الري — رش ورقي صباحاً — ملاحة حول النباتات');
     }
 
-    // رياح
+    // رياح — العتبة تُقارن بالأمتار/الثانية كما يرسلها المزود، وتُسمّى بالمقاس
+    // الذي يقرأه المزارع في كل صفحة (كم/س)، فلا يكذب نص الإرشاد على الرقم المعروض.
     if (windSpeed > 10) {
       advisories.add(
-          '💨 رياح قوية (>10 م/ث): خطر تطاير رش — لا رش — ثبت الصوب والتلاحيف — تحقق من تكاسير');
+          '💨 رياح قوية (>36 كم/س): خطر تطاير رش — لا رش — ثبت الصوب والتلاحيف — تحقق من تكاسير');
     } else if (windSpeed > 6) {
       advisories.add(
-          '🌬️ رياح معتدلة (6-10 م/ث): رش مع الحذر — اتجاه الريح — تجنب الرش الظهيرة');
+          '🌬️ رياح معتدلة (22-36 كم/س): رش مع الحذر — اتجاه الريح — تجنب الرش الظهيرة');
     }
 
     // حالة الطقس

@@ -247,6 +247,120 @@ void main() {
     });
   });
 
+  group('الظهور المباشر بعد الاعتماد (مستشار القرية)', () {
+    // fake يطلق انبعاثاته لا متزامنة، والكتابة الواحدة قد تُنتج أكثر من
+    // انبعاثة، فالقياس بمهلة محدودة على عدد الانبعاثات لا بضخّ إطار واحد.
+    Future<void> waitCount<T>(List<List<T>> sink, int target) async {
+      for (var i = 0; i < 80 && sink.length < target; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 25));
+      }
+    }
+
+    test('اعتماد سجل محامٍ يظهره في الدليل على نفس الاشتراك', () async {
+      final fake = FakeFirebaseFirestore();
+      final svc = LawyerService(fake);
+      final sink = <List<Lawyer>>[];
+      final sub = svc.watchApproved().listen(sink.add);
+      await waitCount<Lawyer>(sink, 1);
+      expect(sink.first, isEmpty);
+
+      final ref = await fake.collection('lawyers').add({
+        'name': 'م/سمير',
+        'submittedBy': 'u1',
+        'isApproved': false,
+        'createdAt': DateTime(2026, 10),
+      });
+      await waitCount<Lawyer>(sink, 2);
+      expect(sink.last.any((l) => l.name == 'م/سمير'), isFalse,
+          reason: 'غير المعتمد لا يظهر للقرية');
+
+      await fake.collection('lawyers').doc(ref.id).update({'isApproved': true});
+      await waitCount<Lawyer>(sink, 3);
+      expect(sink.last.map((l) => l.name).toList(), ['م/سمير'],
+          reason: 'قرار الإدارة وحده هو ما يُظهر السجل، على نفس الاشتراك');
+      await sub.cancel();
+    });
+
+    test('اعتماد استشارة يظهرها مباشرة في تبويب الاستشارات', () async {
+      final fake = FakeFirebaseFirestore();
+      final svc = LegalConsultationService(fake);
+      final sink = <List<LegalConsultation>>[];
+      final sub = svc.watchApproved().listen(sink.add);
+      await waitCount<LegalConsultation>(sink, 1);
+      expect(sink.first, isEmpty);
+
+      final ref = await fake.collection('legal_consultations').add({
+        'question': 'مدة دعوى الجبابة',
+        'userId': 'u1',
+        'isApproved': false,
+        'createdAt': DateTime(2026, 10),
+      });
+      await waitCount<LegalConsultation>(sink, 2);
+      expect(sink.last, isEmpty);
+
+      await fake
+          .collection('legal_consultations')
+          .doc(ref.id)
+          .update({'isApproved': true, 'answer': 'خمسة عشر يومًا'});
+      await waitCount<LegalConsultation>(sink, 3);
+      expect(sink.last.single.question, 'مدة دعوى الجبابة');
+      expect(sink.last.single.hasAnswer, isTrue);
+      await sub.cancel();
+    });
+
+    test('تبديل التبويب إلى «تسجيلي» ثم العودة إلى الدليل لا يُبقي الشاشة دوّارة',
+        () async {
+      final fake = FakeFirebaseFirestore();
+      final svc = LawyerService(fake);
+      final feed = svc.watchApproved();
+      final sink = <List<Lawyer>>[];
+
+      var sub = feed.listen(sink.add);
+      await waitCount<Lawyer>(sink, 1);
+      await sub.cancel();
+
+      // كما يفعل StreamBuilder في التبويب: يلغي الدليل ويستمع «تسجيلي» ثم يعود.
+      final mine = svc.watchMine('u1');
+      sub = mine.listen((_) {});
+      await Future<void>.delayed(const Duration(milliseconds: 40));
+      await sub.cancel();
+
+      sub = feed.listen(sink.add);
+      // لا عقد على انبعاثة الاستئناف (البثّ يسقط ما صدر بلا مستمع)، فالكتابة
+      // تكون بعد إعادة الاشتراك وحدها هي الدليل على أن التدفّق ما يزال حيًّا.
+      final written = sink.length;
+      await fake.collection('lawyers').add({
+        'name': 'م/رجع',
+        'isApproved': true,
+        'createdAt': DateTime(2026, 10, 5),
+      });
+      await waitCount<Lawyer>(sink, written + 1);
+      expect(sink.last.map((l) => l.name).toList(), contains('م/رجع'),
+          reason: 'العودة إلى نفس التدفّق تُكمل الاشتراك ولا ترمي');
+      await sub.cancel();
+    });
+
+    test('عقد المصدر: التدفقات الأربعة بثّية والبناءتان تفيشآن الخطأ', () {
+      final code = src('lib/services/legal_service.dart')
+          .split('\n')
+          .where((l) => !l.trim().startsWith('//'))
+          .join('\n');
+      // أربع تدفقات (محامون/استشارات × الدليل/تسجيلي) — كلُّها بثّية، وإلا
+      // عاد العلّة نفسها: «Stream has already been listened to» دوّارًا أبدا.
+      expect(code.split('asBroadcastStream()').length - 1, 4);
+      // القراءة كاملة للمجموعة والفرز والاعتماد كلاينتيًا (عقد المشروع).
+      expect(code, isNot(contains("where('isApproved'")));
+      expect(code, isNot(contains('orderBy(')));
+
+      final screen = src('lib/features/legal/legal_advisor_screen.dart');
+      expect(screen.split('snap.hasError').length - 1, 2,
+          reason: 'تبويبا المحامين والاستشارات يفيشآن الخطأ لا يدوّران');
+      expect(screen.split('late final Stream').length - 1, 2,
+          reason: 'التدفق مثبّت لكل حالة ولا يُعاد بناؤه في build');
+      expect(screen.split('??= _service.watchMine').length - 1, 2);
+    });
+  });
+
   group('المرجع القانوني الثابت', () {
     test('كل موضوع له عنوان وملخّص ونقاط مقروءة', () {
       expect(kLegalReferenceTopics.length, greaterThanOrEqualTo(10));
@@ -261,6 +375,24 @@ void main() {
       expect(kLegalReferenceTopics.map((t) => t.title).toSet().length,
           kLegalReferenceTopics.length,
           reason: 'لا موضوع يتكرر');
+    });
+
+    test('زيادة المعلومات: ثلاثة عشر موضوعًا إضافيًا بعد الأربعة عشر', () {
+      expect(kLegalReferenceTopics.length, 27);
+      expect(kLegalReferenceTopics.length, greaterThan(14));
+    });
+
+    test('نصوص المرجع عربية خالصة: لا حرف لاتيني في عنوان أو ملخّص أو نقطة', () {
+      final latin = RegExp(
+        '['
+        '${String.fromCharCode(65)}-${String.fromCharCode(90)}'
+        '${String.fromCharCode(97)}-${String.fromCharCode(122)}'
+        ']',
+      );
+      for (final t in kLegalReferenceTopics) {
+        final body = [t.title, t.summary, ...t.points].join(' ');
+        expect(latin.hasMatch(body), isFalse, reason: t.title);
+      }
     });
 
     test('افتتاحيته خريطة نظم القضاء المصري، والتنبيه صريح', () {

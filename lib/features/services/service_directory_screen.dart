@@ -898,8 +898,16 @@ class _ProviderCard extends StatelessWidget {
   final ServiceProvider provider;
   final Color accent;
 
-  /// ضلع صورة البطاقة: نحو ثلث عرض البطاقة على شاشة الهاتف.
+  /// ضلع صورة البطاقة: نحو ثلث عرض البطاقة على شاشة الهاتف، **مربّعًا لكل
+  /// السجلات** — ارتفاع الإطار مثبّت عند هذه القيمة فلا تتغيّر البطاقة باختلاف
+  /// نسبة صورة الفني (المقاس المحسوب بقي لتفاصيل السجل وحدها).
   static const double _kImageSide = 104;
+
+  /// سقف رقائق البطاقة: ثلاثة عناصر فتلتئم في سطرٍ واحد على عرض البطاقة مهما
+  /// كثرت مراحل السجل وأنواع تعليمه. الباقي يُعدّ صراحةً بـ«+ن» ولا يسقط في
+  /// صمت، و«تدريس خاص» يبقى في موضع محفوظ لأنه ما تفتحه مرشّحات الصفحة.
+  /// القوائم الكاملة تبقى في تفاصيل السجل وفي نص المشاركة.
+  static const int _kMaxCardChips = 3;
 
   Color get _color => provider.isFeatured ? const Color(0xFFB8860B) : accent;
 
@@ -934,6 +942,7 @@ class _ProviderCard extends StatelessWidget {
                 key: ValueKey('card-image-${provider.id}'),
                 imageUrl: provider.photoUrl ?? '',
                 width: _kImageSide,
+                fixedHeight: _kImageSide,
                 fallback: _avatar(theme, color),
               ),
               const SizedBox(width: 10),
@@ -968,8 +977,12 @@ class _ProviderCard extends StatelessWidget {
                     ],
                     if (provider.description.isNotEmpty) ...[
                       const SizedBox(height: 4),
+                      // النبذة سطرٌ واحد في البطاقة التعليمية: «عدم تجاوز الكارت
+                      // حجم 5 أسطر» يحسب العنوان والتقييم والرقائق والنبذة وشريط
+                      // الأزرار، فسطران للنبذة كانا يطرحان السقف. النص الكامل يبقى
+                      // في تفاصيل السجل وفي نص المشاركة.
                       Text(provider.description,
-                          maxLines: 2,
+                          maxLines: provider.isEducational ? 1 : 2,
                           overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.bodySmall?.copyWith(
                               fontSize: 11,
@@ -1119,7 +1132,11 @@ class _ProviderCard extends StatelessWidget {
         ].join('\n'));
   }
 
-  /// محتوى العمود التعليمي: سطر المواد + رقائق المراحل/الأنواع/التدريس الخاص.
+  /// محتوى العمود التعليمي: سطر المواد على سطرٍ واحد + الرقائق المحصورة.
+  /// السقف هنا هو ما يجعل البطاقة «لا تتجاوز خمسة أسطر»: الرقائق كانت تنمو بعدد
+  /// مراحل السجل وأنواع تعليمه فتلتفّ أسطرًا وتُطيل الكارت، فصار لها معدودٌ
+  /// معلن بالعدّ لا بالحذف. قائمة المراحل والأنواع الكاملة تبقى في تفاصيل
+  /// السجل وفي نص المشاركة، ومرشّحات الصفحة تفتحها كلها.
   List<Widget> _eduTags(ThemeData theme) {
     final color = _color;
     // سطر المواد حبرٌ فوق أرضية البطاقة لا لوحةٌ من التمييز.
@@ -1127,15 +1144,41 @@ class _ProviderCard extends StatelessWidget {
     return [
       if (provider.displaySpecialty.isNotEmpty)
         Text(provider.displaySpecialty,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
                 fontSize: 11, fontWeight: FontWeight.w700, color: subjectInk)),
+      ..._cardChips(theme),
+    ];
+  }
+
+  /// رقائق البطاقة: المراحل ثم أنواع التعليم، و«تدريس خاص» في موضعٍ محفوظ،
+  /// والباقي يعدّه ظاهرًا `+ن` ولا يُسقطه في صمت. السقف [_kMaxCardChips] يشمل
+  /// رقيقة العدّ نفسها، فلا يزيد ما يُرسم أبدًا عن ثلاثة عناصر في سطرٍ واحد.
+  List<Widget> _cardChips(ThemeData theme) {
+    final color = _color;
+    final leading = <Widget>[
       for (final s in provider.stageChips)
         _tag(theme, s, color, icon: Icons.school_rounded),
       for (final t in provider.eduTypes)
         _tag(theme, t, const Color(0xFF6A1B9A), icon: Icons.category_rounded),
-      if (provider.offersPrivateTutoring)
-        _tag(theme, 'تدريس خاص', kEduPrivateTagColor,
-            icon: Icons.cast_for_education_rounded, filled: true),
+    ];
+    final private = provider.offersPrivateTutoring
+        ? _tag(theme, 'تدريس خاص', kEduPrivateTagColor,
+            icon: Icons.cast_for_education_rounded, filled: true)
+        : null;
+    final total = leading.length + (private == null ? 0 : 1);
+    if (total <= _kMaxCardChips) {
+      return [...leading, if (private != null) private];
+    }
+    // التدريس الخاص يحتفظ بمكانه: إن كان حاضرًا بُقي عليه وحده في الصفحة
+    // الأولى. رقيقة العدّ تأكل خانةً من السقف، فلا يزيد ما يُرسم أبدًا عن ثلاثة.
+    final keep = private == null ? _kMaxCardChips - 1 : 1;
+    final hidden = total - keep - (private == null ? 0 : 1);
+    return [
+      ...leading.take(keep),
+      if (private != null) private,
+      _tag(theme, '+$hidden', color),
     ];
   }
 

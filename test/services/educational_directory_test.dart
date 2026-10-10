@@ -677,6 +677,27 @@ void main() {
       expect(find.byKey(const Key('filters-count')), findsNothing);
       expect(find.text('مدرسة النور'), findsOneWidget);
     });
+
+    testWidgets('مقاس صورة البطاقة مثبّت لكل السجلات (لا يتبع نسبة الصورة)',
+        (tester) async {
+      tester.view.physicalSize = const Size(1170, 2532);
+      tester.view.devicePixelRatio = 3.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final fake = await seed();
+      await pumpScreen(tester, fake);
+      final ids = (await fake.collection('service_providers').get())
+          .docs
+          .map((d) => d.id)
+          .toList();
+      expect(ids, hasLength(3));
+      for (final id in ids) {
+        final image = find.byKey(ValueKey('card-image-$id'));
+        expect(image, findsOneWidget);
+        expect(tester.getSize(image), const Size(104, 104),
+            reason: 'الإطار مثبّت عند ضلع البطاقة فلا تتغيّر البطاقة بنسبة صورة صاحبها');
+      }
+    });
   });
 
   group('تعديل الأدمن للسجل التعليمي', () {
@@ -859,6 +880,88 @@ void main() {
       expect(data.containsKey('subjects'), isFalse);
       expect(data.containsKey('stages'), isFalse);
       expect(data.containsKey('providerKind'), isFalse);
+    });
+  });
+
+  group('بطاقة المدرس الطويلة: معدود الرقائق وسقف الأسطر', () {
+    const subjectsLine = 'الفيزياء، الكيمياء، الأحياء';
+    final description = 'خبرة تدريس طويلة جدًا ' * 8;
+
+    /// سجل واحد بمراحل أربع وأنواع تعليم اثنين وتدريس خاص: السقف يُبقي رقيقة
+    /// واحدة من الرقائق الست + «تدريس خاص» + رقيقة العدّ «+5» = ثلاثة عناصر.
+    Future<String> seedLong(FakeFirebaseFirestore fake) async {
+      final ref = await fake.collection('service_providers').add({
+        'category': 'educational',
+        'name': 'أ. طويلة الخبرة',
+        'phone': '0103',
+        'isApproved': true,
+        'providerKind': kEduKindTeacher,
+        'eduTypes': [kEduTypePublic, kEduTypePrivate],
+        'stages': [kEduStageKinder, kEduStagePrimary, kEduStagePrep, kEduStageSecondary],
+        'subjects': ['الفيزياء', 'الكيمياء', 'الأحياء'],
+        'offersPrivateTutoring': true,
+        'description': description,
+      });
+      return ref.id;
+    }
+
+    testWidgets('المعدود يعلن ما لم يُعرض، والسطران مقيدان، والمقاس مثبّت',
+        (tester) async {
+      tester.view.physicalSize = const Size(1170, 2532);
+      tester.view.devicePixelRatio = 3.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final fake = FakeFirebaseFirestore();
+      final id = await seedLong(fake);
+      await tester.pumpWidget(MaterialApp(
+        home: ProviderCategoryScreen(
+          category: ServiceCategory.educational,
+          service: ServiceProviderService(fake),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      // كل دليل داخل الكارت وحده: المرشّحات المطويّة تسمّي بعض هذه النصوص.
+      final image = find.byKey(ValueKey('card-image-$id'));
+      expect(image, findsOneWidget);
+      final card =
+          find.ancestor(of: image, matching: find.byType(InkWell));
+      expect(card, findsOneWidget);
+
+      expect(tester.getSize(image), const Size(104, 104),
+          reason: 'إطار البطاقة مثبّت فلا تطول البطاقة بنسبة صورة صاحبها');
+
+      expect(
+          find.descendant(of: card, matching: find.text('+5')),
+          findsOneWidget,
+          reason: 'الرقائق السبع تُعرض ثلاثة: رقيقة مرحلة واحدة + تدريس خاص + العدّ');
+      expect(find.descendant(of: card, matching: find.text('تدريس خاص')),
+          findsOneWidget);
+
+      final stages = [
+        kEduStageKinder,
+        kEduStagePrimary,
+        kEduStagePrep,
+        kEduStageSecondary,
+      ];
+      final surviving = stages
+          .where((s) =>
+              find.descendant(of: card, matching: find.text(s)).evaluate().isNotEmpty)
+          .length;
+      expect(surviving, 1,
+          reason: 'لا تُعرض أكثر من مرحلة — الباقي يُعدّ صراحةً في «+5»');
+
+      expect(tester.widget<Text>(find.descendant(
+              of: card, matching: find.text(description)))
+          .maxLines,
+          1,
+          reason: 'النبذة التعليمية سطرٌ واحد');
+      expect(tester.widget<Text>(find.descendant(
+              of: card, matching: find.text(subjectsLine)))
+          .maxLines,
+          1,
+          reason: 'سطر المواد على سطرٍ واحد والاقتصار عليه صريح');
     });
   });
 }

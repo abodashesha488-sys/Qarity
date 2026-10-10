@@ -1,7 +1,52 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
+
+/// نتيجة محاولة الدفع إلى العامل — **لا تُرمى الاستثناءات أبدًا**.
+enum PushSendStatus {
+  /// العامل ردّ 2xx: الرسالة قُبلت وأُرسلت إلى FCM.
+  sent,
+
+  /// `PUSH_ENDPOINT` فارغ — لا وجه للإرسال أصلًا.
+  noEndpoint,
+
+  /// لا مستخدم مسجّل دخوله أو لا ID Token — المتلقي هنا هو المُرسل.
+  noSession,
+
+  /// مهلة الثواني الثماني.
+  timeout,
+
+  /// فشل شبكة (DNS/انقطاع/عدم وصول للعامل).
+  network,
+
+  /// العامل رفض المصادقة أو الدور (401 / 403).
+  rejected,
+
+  /// العامل رفض الطلب بـ400 — موضوع غير مسموح أو نص ناقص.
+  badRequest,
+
+  /// العامل أو FCM فشل (5xx).
+  serverFailed,
+
+  /// ردّ ليس JSON معروفًا — لا يُبلَّغ كنجاح.
+  badResponse,
+}
+
+/// ما يعيده `_post`: الحالة + رمز الوضع + نص خطأ العامل الخام إن وُجد.
+class PushSendResult {
+  const PushSendResult(this.status, {this.statusCode, this.workerError});
+
+  final PushSendStatus status;
+  final int? statusCode;
+
+  /// مفتاح `error` الذي ردّ به العامل (`missing_id_token` / `forbidden_role` /
+  /// `invalid_topic` / `fcm_failed` …) — يُقرأ للواجهات الصادقة وللتشخيص.
+  final String? workerError;
+
+  bool get isSent => status == PushSendStatus.sent;
+}
 
 /// يرسل طلب دفع إشعارات إلى Vercel Worker (`api/push.js`).
 ///
@@ -19,11 +64,12 @@ class RemotePushService {
     defaultValue: 'https://qarity.vercel.app/api/push',
   );
 
-  /// أرسل إشعار FCM إلى topic — best-effort (أخطاء الشبكة تُبتلع بصمت).
-  /// يُتخطى بهدوء إذا لم يكن هناك مستخدم مسجّل دخوله (المتلقي لا يرسل أصلاً).
+  /// أرسل إشعار FCM إلى topic — لا يرمي استثناءً أبدًا، بل يعيد الحالة.
+  /// المتصفحون على `await` دون قراءة النتيجة يحتفظون بسلوك أفضل-جهد السابق؛
+  /// من يريد الإبلاغ الصادق (كلوحة التحكم) يقرأ `PushSendResult`.
   /// عند تمرير collection+itemId يصبح النقر على الإشعار موجهاً للعنصر نفسه.
   /// `alert: true` يطلب من الخادم أولوية قصوى + صوت + اهتزاز (تنبيه عاجل).
-  static Future<void> send({
+  static Future<PushSendResult> send({
     required String topic,
     required String title,
     required String body,
@@ -37,7 +83,7 @@ class RemotePushService {
 
   /// إشعار شخصي لجهاز محدد عبر FCM registration token
   /// (مثلاً: إخطار صاحب المحتوى عند الموافقة على منشوره أو رفضه).
-  static Future<void> sendToDevice({
+  static Future<PushSendResult> sendToDevice({
     required String fcmToken,
     required String title,
     required String body,
@@ -45,21 +91,32 @@ class RemotePushService {
     String? collection,
     String? itemId,
   }) {
-    if (fcmToken.isEmpty) return Future.value();
+    if (fcmToken.isEmpty) {
+      return Future.value(
+          const PushSendResult(PushSendStatus.badRequest, workerError: 'empty_token'));
+    }
     return _post({'token': fcmToken}, title, body, route,
         collection: collection, itemId: itemId);
   }
 
-  static Future<void> _post(
+  /// نقطة الخروج الوحيدة إلى عامل Vercel. **لا ترمي أبدًا**: كل عطل يُترجم
+  /// إلى `PushSendStatus` + رمز الوضع + مفتاح `error` الذي ردّ به العامل،
+  /// حتى لا تستطيع أي واجهة أن تطبع «تم الإرسال» على مسار فاشل.
+  static Future<PushSendResult> _post(
       Map<String, dynamic> target, String title, String body, String? route,
       {String? collection, String? itemId, bool alert = false}) async {
-    if (endpoint.isEmpty) return;
+    if (endpoint.isEmpty) {
+      return const PushSendResult(PushSendStatus.noEndpoint);
+    }
+    final http.Response response;
     try {
       final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
+      if (user == null) return const PushSendResult(PushSendStatus.noSession);
       final idToken = await user.getIdToken();
-      if (idToken == null || idToken.isEmpty) return;
-      await http
+      if (idToken == null || idToken.isEmpty) {
+        return const PushSendResult(PushSendStatus.noSession);
+      }
+      response = await http
           .post(
             Uri.parse(endpoint),
             headers: {
@@ -78,9 +135,51 @@ class RemotePushService {
             }),
           )
           .timeout(const Duration(seconds: 8));
+    } on TimeoutException {
+      return const PushSendResult(PushSendStatus.timeout);
     } catch (_) {
-      // لا يُطاح الاستثناء — الإشعارات أفضل-جهد.
+      return const PushSendResult(PushSendStatus.network);
     }
+
+    final workerError = _workerErrorOf(response.body);
+    final code = response.statusCode;
+    if (code >= 200 && code < 300) {
+      // العامل قد يردّ 200 مع `{ok:false, error:'fcm_failed'}` أو بثrottled —
+      // فلا يُبلَّغ أي ردّ فيه مفتاح خطأ صريح كنجاح كامل.
+      if (workerError != null) {
+        return PushSendResult(PushSendStatus.serverFailed,
+            statusCode: code, workerError: workerError);
+      }
+      return PushSendResult(PushSendStatus.sent, statusCode: code);
+    }
+    if (code == 401 || code == 403) {
+      return PushSendResult(PushSendStatus.rejected,
+          statusCode: code, workerError: workerError);
+    }
+    if (code == 400) {
+      return PushSendResult(PushSendStatus.badRequest,
+          statusCode: code, workerError: workerError);
+    }
+    if (code >= 500) {
+      return PushSendResult(PushSendStatus.serverFailed,
+          statusCode: code, workerError: workerError);
+    }
+    return PushSendResult(PushSendStatus.badResponse,
+        statusCode: code, workerError: workerError);
+  }
+
+  /// مفتاح `error` في ردّ العامل إن كان JSONًا يحويه، وإلا null.
+  static String? _workerErrorOf(String body) {
+    if (body.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map && decoded['error'] is String) {
+        return decoded['error'] as String;
+      }
+    } catch (_) {
+      // ردّ غير JSON (بوابة/HTML) — المعالجة في رمز الوضع وحده.
+    }
+    return null;
   }
 
   /// إخطار الأدمن (ومدير المركز الطبي للطلبات الطبية) بأن طلباً جديداً
@@ -151,25 +250,29 @@ class RemotePushService {
   /// "all_users" الذي يشترك فيه كل مستخدم عند إكمال ملفه وعند فتح الرئيسية.
   /// يمكن للأدمن استخدامه لإرسال إعلانات عاجلة لجميع المستخدمين حتى لو كان
   /// التطبيق مغلقاً.
-  static Future<void> broadcastToAllUsers({
+  ///
+  /// `alert` تُمرَّر كما استلمها المٌستدعي — فمفتاح «تنبيه عاجل» في لوحة
+  /// التحكم يعني فعليًا صوتًا + اهتزازًا + أولوية قصوى، ولا يعني ذلك سِرًّا
+  /// عندما يُطفأ. الحالة المعادة تُقرأ في اللوحة لتُبلَّغ بصدق.
+  static Future<PushSendResult> broadcastToAllUsers({
     required String title,
     required String body,
     String? route,
     String? collection,
     String? itemId,
     bool alert = true,
-  }) async {
-    // يستخدم Topic "all_users" الذي يشترك فيه جميع المستخدمين عند تسجيل الدخول
-    await send(
-      topic: 'all_users',
-      title: title,
-      body: body,
-      route: route,
-      collection: collection,
-      itemId: itemId,
-      alert: true, // التنبيهات الإذاعية دائماً عاجلة
-    );
-  }
+  }) =>
+      // Topic "all_users" الذي يشترك فيه جميع المستخدمين عند إكمال الملف
+      // وعند كل فتح للشاشة الرئيسية.
+      send(
+        topic: 'all_users',
+        title: title,
+        body: body,
+        route: route,
+        collection: collection,
+        itemId: itemId,
+        alert: alert,
+      );
 
   /// إرسال إشعار لمجموعة مستخدمين محددة عبر FCM tokens
   static Future<void> sendToTokens({

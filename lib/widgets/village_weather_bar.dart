@@ -112,7 +112,7 @@ class _VillageWeatherBarState extends State<VillageWeatherBar> {
     final tempMax = (main?['temp_max'] as num?)?.round();
     final tempMin = (main?['temp_min'] as num?)?.round();
     final humidity = (main?['humidity'] as num?)?.round();
-    final windSpeed = (wind?['speed'] as num?)?.toStringAsFixed(1) ?? '0';
+    final windSpeed = WeatherFormat.windSpeedKmh(wind?['speed']);
     final windDeg = wind?['deg'];
     final windDir = windDeg != null ? _windDirection(windDeg) : '--';
     final iconId = weather?['icon'] as String? ?? '01d';
@@ -384,7 +384,7 @@ class _VillageWeatherBarState extends State<VillageWeatherBar> {
                         ),
                         FittedBox(
                           fit: BoxFit.scaleDown,
-                          child: Text('رياح $windSpeed م/ث $windDir',
+                          child: Text('رياح $windSpeed $windDir',
                               maxLines: 1,
                               style: const TextStyle(
                                   color: inkMuted,

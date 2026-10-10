@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -23,6 +24,15 @@ const Color kLegalPendingOrange = Color(0xFFEF6C00);
 /// محافظًا على درجته — فالأصل 2.28 على البطاقة الداكنة ولا يُقرأ.
 Color legalInk(Brightness brightness) =>
     AppColors.inkOn(kLegalAdvisorColor, brightness);
+
+/// هندسة كارت المحامي: خمسة أسطر نصية ثابتة، والصورة تملأ عمودها.
+const double _kLawyerLineHeight = 21.0;
+const double _kLawyerCardBody = _kLawyerLineHeight * 5;
+const double _kLawyerCardPadding = 10.0;
+const double _kLawyerPhotoWidth = 96.0;
+const double _kLawyerStatusGap = 6.0;
+const double _kLawyerStatusRowHeight = 40.0;
+const int _kLawyerSpecVisible = 4;
 
 /// شاشة «مستشار القرية»: سجل محامين + استشارات الأهالي + مرجع معلومات قانونية.
 class LegalAdvisorScreen extends StatefulWidget {
@@ -282,6 +292,10 @@ class _LawyersTabState extends State<_LawyersTab> {
                 return _empty(theme, Icons.lock_outline_rounded,
                     'سجّل الدخول لترى تسجيلك في السجل');
               }
+              if (snap.hasError) {
+                return _empty(theme, Icons.error_outline_rounded,
+                    'تعذّر تحميل سجل المحامين — تحقّق من الاتصال ثم أعد فتح الصفحة');
+              }
               if (!snap.hasData) {
                 return Center(
                     child: CircularProgressIndicator(
@@ -347,7 +361,8 @@ class _LawyersTabState extends State<_LawyersTab> {
       );
 }
 
-/// بطاقة محامٍ في السجل — صورة كاملة بلا اقتصاص ثم الاسم والتخصصات.
+/// بطاقة محامٍ في السجل — ثلاثة أعمدة: الصورة، ثم الاسم والعنوان والهاتف،
+/// ثم التخصصات. ارتفاعها خمسة أسطر نصية ثابتة مهما طال النص.
 class LawyerCard extends StatelessWidget {
   const LawyerCard({
     super.key,
@@ -377,122 +392,141 @@ class LawyerCard extends StatelessWidget {
       ),
       child: InkWell(
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  FullFitImage(
-                    imageUrl: lawyer.photoUrl,
-                    width: 92,
-                    fallback: const _LawyerAvatar(),
+        child: SizedBox(
+          height: _kLawyerCardBody +
+              2 * _kLawyerCardPadding +
+              (showStatus ? _kLawyerStatusRowHeight + _kLawyerStatusGap : 0),
+          child: Padding(
+            padding: const EdgeInsets.all(_kLawyerCardPadding),
+            child: Column(
+              children: [
+                Expanded(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      SizedBox(
+                        width: _kLawyerPhotoWidth,
+                        child: _LawyerPhoto(
+                          url: lawyer.photoUrl,
+                          width: _kLawyerPhotoWidth,
+                          height: _kLawyerCardBody,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        flex: 5,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Align(
+                              alignment: AlignmentDirectional.centerStart,
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(lawyer.name,
+                                    maxLines: 1,
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 15.5,
+                                        color: legalInk(theme.brightness))),
+                              ),
+                            ),
+                            if (lawyer.office.isNotEmpty)
+                              Text(lawyer.office,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: theme.colorScheme
+                                          .onSurfaceVariant)),
+                            const SizedBox(height: 4),
+                            if (lawyer.phone.isNotEmpty)
+                              _meta(theme, Icons.phone_rounded, lawyer.phone),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(flex: 4, child: _specColumn(theme)),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                ),
+                if (showStatus) ...[
+                  const SizedBox(height: _kLawyerStatusGap),
+                  SizedBox(
+                    height: _kLawyerStatusRowHeight,
+                    child: Row(
                       children: [
-                        Text(lawyer.name,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w900, fontSize: 15.5)),
-                        if (lawyer.office.isNotEmpty) ...[
-                          const SizedBox(height: 3),
-                          Text(lawyer.office,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: theme.colorScheme.onSurfaceVariant)),
-                        ],
-                        if (lawyer.bio.isNotEmpty) ...[
-                          const SizedBox(height: 5),
-                          Text(lawyer.bio,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                  fontSize: 12,
-                                  height: 1.55,
-                                  fontWeight: FontWeight.w600,
-                                  color: theme.colorScheme.onSurfaceVariant)),
-                        ],
+                        _StatusMark(approved: lawyer.isApproved),
+                        const Spacer(),
+                        if (onEdit != null)
+                          IconButton(
+                            key: Key('lawyer-edit-${lawyer.id}'),
+                            tooltip: 'تعديل التسجيل',
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(
+                                minWidth: 36, minHeight: 36),
+                            visualDensity: VisualDensity.compact,
+                            icon: const Icon(Icons.edit_rounded, size: 19),
+                            onPressed: onEdit,
+                          ),
+                        if (onDelete != null)
+                          IconButton(
+                            key: Key('lawyer-delete-${lawyer.id}'),
+                            tooltip: 'حذف التسجيل',
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(
+                                minWidth: 36, minHeight: 36),
+                            visualDensity: VisualDensity.compact,
+                            icon: const Icon(Icons.delete_outline_rounded,
+                                size: 19, color: kLegalDeleteRed),
+                            onPressed: onDelete,
+                          ),
                       ],
                     ),
                   ),
                 ],
-              ),
-              if (lawyer.specializations.isNotEmpty) ...[
-                const SizedBox(height: 9),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    for (final s in lawyer.specializations)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                            color:
-                                kLegalAdvisorColor.withValues(alpha: 0.10),
-                            borderRadius: BorderRadius.circular(7),
-                            border: Border.all(
-                                color: kLegalAdvisorColor
-                                    .withValues(alpha: 0.35))),
-                        child: Text(s,
-                            style: TextStyle(
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.w800,
-                                color: legalInk(theme.brightness))),
-                      ),
-                  ],
-                ),
               ],
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 12,
-                runSpacing: 5,
-                children: [
-                  if (lawyer.phone.isNotEmpty)
-                    _meta(theme, Icons.phone_rounded, lawyer.phone),
-                  if (lawyer.workingHours.isNotEmpty)
-                    _meta(theme, Icons.schedule_rounded, lawyer.workingHours),
-                ],
-              ),
-              if (showStatus) ...[
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    _StatusMark(approved: lawyer.isApproved),
-                    const Spacer(),
-                    if (onEdit != null)
-                      IconButton(
-                        key: Key('lawyer-edit-${lawyer.id}'),
-                        tooltip: 'تعديل التسجيل',
-                        icon: const Icon(Icons.edit_rounded, size: 19),
-                        onPressed: onEdit,
-                      ),
-                    if (onDelete != null)
-                      IconButton(
-                        key: Key('lawyer-delete-${lawyer.id}'),
-                        tooltip: 'حذف التسجيل',
-                        icon: const Icon(Icons.delete_outline_rounded,
-                            size: 19, color: kLegalDeleteRed),
-                        onPressed: onDelete,
-                      ),
-                  ],
-                ),
-              ],
-            ],
+            ),
           ),
         ),
       ),
     );
   }
+
+  /// العمود الثالث: التخصصات في سطور ثابتة الارتفاع، والزائد يُعلَم بعدده.
+  Widget _specColumn(ThemeData theme) {
+    final specs = lawyer.specializations;
+    if (specs.isEmpty) return const SizedBox.shrink();
+    final shown = specs.take(_kLawyerSpecVisible).toList();
+    final extra = specs.length - shown.length;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final s in shown) _specChip(theme, s),
+        if (extra > 0) _specChip(theme, '+$extra تخصصات'),
+      ],
+    );
+  }
+
+  Widget _specChip(ThemeData theme, String text) => Container(
+        height: _kLawyerLineHeight,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        alignment: AlignmentDirectional.centerStart,
+        decoration: BoxDecoration(
+            color: kLegalAdvisorColor.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(7),
+            border:
+                Border.all(color: kLegalAdvisorColor.withValues(alpha: 0.35))),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(text,
+              maxLines: 1,
+              style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w800,
+                  color: legalInk(theme.brightness))),
+        ),
+      );
 
   Widget _meta(ThemeData theme, IconData icon, String text) => Row(
         mainAxisSize: MainAxisSize.min,
@@ -510,13 +544,47 @@ class LawyerCard extends StatelessWidget {
       );
 }
 
+/// صورة المحامي تملأ عمودها بالكامل؛ الزائد يُقتطع من أعلاها وحده.
+class _LawyerPhoto extends StatelessWidget {
+  const _LawyerPhoto(
+      {required this.url, required this.width, required this.height});
+
+  final String url;
+  final double width;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    if (url.isEmpty) return _LawyerAvatar(width: width, height: height);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: SizedBox(
+        width: width,
+        height: height,
+        child: CachedNetworkImage(
+          imageUrl: url,
+          fit: BoxFit.cover,
+          alignment: Alignment.bottomCenter,
+          memCacheWidth: (width * 3).ceil(),
+          placeholder: (context, _) => _LawyerAvatar(width: width, height: height),
+          errorWidget: (context, _, __) =>
+              _LawyerAvatar(width: width, height: height),
+        ),
+      ),
+    );
+  }
+}
+
 class _LawyerAvatar extends StatelessWidget {
-  const _LawyerAvatar();
+  const _LawyerAvatar({this.width = 92, this.height = 92});
+
+  final double width;
+  final double height;
 
   @override
   Widget build(BuildContext context) => Container(
-        width: 92,
-        height: 92,
+        width: width,
+        height: height,
         decoration: BoxDecoration(
             color: kLegalAdvisorColor.withValues(alpha: 0.10),
             borderRadius: BorderRadius.circular(12)),
@@ -655,6 +723,10 @@ class _ConsultationsTabState extends State<_ConsultationsTab> {
               if (_mineOnly && _myUid.isEmpty) {
                 return _empty(theme, Icons.lock_outline_rounded,
                     'سجّل الدخول لمتابعة استشاراتك');
+              }
+              if (snap.hasError) {
+                return _empty(theme, Icons.error_outline_rounded,
+                    'تعذّر تحميل الاستشارات — تحقّق من الاتصال ثم أعد فتح الصفحة');
               }
               if (!snap.hasData) {
                 return Center(

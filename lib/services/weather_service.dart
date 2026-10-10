@@ -142,6 +142,14 @@ class WeatherFormat {
     return dirs[i];
   }
 
+  /// المزود يرسل سرعة الرياح متر/ثانية حتى مع `units=metric`، فتُحوَّل هنا في
+  /// موضع واحد فلا يتفارق كارت الرئيسية عن صفحة التفاصيل ولا عن صفحة الإرشاد.
+  static String windSpeedKmh(Object? speed) {
+    final v = speed is num ? speed : null;
+    if (v == null) return '—';
+    return '${(v * 3.6).round()} كم/س';
+  }
+
   static String pressureHpa(num hpa) => '${hpa.round()} hPa';
 
   /// سلة الحالة من مفتاح أيقونة المزود — مصدر واحد للتسمية ولرمز الرجوع،

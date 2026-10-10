@@ -192,7 +192,7 @@ void main() {
       expect(strip, contains("'العظمى "));
       expect(strip, contains("'الصغرى "));
       expect(strip, contains(r'رطوبة ${humidity ?? 0}%'));
-      expect(strip, contains(r'رياح $windSpeed م/ث $windDir'));
+      expect(strip, contains(r'رياح $windSpeed $windDir'));
       expect(
         RegExp(r'maxLines: 1').allMatches(strip).length,
         7,
@@ -223,6 +223,71 @@ void main() {
       expect(bar, contains('WeatherFormat.iconGlyph(iconId)'));
       // الرابط لا يُكتب في الواجهة: كل مواضع العرض تستدعي `iconUrl` وحدها.
       expect(bar, isNot(contains('openweathermap.org/img')));
+    });
+  });
+
+  group('سرعة الرياح بالكيلومتر/الساعة في كل صفحة طقس', () {
+    test('المحوّل واحد: متر/ثانية × 3.6 مقربًا، وغياب الرقم يبقى صادقًا', () {
+      expect(WeatherFormat.windSpeedKmh(5), '18 كم/س');
+      expect(WeatherFormat.windSpeedKmh(10), '36 كم/س');
+      expect(WeatherFormat.windSpeedKmh(3.5), '13 كم/س');
+      expect(WeatherFormat.windSpeedKmh(0), '0 كم/س');
+      // لا صفر مخترع ولا «0.0» على بيانات غائبة: `—` هي المرجع.
+      expect(WeatherFormat.windSpeedKmh(null), '—');
+      expect(WeatherFormat.windSpeedKmh(''), '—');
+      expect(WeatherFormat.windSpeedKmh('12'), '—');
+    });
+
+    test('المحوّل يُنادى على بيانات المزود الخام، والسطر يقرون بالاتجاه', () {
+      final bar = src('lib/widgets/village_weather_bar.dart');
+      // الموضعان في ملفَّين مختلفين من المسافة: النداء في مُحمِّل الحالة
+      // (`_loadWeather`) قبل `_weatherStrip` بكثير، والرسم داخل العقد المُقطوع.
+      // فموطن كل إثبات هو منطقه لا الملف كاملًا.
+      expect(
+        bar,
+        contains("WeatherFormat.windSpeedKmh(wind?['speed'])"),
+      );
+      final strip = bar.substring(
+        bar.indexOf('Widget _weatherStrip({'),
+        bar.indexOf('String _windDirection(num deg) {'),
+      );
+      expect(strip, contains(r'رياح $windSpeed $windDir'));
+      expect(strip, isNot(contains('م/ث')));
+    });
+
+    test('الصفحتان الأخريان بالطقس تمرّان بالمحوّل نفسه — لا ترجمة محلية لكل شاشة', () {
+      final detail = src('lib/features/weather/weather_detail_screen.dart');
+      expect(detail, contains("WeatherFormat.windSpeedKmh(wind['speed'])"));
+      expect(detail, contains("WeatherFormat.windSpeedKmh(wind['gust'])"));
+      final advisory = src('lib/features/services/weather_advisory_screen.dart');
+      expect(advisory, contains('WeatherFormat.windSpeedKmh(windSpeed)'));
+      // عتبة الإرشاد تقارن بالأمتار/الثانية كما يرسلها المزود، وتُسمّى بالمقاس
+      // المعروض — فلا يكذب نص الإرشاد على الرقم الذي يراه المزارع.
+      expect(advisory, contains('if (windSpeed > 10)'));
+      expect(advisory, contains('} else if (windSpeed > 6)'));
+      expect(advisory, contains('>36 كم/س'));
+      expect(advisory, contains('22-36 كم/س'));
+    });
+
+    test('لا «م/ث» في أي سطر برمجي داخل `lib` — المقاس الواحد للرياح', () {
+      final files = Directory('lib')
+          .listSync(recursive: true)
+          .whereType<File>()
+          .where((f) => f.path.endsWith('.dart'))
+          .toList();
+      final hits = <String>[];
+      for (final f in files) {
+        // التعليقات مستثناة: تسمية الوحدة بالعربية الفصحى («متر/ثانية») شرحٌ
+        // لا واجهة، والممنوع هو ظهورها لما يقرؤه المستخدم.
+        final body = f
+            .readAsStringSync()
+            .split('\n')
+            .where((l) => !l.trimLeft().startsWith('//'))
+            .join('\n');
+        final count = RegExp(r'م/ث').allMatches(body).length;
+        if (count > 0) hits.add('${f.path}::$count');
+      }
+      expect(hits, isEmpty);
     });
   });
 

@@ -21,6 +21,7 @@ class FullFitImage extends StatefulWidget {
     this.minRatio = 0.72,
     this.maxRatio = 1.5,
     this.tint = const Color(0x14000000),
+    this.fixedHeight,
   });
 
   final String imageUrl;
@@ -36,6 +37,10 @@ class FullFitImage extends StatefulWidget {
 
   /// لون الخلفية أثناء القياس وللحواف حين تُقصّ النسبة.
   final Color tint;
+
+  /// ارتفاع معلوم ثابت للإطار: حين يُمرَّر لا تُقاس نسبة الصورة إطلاقًا ولا
+  /// يتغيّر ارتفاع البطاقة بها — الصورة تُعرض كاملة داخل المقاس المثبّت.
+  final double? fixedHeight;
 
   static final Map<String, double> _ratioCache = {};
   static final Set<String> _inFlight = {};
@@ -106,13 +111,16 @@ class _FullFitImageState extends State<FullFitImage> {
   }
 
   /// يقيس النسبة من الصورة المفكوكة فعليًا؛ والفشل يترك الإطار مربعًا.
+  /// ومع [FullFitImage.fixedHeight] لا قياس أصلًا — الإطار معلوم سلفًا.
   void _probe() {
+    if (widget.fixedHeight != null) return;
     FullFitImage.measure(widget.imageUrl, onResult: (_) {
       if (mounted) setState(() {});
     });
   }
 
   double get _height {
+    if (widget.fixedHeight != null) return widget.fixedHeight!;
     if (widget.imageUrl.isEmpty || _failed) return widget.width;
     return FullFitImage.heightFor(widget.imageUrl, widget.width,
         minRatio: widget.minRatio, maxRatio: widget.maxRatio);
