@@ -1,7 +1,7 @@
 {
-  "versionCode": 2035,
-  "versionName": "1.1.35",
+  "versionCode": 2036,
+  "versionName": "1.1.36",
   "apkUrl": "https://github.com/abodashesha488-sys/Qarity/releases/latest/download/Qarity.apk",
   "forceUpdate": false,
-  "releaseNotes": "إعادة توزيع أعمدة كارت طقس القرية الثلاثة بالتمركز وبحجم يظهر كل بياناتها"
+  "releaseNotes": "تحديث جديد: سرعة الرياح بالكيلو/ساعة في كل مواضع الطقس، كارت المحامي بثلاثة أعمدة، ظهور الاستشارات بعد موافقة الإدارة، مرجع قانوني موسّع، تثبيت مقاس صور الكروت وتنسيق كروت المدرسين، وتصغير أيقونات بوابتَي الخدمات الطبية والمزارع."
 }
