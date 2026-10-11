@@ -27,6 +27,7 @@ import '../../widgets/common_appbar_actions.dart';
 import '../../widgets/offline_stream_builder.dart';
 import '../../widgets/qurity_logo.dart';
 import '../../widgets/update_flow.dart';
+import '../../widgets/village_prayer_dialog.dart';
 import '../../widgets/village_weather_bar.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -181,6 +182,13 @@ class _HomeIdentityBarState extends State<HomeIdentityBar> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     _GlassIconButton(
+                        icon: Icons.search_rounded,
+                        onTap: () {
+                          HapticFeedback.lightImpact();
+                          Navigator.pushNamed(context, AppRoutes.globalSearch);
+                        }),
+                    const SizedBox(width: 6),
+                    _GlassIconButton(
                         icon: Icons.settings_outlined,
                         onTap: () => Navigator.pushNamed(
                             context, AppRoutes.settingsIndex)),
@@ -225,6 +233,7 @@ class HomeDrawer extends StatelessWidget {
               ]),
             ),
             _buildDrawerItem(context, 'الرئيسية', Icons.home_rounded, AppRoutes.home),
+            _buildDrawerItem(context, 'البحث الشامل', Icons.search_rounded, AppRoutes.globalSearch),
             _buildDrawerItem(context, 'تعرف على القرية', Icons.account_balance_rounded, AppRoutes.about,
                 leading: const QurityLogo(size: 28, withBorder: false, withShadow: false)),
             _buildDrawerItem(context, 'أخبار القرية', Icons.newspaper_rounded, AppRoutes.newsList),
@@ -682,6 +691,7 @@ class _HeroHeader extends StatelessWidget {
                 height: kHeroBodyHeight,
                 child: Row(
                   children: [
+                    _HeaderSearchButton(),
                     Spacer(),
                     NotificationBellButton(compact: true),
                   ],
@@ -742,6 +752,54 @@ class _HeroHeader extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _HeaderSearchButton extends StatelessWidget {
+  const _HeaderSearchButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: () {
+          HapticFeedback.lightImpact();
+          Navigator.pushNamed(context, AppRoutes.globalSearch);
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: const Color(0xE604392B),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x40000000),
+                blurRadius: 8,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.search_rounded, size: 14, color: Color(0xFFFFE082)),
+              SizedBox(width: 4),
+              Text(
+                'بحث',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1049,20 +1107,27 @@ class _VillageClockState extends State<_VillageClock> {
     final period = n.hour < 12 ? 'ص' : 'م';
     final text =
         '${h12.toString().padLeft(2, '0')}:${n.minute.toString().padLeft(2, '0')} $period';
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Icon(Icons.schedule_rounded,
-            size: 11, color: Color(0xFFFFE082)),
-        const SizedBox(width: 5),
-        Text(text,
-            style: const TextStyle(
-                color: Colors.white,
-                fontSize: 10.5,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.5,
-                fontFeatures: [FontFeature.tabularFigures()])),
-      ],
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        HapticFeedback.lightImpact();
+        showVillagePrayerTimesSheet(context);
+      },
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.schedule_rounded,
+              size: 11, color: Color(0xFFFFE082)),
+          const SizedBox(width: 5),
+          Text(text,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.5,
+                  fontFeatures: [FontFeature.tabularFigures()])),
+        ],
+      ),
     );
   }
 }

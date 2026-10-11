@@ -7,6 +7,7 @@ import 'arabic_letters.dart';
 import 'children_lessons.dart';
 import 'children_speech.dart';
 import 'coloring_screen.dart';
+import 'kids_certificate_dialog.dart';
 import 'kids_progress.dart';
 import 'lessons_screen.dart';
 import 'letters_game_screen.dart';
@@ -72,6 +73,10 @@ class _ChildrenScreenState extends State<ChildrenScreen> {
           _PortalBanner(
             totalStars: _progress.totalStars,
             onOpenReport: () => showParentsReport(context, _progress),
+            onOpenCertificate: () => showKidsCertificateDialog(
+              context,
+              totalStars: _progress.totalStars,
+            ),
           ),
           const SizedBox(height: 18),
 
@@ -308,10 +313,12 @@ class _PortalBanner extends StatelessWidget {
   const _PortalBanner({
     required this.totalStars,
     required this.onOpenReport,
+    required this.onOpenCertificate,
   });
 
   final int totalStars;
   final VoidCallback onOpenReport;
+  final VoidCallback onOpenCertificate;
 
   @override
   Widget build(BuildContext context) {
@@ -401,6 +408,38 @@ class _PortalBanner extends StatelessWidget {
                     '$totalStars',
                     style: const TextStyle(
                       fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          // زر الشهادة
+          InkWell(
+            onTap: onOpenCertificate,
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFD54F).withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: const Color(0xFFFFD54F),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.workspace_premium_rounded,
+                      size: 15, color: Color(0xFFFFD54F)),
+                  const SizedBox(width: 4),
+                  Text(
+                    'الشهادة',
+                    style: GoogleFonts.tajawal(
+                      fontSize: 11.5,
                       fontWeight: FontWeight.w900,
                       color: Colors.white,
                     ),
@@ -1070,6 +1109,32 @@ void showParentsReport(BuildContext context, KidsSnapshot snap) {
                   ),
               ],
             ),
+          const SizedBox(height: 18),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFD4AF37),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+                showKidsCertificateDialog(context, totalStars: snap.totalStars);
+              },
+              icon: const Icon(Icons.workspace_premium_rounded,
+                  color: Colors.black87),
+              label: Text(
+                'إصدار شهادة التفوق للبطل 🎖️',
+                style: GoogleFonts.tajawal(
+                  fontWeight: FontWeight.w900,
+                  color: Colors.black87,
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     ).animate().fadeIn(duration: 200.ms).slideY(begin: 0.3, end: 0),

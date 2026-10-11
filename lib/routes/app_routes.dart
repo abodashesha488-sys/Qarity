@@ -16,6 +16,7 @@ import '../features/forum/create_post.dart';
 import '../features/forum/post_detail.dart';
 import '../features/forum/posts.dart';
 import '../features/home/about_app.dart';
+import '../features/home/global_search_screen.dart';
 import '../features/home/home.dart';
 import '../features/home/splash.dart';
 import '../features/legal/lawyer_detail_screen.dart';
@@ -176,6 +177,7 @@ static const String marketProducts = '/market';
   static const String notificationOpen = '/open';
   static const String weather = '/weather';
   static const String children = '/children';
+  static const String globalSearch = '/search';
 
   /// مسار صفحة الخدمة المستقلة حسب فئة السجل — تُستعمل في إشعارات لوحة
   /// التحكم حتى يفتح النقر الصفحة الصحيحة بدل بوّابة ملغاة.
@@ -268,6 +270,7 @@ obituariesAdd: (_) => const AddObituaryScreen(),
     notificationOpen: (_ ) => const NotificationOpenScreen(),
     weather: (_ ) => const WeatherDetailScreen(),
     children: (_ ) => const ChildrenScreen(),
+    globalSearch: (_ ) => const GlobalSearchScreen(),
   };
 
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {

@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../widgets/qurity_app_bar.dart';
 import 'children_speech.dart';
+import 'kids_certificate_dialog.dart';
 import 'kids_progress.dart';
 
 /// 🔢 لعبة الأرقام — «عُدّ الأشياء»: مجموعة إيموجي والطفل يختار
@@ -189,6 +190,29 @@ class _NumbersGameScreenState extends State<NumbersGameScreen> {
                   icon: const Icon(Icons.replay_rounded),
                   label: const Text('العب مرة أخرى'),
                 ),
+                if (stars >= 2) ...[
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFFB78103),
+                      side: const BorderSide(color: Color(0xFFD4AF37), width: 1.5),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 12),
+                    ),
+                    onPressed: () {
+                      showKidsCertificateDialog(
+                        context,
+                        totalStars: stars,
+                        gameTitle: 'تحدي لعبة الأرقام',
+                      );
+                    },
+                    icon: const Icon(Icons.workspace_premium_rounded),
+                    label: Text(
+                      'استلام شهادة التفوق 🎖️',
+                      style: GoogleFonts.tajawal(fontWeight: FontWeight.w900),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 8),
                 TextButton(
                   onPressed: () {

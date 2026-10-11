@@ -283,6 +283,7 @@ class _ClinicEditFormState extends State<ClinicEditForm> {
   late String _specialty = widget.existing?.specialty ?? 'باطنة';
   late final Set<String> _days = {...?widget.existing?.workingDays};
   late bool _active = widget.existing?.isActive ?? true;
+  late bool _isAvailableNow = widget.existing?.isAvailableNow ?? false;
 
   late String _imageUrl = widget.existing?.imageUrl ?? '';
   String? _photoError;
@@ -537,6 +538,13 @@ class _ClinicEditFormState extends State<ClinicEditForm> {
                     value: _active,
                     onChanged: (v) => setState(() => _active = v),
                   ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('الطبيب متواجد بالعيادة الآن'),
+                    subtitle: const Text('تفعيل شارة التواجد الحي للمواطنين'),
+                    value: _isAvailableNow,
+                    onChanged: (v) => setState(() => _isAvailableNow = v),
+                  ),
                 ],
               ),
             ),
@@ -579,6 +587,7 @@ class _ClinicEditFormState extends State<ClinicEditForm> {
         imageUrl: _imageUrl,
         fees: double.tryParse(_feesC.text) ?? 0,
         isActive: _active,
+        isAvailableNow: _isAvailableNow,
         // الإضافة الجديدة تنتظر موافقة المدير العام؛ التعديل يحافظ على الحالة.
         isApproved: widget.existing?.isApproved ?? false,
       ),

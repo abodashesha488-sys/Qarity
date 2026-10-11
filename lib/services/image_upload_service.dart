@@ -12,6 +12,10 @@ class ImageUploadService {
   /// يرفع صورة إلى ImgBB ويعيد URL بنتيجة الرفع.
   /// أي استجابة بلا رابط تُرمى كخطأ — لا يُقبل رابط فارغ إطلاقًا.
   Future<String> uploadImage(Uint8List bytes) async {
+    if (_apiKey.isEmpty) {
+      throw Exception(
+          'مفتاح رفع الصور غير مضبوط — يلزم تمرير IMGBB_API_KEY عند البناء');
+    }
     final request = http.MultipartRequest('POST', Uri.parse('$_uploadUrl?key=$_apiKey'));
     request.files.add(http.MultipartFile.fromBytes('image', bytes, filename: 'upload.jpg'));
 

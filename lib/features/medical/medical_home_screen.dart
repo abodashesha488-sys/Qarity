@@ -619,6 +619,13 @@ class _CenterClinicCard extends StatelessWidget {
                 spacing: 8,
                 runSpacing: 6,
                 children: [
+                  _Pill(
+                      icon: Icons.fiber_manual_record_rounded,
+                      text: clinic.scheduleStatusLabel,
+                      color: clinic.isDoctorOnDuty
+                          ? const Color(0xFF2E7D32)
+                          : theme.colorScheme.onSurfaceVariant,
+                      filled: clinic.isDoctorOnDuty),
                   if (clinic.workingHours.isNotEmpty)
                     _Pill(
                         icon: Icons.access_time_rounded,
@@ -1274,6 +1281,11 @@ class _ClinicCard extends StatelessWidget {
           _Tag(clinic.specialty, const Color(0xFF00897B)),
         if (clinic.ownerName.isNotEmpty)
           _Tag('د. ${clinic.ownerName}', theme.colorScheme.onSurfaceVariant),
+        _Tag(
+            clinic.scheduleStatusLabel,
+            clinic.isDoctorOnDuty
+                ? const Color(0xFF2E7D32)
+                : theme.colorScheme.onSurfaceVariant),
       ],
       subtitle: [
         if (clinic.workingHours.isNotEmpty) clinic.workingHours,
@@ -2521,6 +2533,7 @@ class _VillageClinicFormSheetState extends State<VillageClinicFormSheet> {
       TextEditingController(text: widget.existing?.description ?? '');
   late final List<String> _images =
       List.of(widget.existing?.imageUrls ?? const <String>[]);
+  late bool _isAvailableNow = widget.existing?.isAvailableNow ?? false;
 
   bool get _isEdit => widget.existing != null;
 
@@ -2561,6 +2574,7 @@ class _VillageClinicFormSheetState extends State<VillageClinicFormSheet> {
             workingHours: _hoursC.text.trim(),
             description: _descC.text.trim(),
             imageUrls: List.from(_images),
+            isAvailableNow: _isAvailableNow,
             isApproved: editing?.isApproved ?? false,
             submittedBy: editing?.submittedBy ?? widget.userId,
             submittedByName: editing?.submittedByName ?? widget.userName,
@@ -2601,6 +2615,14 @@ class _VillageClinicFormSheetState extends State<VillageClinicFormSheet> {
           _field(_hoursC, 'مواعيد العمل', Icons.access_time_rounded),
           const SizedBox(height: 12),
           _field(_descC, 'نبذة', Icons.description_rounded, maxLines: 3),
+          const SizedBox(height: 8),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('الطبيب متواجد بالعيادة الآن'),
+            subtitle: const Text('تفعيل شارة التواجد الحي للمراجعين'),
+            value: _isAvailableNow,
+            onChanged: (v) => setState(() => _isAvailableNow = v),
+          ),
         ],
       ),
     );

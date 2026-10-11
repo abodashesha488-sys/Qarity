@@ -9,6 +9,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../widgets/qurity_app_bar.dart';
 import 'arabic_letters.dart';
 import 'children_speech.dart';
+import 'kids_certificate_dialog.dart';
 import 'kids_progress.dart';
 
 /// 🎮 لعبة الحروف — «أكمل الكلمة»: إيموجي وكلمة بحرف أول ناقص،
@@ -162,6 +163,29 @@ class _LettersGameScreenState extends State<LettersGameScreen> {
                   icon: const Icon(Icons.replay_rounded),
                   label: const Text('العب مرة أخرى'),
                 ),
+                if (stars >= 2) ...[
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFFB78103),
+                      side: const BorderSide(color: Color(0xFFD4AF37), width: 1.5),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 12),
+                    ),
+                    onPressed: () {
+                      showKidsCertificateDialog(
+                        context,
+                        totalStars: stars,
+                        gameTitle: 'تحدي لعبة الحروف',
+                      );
+                    },
+                    icon: const Icon(Icons.workspace_premium_rounded),
+                    label: Text(
+                      'استلام شهادة التفوق 🎖️',
+                      style: GoogleFonts.tajawal(fontWeight: FontWeight.w900),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 8),
                 TextButton(
                   onPressed: () {

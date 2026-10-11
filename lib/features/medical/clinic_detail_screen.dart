@@ -344,6 +344,10 @@ class _VillageClinicDetailScreenState extends State<VillageClinicDetailScreen> {
                     accent: _teal,
                     child: Column(
                       children: [
+                        MedInfoRow(
+                            icon: Icons.fiber_manual_record_rounded,
+                            label: 'حالة التواجد',
+                            value: clinic.scheduleStatusLabel),
                         if (clinic.ownerName.isNotEmpty)
                           MedInfoRow(
                               icon: Icons.person_rounded,

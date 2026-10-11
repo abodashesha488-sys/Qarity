@@ -62,6 +62,7 @@ class MedicalCenterClinic {
   final double fees; // أجر رمزي
   final bool isActive;
   final bool isApproved; // وثائق المركز القديمة تُعتبر معتمدة ضمناً
+  final bool isAvailableNow;
   final DateTime? updatedAt;
 
   const MedicalCenterClinic({
@@ -76,6 +77,7 @@ class MedicalCenterClinic {
     this.fees = 0,
     this.isActive = true,
     this.isApproved = true,
+    this.isAvailableNow = false,
     this.updatedAt,
   });
 
@@ -96,6 +98,7 @@ class MedicalCenterClinic {
       fees: (json['fees'] as num?)?.toDouble() ?? 0,
       isActive: json['isActive'] as bool? ?? true,
       isApproved: json['isApproved'] as bool? ?? true,
+      isAvailableNow: json['isAvailableNow'] as bool? ?? false,
       updatedAt: tsToDateTime(json['updatedAt']),
     );
   }
@@ -111,6 +114,7 @@ class MedicalCenterClinic {
         'fees': fees,
         'isActive': isActive,
         'isApproved': isApproved,
+        'isAvailableNow': isAvailableNow,
         'updatedAt': FieldValue.serverTimestamp(),
       };
 
@@ -124,6 +128,7 @@ class MedicalCenterClinic {
     String? imageUrl,
     double? fees,
     bool? isActive,
+    bool? isAvailableNow,
   }) =>
       MedicalCenterClinic(
         id: id,
@@ -136,6 +141,7 @@ class MedicalCenterClinic {
         imageUrl: imageUrl ?? this.imageUrl,
         fees: fees ?? this.fees,
         isActive: isActive ?? this.isActive,
+        isAvailableNow: isAvailableNow ?? this.isAvailableNow,
         updatedAt: updatedAt,
       );
 
@@ -143,6 +149,21 @@ class MedicalCenterClinic {
     if (workingDays.isEmpty && workingHours.isEmpty) return 'لم تُحدد المواعيد';
     final days = workingDays.isEmpty ? '' : workingDays.join(' • ');
     return [days, workingHours].where((e) => e.isNotEmpty).join(' | ');
+  }
+
+  String get scheduleStatusLabel {
+    if (isAvailableNow) return 'متواجد الآن بالمركز';
+    const days = ['الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت', 'الأحد'];
+    final today = days[DateTime.now().weekday - 1];
+    if (workingDays.contains(today)) return 'متاح اليوم بالمركز';
+    return 'خارج أوقات العمل';
+  }
+
+  bool get isDoctorOnDuty {
+    if (isAvailableNow) return true;
+    const days = ['الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت', 'الأحد'];
+    final today = days[DateTime.now().weekday - 1];
+    return workingDays.contains(today);
   }
 }
 
@@ -158,6 +179,7 @@ class VillageClinic {
   final String description;
   final List<String> imageUrls;
   final bool isApproved;
+  final bool isAvailableNow;
   final String? submittedBy;
   final String? submittedByName;
   final DateTime? createdAt;
@@ -173,6 +195,7 @@ class VillageClinic {
     this.description = '',
     this.imageUrls = const [],
     this.isApproved = false,
+    this.isAvailableNow = false,
     this.submittedBy,
     this.submittedByName,
     this.createdAt,
@@ -191,6 +214,7 @@ class VillageClinic {
       imageUrls:
           (json['imageUrls'] as List<dynamic>?)?.cast<String>() ?? const [],
       isApproved: json['isApproved'] as bool? ?? false,
+      isAvailableNow: json['isAvailableNow'] as bool? ?? false,
       submittedBy: json['submittedBy'] as String?,
       submittedByName: json['submittedByName'] as String?,
       createdAt: tsToDateTime(json['createdAt']),
@@ -207,6 +231,7 @@ class VillageClinic {
         'description': description,
         'imageUrls': imageUrls,
         'isApproved': isApproved,
+        'isAvailableNow': isAvailableNow,
         'submittedBy': submittedBy,
         'submittedByName': submittedByName,
         'createdAt': createdAt != null
@@ -215,6 +240,13 @@ class VillageClinic {
       };
 
   String get imageUrl => imageUrls.isNotEmpty ? imageUrls.first : '';
+
+  String get scheduleStatusLabel {
+    if (isAvailableNow) return 'متواجد الآن بالعيادة';
+    return workingHours.isNotEmpty ? 'مواعيد العمل: $workingHours' : 'حسب المواعيد';
+  }
+
+  bool get isDoctorOnDuty => isAvailableNow;
 }
 
 // ═══════════════════════ صيدلية بالقرية (مدخَل مستخدم + موافقة) ═══════════════════════

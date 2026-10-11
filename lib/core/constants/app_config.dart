@@ -1,10 +1,8 @@
 class AppConfig {
-  // مفتاح ImgBB يُقرأ من dart-define عند البناء حتى لا يُخزَّن صراحةً في الكود.
+  // مفتاح ImgBB يُقرأ حصريًا من dart-define عند البناء لحماية المفتاح في المستودع العام.
   // مثال: flutter build web --dart-define=IMGBB_API_KEY=xxxxx
-  // القيمة الافتراضية تُبقي التطوير المحلي يعمل دون إعداد إضافي.
   static const String imgbbApiKey = String.fromEnvironment(
     'IMGBB_API_KEY',
-    defaultValue: '5adf17954a21d7d9146824fde7061c6d',
   );
 
   // البريد الافتراضي للمالك يُقرأ من dart-define (اختياري)، يُستخدم فقط في
@@ -17,7 +15,6 @@ class AppConfig {
   // مثال: flutter build web --dart-define=OWM_API_KEY=xxxxx
   static const String openWeatherApiKey = String.fromEnvironment(
     'OWM_API_KEY',
-    defaultValue: '79ddbbe54f06e4aba33efa74466d8bde',
   );
 
   // مفتاح VAPID العام للـWeb Push (Firebase Console → Project Settings →
