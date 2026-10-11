@@ -13,7 +13,7 @@ class AppConfig {
     'BOOTSTRAP_ADMIN_EMAIL',
   );
 
-  // مفتاح OpenWeatherMap — يُقرأ من dart-define عند البناء.
+  // مفتاح OpenWeatherMap — احتياطي اختياري يُقرأ من dart-define (المزود الأساسي هو Open-Meteo ولا يتطلب أي مفتاح).
   // مثال: flutter build web --dart-define=OWM_API_KEY=xxxxx
   static const String openWeatherApiKey = String.fromEnvironment(
     'OWM_API_KEY',
