@@ -14,7 +14,7 @@ class FarmerServicesScreen extends StatelessWidget {
       title: 'خدمات زراعية',
       route: AppRoutes.agriculturalServices,
       image: 'assets/images/tools.jpg',
-      description: 'سجل مقدّمي الآلات والخدمات الزراعية في القرية',
+      description: 'سجل مقدّمي الآلات والعمال والمعدات والخدمات الزراعية',
     ),
     _FarmerService(
       title: 'مستشارك الزراعي',

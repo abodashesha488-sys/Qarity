@@ -917,6 +917,8 @@ class _ProviderCard extends StatelessWidget {
     final color = _color;
     final eduTags =
         provider.isEducational ? _eduTags(theme) : const <Widget>[];
+    final serviceTags =
+        !provider.isEducational ? _serviceTags(theme) : const <Widget>[];
     return Card(
       elevation: 0,
       margin: const EdgeInsets.only(top: 8),
@@ -975,6 +977,10 @@ class _ProviderCard extends StatelessWidget {
                     if (eduTags.isNotEmpty) ...[
                       const SizedBox(height: 5),
                       Wrap(spacing: 4, runSpacing: 4, children: eduTags),
+                    ],
+                    if (serviceTags.isNotEmpty) ...[
+                      const SizedBox(height: 5),
+                      Wrap(spacing: 4, runSpacing: 4, children: serviceTags),
                     ],
                     if (provider.description.isNotEmpty) ...[
                       const SizedBox(height: 4),
@@ -1150,6 +1156,28 @@ class _ProviderCard extends StatelessWidget {
             style: TextStyle(
                 fontSize: 11, fontWeight: FontWeight.w700, color: subjectInk)),
       ..._cardChips(theme),
+    ];
+  }
+
+  /// رقائق الخدمات الزراعية والفنية: الحرفة/الخدمة ووسم العنوان/الموقع.
+  List<Widget> _serviceTags(ThemeData theme) {
+    final color = _color;
+    final isAgri = provider.category == ServiceCategory.agricultural;
+    return [
+      if (provider.displaySpecialty.isNotEmpty)
+        _tag(
+          theme,
+          provider.displaySpecialty,
+          color,
+          icon: isAgri ? Icons.agriculture_rounded : Icons.handyman_rounded,
+        ),
+      if (provider.address.isNotEmpty)
+        _tag(
+          theme,
+          provider.address,
+          theme.colorScheme.onSurfaceVariant,
+          icon: Icons.location_on_rounded,
+        ),
     ];
   }
 

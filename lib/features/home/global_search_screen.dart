@@ -17,7 +17,8 @@ enum SearchCategoryFilter {
   all('الكل', Icons.search_rounded),
   phone('دليل الهاتف', Icons.contact_page_rounded),
   medical('الصحة والأطباء', Icons.medical_services_rounded),
-  services('الحرف والخدمات', Icons.handyman_rounded),
+  services('دليل الحرفيين', Icons.handyman_rounded),
+  agricultural('خدمات زراعية وعمال', Icons.agriculture_rounded),
   market('سوق القرية', Icons.storefront_rounded),
   news('الأخبار', Icons.newspaper_rounded);
 
@@ -79,6 +80,9 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
   static const List<String> _popularSuggestions = [
     'دكتور أطفال',
     'صيدلية',
+    'عمال ومعدات',
+    'عمالة زراعية',
+    'خدمات تجهيز الأرض',
     'كهربائي',
     'سباك',
     'غاز',
@@ -236,20 +240,52 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
       }
     }
 
-    // 3. الحرفيون والخدمات
+    // 3. الحرفيون والفنيون
     if (_selectedFilter == SearchCategoryFilter.all ||
         _selectedFilter == SearchCategoryFilter.services) {
-      for (final s in _serviceProviders) {
+      for (final s in _serviceProviders.where((p) =>
+          p.category == ServiceCategory.technicians ||
+          p.category == ServiceCategory.educational)) {
         if (s.name.toLowerCase().contains(q) ||
             s.specialty.toLowerCase().contains(q) ||
             s.category.toLowerCase().contains(q) ||
+            s.address.toLowerCase().contains(q) ||
             s.description.toLowerCase().contains(q)) {
           list.add(GlobalSearchResultItem(
             title: s.name,
-            subtitle: '${s.specialty} · ${s.phone}',
+            subtitle:
+                '${s.displaySpecialty}${s.address.isNotEmpty ? ' · ${s.address}' : ''}${s.phone.isNotEmpty ? ' · ${s.phone}' : ''}',
             category: ServiceCategory.label(s.category),
             icon: ServiceCategory.icon(s.category),
             accentColor: ServiceCategory.color(s.category),
+            phone: s.phone,
+            route: AppRoutes.serviceProviderDetail,
+            routeArgs: s,
+          ));
+        }
+      }
+    }
+
+    // 4. خدمات زراعية وعمال ومعدات
+    if (_selectedFilter == SearchCategoryFilter.all ||
+        _selectedFilter == SearchCategoryFilter.agricultural) {
+      for (final s in _serviceProviders
+          .where((p) => p.category == ServiceCategory.agricultural)) {
+        if (s.name.toLowerCase().contains(q) ||
+            s.specialty.toLowerCase().contains(q) ||
+            s.address.toLowerCase().contains(q) ||
+            s.description.toLowerCase().contains(q) ||
+            (q.contains('عمال') ||
+                q.contains('معدات') ||
+                q.contains('تجهيز') ||
+                q.contains('زراع'))) {
+          list.add(GlobalSearchResultItem(
+            title: s.name,
+            subtitle:
+                '${s.displaySpecialty}${s.address.isNotEmpty ? ' · ${s.address}' : ''}${s.phone.isNotEmpty ? ' · ${s.phone}' : ''}',
+            category: 'خدمات زراعية · عمال ومعدات',
+            icon: Icons.agriculture_rounded,
+            accentColor: const Color(0xFFAD1457),
             phone: s.phone,
             route: AppRoutes.serviceProviderDetail,
             routeArgs: s,

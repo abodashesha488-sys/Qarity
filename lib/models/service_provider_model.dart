@@ -61,6 +61,8 @@ const List<String> kTechnicianCrafts = [
 
 /// الخدمات الزراعية المقدمة للمزارعين.
 const List<String> kAgriculturalServices = [
+  'عمالة زراعية - خدمات تجهيز الأرض',
+  'عمال ومعدات',
   'آلات ومحاريث حرث',
   'جرارات زراعية',
   'ماكينات ومعدات حصاد',
