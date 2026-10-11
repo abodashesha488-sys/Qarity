@@ -199,4 +199,73 @@ class ShareService {
       }
     }
   }
+
+  // ═══════════════════ شهادة تفوق ركن الأطفال كصورة ═══════════════════
+  /// يشارك شهادة تفوق ركن الأطفال كصورة PNG عالية الجودة تحتوي على كامل تصميم الشهادة.
+  static Future<void> shareKidsCertificateAsImage({
+    required BuildContext context,
+    required Uint8List imageBytes,
+    required String childName,
+    int totalStars = 0,
+    String? gameTitle,
+  }) async {
+    try {
+      final starsText =
+          totalStars > 0 ? '$totalStars نجمة ذهبية ⭐' : 'نجوم التفوق ⭐';
+      final shareText = [
+        '🎖️ شهادة تفوق وتميز للبطل $childName من ركن الأطفال بتطبيق قرية أبوديشيشة 🌟',
+        'تقديرًا لاجتهاده وتفوقه في ${gameTitle ?? 'ألعاب وتحديات ركن الأطفال'} وحصده $starsText!',
+        'بارك الله فيك وإلى مزيد من النجاح والتفوق دائماً يا بطل 🎈🎉',
+        appSignature,
+      ].join('\n\n');
+
+      if (!kIsWeb) {
+        final tempDir = await getTemporaryDirectory();
+        final fileName =
+            'kids_certificate_${DateTime.now().millisecondsSinceEpoch}.png';
+        final file = File('${tempDir.path}/$fileName');
+        await file.writeAsBytes(imageBytes);
+
+        await SharePlus.instance.share(
+          ShareParams(
+            text: shareText,
+            files: [XFile(file.path)],
+          ),
+        );
+      } else {
+        await SharePlus.instance.share(
+          ShareParams(
+            text: shareText,
+            files: [
+              XFile.fromData(
+                imageBytes,
+                mimeType: 'image/png',
+                name: 'kids_certificate.png',
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('Kids certificate share error: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'تعذر إرسال صورة الشهادة مباشرة — جاري مشاركة النص التقديري.',
+            ),
+            backgroundColor: Color(0xFFD4AF37),
+          ),
+        );
+      }
+      // مشاركة نصية كبديل فوري
+      await shareText(
+        title: '🎖️ شهادة تفوق وتميز للبطل $childName',
+        body: [
+          '✨ يسر ركن الأطفال بتطبيق قرية أبوديشيشة أن يمنح هذه الشهادة للبطل المتميز: $childName',
+          'تقديرًا لاجتهاده وتفوقه في ${gameTitle ?? 'ألعاب وتحديات ركن الأطفال'}!',
+        ].join('\n\n'),
+      );
+    }
+  }
 }

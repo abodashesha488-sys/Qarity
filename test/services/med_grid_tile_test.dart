@@ -429,10 +429,10 @@ void main() {
       expect(home, contains('bottomRight: Radius.circular(63)'));
       expect(home, contains('EdgeInsets.fromLTRB(31, 15, 31, 49.5)'));
       expect(home, contains('bottomLeft: Radius.circular(63)'));
-      // الجرس رجع إلى قطره الثابت: لا وسيط حجم يبقى بلا طالب.
+      // الجرس بنفس نسق كبسولات الهيدر الزمردية الأنيقة.
       expect(home, contains('NotificationBellButton(compact: true)'));
       expect(bell, isNot(contains('compactSize')));
-      expect(bell, contains('width: 42'));
+      expect(bell, contains('const Color(0xE604392B)'));
       // حبيبات التاريخ والساعة إلى مقاسها السابق (أيقونتان 11 وخطّان 10/10.5).
       expect(home, contains('size: 11, color: Color(0xFFFFE082)'));
       expect(home, contains('fontSize: 10,'));
@@ -447,10 +447,10 @@ void main() {
       expect(home, contains("key: const ValueKey('header-clock-date-line')"));
       // السطر واحد متمركز، وحبايته في صفٍّ واحد لا فوق بعضهما.
       final line = home.indexOf("ValueKey('header-clock-date-line')");
-      final lineBlock = home.substring(line, line + 640);
+      final lineBlock = home.substring(line, line + 1500);
       expect(lineBlock, contains('mainAxisAlignment: MainAxisAlignment.center'));
-      expect(lineBlock.split('_pill(').length - 1, 2,
-          reason: 'حبايتان فقط — الساعة والتاريخ — في السطر');
+      expect(lineBlock.split('_pill(').length - 1, 3,
+          reason: 'ثلاث حبات — الساعة والتاريخ ومواقيت الصلاة — في السطر');
       // موضعه في أسفل الهيدر: مثبت بأسفل الصندوق لا في جسمه.
       final positioned = home.lastIndexOf('Positioned(', line);
       expect(home.substring(positioned, line), contains('bottom: 12'));

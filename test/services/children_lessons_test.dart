@@ -7,6 +7,7 @@ import 'package:qurity/features/children/arabic_letters.dart';
 import 'package:qurity/features/children/children_lessons.dart';
 import 'package:qurity/features/children/children_screen.dart';
 import 'package:qurity/features/children/children_speech.dart';
+import 'package:qurity/features/children/kids_certificate_dialog.dart';
 import 'package:qurity/features/children/lessons_screen.dart';
 import 'package:qurity/features/children/letters_learn_screen.dart';
 import 'package:qurity/features/children/numbers_learn_screen.dart';
@@ -221,4 +222,39 @@ void main() {
     expect(find.byType(LearnLettersScreen), findsOneWidget);
     expect(find.byType(Image), findsAtLeastNWidgets(20));
   });
+
+  testWidgets('شهادة تفوق الأطفال تعرض شعار القرية في المنتصف وزر مشاركة كصورة', (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 3.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(MaterialApp(
+      home: Builder(
+        builder: (context) => Scaffold(
+          body: Center(
+            child: ElevatedButton(
+              onPressed: () => showKidsCertificateDialog(
+                context,
+                totalStars: 10,
+                defaultName: 'أحمد البطل',
+                gameTitle: 'تحدي الحروف والأرقام',
+              ),
+              child: const Text('افتح الشهادة'),
+            ),
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('افتح الشهادة'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('شهادة تفوق وتقدير'), findsOneWidget);
+    expect(find.text('قرية أبوديشيشة · ركن الأطفال'), findsOneWidget);
+    expect(find.text('مشاركة الشهادة كصورة'), findsOneWidget);
+    expect(find.byType(RepaintBoundary), findsWidgets);
+    expect(find.byType(Image), findsWidgets);
+  });
 }
+

@@ -19,6 +19,7 @@ import '../../services/forum_service.dart';
 import '../../services/market_service.dart';
 import '../../services/news_service.dart';
 import '../../services/notification_service.dart';
+import '../../services/prayer_times_service.dart';
 import '../../services/update_service.dart';
 import '../../services/user_service.dart';
 import '../../services/weather_service.dart';
@@ -181,13 +182,6 @@ class _HomeIdentityBarState extends State<HomeIdentityBar> {
             Builder(builder: (context) => Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _GlassIconButton(
-                        icon: Icons.search_rounded,
-                        onTap: () {
-                          HapticFeedback.lightImpact();
-                          Navigator.pushNamed(context, AppRoutes.globalSearch);
-                        }),
-                    const SizedBox(width: 6),
                     _GlassIconButton(
                         icon: Icons.settings_outlined,
                         onTap: () => Navigator.pushNamed(
@@ -635,22 +629,32 @@ class _HeroHeader extends StatelessWidget {
   const _HeroHeader({required this.dateLabel});
   final String dateLabel;
 
-  Widget _pill({required Widget child}) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
-        decoration: BoxDecoration(
-          color: const Color(0xE604392B),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-              color: Colors.white.withValues(alpha: 0.4)),
-          boxShadow: const [
-            BoxShadow(
-                color: Color(0x40000000),
-                blurRadius: 8,
-                offset: Offset(0, 2))
-          ],
-        ),
-        child: child,
-      );
+  Widget _pill({required Widget child, VoidCallback? onTap}) {
+    final pillBox = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
+      decoration: BoxDecoration(
+        color: const Color(0xE604392B),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
+        boxShadow: const [
+          BoxShadow(
+              color: Color(0x40000000),
+              blurRadius: 8,
+              offset: Offset(0, 2))
+        ],
+      ),
+      child: child,
+    );
+    if (onTap == null) return pillBox;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: onTap,
+        child: pillBox,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -699,37 +703,48 @@ class _HeroHeader extends StatelessWidget {
               ),
             ),
           ),
-          // ── الوقت والتاريخ: سطر واحد متمركز أسفل الهيدر ──
+          // ── الوقت والتاريخ ومواقيت الصلاة: سطر واحد متمركز أسفل الهيدر ──
           Positioned(
             left: 0,
             right: 0,
             bottom: 12,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              child: Row(
-                key: const ValueKey('header-clock-date-line'),
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _pill(child: const _VillageClock()),
-                  const SizedBox(width: 8),
-                  _pill(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.event_rounded,
-                            size: 11, color: Color(0xFFFFE082)),
-                        const SizedBox(width: 5),
-                        Text(dateLabel,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700)),
-                      ],
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Row(
+                  key: const ValueKey('header-clock-date-line'),
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _pill(child: const _VillageClock()),
+                    const SizedBox(width: 5),
+                    _pill(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.event_rounded,
+                              size: 11, color: Color(0xFFFFE082)),
+                          const SizedBox(width: 4),
+                          Text(dateLabel,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700)),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 5),
+                    _pill(
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        showVillagePrayerTimesSheet(context);
+                      },
+                      child: const _VillageNextPrayerPill(),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -1075,7 +1090,7 @@ class _ServiceItem {
   const _ServiceItem(this.title, this.route, this.image);
 }
 
-// ═══════════════ ساعة التوقيت المحلي للقرية (تحت التاريخ) ═══════════════
+// ═══════════════ ساعة التوقيت المحلي للقرية ═══════════════
 class _VillageClock extends StatefulWidget {
   const _VillageClock();
 
@@ -1107,27 +1122,73 @@ class _VillageClockState extends State<_VillageClock> {
     final period = n.hour < 12 ? 'ص' : 'م';
     final text =
         '${h12.toString().padLeft(2, '0')}:${n.minute.toString().padLeft(2, '0')} $period';
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () {
-        HapticFeedback.lightImpact();
-        showVillagePrayerTimesSheet(context);
-      },
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.schedule_rounded,
-              size: 11, color: Color(0xFFFFE082)),
-          const SizedBox(width: 5),
-          Text(text,
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.5,
-                  fontFeatures: [FontFeature.tabularFigures()])),
-        ],
-      ),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.schedule_rounded,
+            size: 11, color: Color(0xFFFFE082)),
+        const SizedBox(width: 4),
+        Text(text,
+            style: const TextStyle(
+                color: Colors.white,
+                fontSize: 10.5,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.5,
+                fontFeatures: [FontFeature.tabularFigures()])),
+      ],
+    );
+  }
+}
+
+// ═══════════════ مربع الصلاة القادمة والوقت المتبقي ═══════════════
+class _VillageNextPrayerPill extends StatefulWidget {
+  const _VillageNextPrayerPill();
+
+  @override
+  State<_VillageNextPrayerPill> createState() => _VillageNextPrayerPillState();
+}
+
+class _VillageNextPrayerPillState extends State<_VillageNextPrayerPill> {
+  Timer? _ticker;
+
+  @override
+  void initState() {
+    super.initState();
+    _ticker = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final now = WeatherService.villageNow();
+    final schedule = PrayerTimesService.calculate(date: now);
+    final (nextPrayer, remaining) = schedule.getNextPrayer(now);
+    final remainingText = VillagePrayerSchedule.formatRemainingTime(remaining);
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.mosque_rounded,
+            size: 11, color: Color(0xFFFFE082)),
+        const SizedBox(width: 4),
+        Text(
+          'الصلاة القادمة: ${nextPrayer.nameAr} ($remainingText)',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
     );
   }
 }

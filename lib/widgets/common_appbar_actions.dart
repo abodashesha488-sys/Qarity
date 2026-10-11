@@ -67,59 +67,55 @@ class _NotificationBellButtonState extends State<NotificationBellButton> {
             onPressed: open,
           );
         }
-        // النسخة المضغوطة (هيدر الرئيسية) — دائرة بلون الثيم + شارة غير مقطوعة
-        return Padding(
-          padding: const EdgeInsetsDirectional.only(end: 4, top: 1, bottom: 1),
+        // النسخة المضغوطة (هيدر الرئيسية) — كبسولة زمردية بنفس نسق البحث والوقت والتاريخ
+        return Material(
+          color: Colors.transparent,
           child: InkWell(
-            customBorder: const CircleBorder(),
+            borderRadius: BorderRadius.circular(999),
             onTap: open,
             child: Container(
-              width: 42,
-              height: 42,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Theme.of(context).colorScheme.primaryContainer,
-                border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.55), width: 1.6),
+                color: const Color(0xE604392B),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
                 boxShadow: const [
                   BoxShadow(
-                      color: Color(0x40000000),
-                      blurRadius: 8,
-                      offset: Offset(0, 2))
+                    color: Color(0x40000000),
+                    blurRadius: 8,
+                    offset: Offset(0, 2),
+                  ),
                 ],
               ),
-              child: Stack(
-                alignment: Alignment.center,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    Icons.notifications_none_rounded,
-                    color: Theme.of(context).colorScheme.onPrimaryContainer,
-                    size: 21),
-                  if (unread > 0)
-                    PositionedDirectional(
-                      top: 4,
-                      end: 3,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 4.5, vertical: 1),
-                        constraints: const BoxConstraints(minWidth: 15),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.error,
-                          borderRadius: BorderRadius.circular(999),
-                          border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.9),
-                              width: 1.2),
-                        ),
-                        child: Text(
-                            unread > 99 ? '99+' : '$unread',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 8.5,
-                                height: 1.25,
-                                fontWeight: FontWeight.w900)),
+                  Badge(
+                    isLabelVisible: unread > 0,
+                    label: Text(
+                      unread > 99 ? '99+' : '$unread',
+                      style: const TextStyle(
+                        fontSize: 8.5,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
                       ),
                     ),
+                    backgroundColor: const Color(0xFFE53935),
+                    child: const Icon(
+                      Icons.notifications_none_rounded,
+                      size: 14,
+                      color: Color(0xFFFFE082),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Text(
+                    'الإشعارات',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                 ],
               ),
             ),
