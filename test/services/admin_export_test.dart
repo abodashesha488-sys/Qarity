@@ -49,7 +49,7 @@ void main() {
       expect(sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0)).value,
           isA<TextCellValue>());
       final util = File('lib/core/utils/xlsx_export.dart').readAsStringSync();
-      expect(util, contains('backgroundColorHex: ExcelColor.fromInt(0xFF6F4E37)'));
+      expect(util, contains('backgroundColorHex: ExcelColor.fromInt(AppColors.primary.toARGB32())'));
       expect(util, contains('fontColorHex: ExcelColor.white'));
       expect(util, isNot(contains("'#6F4E37'")),
           reason: 'تمرير النص كان يرمي TypeError فيبتلعه catch ويقول «خطأ في التصدير»');

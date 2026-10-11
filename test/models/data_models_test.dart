@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:qurity/core/constants/app_colors.dart';
 import 'package:qurity/models/data_models.dart';
 
 void main() {
@@ -252,7 +253,7 @@ void main() {
         createdAt: DateTime(2020),
       );
       expect(o.statusLabel, 'تم التسليم');
-      expect(o.statusColor, const Color(0xFF6F4E37));
+      expect(o.statusColor, AppColors.success);
     });
 
     test('VillageInfo defaults are non-empty', () {

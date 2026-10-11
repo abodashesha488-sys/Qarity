@@ -109,19 +109,20 @@ void main() {
       expect(ordered.map((u) => u['id']).toList(), ['ad', 's1', 'u1', 'u2']);
     });
 
-    test('رتبة الأدوار معروفة: أدمن ⇒ مساعد ⇒ طبي ⇒ زراعي ⇒ مشرف ⇒ بائع، والمجهول آخرًا', () {
+    test('رتبة الأدوار معروفة: أدمن ⇒ مساعد ⇒ طبي ⇒ زراعي ⇒ قانوني ⇒ مشرف ⇒ بائع، والمجهول آخرًا', () {
       const known = [
         'admin',
         'assistant_admin',
         'medical_admin',
         'agricultural_admin',
+        'legal_admin',
         'moderator',
         'seller',
       ];
-      expect(known.map(userRoleRank).toList(), List<int>.generate(6, (i) => i));
-      expect(userRoleRank('user'), 6);
-      expect(userRoleRank('مجهول'), 6);
-      expect(userRoleRank(''), 6,
+      expect(known.map(userRoleRank).toList(), List<int>.generate(7, (i) => i));
+      expect(userRoleRank('user'), 7);
+      expect(userRoleRank('مجهول'), 7);
+      expect(userRoleRank(''), 7,
           reason: 'أي دور جديد يواضع المستخدمين في الذيل ولا يتسلّل فوق الأدمن');
     });
   });

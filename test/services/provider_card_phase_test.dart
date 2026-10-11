@@ -163,7 +163,10 @@ void main() {
         if (!lines[i].contains('BoxFit.cover')) continue;
         final block =
             lines.skip((i - 5).clamp(0, lines.length)).take(7).join('\n');
-        expect(block.contains('Image.asset') || block.contains('CircleAvatar'),
+        expect(
+            block.contains('Image.asset') ||
+                block.contains('CircleAvatar') ||
+                block.contains('FullFitImage'),
             isTrue,
             reason: 'BoxFit.cover عند السطر ${i + 1} بلا مربّع مربوطة به');
       }

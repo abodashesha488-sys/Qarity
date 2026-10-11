@@ -24,7 +24,6 @@ lib/
 │   ├── theme/
 │   │   └── app_theme.dart
 │   └── utils/
-│       ├── animations.dart
 │       └── helpers.dart
 ├── features/
 │   ├── auth/
@@ -84,8 +83,6 @@ lib/
     ├── forum_service.dart
     ├── market_service.dart
     ├── news_service.dart
-    ├── order_service.dart
-    ├── service_request_service.dart
     ├── product_interaction_service.dart
     ├── image_upload_service.dart
     ├── theme_service.dart
