@@ -41,11 +41,39 @@ class LearnNumbersScreen extends StatelessWidget {
     );
   }
 
-  static void showNumberCard(BuildContext context, int index) {
+  static String numberSpeechText(int index) {
+    switch (index) {
+      case 0:
+        return 'الرقم واحد .. تفاحة واحدة';
+      case 1:
+        return 'الرقم اتنين .. تفاحتين .. واحد ، اتنين';
+      case 2:
+        return 'الرقم تلاتة .. تلات تفاحات .. واحد ، اتنين ، تلاتة';
+      case 3:
+        return 'الرقم أربعة .. أربع تفاحات .. واحد ، اتنين ، تلاتة ، أربعة';
+      case 4:
+        return 'الرقم خمسة .. خمس تفاحات .. واحد ، اتنين ، تلاتة ، أربعة ، خمسة';
+      case 5:
+        return 'الرقم ستة .. ست تفاحات .. واحد ، اتنين ، تلاتة ، أربعة ، خمسة ، ستة';
+      case 6:
+        return 'الرقم سبعة .. سبع تفاحات .. واحد ، اتنين ، تلاتة ، أربعة ، خمسة ، ستة ، سبعة';
+      case 7:
+        return 'الرقم تمانية .. تمان تفاحات .. واحد ، اتنين ، تلاتة ، أربعة ، خمسة ، ستة ، سبعة ، تمانية';
+      case 8:
+        return 'الرقم تسعة .. تسع تفاحات .. واحد ، اتنين ، تلاتة ، أربعة ، خمسة ، ستة ، سبعة ، تمانية ، تسعة';
+      case 9:
+        return 'الرقم عشرة .. عشر تفاحات .. واحد ، اتنين ، تلاتة ، أربعة ، خمسة ، ستة ، سبعة ، تمانية ، تسعة ، عشرة';
+      default:
+        return 'الرقم ${kNumberNames[index]}';
+    }
+  }
+
+  static void showNumberCard(BuildContext context, int index) async {
     final colors = LearnLettersScreen.paletteFor(index);
     final n = index + 1;
-    ChildrenSpeech.speak('الرقم ${kNumberNames[index]}. تعال نعدّ $n تفاحات');
-    showModalBottomSheet<void>(
+    final text = numberSpeechText(index);
+    ChildrenSpeech.speak(text);
+    await showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
@@ -105,7 +133,7 @@ class LearnNumbersScreen extends StatelessWidget {
                     return IconButton(
                       tooltip: isPlaying ? 'إيقاف مؤقت' : 'اسمع',
                       onPressed: () => ChildrenSpeech.togglePlayPause(
-                          'الرقم ${kNumberNames[index]} .. تعال نعد $n تفاحات'),
+                          numberSpeechText(index)),
                       icon: Icon(
                         isPlaying
                             ? Icons.pause_circle_rounded
@@ -147,6 +175,7 @@ class LearnNumbersScreen extends StatelessWidget {
         ),
       ).animate().fadeIn(duration: 200.ms).slideY(begin: 0.3, end: 0),
     );
+    ChildrenSpeech.stop();
   }
 }
 

@@ -47,28 +47,77 @@ class MainActivity : FlutterActivity() {
             result.error("FILE_NOT_FOUND", "APK file does not exist", null)
             return
         }
-        if (!file.canRead()) {
-            Log.e("QURITY_UPDATE", "FILE_NOT_READABLE: $apkPath")
-            result.error("FILE_NOT_READABLE", "APK file is not readable", null)
-            return
-        }
+
+        try {
+            file.setReadable(true, false)
+        } catch (_: Exception) {}
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !canInstallPackages()) {
             Log.e("QURITY_UPDATE", "PERMISSION_DENIED")
             result.error("PERMISSION_DENIED", "User has not granted install permission", null)
             return
         }
+
         try {
             Log.d("QURITY_UPDATE", "Starting install activity")
             val authority = "${applicationContext.packageName}.fileprovider"
             val contentUri = FileProvider.getUriForFile(this, authority, file)
+
             val intent = Intent(Intent.ACTION_VIEW).apply {
                 setDataAndType(contentUri, "application/vnd.android.package-archive")
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
             }
-            startActivity(intent)
-            Log.d("QURITY_UPDATE", "startActivity succeeded")
-            result.success(null)
+
+            // منح صلاحية قراءة الملف لجميع الأنشطة المطابقة
+            val resInfoList = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                packageManager.queryIntentActivities(
+                    intent,
+                    PackageManager.ResolveInfoFlags.of(PackageManager.MATCH_DEFAULT_ONLY.toLong())
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                packageManager.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
+            }
+
+            for (resolveInfo in resInfoList) {
+                val pkgName = resolveInfo.activityInfo.packageName
+                grantUriPermission(pkgName, contentUri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+
+            // منح الصلاحية صراحة لمثبتات النظام الشائعة لضمان عدم رفض الوصول عبر التفويض
+            val commonInstallers = listOf(
+                "com.google.android.packageinstaller",
+                "com.android.packageinstaller",
+                "com.samsung.android.packageinstaller",
+                "com.miui.packageinstaller",
+                "com.coloros.packageinstaller",
+                "com.oppo.packageinstaller",
+                "com.vivo.packageinstaller"
+            )
+            for (installer in commonInstallers) {
+                try {
+                    grantUriPermission(installer, contentUri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                } catch (_: Exception) {}
+            }
+
+            try {
+                startActivity(intent)
+                Log.d("QURITY_UPDATE", "startActivity succeeded")
+                result.success(null)
+            } catch (actEx: Exception) {
+                Log.w("QURITY_UPDATE", "ACTION_VIEW failed, attempting ACTION_INSTALL_PACKAGE fallback: ${actEx.message}")
+                val fallbackIntent = Intent(Intent.ACTION_INSTALL_PACKAGE).apply {
+                    setDataAndType(contentUri, "application/vnd.android.package-archive")
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    putExtra(Intent.EXTRA_NOT_UNKNOWN_SOURCE, true)
+                }
+                startActivity(fallbackIntent)
+                Log.d("QURITY_UPDATE", "fallback startActivity succeeded")
+                result.success(null)
+            }
         } catch (e: Exception) {
             Log.e("QURITY_UPDATE", "INSTALL_FAILED: ${e.message}", e)
             result.error("INSTALL_FAILED", e.message ?: "Unknown error", null)

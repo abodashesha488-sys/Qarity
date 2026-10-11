@@ -49,10 +49,14 @@ class LearnLettersScreen extends StatelessWidget {
     );
   }
 
-  static void showLetterCard(BuildContext context, ArabicLetter letter) {
+  static String letterSpeechText(ArabicLetter letter) =>
+      'حرف ${letter.name} .. ${letter.word}';
+
+  static void showLetterCard(BuildContext context, ArabicLetter letter) async {
     final colors = paletteFor(letter.colorIndex);
-    ChildrenSpeech.speak('حرف ${letter.name}. ${letter.word}');
-    showModalBottomSheet<void>(
+    final text = letterSpeechText(letter);
+    ChildrenSpeech.speak(text);
+    await showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
@@ -104,7 +108,7 @@ class LearnLettersScreen extends StatelessWidget {
                     return IconButton(
                       tooltip: isPlaying ? 'إيقاف مؤقت' : 'اسمع',
                       onPressed: () => ChildrenSpeech.togglePlayPause(
-                          'حرف ${letter.name} .. ${letter.word}'),
+                          letterSpeechText(letter)),
                       icon: Icon(
                         isPlaying
                             ? Icons.pause_circle_rounded
@@ -175,6 +179,7 @@ class LearnLettersScreen extends StatelessWidget {
         ),
       ).animate().fadeIn(duration: 200.ms).slideY(begin: 0.3, end: 0),
     );
+    ChildrenSpeech.stop();
   }
 }
 

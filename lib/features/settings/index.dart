@@ -29,83 +29,159 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return Scaffold(
           appBar: const QurityAppBar(title: 'الإعدادات'),
           body: ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             children: [
-              _buildSectionCard(theme, 'المظهر', Icons.palette_rounded, [
-                _familyHeading(theme),
-                ...AppThemes.all.map((f) => _ThemeFamilyCard(
-                      family: f,
-                      selected: f.id == _themeService.family.id,
-                      onTap: () => _themeService.setFamily(f),
-                    )),
-                SwitchListTile(
-                  title: Text('الوضع الليلي', style: GoogleFonts.tajawal(fontWeight: FontWeight.w700)),
-                  subtitle: Text('تفعيل المظهر الداكن للتطبيق', style: GoogleFonts.tajawal()),
-                  value: _themeService.isDarkMode,
-                  onChanged: (value) => _themeService.setDarkMode(value),
-                  secondary: Container(
-                    padding: const EdgeInsets.all(10),
+              _buildHeroBanner(theme),
+              _buildSectionCard(
+                theme,
+                'المظهر',
+                Icons.palette_rounded,
+                [
+                  _familyHeading(theme),
+                  ...AppThemes.all.map((f) => _ThemeFamilyCard(
+                        family: f,
+                        selected: f.id == _themeService.family.id,
+                        onTap: () => _themeService.setFamily(f),
+                      )),
+                  const SizedBox(height: 6),
+                  DecoratedBox(
                     decoration: BoxDecoration(
-                      // الأرضية كانت التمييز نفسه معتما والرمز من نفس لونه،
-                      // فالرمز غير مرئي إطلاقا في الحالتين. صارت الأرضية تظليلا
-                      // خفيفا من التمييز والرمز حبرا مقروءا مشتقا منه.
-                      color: (_themeService.isDarkMode
-                              ? AppColors.purple
-                              : AppColors.warning)
-                          .withValues(alpha: 0.14),
-                      borderRadius: BorderRadius.circular(12),
+                      color: theme.colorScheme.surfaceContainerHighest
+                          .withValues(alpha: 0.35),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: theme.colorScheme.outlineVariant
+                            .withValues(alpha: 0.25),
+                      ),
                     ),
-                    child: Icon(
-                      _themeService.isDarkMode ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
-                      color: AppColors.readableInk(
+                    child: SwitchListTile(
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                      title: Text(
+                        'الوضع الليلي',
+                        style: GoogleFonts.tajawal(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 14.5,
+                        ),
+                      ),
+                      subtitle: Text(
+                        'تفعيل المظهر الداكن المريح للعين',
+                        style: GoogleFonts.tajawal(
+                          fontSize: 12,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      value: _themeService.isDarkMode,
+                      onChanged: (value) => _themeService.setDarkMode(value),
+                      secondary: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: (_themeService.isDarkMode
+                                  ? AppColors.purple
+                                  : AppColors.warning)
+                              .withValues(alpha: 0.16),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
                           _themeService.isDarkMode
-                              ? AppColors.purple
-                              : AppColors.warning,
-                          theme.brightness),
+                              ? Icons.dark_mode_rounded
+                              : Icons.light_mode_rounded,
+                          color: AppColors.readableInk(
+                              _themeService.isDarkMode
+                                  ? AppColors.purple
+                                  : AppColors.warning,
+                              theme.brightness),
+                          size: 20,
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ]),
-              const SizedBox(height: 16),
-              _buildSectionCard(theme, 'الإشعارات', Icons.notifications_active_rounded, [
-                _SettingsTile(
-                  icon: Icons.notifications_rounded,
-                  title: 'إعدادات الإشعارات',
-                  subtitle: 'تخصيص الإشعارات التي تصلك',
-                  onTap: () => Navigator.pushNamed(context, AppRoutes.notificationsSettings),
-                ),
-              ]),
-              const SizedBox(height: 16),
-              _buildSectionCard(theme, 'اللغة', Icons.language_rounded, [
-                _SettingsTile(
-                  icon: Icons.translate_rounded,
-                  title: 'تغيير اللغة',
-                  trailing: Text('العربية', style: GoogleFonts.tajawal(color: theme.colorScheme.primary, fontWeight: FontWeight.w700)),
-                  onTap: () {},
-                ),
-              ]),
-              const SizedBox(height: 16),
-              _buildSectionCard(theme, 'الحساب', Icons.person_rounded, [
-                _SettingsTile(
-                  icon: Icons.account_circle_rounded,
-                  title: 'حساب المستخدم',
-                  subtitle: 'الملف الشخصي وتسجيلات الدخول',
-                  onTap: () {},
-                ),
-              ]),
-              const SizedBox(height: 16),
-              _buildSectionCard(theme, 'التحديثات', Icons.system_update_rounded, [
-                const _UpdateTile(),
-              ]),
-              const SizedBox(height: 16),
-              _buildSectionCard(theme, 'عن التطبيق', Icons.info_rounded, [
-                _SettingsTile(
-                  icon: Icons.app_settings_alt_rounded,
-                  title: 'معلومات التطبيق',
-                  subtitle: 'الإصدار والحقوق',
-                  onTap: () => Navigator.pushNamed(context, AppRoutes.aboutApp),
-                ),
-              ]),
+                ],
+              ),
+              _buildSectionCard(
+                theme,
+                'التحديثات',
+                Icons.system_update_rounded,
+                [
+                  const _UpdateTile(),
+                ],
+              ),
+              _buildSectionCard(
+                theme,
+                'الإشعارات',
+                Icons.notifications_active_rounded,
+                [
+                  _SettingsTile(
+                    icon: Icons.notifications_rounded,
+                    title: 'إعدادات الإشعارات',
+                    subtitle: 'تخصيص التنبيهات وقنوات الأخبار والخدمات',
+                    onTap: () => Navigator.pushNamed(
+                        context, AppRoutes.notificationsSettings),
+                  ),
+                ],
+              ),
+              _buildSectionCard(
+                theme,
+                'اللغة',
+                Icons.language_rounded,
+                [
+                  _SettingsTile(
+                    icon: Icons.translate_rounded,
+                    title: 'لغة التطبيق',
+                    subtitle: 'اللغة المعتمدة لواجهات النظام',
+                    trailing: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary.withValues(alpha: 0.10),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color:
+                              theme.colorScheme.primary.withValues(alpha: 0.25),
+                        ),
+                      ),
+                      child: Text(
+                        'العربية',
+                        style: GoogleFonts.tajawal(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                    onTap: () => _showLanguageModal(context),
+                  ),
+                ],
+              ),
+              _buildSectionCard(
+                theme,
+                'الحساب',
+                Icons.person_rounded,
+                [
+                  _SettingsTile(
+                    icon: Icons.account_circle_rounded,
+                    title: 'حساب المستخدم',
+                    subtitle: 'الملف الشخصي والبيانات المسجلة',
+                    onTap: () =>
+                        Navigator.pushNamed(context, AppRoutes.profileMain),
+                  ),
+                ],
+              ),
+              _buildSectionCard(
+                theme,
+                'عن التطبيق',
+                Icons.info_rounded,
+                [
+                  _SettingsTile(
+                    icon: Icons.app_settings_alt_rounded,
+                    title: 'معلومات التطبيق',
+                    subtitle: 'الإصدار، الرؤية، والمطورين',
+                    onTap: () =>
+                        Navigator.pushNamed(context, AppRoutes.aboutApp),
+                  ),
+                ],
+              ),
+              _buildFooter(theme),
             ],
           ),
         );
@@ -113,36 +189,285 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildSectionCard(ThemeData theme, String title, IconData icon, List<Widget> children) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
+  Widget _buildHeroBanner(ThemeData theme) {
+    final primary = theme.colorScheme.primary;
+    final isDark = theme.brightness == Brightness.dark;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 18),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: AlignmentDirectional.topStart,
+          end: AlignmentDirectional.bottomEnd,
+          colors: isDark
+              ? [
+                  primary.withValues(alpha: 0.22),
+                  primary.withValues(alpha: 0.08),
+                ]
+              : [
+                  primary.withValues(alpha: 0.12),
+                  primary.withValues(alpha: 0.03),
+                ],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: primary.withValues(alpha: isDark ? 0.25 : 0.18),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: primary.withValues(alpha: isDark ? 0.15 : 0.05),
+            blurRadius: 16,
+            offset: const Offset(0, 5),
+          ),
+        ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(icon, color: theme.colorScheme.primary, size: 18),
+      child: Row(
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  primary,
+                  primary.withValues(alpha: 0.8),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: primary.withValues(alpha: 0.35),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
                 ),
-                const SizedBox(width: 10),
-                Text(title, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
               ],
             ),
-            const SizedBox(height: 8),
-            ...children,
-          ],
+            child: const Icon(
+              Icons.tune_rounded,
+              color: Colors.white,
+              size: 26,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'إعدادات المنظومة',
+                  style: GoogleFonts.tajawal(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  'تخصيص الواجهة والإشعارات ومتابعة التحديثات الرسمية',
+                  style: GoogleFonts.tajawal(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: theme.colorScheme.onSurfaceVariant,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionCard(
+    ThemeData theme,
+    String title,
+    IconData icon,
+    List<Widget> children,
+  ) {
+    final isDark = theme.brightness == Brightness.dark;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant
+              .withValues(alpha: isDark ? 0.30 : 0.40),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: theme.shadowColor.withValues(alpha: isDark ? 0.22 : 0.04),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary
+                      .withValues(alpha: isDark ? 0.16 : 0.10),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: theme.colorScheme.primary, size: 18),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                title,
+                style: GoogleFonts.tajawal(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w900,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...children,
+        ],
+      ),
+    );
+  }
+
+  void _showLanguageModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        final t = Theme.of(ctx);
+        return Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: t.colorScheme.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Icon(Icons.translate_rounded, color: t.colorScheme.primary),
+                  const SizedBox(width: 10),
+                  Text(
+                    'لغة المنظومة',
+                    style: GoogleFonts.tajawal(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: t.colorScheme.primary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: t.colorScheme.primary.withValues(alpha: 0.25),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle_rounded,
+                        color: AppColors.success),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'اللغة العربية (الفصحى)',
+                            style: GoogleFonts.tajawal(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 14.5,
+                            ),
+                          ),
+                          Text(
+                            'اللغة الأساسية والمعتمدة لكافة خدمات المنظومة',
+                            style: GoogleFonts.tajawal(
+                              fontSize: 12,
+                              color: t.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildFooter(ThemeData theme) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 20),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 24,
+                height: 1,
+                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Icon(
+                  Icons.favorite_rounded,
+                  color: AppColors.error.withValues(alpha: 0.7),
+                  size: 15,
+                ),
+              ),
+              Container(
+                width: 24,
+                height: 1,
+                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'تطبيق قرية أبوديشيشة الرقمي',
+            style: GoogleFonts.tajawal(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w800,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'صُنع بكل إتقان لخدمة أهالينا الكرام',
+            style: GoogleFonts.tajawal(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -294,44 +619,70 @@ class _SettingsTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
+    final isDark = theme.brightness == Brightness.dark;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(9),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary
+                      .withValues(alpha: isDark ? 0.14 : 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: theme.colorScheme.primary, size: 19),
               ),
-              child: Icon(icon, color: theme.colorScheme.primary, size: 18),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-                  if (subtitle != null)
-                    Text(subtitle!, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-                ],
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.tajawal(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle!,
+                        style: GoogleFonts.tajawal(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w500,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
-            ),
-            if (trailing != null)
-              trailing!
-            else
-              Icon(Icons.chevron_left_rounded, color: theme.colorScheme.onSurfaceVariant, size: 18),
-          ],
+              if (trailing != null)
+                trailing!
+              else
+                Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  color:
+                      theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                  size: 15,
+                ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-/// صف التحديثات — يعرض الإصدار الحالي ويفحص يدويًا عند الضغط.
+/// كارت التحديثات المطور — يعرض تفاصيل الإصدار ويفحص التحديثات مباشرة ويفتح المثبت بعد التحميل.
 class _UpdateTile extends StatefulWidget {
   const _UpdateTile();
 
@@ -341,6 +692,7 @@ class _UpdateTile extends StatefulWidget {
 
 class _UpdateTileState extends State<_UpdateTile> {
   String _version = '…';
+  String _buildNumber = '';
   bool _checking = false;
 
   @override
@@ -353,7 +705,10 @@ class _UpdateTileState extends State<_UpdateTile> {
     try {
       final p = await PackageInfo.fromPlatform();
       if (mounted) {
-        setState(() => _version = 'الإصدار ${p.version}');
+        setState(() {
+          _version = 'v${p.version}';
+          _buildNumber = p.buildNumber;
+        });
       }
     } catch (_) {}
   }
@@ -373,17 +728,68 @@ class _UpdateTileState extends State<_UpdateTile> {
           await UpdateFlow.install(context, info);
         case UpdateCheckStatus.checkFailed:
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('تعذّر فحص التحديثات — تحقق من الاتصال وأعد المحاولة'),
+            SnackBar(
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              backgroundColor: AppColors.error,
+              content: Row(
+                children: [
+                  const Icon(Icons.cloud_off_rounded,
+                      color: Colors.white, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'تعذّر فحص التحديثات — تحقق من الاتصال وأعد المحاولة',
+                      style: GoogleFonts.tajawal(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
         case UpdateCheckStatus.notSupported:
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('التحديث هنا تلقائي عند فتح التطبيق')),
+            SnackBar(
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              content: Row(
+                children: [
+                  const Icon(Icons.info_outline_rounded,
+                      color: Colors.white, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'التحديث هنا تلقائي عند فتح التطبيق',
+                      style: GoogleFonts.tajawal(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           );
         case UpdateCheckStatus.upToDate:
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('أنت على أحدث إصدار')),
+            SnackBar(
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              backgroundColor: AppColors.success,
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle_rounded,
+                      color: Colors.white, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'أنت على أحدث إصدار',
+                      style: GoogleFonts.tajawal(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           );
       }
     } finally {
@@ -393,11 +799,163 @@ class _UpdateTileState extends State<_UpdateTile> {
 
   @override
   Widget build(BuildContext context) {
-    return _SettingsTile(
-      icon: Icons.system_update_alt_rounded,
-      title: 'التحقق من التحديثات',
-      subtitle: '$_version ${_checking ? '• جاري الفحص…' : '• اضغط للفحص الآن'}',
-      onTap: _checkForUpdate,
+    final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: primary.withValues(alpha: isDark ? 0.08 : 0.04),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: primary.withValues(alpha: isDark ? 0.22 : 0.15),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: primary.withValues(alpha: 0.14),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.cloud_sync_rounded,
+                  color: primary,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'الإصدار الحالي المثبت',
+                      style: GoogleFonts.tajawal(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Text(
+                          _version,
+                          style: GoogleFonts.tajawal(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                        if (_buildNumber.isNotEmpty) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              'بناء $_buildNumber',
+                              style: GoogleFonts.tajawal(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                      color: AppColors.success.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: const BoxDecoration(
+                        color: AppColors.success,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      'نشط',
+                      style: GoogleFonts.tajawal(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.success,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'يتم فحص وتثبيت التحديثات الجديدة تلقائيًا لضمان الأمان وفاعلية الخدمات.',
+            style: GoogleFonts.tajawal(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              height: 1.4,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _checking ? null : _checkForUpdate,
+              icon: _checking
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.system_update_alt_rounded, size: 19),
+              label: Text(
+                _checking ? 'جاري فحص التحديثات...' : 'التحقق من التحديثات',
+                style: GoogleFonts.tajawal(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              style: FilledButton.styleFrom(
+                backgroundColor: primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                elevation: 0,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
