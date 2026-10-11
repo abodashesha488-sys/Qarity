@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/constants/app_config.dart';
+import 'prayer_times_service.dart';
 
 /// خدمة الطقس — Open-Meteo (مجاني 100% وبدون مفتاح API، مع احتياطي OpenWeatherMap وكاش محلي).
 /// نتيجة كل استدعاء تُخزّن مؤقتاً في الذاكرة (10 دقائق) لتحمّل انقطاع الشبكة.
@@ -27,9 +28,9 @@ class WeatherService {
   Map<String, dynamic>? get cachedCurrent => _currentCache;
   Map<String, dynamic>? get cachedForecast => _forecastCache;
 
-  /// إزاحة منطقة القرية الزمنية (ثوانٍ) من آخر استجابة — للساعة في الهيدر.
-  /// 7200 = UTC+2 (مصر) حتى وصول أول رد حي.
-  static int tzOffsetSeconds = 7200;
+  /// إزاحة منطقة القرية الزمنية (ثوانٍ) — تحسب تلقائياً طبقاً لتوقيت مصر (صيفي 10800 / شتوي 7200) حتى وصول رد حي.
+  static int tzOffsetSeconds =
+      (PrayerTimesService.egyptTimeZoneOffsetHours(DateTime.now()) * 3600).toInt();
 
   /// وقت القرية المحلي الآن.
   static DateTime villageNow() =>

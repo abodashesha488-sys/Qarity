@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../core/constants/app_colors.dart';
-import '../../models/agriculture_content_model.dart';
 import '../../services/agriculture_content_service.dart';
-import '../../widgets/agriculture_content_panel.dart';
 import '../../widgets/qurity_app_bar.dart';
 
 /// شاشة المحاصيل — شبكة من المحاصيل المصرية تفتح تفاصيل علمية موثقة.
@@ -846,28 +844,20 @@ class CropsScreen extends StatelessWidget {
       appBar: const QurityAppBar(
         title: 'المحاصيل الزراعية',
       ),
-      body: Column(
-        children: [
-          AgricultureContentPanel(
-              section: AgricultureSections.crops, service: contentService),
-          Expanded(
-            child: GridView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _crops.length,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                mainAxisSpacing: 14,
-                crossAxisSpacing: 14,
-                childAspectRatio: 0.68,
-              ),
-              itemBuilder: (context, index) => _CropCard(
-                crop: _crops[index],
-                color: color,
-                index: index,
-              ),
-            ),
-          ),
-        ],
+      body: GridView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: _crops.length,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          mainAxisSpacing: 14,
+          crossAxisSpacing: 14,
+          childAspectRatio: 0.68,
+        ),
+        itemBuilder: (context, index) => _CropCard(
+          crop: _crops[index],
+          color: color,
+          index: index,
+        ),
       ),
     );
   }

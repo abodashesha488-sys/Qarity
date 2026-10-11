@@ -427,39 +427,27 @@ void main() {
       // صندوق الهيدر وحده تكبّر (قيس بالأداة A/B: old=84.0 ⇒ new=117.5 = +39.9%).
       // صورة الخلفية تملؤه تلقائيًا لأنها Positioned.fill.
       expect(home, contains('bottomRight: Radius.circular(63)'));
-      expect(home, contains('EdgeInsets.fromLTRB(31, 15, 31, 49.5)'));
+      expect(home, contains('EdgeInsets.fromLTRB(26, 12, 26, 48)'));
       expect(home, contains('bottomLeft: Radius.circular(63)'));
       // الجرس بنفس نسق كبسولات الهيدر الزمردية الأنيقة.
       expect(home, contains('NotificationBellButton(compact: true)'));
       expect(bell, isNot(contains('compactSize')));
       expect(bell, contains('const Color(0xE604392B)'));
-      // حبيبات التاريخ والساعة إلى مقاسها السابق (أيقونتان 11 وخطّان 10/10.5).
-      expect(home, contains('size: 11, color: Color(0xFFFFE082)'));
+      // حبيبات التاريخ والساعة إلى مقاسها السابق.
       expect(home, contains('fontSize: 10,'));
       expect(home, contains('fontSize: 10.5'));
       expect(home, contains('horizontal: 9, vertical: 3.5'));
-      // ── بموجة ٢٠٢٦-١٠-٠٥: انتقل الوقت والتاريخ إلى سطر واحد متمركز أسفل
-      // الهيدر، فاحتفظ الصندوق بارتفاعه بثابت يحسم جسم الهيدر بدل الحبّاعتين.
-      // 53.0 هو ارتفاع الحبّاعتين فوق بعضهما كما قِيست في بناء المقارنة نفسه
-      // (الهيدر الكامل 117.5 عند عرض ٣٩٠)، فلا ينقص سنتيمتر عند النقل.
-      expect(home, contains('const double kHeroBodyHeight = 53.0;'));
+      // ── بموجة الهيدر: الوقت تحت البحث، التاريخ تحت الإشعارات، ومواقيت الصلاة متمركزة أسفل الهيدر ──
+      expect(home, contains('const double kHeroBodyHeight = 58.0;'));
       expect(home, contains('height: kHeroBodyHeight'));
       expect(home, contains("key: const ValueKey('header-clock-date-line')"));
-      // السطر واحد متمركز، وحبايته في صفٍّ واحد لا فوق بعضهما.
-      final line = home.indexOf("ValueKey('header-clock-date-line')");
-      final lineBlock = home.substring(line, line + 1500);
-      expect(lineBlock, contains('mainAxisAlignment: MainAxisAlignment.center'));
-      expect(lineBlock.split('_pill(').length - 1, 3,
-          reason: 'ثلاث حبات — الساعة والتاريخ ومواقيت الصلاة — في السطر');
-      // موضعه في أسفل الهيدر: مثبت بأسفل الصندوق لا في جسمه.
-      final positioned = home.lastIndexOf('Positioned(', line);
-      expect(home.substring(positioned, line), contains('bottom: 12'));
-      expect(home.substring(positioned, line), contains('left: 0'));
-      // جسم الهيدر صار الجرس وحده: لا تُعاد حَبّاعة إلى الصفّ القديم.
-      final body = home.substring(home.indexOf('height: kHeroBodyHeight'), line);
-      expect(body, isNot(contains('_pill(')),
-          reason: 'الوقت والتاريخ خارج جسم الهيدر لا داخله');
-      expect(body, contains('NotificationBellButton(compact: true)'));
+      // مواقيت الصلاة مكبرة بحبة مخصصة متمركزة
+      expect(home, contains('_prayerPill('));
+      expect(home, contains('const _VillageNextPrayerPill()'));
+      // الوقت تحت البحث والتاريخ تحت الإشعارات
+      expect(home, contains('_HeaderSearchButton()'));
+      expect(home, contains('const _VillageClock()'));
+      expect(home, contains('NotificationBellButton(compact: true)'));
     });
   });
 }

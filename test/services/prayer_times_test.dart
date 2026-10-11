@@ -60,5 +60,30 @@ void main() {
         expect(str.contains(':'), isTrue);
       }
     });
+
+    test('فارق التوقيت لمصر صيفي 3.0 وشتوي 2.0 طبقاً لقانون التوقيت الصيفي', () {
+      // شهر يوليو: صيفي
+      expect(PrayerTimesService.egyptTimeZoneOffsetHours(DateTime(2026, 7)), 3.0);
+      // شهر أكتوبر (قبل نهاية الشهر): صيفي
+      expect(PrayerTimesService.egyptTimeZoneOffsetHours(DateTime(2026, 10, 12)), 3.0);
+      // شهر ديسمبر: شتوي
+      expect(PrayerTimesService.egyptTimeZoneOffsetHours(DateTime(2026, 12)), 2.0);
+      // شهر يناير: شتوي
+      expect(PrayerTimesService.egyptTimeZoneOffsetHours(DateTime(2026, 1, 15)), 2.0);
+    });
+
+    test('حساب المواقيت مع تاريخ UTC (مثل villageNow) يعطي التوقيت المحلي المصري الصحيح', () {
+      final utcDate = DateTime.utc(2026, 10, 12, 12);
+      final schedule = PrayerTimesService.calculate(date: utcDate);
+
+      // الفجر في مصر في أكتوبر حوالي 5:25 ص (وليس 2:25 ص)
+      expect(schedule.fajr.time.hour, 5);
+      // الظهر حوالي 12:41 م (وليس 9:41 ص)
+      expect(schedule.dhuhr.time.hour, 12);
+      // المغرب حوالي 6:28 م (وليس 3:28 م)
+      expect(schedule.maghrib.time.hour, 18);
+      // العشاء حوالي 7:46 م (وليس 4:46 م)
+      expect(schedule.isha.time.hour, 19);
+    });
   });
 }

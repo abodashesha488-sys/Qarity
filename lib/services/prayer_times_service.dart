@@ -81,13 +81,38 @@ class VillagePrayerSchedule {
 /// خط العرض: 31.02 شمالاً، خط الطول: 31.38 شرقاً
 /// زاوية الفجر: 19.5°، زاوية العشاء: 17.5°
 class PrayerTimesService {
-  // إحداثيات قرية أبوديشيشة
-  static const double villageLatitude = 31.02;
-  static const double villageLongitude = 31.38;
+  // إحداثيات قرية أبوديشيشة (مركز شربين - الدقهلية)
+  static const double villageLatitude = 31.299677;
+  static const double villageLongitude = 31.354846;
 
   // زوايا الهيئة المصرية العامة للمساحة
   static const double fajrAngle = 19.5;
   static const double ishaAngle = 17.5;
+
+  /// فارق التوقيت لقرية أبوديشيشة (مصر) عن UTC بالساعات.
+  /// صيفي (+3) من الجمعة الأخيرة من أبريل حتى نهاية الخميس الأخير من أكتوبر، وشتوي (+2) باقي العام.
+  static double egyptTimeZoneOffsetHours(DateTime date) {
+    final y = date.year;
+    // الجمعة الأخيرة في أبريل
+    var aprLastFri = 30;
+    while (DateTime.utc(y, 4, aprLastFri).weekday != DateTime.friday) {
+      aprLastFri--;
+    }
+    final dstStart = DateTime.utc(y, 4, aprLastFri);
+
+    // الخميس الأخير في أكتوبر (ينتهي العمل بالتوقيت الصيفي بنهاية يوم الخميس)
+    var octLastThu = 31;
+    while (DateTime.utc(y, 10, octLastThu).weekday != DateTime.thursday) {
+      octLastThu--;
+    }
+    final dstEnd = DateTime.utc(y, 10, octLastThu + 1);
+
+    final dUtc = date.isUtc ? date : date.toUtc();
+    if (dUtc.isAfter(dstStart) && dUtc.isBefore(dstEnd)) {
+      return 3.0;
+    }
+    return 2.0;
+  }
 
   /// حساب جدول الصلوات لتاريخ محدد
   static VillagePrayerSchedule calculate({DateTime? date}) {
@@ -111,13 +136,20 @@ class PrayerTimesService {
 
     // معادلة الوقت (Equation of Time بالدقائق)
     final ra = _fixAngle(_arctan2(_cos(e) * _sin(l), _cos(l))) / 15.0;
-    final eqt = (q / 15.0) - ra;
+    var eqtDiff = (q / 15.0) - ra;
+    while (eqtDiff > 12) {
+      eqtDiff -= 24;
+    }
+    while (eqtDiff < -12) {
+      eqtDiff += 24;
+    }
+    final eqt = eqtDiff;
 
     // زوال الشمس (الظهر الفلكي) بالتوقيت العالمي UTC
     final noonUtc = 12.0 - (villageLongitude / 15.0) - eqt;
 
-    // فارق التوقيت المحلي مع UTC للتاريخ المحدد
-    final tzOffset = target.timeZoneOffset.inMinutes / 60.0;
+    // فارق التوقيت المحلي لقرية أبوديشيشة مع UTC للتاريخ المحدد
+    final tzOffset = egyptTimeZoneOffsetHours(target);
     final localNoon = noonUtc + tzOffset;
 
     // حساب زوايا الساعات لمختلف الأوقات
@@ -229,6 +261,9 @@ class PrayerTimesService {
       h += 1;
     }
 
+    if (date.isUtc) {
+      return DateTime.utc(date.year, date.month, date.day, h % 24, m, s);
+    }
     return DateTime(date.year, date.month, date.day, h % 24, m, s);
   }
 }

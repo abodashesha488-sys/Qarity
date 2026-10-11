@@ -620,10 +620,9 @@ class _HomeContentState extends State<HomeContent> {
               color: theme.colorScheme.onSurfaceVariant)));
 }
 
-// ═══════════════ هيدر علوي مبسّط: الجرس + التاريخ والوقت ═══════════════
-/// ارتفاع جسم هيدر الرئيسية — كان تحسمه حبّاعتا الوقت والتاريخ فوق بعضهما،
-/// وبقي ثابتًا بعد نقلهما إلى سطر واحد أسفل الهيدر.
-const double kHeroBodyHeight = 53.0;
+// ═══════════════ هيدر علوي: البحث والوقت، الإشعارات والتاريخ، ومواقيت الصلاة ═══════════════
+/// ارتفاع جسم هيدر الرئيسية لاستيعاب زري البحث والإشعارات وتحتهما الوقت والتاريخ
+const double kHeroBodyHeight = 58.0;
 
 class _HeroHeader extends StatelessWidget {
   const _HeroHeader({required this.dateLabel});
@@ -635,12 +634,55 @@ class _HeroHeader extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xE604392B),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 0.9),
         boxShadow: const [
           BoxShadow(
               color: Color(0x40000000),
               blurRadius: 8,
               offset: Offset(0, 2))
+        ],
+      ),
+      child: child,
+    );
+    if (onTap == null) return pillBox;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: onTap,
+        child: pillBox,
+      ),
+    );
+  }
+
+  Widget _prayerPill({required Widget child, VoidCallback? onTap}) {
+    final pillBox = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xF0033527),
+            Color(0xF0064C39),
+          ],
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+        ),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: const Color(0xFFFFD54F).withValues(alpha: 0.6),
+          width: 1.1,
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x55000000),
+            blurRadius: 10,
+            offset: Offset(0, 3),
+          ),
+          BoxShadow(
+            color: Color(0x22F1C40F),
+            blurRadius: 6,
+            spreadRadius: 0.5,
+          ),
         ],
       ),
       child: child,
@@ -684,66 +726,72 @@ class _HeroHeader extends StatelessWidget {
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => const SizedBox.shrink()),
           ),
-          const SafeArea(
+          SafeArea(
             bottom: false,
             child: Padding(
-              padding: EdgeInsets.fromLTRB(31, 15, 31, 49.5),
-              // جسم الهيدر يحتفظ بارتفاعه السابق (كان تحسمه حبّاعتا الوقت
-              // والتاريخ فوق بعضهما) فلا يتقلّص الصندوق المكبّر حين انتقلتا
-              // إلى سطر واحد في أسفل الهيدر.
+              padding: const EdgeInsets.fromLTRB(26, 12, 26, 48),
               child: SizedBox(
                 height: kHeroBodyHeight,
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _HeaderSearchButton(),
-                    Spacer(),
-                    NotificationBellButton(compact: true),
+                    // زر البحث وتحته الوقت مباشرة
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const _HeaderSearchButton(),
+                        const SizedBox(height: 4.5),
+                        _pill(child: const _VillageClock()),
+                      ],
+                    ),
+                    const Spacer(),
+                    // زر الإشعارات وتحته التاريخ مباشرة
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        const NotificationBellButton(compact: true),
+                        const SizedBox(height: 4.5),
+                        _pill(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.event_rounded,
+                                  size: 11, color: Color(0xFFFFE082)),
+                              const SizedBox(width: 4),
+                              Text(dateLabel,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
             ),
           ),
-          // ── الوقت والتاريخ ومواقيت الصلاة: سطر واحد متمركز أسفل الهيدر ──
+          // ── مواقيت الصلاة: منتصف أسفل الهيدر بتنسيق بارز واحترافي ──
           Positioned(
-            left: 0,
-            right: 0,
-            bottom: 12,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+            key: const ValueKey('header-clock-date-line'),
+            left: 12,
+            right: 12,
+            bottom: 11,
+            child: Center(
               child: FittedBox(
                 fit: BoxFit.scaleDown,
-                child: Row(
-                  key: const ValueKey('header-clock-date-line'),
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _pill(child: const _VillageClock()),
-                    const SizedBox(width: 5),
-                    _pill(
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.event_rounded,
-                              size: 11, color: Color(0xFFFFE082)),
-                          const SizedBox(width: 4),
-                          Text(dateLabel,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700)),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 5),
-                    _pill(
-                      onTap: () {
-                        HapticFeedback.lightImpact();
-                        showVillagePrayerTimesSheet(context);
-                      },
-                      child: const _VillageNextPrayerPill(),
-                    ),
-                  ],
+                child: _prayerPill(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    showVillagePrayerTimesSheet(context);
+                  },
+                  child: const _VillageNextPrayerPill(),
                 ),
               ),
             ),
@@ -1176,17 +1224,42 @@ class _VillageNextPrayerPillState extends State<_VillageNextPrayerPill> {
       mainAxisSize: MainAxisSize.min,
       children: [
         const Icon(Icons.mosque_rounded,
-            size: 11, color: Color(0xFFFFE082)),
-        const SizedBox(width: 4),
+            size: 15, color: Color(0xFFFFD54F)),
+        const SizedBox(width: 6),
         Text(
-          'الصلاة القادمة: ${nextPrayer.nameAr} ($remainingText)',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
+          'الصلاة القادمة: ${nextPrayer.nameAr}',
           style: const TextStyle(
             color: Colors.white,
-            fontSize: 10,
-            fontWeight: FontWeight.w700,
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
           ),
+        ),
+        const SizedBox(width: 6),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6.5, vertical: 2),
+          decoration: BoxDecoration(
+            color: const Color(0x33FFD54F),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: const Color(0x77FFD54F),
+              width: 0.8,
+            ),
+          ),
+          child: Text(
+            remainingText,
+            style: const TextStyle(
+              color: Color(0xFFFFE082),
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              fontFeatures: [FontFeature.tabularFigures()],
+            ),
+          ),
+        ),
+        const SizedBox(width: 4),
+        const Icon(
+          Icons.chevron_left_rounded,
+          size: 14,
+          color: Colors.white70,
         ),
       ],
     );

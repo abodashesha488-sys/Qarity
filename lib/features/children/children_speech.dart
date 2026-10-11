@@ -73,12 +73,53 @@ class ChildrenSpeech {
   static Future<void> _ensure() async {
     if (_ready) return;
     try {
-      // 1. فحص وضبط الصوت العربي المفضل (اللهجة المصرية ar-EG)
+      // تفعيل انتظار اكتمال النطق لانتظام الأحداث
+      try {
+        await _tts.awaitSpeakCompletion(true);
+      } catch (_) {}
+
+      // 1. ضبط اللغة — نجرب المصرية أولاً ثم البدائل العربية لمنع الرجوع للإنجليزية
+      const arabicLocales = [
+        'ar-EG',
+        'ar-SA',
+        'ar',
+        'ar-AE',
+        'ar-XA',
+        'ar_EG',
+        'ar_SA',
+      ];
+
+      bool langSet = false;
+      for (final loc in arabicLocales) {
+        try {
+          final dynamic isAvail = await _tts.isLanguageAvailable(loc);
+          if (isAvail == true || (isAvail is num && isAvail >= 0)) {
+            final dynamic res = await _tts.setLanguage(loc);
+            if (res == true || (res is num && res >= 0)) {
+              langSet = true;
+              break;
+            }
+          }
+        } catch (_) {}
+      }
+
+      if (!langSet) {
+        for (final loc in arabicLocales) {
+          try {
+            final dynamic res = await _tts.setLanguage(loc);
+            if (res == true || (res is num && res >= 0)) {
+              langSet = true;
+              break;
+            }
+          } catch (_) {}
+        }
+      }
+
+      // 2. فحص وضبط الصوت العربي المفضل (اللهجة المصرية أو العربية الفصحى)
       try {
         final dynamic voices = await _tts.getVoices;
         if (voices is List && voices.isNotEmpty) {
-          Map<String, String>? egyptianVoice;
-          Map<String, String>? generalArabicVoice;
+          Map<String, String>? preferredVoice;
 
           for (final v in voices) {
             if (v is Map) {
@@ -91,14 +132,14 @@ class ChildrenSpeech {
                   name.contains('ar-eg') ||
                   name.contains('ar_eg') ||
                   name.contains('egypt')) {
-                egyptianVoice = {
+                preferredVoice = {
                   'name': v['name']?.toString() ?? '',
                   'locale': v['locale']?.toString() ?? 'ar-EG',
                 };
                 break;
-              } else if (generalArabicVoice == null &&
+              } else if (preferredVoice == null &&
                   (locale.startsWith('ar') || name.contains('arabic'))) {
-                generalArabicVoice = {
+                preferredVoice = {
                   'name': v['name']?.toString() ?? '',
                   'locale': v['locale']?.toString() ?? 'ar-SA',
                 };
@@ -106,47 +147,16 @@ class ChildrenSpeech {
             }
           }
 
-          if (egyptianVoice != null && egyptianVoice['name']!.isNotEmpty) {
-            await _tts.setVoice(egyptianVoice);
-          } else if (generalArabicVoice != null &&
-              generalArabicVoice['name']!.isNotEmpty) {
-            await _tts.setVoice(generalArabicVoice);
+          if (preferredVoice != null && preferredVoice['name']!.isNotEmpty) {
+            await _tts.setVoice(preferredVoice);
           }
         }
       } catch (e) {
         debugPrint('[ChildrenSpeech] voice selection error: $e');
       }
 
-      // 2. ضبط اللغة — نجرب المصرية أولاً ثم البدائل العربية لمنع الرجوع للإنجليزية
-      const arabicLocales = [
-        'ar-EG',
-        'ar_EG',
-        'ar-SA',
-        'ar_SA',
-        'ar-XA',
-        'ar-AE',
-        'ar',
-      ];
-
-      bool langSet = false;
-      for (final loc in arabicLocales) {
-        try {
-          final dynamic res = await _tts.setLanguage(loc);
-          if (res == true || (res is num && res > 0)) {
-            langSet = true;
-            break;
-          }
-        } catch (_) {}
-      }
-
-      if (!langSet) {
-        try {
-          await _tts.setLanguage('ar-EG');
-        } catch (_) {}
-      }
-
       // 3. نبرة وسرعة صوتية مريحة وواضحة جداً للأطفال لضبط مخارج الحروف
-      await _tts.setSpeechRate(0.38);
+      await _tts.setSpeechRate(0.42);
       await _tts.setPitch(1.05);
 
       // ربط أحداث المشغل لتحديث الواجهات التفاعلية.
@@ -187,12 +197,14 @@ class ChildrenSpeech {
     if (_failed) return;
     try {
       await _tts.stop();
+      await Future<void>.delayed(const Duration(milliseconds: 50));
       currentText = text;
       playState.value = TtsPlayState.playing;
       await _tts.speak(normalize(text));
     } catch (e) {
       debugPrint('[ChildrenSpeech] speak error: $e');
       playState.value = TtsPlayState.stopped;
+      currentText = '';
     }
   }
 
@@ -210,15 +222,15 @@ class ChildrenSpeech {
   static Future<void> resume() async {
     if (currentText.isEmpty) return;
     try {
-      // إن تعذر الاستئناف عبر المحرك (على بعض الأجهزة)، نعيد نطق النص.
       playState.value = TtsPlayState.playing;
       await _tts.speak(normalize(currentText));
     } catch (_) {
       playState.value = TtsPlayState.stopped;
+      currentText = '';
     }
   }
 
-  /// ⏹️ إيقاف كامل للصوت.
+  /// ⏹️ إيقاف كامل وفوري للصوت.
   static Future<void> stop() async {
     try {
       await _tts.stop();
@@ -227,17 +239,15 @@ class ChildrenSpeech {
     currentText = '';
   }
 
-  /// 🔀 تبديل التشغيل والإيقاف المؤقت لنص معين (Play / Pause / Resume).
+  /// 🔀 تبديل التشغيل والإيقاف الفوري: إن كان يعمل يوقف، وإن كان متوقفاً يُشغل.
   static Future<void> togglePlayPause(String text) async {
-    final clean = normalize(text);
-    final curClean = normalize(currentText);
-
-    if (isPlaying && clean == curClean) {
-      await pause();
-    } else if (isPaused && clean == curClean) {
-      await resume();
+    if (isPlaying) {
+      await stop();
     } else {
       await speak(text);
     }
   }
+
+  /// 🔀 دالة صريحة للتشغيل والإيقاف الفوري.
+  static Future<void> togglePlayStop(String text) => togglePlayPause(text);
 }

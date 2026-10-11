@@ -925,28 +925,44 @@ class _ProviderCard extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-            color: color.withValues(alpha: provider.isFeatured ? 0.6 : 0.22)),
+          color: color.withValues(alpha: provider.isFeatured ? 0.6 : 0.22),
+          width: provider.isFeatured ? 1.4 : 1.0,
+        ),
       ),
       color: provider.isFeatured
           ? const Color(0xFFB8860B).withValues(alpha: 0.06)
-          : null,
+          : (theme.brightness == Brightness.dark
+              ? theme.colorScheme.surfaceContainerLow
+              : theme.colorScheme.surface),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: () => Navigator.pushNamed(
             context, AppRoutes.serviceProviderDetail,
             arguments: provider),
         child: Padding(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.all(9),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              FullFitImage(
-                key: ValueKey('card-image-${provider.id}'),
-                imageUrl: provider.photoUrl ?? '',
-                width: _kImageSide,
-                fixedHeight: _kImageSide,
-                fit: BoxFit.cover,
-                fallback: _avatar(theme, color),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(13),
+                  border: Border.all(
+                    color: color.withValues(
+                        alpha: provider.isFeatured ? 0.35 : 0.16),
+                  ),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: FullFitImage(
+                    key: ValueKey('card-image-${provider.id}'),
+                    imageUrl: provider.photoUrl ?? '',
+                    width: _kImageSide,
+                    fixedHeight: _kImageSide,
+                    fit: BoxFit.cover,
+                    fallback: _avatar(theme, color),
+                  ),
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -1150,11 +1166,33 @@ class _ProviderCard extends StatelessWidget {
     final Color subjectInk = AppColors.inkOn(color, theme.brightness);
     return [
       if (provider.displaySpecialty.isNotEmpty)
-        Text(provider.displaySpecialty,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-                fontSize: 11, fontWeight: FontWeight.w700, color: subjectInk)),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(7),
+            border: Border.all(
+              color: color.withValues(alpha: 0.3),
+              width: 0.8,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.menu_book_rounded, size: 11, color: subjectInk),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(provider.displaySpecialty,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w800,
+                        color: subjectInk)),
+              ),
+            ],
+          ),
+        ),
       ..._cardChips(theme),
     ];
   }
@@ -1219,11 +1257,14 @@ class _ProviderCard extends StatelessWidget {
         ? Colors.white
         : AppColors.inkOn(color, theme.brightness);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
       decoration: BoxDecoration(
         color: filled ? color : color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(7),
-        border: Border.all(color: color.withValues(alpha: filled ? 1 : 0.45)),
+        border: Border.all(
+          color: color.withValues(alpha: filled ? 1 : 0.4),
+          width: 0.8,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1231,11 +1272,11 @@ class _ProviderCard extends StatelessWidget {
           if (mark != null)
             EduKindMark(kind: mark, size: 12)
           else if (icon != null)
-            Icon(icon, size: 9, color: ink),
-          if (mark != null || icon != null) const SizedBox(width: 3),
+            Icon(icon, size: 9.5, color: ink),
+          if (mark != null || icon != null) const SizedBox(width: 3.5),
           Text(text,
               style: TextStyle(
-                  fontSize: 9,
+                  fontSize: 9.5,
                   height: 1.25,
                   fontWeight: FontWeight.w800,
                   color: ink)),

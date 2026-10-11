@@ -366,10 +366,18 @@ class _ServiceProviderDetailScreenState
   }
 
   BoxDecoration _cardDeco(ThemeData theme, Color accent) => BoxDecoration(
-        color:
-            theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+        color: theme.brightness == Brightness.dark
+            ? theme.colorScheme.surfaceContainerLow
+            : theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: accent.withValues(alpha: 0.22)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       );
 
   /// بطاقة مدمجة: الصورة والاسم والصفة والتقييم وشارات الوسوم في كتلة واحدة.
@@ -393,6 +401,27 @@ class _ServiceProviderDetailScreenState
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.titleMedium
                         ?.copyWith(fontWeight: FontWeight.w900, height: 1.25)),
+                if (provider.isEducational &&
+                    provider.displaySpecialty.isNotEmpty) ...[
+                  const SizedBox(height: 5),
+                  Row(
+                    children: [
+                      Icon(Icons.menu_book_rounded,
+                          size: 14, color: _ink(accent)),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(provider.displaySpecialty,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                fontSize: _kBody,
+                                height: 1.35,
+                                fontWeight: FontWeight.w800,
+                                color: _ink(accent))),
+                      ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 6),
                 Wrap(
                   spacing: 5,
@@ -452,11 +481,22 @@ class _ServiceProviderDetailScreenState
                     size: 30, color: _ink(accent))),
           );
     // الارتفاع يُقاس من نسبة الصورة الحقيقية فتملأ إطارها كاملة بلا اقتصاص.
-    return FullFitImage(
-      imageUrl: provider.photoUrl ?? '',
-      width: _kPhotoSide,
-      radius: 14,
-      fallback: fallback(),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(
+          color: accent.withValues(alpha: 0.2),
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: FullFitImage(
+          imageUrl: provider.photoUrl ?? '',
+          width: _kPhotoSide,
+          radius: 14,
+          fallback: fallback(),
+        ),
+      ),
     );
   }
 
@@ -532,7 +572,8 @@ class _ServiceProviderDetailScreenState
 
   /// سطر واحد: تسمية صغيرة ثم وسوم القيم تلتفّ أسطرًا عند الضيق.
   Widget _factLine(
-      ThemeData theme, String label, List<String> values, Color color) {
+      ThemeData theme, String label, List<String> values, Color color,
+      {IconData? icon}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 7),
       child: Wrap(
@@ -540,11 +581,20 @@ class _ServiceProviderDetailScreenState
         runSpacing: 5,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          Text('$label:',
-              style: TextStyle(
-                  fontSize: _kLabel,
-                  fontWeight: FontWeight.w900,
-                  color: theme.colorScheme.onSurface)),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 13, color: _ink(color)),
+                const SizedBox(width: 4),
+              ],
+              Text('$label:',
+                  style: TextStyle(
+                      fontSize: _kLabel,
+                      fontWeight: FontWeight.w900,
+                      color: theme.colorScheme.onSurface)),
+            ],
+          ),
           for (final v in values) _pill(v, color),
         ],
       ),
@@ -566,22 +616,33 @@ class _ServiceProviderDetailScreenState
     final university = provider.universityNote.trim();
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 5),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
       decoration: _cardDeco(theme, accent),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('بيانات التدريس',
-              style: theme.textTheme.titleSmall
-                  ?.copyWith(fontWeight: FontWeight.w900, color: _ink(accent))),
-          const SizedBox(height: 8),
-          if (provider.eduTypesLine.isNotEmpty)
-            _factLine(theme, 'النوع', provider.eduTypes, accent),
+          Row(
+            children: [
+              Icon(Icons.school_rounded, size: 17, color: _ink(accent)),
+              const SizedBox(width: 6),
+              Text('بيانات التدريس',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w900, color: _ink(accent))),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (subjects.isNotEmpty)
+            _factLine(theme, 'المواد', subjects, accent,
+                icon: Icons.menu_book_rounded),
           if (provider.stageChips.isNotEmpty)
-            _factLine(theme, 'المراحل', provider.stageChips, accent),
-          if (subjects.isNotEmpty) _factLine(theme, 'المواد', subjects, accent),
+            _factLine(theme, 'المراحل', provider.stageChips, accent,
+                icon: Icons.layers_rounded),
+          if (provider.eduTypesLine.isNotEmpty)
+            _factLine(theme, 'النوع', provider.eduTypes, const Color(0xFF6A1B9A),
+                icon: Icons.category_rounded),
           if (university.isNotEmpty)
-            _factLine(theme, 'جامعي', [university], accent),
+            _factLine(theme, 'جامعي', [university], accent,
+                icon: Icons.account_balance_rounded),
         ],
       ),
     );
@@ -596,9 +657,15 @@ class _ServiceProviderDetailScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('عن الخدمة',
-              style: theme.textTheme.titleSmall
-                  ?.copyWith(fontWeight: FontWeight.w900, color: _ink(accent))),
+          Row(
+            children: [
+              Icon(Icons.info_outline_rounded, size: 16, color: _ink(accent)),
+              const SizedBox(width: 6),
+              Text(provider.isEducational ? 'نبذة تعريفية' : 'عن الخدمة',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w900, color: _ink(accent))),
+            ],
+          ),
           const SizedBox(height: 6),
           Text(provider.description,
               maxLines: _descExpanded ? null : 3,
@@ -635,6 +702,19 @@ class _ServiceProviderDetailScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Row(
+            children: [
+              Icon(Icons.phone_in_talk_rounded, size: 16, color: _ink(accent)),
+              const SizedBox(width: 6),
+              Text(
+                  provider.isEducational
+                      ? 'التواصل والاستفسار'
+                      : 'معلومات التواصل',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w900, color: _ink(accent))),
+            ],
+          ),
+          const SizedBox(height: 10),
           if (provider.address.isNotEmpty)
             _inlineLine(
                 theme, Icons.location_on_rounded, provider.address, accent),

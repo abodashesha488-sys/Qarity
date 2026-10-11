@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
-import '../../models/agriculture_content_model.dart';
-import '../../widgets/agriculture_content_panel.dart';
 import '../../widgets/agriculture_promo_banner.dart';
 import '../../widgets/qurity_app_bar.dart';
 
@@ -87,7 +85,6 @@ class _FertilizersTabState extends State<_FertilizersTab> {
       children: [
         _buildHeroSection(context, color),
         const AgriculturePromoBanner(placement: 'agri_fertilizers'),
-        const AgricultureContentPanel(section: AgricultureSections.fertilizers),
         const SizedBox(height: 20),
         _categoryFilters(color),
         const SizedBox(height: 16),
@@ -281,7 +278,6 @@ class _PesticidesTabState extends State<_PesticidesTab> {
       children: [
         _buildHeroSection(context, color),
         const AgriculturePromoBanner(placement: 'agri_pesticides'),
-        const AgricultureContentPanel(section: AgricultureSections.pesticides),
         const SizedBox(height: 20),
         _categoryFilters(color),
         const SizedBox(height: 16),

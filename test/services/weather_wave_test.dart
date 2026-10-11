@@ -29,9 +29,9 @@ void main() {
       expect(home, isNot(contains("Image.asset('assets/images/heder2.jpg'")));
     });
 
-    test('عقد الهيدر القديم لم يتزحزح: جسم `53.0` وسطر الوقت والتاريخ متمركز', () {
+    test('عقد الهيدر: الوقت تحت البحث والتاريخ تحت الإشعارات ومواقيت الصلاة متمركزة', () {
       final home = src('lib/features/home/home.dart');
-      expect(home, contains('const double kHeroBodyHeight = 53.0;'));
+      expect(home, contains('const double kHeroBodyHeight = 58.0;'));
       expect(home, contains("ValueKey('header-clock-date-line')"));
     });
 

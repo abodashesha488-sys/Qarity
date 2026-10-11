@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../core/constants/app_colors.dart';
-import '../../models/agriculture_content_model.dart';
-import '../../widgets/agriculture_content_panel.dart';
 import '../../widgets/agriculture_promo_banner.dart';
 import '../../widgets/qurity_app_bar.dart';
 
@@ -56,7 +54,6 @@ class _AgriculturalAdvisorScreenState extends State<AgriculturalAdvisorScreen> {
         children: [
           _buildHeroSection(theme, color),
           const AgriculturePromoBanner(placement: 'svc_agricultural'),
-          const AgricultureContentPanel(section: AgricultureSections.advisor),
           const SizedBox(height: 14),
           TextField(
             controller: _searchController,
