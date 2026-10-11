@@ -1,7 +1,7 @@
 {
-  "versionCode": 2036,
-  "versionName": "1.1.36",
+  "versionCode": 2037,
+  "versionName": "1.1.37",
   "apkUrl": "https://github.com/abodashesha488-sys/Qarity/releases/latest/download/Qarity.apk",
   "forceUpdate": false,
-  "releaseNotes": "تحديث جديد: سرعة الرياح بالكيلو/ساعة في كل مواضع الطقس، كارت المحامي بثلاثة أعمدة، ظهور الاستشارات بعد موافقة الإدارة، مرجع قانوني موسّع، تثبيت مقاس صور الكروت وتنسيق كروت المدرسين، وتصغير أيقونات بوابتَي الخدمات الطبية والمزارع."
+  "releaseNotes": "sync: update"
 }
