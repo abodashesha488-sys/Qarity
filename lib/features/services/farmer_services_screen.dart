@@ -75,20 +75,35 @@ class FarmerServicesScreen extends StatelessWidget {
               ),
             ),
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               sliver: SliverGrid(
                 delegate: SliverChildBuilderDelegate(
                   (context, index) => _ServiceTile(
                     service: _services[index],
                     index: index,
                   ),
-                  childCount: _services.length,
+                  childCount: 4,
                 ),
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   mainAxisSpacing: spacing,
                   crossAxisSpacing: spacing,
                   mainAxisExtent: extent,
+                ),
+              ),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, spacing, 16, 28),
+              sliver: SliverToBoxAdapter(
+                child: Center(
+                  child: SizedBox(
+                    width: ((box.maxWidth - 32.0 - spacing) / 2),
+                    height: extent,
+                    child: _ServiceTile(
+                      service: _services[4],
+                      index: 4,
+                    ),
+                  ),
                 ),
               ),
             ),

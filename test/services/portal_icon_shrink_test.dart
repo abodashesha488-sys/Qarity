@@ -123,8 +123,8 @@ void main() {
       expect(count(text, '.clamp(88.0, 240.0)'), 1);
       expect(count(text, 'crossAxisCount: 2,'), 1);
       expect(count(text, 'mainAxisExtent: extent'), 1);
-      expect(count(text, 'padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),'), 1);
-      expect(count(text, 'itemCount: _sections.length,'), 1);
+      expect(count(text, 'childCount: 6,'), 1);
+      expect(count(text, 'index: 6,'), 1);
     });
 
     test('المزارع: مقام البوابة مع كتلة العنوان كما كان', () {

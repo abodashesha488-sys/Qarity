@@ -67,19 +67,45 @@ class MedicalHomeScreen extends StatelessWidget {
         const spacing = 16.0;
         final extent = ((box.maxHeight - vPadding - 3 * spacing) / 4)
             .clamp(88.0, 240.0);
-        return GridView.builder(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
-          itemCount: _sections.length,
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              mainAxisSpacing: spacing,
-              crossAxisSpacing: spacing,
-              mainAxisExtent: extent),
-          itemBuilder: (context, index) => _MedicalSectionTile(
-            index: index,
-            label: _sections[index].$1,
-            image: _sections[index].$2,
-          ),
+        final tileWidth = (box.maxWidth - 32.0 - spacing) / 2;
+        return CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              sliver: SliverGrid(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => _MedicalSectionTile(
+                    index: index,
+                    label: _sections[index].$1,
+                    image: _sections[index].$2,
+                  ),
+                  childCount: 6,
+                ),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: spacing,
+                    crossAxisSpacing: spacing,
+                    mainAxisExtent: extent),
+              ),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, spacing, 16, 28),
+              sliver: SliverToBoxAdapter(
+                child: Center(
+                  child: SizedBox(
+                    width: tileWidth,
+                    height: extent,
+                    child: _MedicalSectionTile(
+                      index: 6,
+                      label: _sections[6].$1,
+                      image: _sections[6].$2,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         );
       }),
     );
