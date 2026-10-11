@@ -7,7 +7,7 @@ Qarity is a comprehensive digital platform for village community services (قر�
 - **Errors:** 0
 - **Warnings:** 0 · **Info:** 0
 - **Status:** Compiles successfully · `flutter analyze`: No issues found!
-- **اختبارات:** آخر **مجموعة كاملة** موثّقة = **897/897 في كامل المشروع** (79 ملف اختبار) بنجاح 100% (`01:53 +897: All tests passed!`) بعد إضافة محرك مواقيت الصلاة الفلكي والبحث الشامل وشهادات الأطفال وإتاحة الأطباء وتصفير مفاتيح الـ API؛ وقبلها = 886/886. **لا تُصدّر رقمًا لم تَجْرِه.**
+- **اختبارات:** آخر **مجموعة كاملة** موثّقة = **898/898 في كامل المشروع** (79 ملف اختبار) بنجاح 100% (`02:31 +898: All tests passed!`)؛ وقبلها = 897/897. **لا تُصدّر رقمًا لم تَجْرِه.**
 
 ## Firebase Configuration
 
