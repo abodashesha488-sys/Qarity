@@ -943,6 +943,7 @@ class _ProviderCard extends StatelessWidget {
                 imageUrl: provider.photoUrl ?? '',
                 width: _kImageSide,
                 fixedHeight: _kImageSide,
+                fit: BoxFit.cover,
                 fallback: _avatar(theme, color),
               ),
               const SizedBox(width: 10),

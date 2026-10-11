@@ -685,7 +685,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _roleBadge(ThemeData theme) {
     final (label, color, icon) = switch (_user?.role ?? 'user') {
       'admin' => ('مدير عام', const Color(0xFF1565C0), Icons.admin_panel_settings_rounded),
+      'assistant_admin' => ('أدمن مساعد', const Color(0xFF6A1B9A), Icons.shield_rounded),
       'medical_admin' => ('مدير المركز الطبي', const Color(0xFF00897B), Icons.medical_services_rounded),
+      'legal_admin' => ('أدمن الاستشارات القانونية', const Color(0xFF2E7D32), Icons.gavel_rounded),
       'moderator' => ('مشرف', Colors.orange, Icons.verified_user_rounded),
       'seller' => ('بائع', Colors.deepPurple, Icons.store_rounded),
       _ => ('مستخدم', Colors.teal, Icons.person_rounded),

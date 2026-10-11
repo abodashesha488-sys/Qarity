@@ -176,4 +176,45 @@ class LegalConsultationService {
                 .toList(), (c) => c.createdAt))
         .asBroadcastStream();
   }
+
+  /// كل الاستشارات (المعتمدة والواردة) لأدمن الاستشارات القانونية والإدارة.
+  Stream<List<LegalConsultation>> watchAll() {
+    return _col
+        .snapshots()
+        .map((s) => _newestFirst<LegalConsultation>(
+            s.docs
+                .map((d) => LegalConsultation.fromJson(d.data(), d.id))
+                .toList(), (c) => c.createdAt))
+        .asBroadcastStream();
+  }
+
+  /// الرد على الاستشارة وحفظه مع اعتمادها من قبل أدمن الاستشارات القانونية أو الإدارة.
+  Future<void> submitAnswer(String id, String answer,
+      {bool approve = true}) async {
+    final trimmed = answer.trim();
+    await _col.doc(id).update({
+      'answer': trimmed,
+      'isApproved': approve,
+      'answeredAt': FieldValue.serverTimestamp(),
+    });
+    try {
+      final snap = await _col.doc(id).get();
+      final data = snap.data();
+      final targetUid = data?['userId'] as String?;
+      final question = data?['question'] as String? ?? '';
+      if (targetUid != null && targetUid.isNotEmpty) {
+        unawaited(NotificationInboxService.instance.push(
+          userId: targetUid,
+          title: '⚖️ تم الرد على استشارتك القانونية',
+          body: trimmed.isNotEmpty
+              ? 'ورد رد المستشار على سؤالك: «$question»'
+              : 'تمت مراجعة سؤالك القانوني',
+          route: '/legal',
+          kind: 'info',
+        ));
+      }
+    } catch (_) {
+      // إرسال الإشعار لا يعطل الرد إن فشل
+    }
+  }
 }

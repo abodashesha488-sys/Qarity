@@ -28,11 +28,12 @@ const Map<String, int> kUserRoleRank = {
   'assistant_admin': 1,
   'medical_admin': 2,
   'agricultural_admin': 3,
-  'moderator': 4,
-  'seller': 5,
+  'legal_admin': 4,
+  'moderator': 5,
+  'seller': 6,
 };
 
-int userRoleRank(String role) => kUserRoleRank[role] ?? 6;
+int userRoleRank(String role) => kUserRoleRank[role] ?? 7;
 
 /// أي مجموعة ينتمي إليها هذا المستند؟ القيم هي نصوص الملف الشخصي نفسها
 /// (`kGenderMale`/`kGenderFemale`)، فلا مصدر ثانٍ للنوع في التطبيق.

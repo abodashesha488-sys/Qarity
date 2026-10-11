@@ -88,6 +88,21 @@ class AdminService {
     }
   }
 
+  /// هل هذا المستخدم «أدمن الاستشارات القانونية» أو أي مدير (عام/مساعد)؟
+  /// مهمته الوحيدة: الرد على الاستشارات القانونية في مستشار القرية.
+  Future<bool> isLegalAdmin(String uid) async {
+    try {
+      final doc = await _firestore.collection('users').doc(uid).get();
+      final role = doc.data()?['role'] as String?;
+      return role == 'legal_admin' ||
+          role == 'admin' ||
+          role == 'assistant_admin';
+    } catch (e) {
+      debugPrint('isLegalAdmin error: $e');
+      return false;
+    }
+  }
+
   Future<int> getPendingCountFuture(String collection) =>
       _pendingCountOnce(collection);
 

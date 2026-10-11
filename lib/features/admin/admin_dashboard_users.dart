@@ -43,6 +43,11 @@ class _UsersPageState extends State<_UsersPage> {
       Color(0xFF558B2F),
       Icons.agriculture_rounded
     ),
+    'legal_admin': (
+      'أدمن الاستشارات القانونية',
+      Color(0xFF2E7D32),
+      Icons.gavel_rounded
+    ),
     'assistant_admin': ('أدمن مساعد', Color(0xFF6A1B9A), Icons.shield_rounded),
     'admin': (
       'مدير عام',
@@ -58,6 +63,7 @@ class _UsersPageState extends State<_UsersPage> {
     ('moderator', 'مشرفون'),
     ('medical_admin', 'مدير طبي'),
     ('agricultural_admin', 'مدير زراعي'),
+    ('legal_admin', 'أدمن قانوني'),
     ('assistant_admin', 'أدمن مساعد'),
     ('admin', 'مدراء'),
     ('disabled', 'معطّلون'),
@@ -164,6 +170,7 @@ class _UsersPageState extends State<_UsersPage> {
                   'admin',
                   'assistant_admin',
                   'medical_admin',
+                  'legal_admin',
                   'moderator'
                 ].contains((u['role'] ?? '')))
             .length;
@@ -1354,6 +1361,8 @@ class _UsersPageState extends State<_UsersPage> {
         return 'نفس صلاحيات المدير العام، لكن لا يستطيع حذف (أو تنحية) المدير العام';
       case 'medical_admin':
         return 'إدارة المركز الطبي الخيري فقط — لا يراجع بقية محتوى الخدمات الطبية';
+      case 'legal_admin':
+        return 'الرد على الاستشارات القانونية في مستشار القرية فقط';
       case 'admin':
         return 'كل الصلاحيات + تعيين الأدوار';
       default:

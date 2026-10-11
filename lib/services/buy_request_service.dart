@@ -97,7 +97,7 @@ class BuyRequestService {
       unawaited(
           CacheService.saveBuyRequests(all.map((r) => r.toJson()).toList()));
       return _openVisible(all, uid);
-    });
+    }).asBroadcastStream();
   }
 
   static int _newestFirst(BuyRequest a, BuyRequest b) =>

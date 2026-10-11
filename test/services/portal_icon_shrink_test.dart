@@ -46,10 +46,10 @@ void main() {
   const medicalPath = 'lib/features/medical/medical_home_screen.dart';
   const farmerPath = 'lib/features/services/farmer_services_screen.dart';
 
-  group('الأيقونة مصغّرة عند 0.7 من بلاطتها ومتمركزة', () {
-    test('البوابة الطبية: `Center` + `FractionallySizedBox(0.7, 0.7)` حول `Image.asset` — مرة واحدة', () {
+  group('الأيقونة مصغّرة عند 0.7 من بلاطتها ومتمركزة كزر بارز', () {
+    test('البوابة الطبية: `return Center(` + `FractionallySizedBox(0.7, 0.7)` حول زر الصورة — مرة واحدة', () {
       final tile = medicalTile(src(medicalPath));
-      expect(count(tile, 'child: Center('), 1);
+      expect(count(tile, 'return Center('), 1);
       expect(count(tile, 'child: FractionallySizedBox('), 1);
       expect(count(tile, 'widthFactor: 0.7'), 1);
       expect(count(tile, 'heightFactor: 0.7'), 1);
@@ -62,7 +62,7 @@ void main() {
 
     test('بوابة المزارع: نفس الغلاف بمقاس واحد', () {
       final tile = farmerTile(src(farmerPath));
-      expect(count(tile, 'child: Center('), 1);
+      expect(count(tile, 'return Center('), 1);
       expect(count(tile, 'child: FractionallySizedBox('), 1);
       expect(count(tile, 'widthFactor: 0.7'), 1);
       expect(count(tile, 'heightFactor: 0.7'), 1);
@@ -73,43 +73,39 @@ void main() {
       expect(count(tile, 'cacheWidth: 520'), 1);
     });
 
-    test('النقر يلفّ البلاطة كاملة لا الأيقونة: `onTap` يسبق `child: Center(`', () {
+    test('النقر يلفّ زر الصورة البارز: `InkWell` داخل `FractionallySizedBox`', () {
       final medical = medicalTile(src(medicalPath));
       expect(
           medical.indexOf(
-              "Navigator.pushNamed(context, '/medical/section', arguments: index)"),
-          lessThan(medical.indexOf('child: Center(')));
+              "Navigator.pushNamed(context, '/medical/section'"),
+          greaterThan(medical.indexOf('return Center(')));
       final farmer = farmerTile(src(farmerPath));
       expect(farmer.indexOf('onTap: () => Navigator.pushNamed(context, service.route)'),
-          lessThan(farmer.indexOf('child: Center(')));
+          greaterThan(farmer.indexOf('return Center(')));
     });
   });
 
-  group('إطار البلاطة وأرضيتها وظلّها ورسوميتها كما كانت', () {
-    test('الطبية: `Container` بحرف `Material(colorScheme.surface)` وظل وأنتي-ألياس', () {
+  group('الصورة زر بارز بظل وحواف دائرية بسيطة بلا مربع خارجي', () {
+    test('الطبية: `Container` بظل وحواف 16 حول الصورة فقط بلا خلفية مربعة', () {
       final tile = medicalTile(src(medicalPath));
-      expect(count(tile, 'final radius = BorderRadius.circular(22);'), 1);
+      expect(count(tile, 'const imgRadius = BorderRadius.all(Radius.circular(16));'), 1);
       expect(count(tile, 'decoration: BoxDecoration('), 1);
-      expect(count(tile, 'borderRadius: radius,'), 2);
-      expect(count(tile, 'color: Colors.black.withValues(alpha: 0.26),'), 1);
-      expect(count(tile, 'blurRadius: 12,'), 1);
-      expect(count(tile, 'offset: const Offset(0, 5),'), 1);
+      expect(count(tile, 'borderRadius: imgRadius,'), 3);
+      expect(count(tile, 'blurRadius: 10,'), 1);
+      expect(count(tile, 'offset: const Offset(0, 4),'), 1);
       expect(count(tile, 'clipBehavior: Clip.antiAlias,'), 1);
-      expect(count(tile, 'child: Material('), 1);
-      expect(count(tile, 'color: Theme.of(context).colorScheme.surface,'), 1);
+      expect(count(tile, 'color: Colors.transparent,'), 1);
       expect(count(tile, 'child: InkWell('), 1);
-      expect(count(tile, 'borderRadius: radius,'), 2);
     });
 
-    test('المزارع: نفس الإطار والظل والحرف وسلسلة الأنميشن', () {
+    test('المزارع: نفس الظل والحواف وسلسلة الأنميشن', () {
       final tile = farmerTile(src(farmerPath));
-      expect(count(tile, 'final radius = BorderRadius.circular(22);'), 1);
-      expect(count(tile, 'color: Colors.black.withValues(alpha: 0.26),'), 1);
-      expect(count(tile, 'blurRadius: 12,'), 1);
-      expect(count(tile, 'offset: const Offset(0, 5),'), 1);
+      expect(count(tile, 'const imgRadius = BorderRadius.all(Radius.circular(16));'), 1);
+      expect(count(tile, 'borderRadius: imgRadius,'), 3);
+      expect(count(tile, 'blurRadius: 10,'), 1);
+      expect(count(tile, 'offset: const Offset(0, 4),'), 1);
       expect(count(tile, 'clipBehavior: Clip.antiAlias,'), 1);
-      expect(count(tile, 'child: Material('), 1);
-      expect(count(tile, 'color: Theme.of(context).colorScheme.surface,'), 1);
+      expect(count(tile, 'color: Colors.transparent,'), 1);
       expect(count(tile, 'child: InkWell('), 1);
       expect(count(tile, '.animate(delay: (index * 45).ms).fadeIn(duration: 350.ms).scale('), 1);
       expect(count(tile, 'begin: const Offset(0.92, 0.92),'), 1);

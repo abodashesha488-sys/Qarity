@@ -1,4 +1,4 @@
-﻿part of 'market_tabs_screen.dart';
+part of 'market_tabs_screen.dart';
 
 // ─── هوية التبويبين اللونية ───
 const Color _buyAccent = Color(0xFF1565C0);
@@ -230,10 +230,23 @@ class _BuyRequestsTabState extends State<_BuyRequestsTab> {
       onlineBuilder: (context, snapshot) {
         final items = snapshot.data ?? [];
         if (items.isEmpty) {
-          return const _TabEmpty(
-            icon: Icons.request_quote_rounded,
-            message:
-                'لا توجد سلع مطلوبة حالياً\nأضف طلبك من زر «أضف سلعة مطلوبة»',
+          return RefreshIndicator(
+            color: _buyAccent,
+            onRefresh: () async {
+              await _service.getOpenRequests(forceRefresh: true);
+              if (mounted) setState(_attach);
+            },
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: const [
+                SizedBox(height: 120),
+                _TabEmpty(
+                  icon: Icons.request_quote_rounded,
+                  message:
+                      'لا توجد سلع مطلوبة حالياً\nأضف طلبك من زر «أضف سلعة مطلوبة»',
+                ),
+              ],
+            ),
           );
         }
         return _buildBuyRequestsList(uid, items);
@@ -261,28 +274,35 @@ class _BuyRequestsTabState extends State<_BuyRequestsTab> {
 
   Widget _buildBuyRequestsList(String? uid, List<BuyRequest> items) {
     final theme = Theme.of(context);
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
-      itemCount: items.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (context, i) {
-        final r = items[i];
-        final mine = uid != null && r.userId == uid;
-        return Card(
-          elevation: 0,
-          clipBehavior: Clip.antiAlias,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-            side: BorderSide(
-                color: _buyAccent.withValues(alpha: mine ? 0.55 : 0.3),
-                width: mine ? 1.4 : 1),
-          ),
-          child: InkWell(
-            onTap: () => _openMarketPage(context,
-                _BuyRequestDetailPage(request: r, service: _service)),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
+    return RefreshIndicator(
+      color: _buyAccent,
+      onRefresh: () async {
+        await _service.getOpenRequests(forceRefresh: true);
+        if (mounted) setState(_attach);
+      },
+      child: ListView.separated(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+        itemCount: items.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        itemBuilder: (context, i) {
+          final r = items[i];
+          final mine = uid != null && r.userId == uid;
+          return Card(
+            elevation: 0,
+            clipBehavior: Clip.antiAlias,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+              side: BorderSide(
+                  color: _buyAccent.withValues(alpha: mine ? 0.55 : 0.3),
+                  width: mine ? 1.4 : 1),
+            ),
+            child: InkWell(
+              onTap: () => _openMarketPage(context,
+                  _BuyRequestDetailPage(request: r, service: _service)),
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
                 SizedBox(
                   width: 92,
                   child: r.imageUrl.isEmpty
@@ -403,8 +423,10 @@ class _BuyRequestsTabState extends State<_BuyRequestsTab> {
               ],
             ),
           ),
+          ),
         ).animate(delay: (i * 40).ms).fadeIn();
       },
+    ),
     );
   }
 }
@@ -641,10 +663,23 @@ class _DonationsTabState extends State<_DonationsTab> {
       onlineBuilder: (context, snapshot) {
         final items = snapshot.data ?? [];
         if (items.isEmpty) {
-          return const _TabEmpty(
-            icon: Icons.volunteer_activism_rounded,
-            message:
-                'لا توجد تبرعات معروضة حالياً\nأضف تبرعك من زر «أضف تبرعاً»',
+          return RefreshIndicator(
+            color: _donateAccent,
+            onRefresh: () async {
+              await _service.getAvailableDonations(forceRefresh: true);
+              if (mounted) setState(_attach);
+            },
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: const [
+                SizedBox(height: 120),
+                _TabEmpty(
+                  icon: Icons.volunteer_activism_rounded,
+                  message:
+                      'لا توجد تبرعات معروضة حالياً\nأضف تبرعك من زر «أضف تبرعاً»',
+                ),
+              ],
+            ),
           );
         }
         return _buildDonationsList(uid, items);
@@ -673,28 +708,35 @@ class _DonationsTabState extends State<_DonationsTab> {
 
   Widget _buildDonationsList(String? uid, List<Donation> items) {
     final theme = Theme.of(context);
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
-      itemCount: items.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (context, i) {
-        final d = items[i];
-        final mine = uid != null && d.userId == uid;
-        return Card(
-          elevation: 0,
-          clipBehavior: Clip.antiAlias,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-            side: BorderSide(
-                color: _donateAccent.withValues(alpha: mine ? 0.55 : 0.3),
-                width: mine ? 1.4 : 1),
-          ),
-          child: InkWell(
-            onTap: () => _openMarketPage(context,
-                _DonationDetailPage(donation: d, service: _service)),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
+    return RefreshIndicator(
+      color: _donateAccent,
+      onRefresh: () async {
+        await _service.getAvailableDonations(forceRefresh: true);
+        if (mounted) setState(_attach);
+      },
+      child: ListView.separated(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+        itemCount: items.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        itemBuilder: (context, i) {
+          final d = items[i];
+          final mine = uid != null && d.userId == uid;
+          return Card(
+            elevation: 0,
+            clipBehavior: Clip.antiAlias,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+              side: BorderSide(
+                  color: _donateAccent.withValues(alpha: mine ? 0.55 : 0.3),
+                  width: mine ? 1.4 : 1),
+            ),
+            child: InkWell(
+              onTap: () => _openMarketPage(context,
+                  _DonationDetailPage(donation: d, service: _service)),
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
                 SizedBox(
                   width: 92,
                   child: _net(d.imageUrl, theme),
@@ -796,8 +838,10 @@ class _DonationsTabState extends State<_DonationsTab> {
               ],
             ),
           ),
+          ),
         ).animate(delay: (i * 40).ms).fadeIn();
       },
+    ),
     );
   }
 }

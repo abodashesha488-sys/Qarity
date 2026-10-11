@@ -95,29 +95,35 @@ class _MedicalSectionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final radius = BorderRadius.circular(22);
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: radius,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.26),
-            blurRadius: 12,
-            offset: const Offset(0, 5),
+    const imgRadius = BorderRadius.all(Radius.circular(16));
+    return Center(
+      child: FractionallySizedBox(
+        widthFactor: 0.7,
+        heightFactor: 0.7,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: imgRadius,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.22),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 4,
+                offset: const Offset(0, 1),
+              ),
+            ],
           ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Material(
-        color: Theme.of(context).colorScheme.surface,
-        child: InkWell(
-          borderRadius: radius,
-          onTap: () =>
-              Navigator.pushNamed(context, '/medical/section', arguments: index),
-          child: Center(
-            child: FractionallySizedBox(
-              widthFactor: 0.7,
-              heightFactor: 0.7,
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: imgRadius,
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              borderRadius: imgRadius,
+              onTap: () => Navigator.pushNamed(context, '/medical/section',
+                  arguments: index),
               child: Image.asset(
                 image,
                 width: double.infinity,

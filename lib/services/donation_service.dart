@@ -95,7 +95,7 @@ class DonationService {
       unawaited(
           CacheService.saveDonations(all.map((d) => d.toJson()).toList()));
       return _availableVisible(all, uid);
-    });
+    }).asBroadcastStream();
   }
 
   static int _newestFirst(Donation a, Donation b) =>

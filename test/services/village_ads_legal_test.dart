@@ -340,14 +340,13 @@ void main() {
       await sub.cancel();
     });
 
-    test('عقد المصدر: التدفقات الأربعة بثّية والبناءتان تفيشآن الخطأ', () {
+    test('عقد المصدر: التدفقات الخمسة بثّية والبناءتان تفيشآن الخطأ', () {
       final code = src('lib/services/legal_service.dart')
           .split('\n')
           .where((l) => !l.trim().startsWith('//'))
           .join('\n');
-      // أربع تدفقات (محامون/استشارات × الدليل/تسجيلي) — كلُّها بثّية، وإلا
-      // عاد العلّة نفسها: «Stream has already been listened to» دوّارًا أبدا.
-      expect(code.split('asBroadcastStream()').length - 1, 4);
+      // خمس تدفقات (محامون/استشارات × الدليل/تسجيلي + كل الاستشارات لأدمن الاستشارات القانونية) — كلُّها بثّية.
+      expect(code.split('asBroadcastStream()').length - 1, 5);
       // القراءة كاملة للمجموعة والفرز والاعتماد كلاينتيًا (عقد المشروع).
       expect(code, isNot(contains("where('isApproved'")));
       expect(code, isNot(contains('orderBy(')));
@@ -358,6 +357,23 @@ void main() {
       expect(screen.split('late final Stream').length - 1, 2,
           reason: 'التدفق مثبّت لكل حالة ولا يُعاد بناؤه في build');
       expect(screen.split('??= _service.watchMine').length - 1, 2);
+    });
+
+    test('submitAnswer يحفظ الرد ويعتمد الاستشارة في Firestore', () async {
+      final fake = FakeFirebaseFirestore();
+      final svc = LegalConsultationService(fake);
+      final ref = await fake.collection('legal_consultations').add({
+        'question': 'سؤال حول الميراث',
+        'userId': 'u1',
+        'isApproved': false,
+        'answer': '',
+      });
+
+      await svc.submitAnswer(ref.id, 'حسب الشريعة والقانون المصري');
+
+      final snap = await fake.collection('legal_consultations').doc(ref.id).get();
+      expect(snap.data()?['answer'], 'حسب الشريعة والقانون المصري');
+      expect(snap.data()?['isApproved'], isTrue);
     });
   });
 

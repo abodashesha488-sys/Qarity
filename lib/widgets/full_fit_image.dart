@@ -22,7 +22,10 @@ class FullFitImage extends StatefulWidget {
     this.maxRatio = 1.5,
     this.tint = const Color(0x14000000),
     this.fixedHeight,
+    this.fit = BoxFit.contain,
   });
+
+  final BoxFit fit;
 
   final String imageUrl;
   final double width;
@@ -141,7 +144,7 @@ class _FullFitImageState extends State<FullFitImage> {
                 imageUrl: widget.imageUrl,
                 width: widget.width,
                 height: height,
-                fit: BoxFit.contain,
+                fit: widget.fit,
                 memCacheWidth: (widget.width * 3).ceil(),
                 placeholder: (_, __) => const SizedBox.shrink(),
                 errorWidget: (_, __, ___) {

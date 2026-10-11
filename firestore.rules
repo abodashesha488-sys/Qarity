@@ -51,6 +51,11 @@ service cloud.firestore {
         me().data.role in ['admin', 'assistant_admin', 'agricultural_admin'];
     }
 
+    function isLegalAdmin() {
+      return accountActive() &&
+        me().data.role in ['admin', 'assistant_admin', 'legal_admin'];
+    }
+
     function isOwner(userId) {
       return accountActive() && request.auth.uid == userId;
     }
@@ -101,6 +106,7 @@ service cloud.firestore {
                     && request.resource.data.role != 'moderator'
                     && request.resource.data.role != 'seller'
                     && request.resource.data.role != 'agricultural_admin'
+                    && request.resource.data.role != 'legal_admin'
                     && request.resource.data.isActive == true;
 
       // المدير العام يغيّر أي شيء في أي حساب (الأدوار/النوع/التفعيل).
@@ -443,9 +449,9 @@ service cloud.firestore {
     // السؤال القانوني حسّاس: المعتمد فقط يُقرأ للعموم، وصاحب السؤال يرى
     // معلّقه، والرد (`answer`) يكتبه الأدمن وحده حتى لا يُنسب زورًا لمستشار.
     match /legal_consultations/{docId} {
-      allow get: if isAdmin() || resource.data.isApproved == true
+      allow get: if isAdmin() || isLegalAdmin() || resource.data.isApproved == true
                  || (isSignedIn() && resource.data.userId == request.auth.uid);
-      allow list: if isAdmin() || resource.data.isApproved == true
+      allow list: if isAdmin() || isLegalAdmin() || resource.data.isApproved == true
                   || (isSignedIn() && resource.data.userId == request.auth.uid);
       allow create: if accountActive()
                     && request.auth.uid == request.resource.data.userId
@@ -453,12 +459,12 @@ service cloud.firestore {
       // المالك: يصوغ سؤاله في أي وقت — فيعود للمراجعة — دون لمس نسبه أو الرد،
       // ودون أن يبقى عليه ردٌّ قديم: فبعد إعادة الصياغة يكون الرد السابق
       // إجابةً عن سؤالٍ لم يعد موجودًا، والخدمة تفرّغه والقواعد تثبت ذلك.
-      allow update: if isAdmin()
+      allow update: if isAdmin() || isLegalAdmin()
                     || (ownerEdit(resource.data.userId, request.resource.data.userId)
                         && request.resource.data.answer == ''
                         && !request.resource.data.diff(resource.data)
                              .affectedKeys().hasAny(['userName']));
-      allow delete: if isAdmin()
+      allow delete: if isAdmin() || isLegalAdmin()
                     || ownerDelete(resource.data.userId);
     }
 
