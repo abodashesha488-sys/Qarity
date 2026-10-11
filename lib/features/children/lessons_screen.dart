@@ -162,15 +162,24 @@ class _LessonCardState extends State<_LessonCard> {
 
   ChildLesson get _lesson => widget.lessons[_index];
 
+  String get _currentFullText =>
+      '${_lesson.title}. ${_lesson.body}${_lesson.tip == null ? '' : '. ${_lesson.tip}'}';
+
   @override
   void initState() {
     super.initState();
-    ChildrenSpeech.speak('${_lesson.title}. ${_lesson.body}');
+    ChildrenSpeech.speak(_currentFullText);
+  }
+
+  @override
+  void dispose() {
+    ChildrenSpeech.stop();
+    super.dispose();
   }
 
   void _goTo(int next) {
     setState(() => _index = next);
-    ChildrenSpeech.speak('${_lesson.title}. ${_lesson.body}');
+    ChildrenSpeech.speak(_currentFullText);
   }
 
   @override
@@ -185,9 +194,9 @@ class _LessonCardState extends State<_LessonCard> {
           bottom: MediaQuery.of(context).viewInsets.bottom + 12),
       child: DraggableScrollableSheet(
         expand: false,
-        initialChildSize: 0.6,
-        minChildSize: 0.4,
-        maxChildSize: 0.85,
+        initialChildSize: 0.65,
+        minChildSize: 0.45,
+        maxChildSize: 0.9,
         builder: (context, scrollController) => Container(
           decoration: BoxDecoration(
             color: Colors.white,
@@ -212,8 +221,8 @@ class _LessonCardState extends State<_LessonCard> {
               Row(
                 children: [
                   Container(
-                    width: 64,
-                    height: 64,
+                    width: 60,
+                    height: 60,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                           colors: [
@@ -229,32 +238,137 @@ class _LessonCardState extends State<_LessonCard> {
                             child: Text(lesson.emoji,
                                 style: GoogleFonts.tajawal(
                                     fontSize:
-                                        lesson.emoji.length > 1 ? 26 : 34,
+                                        lesson.emoji.length > 1 ? 24 : 32,
                                     fontWeight: FontWeight.w900,
                                     color: Colors.white)))
                         : Image.asset(asset,
                             fit: BoxFit.cover,
                             errorBuilder: (context, error, stack) => Center(
                                 child: Text(lesson.emoji,
-                                    style: const TextStyle(fontSize: 30)))),
+                                    style: const TextStyle(fontSize: 28)))),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(lesson.title,
                         textDirection: TextDirection.rtl,
                         style: GoogleFonts.tajawal(
-                            fontSize: 18,
+                            fontSize: 17,
                             fontWeight: FontWeight.w900,
                             color: accent)),
                   ),
                   IconButton(
                     tooltip: 'اسمع',
-                    onPressed: () => ChildrenSpeech.speak(
-                        '${lesson.title}. ${lesson.body}${lesson.tip == null ? '' : '. ${lesson.tip}'}'),
+                    onPressed: () =>
+                        ChildrenSpeech.togglePlayPause(_currentFullText),
                     icon: Icon(Icons.volume_up_rounded,
                         color: accent, size: 24),
                   ),
                 ],
+              ),
+              const SizedBox(height: 12),
+
+              // ─── شريط التحكم الصوتي التفاعلي (تشغيل / إيقاف مؤقت / استمرار / إيقاف) ───
+              ValueListenableBuilder<TtsPlayState>(
+                valueListenable: ChildrenSpeech.playState,
+                builder: (context, state, _) {
+                  final isPlaying = state == TtsPlayState.playing;
+                  final isPaused = state == TtsPlayState.paused;
+                  return Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: accent.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: accent.withValues(alpha: 0.25),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        // زر التشغيل / الإيقاف المؤقت
+                        Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(20),
+                            onTap: () => ChildrenSpeech.togglePlayPause(
+                                _currentFullText),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 7),
+                              decoration: BoxDecoration(
+                                color: accent,
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: accent.withValues(alpha: 0.3),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    isPlaying
+                                        ? Icons.pause_rounded
+                                        : Icons.play_arrow_rounded,
+                                    color: Colors.white,
+                                    size: 19,
+                                  ),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    isPlaying
+                                        ? 'إيقاف مؤقت'
+                                        : (isPaused ? 'استمرار' : 'استمع للقصة'),
+                                    style: GoogleFonts.tajawal(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        if (isPlaying || isPaused) ...[
+                          const SizedBox(width: 8),
+                          // زر إيقاف كامل
+                          IconButton(
+                            tooltip: 'إيقاف نهائي',
+                            iconSize: 22,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(
+                                minWidth: 32, minHeight: 32),
+                            icon: const Icon(Icons.stop_circle_rounded,
+                                color: Color(0xFFD32F2F)),
+                            onPressed: () => ChildrenSpeech.stop(),
+                          ),
+                        ],
+                        const Spacer(),
+                        // مؤشر الحالة النصي
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              isPlaying
+                                  ? 'جارٍ الاستماع 🔊'
+                                  : (isPaused
+                                      ? 'موقوف مؤقتاً ⏸️'
+                                      : 'صوت واضح 🎧'),
+                              style: GoogleFonts.tajawal(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w800,
+                                color: accent,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
               const SizedBox(height: 14),
               Align(

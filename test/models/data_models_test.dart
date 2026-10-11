@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:qurity/core/constants/app_colors.dart';
 import 'package:qurity/models/data_models.dart';
+import 'package:qurity/models/market_extra_models.dart';
 
 void main() {
   final now = DateTime(2020);
@@ -358,6 +359,59 @@ void main() {
       final agr = u.copyWith(role: 'agricultural_admin');
       expect(agr.isAgriculturalAdmin, isTrue);
       expect(agr.isAdmin, isFalse);
+    });
+  });
+
+  group('BuyRequest & BuyRequestComment', () {
+    test('BuyRequest round-trips contactPhone and commentsCount', () {
+      final json = <String, dynamic>{
+        'userId': 'u1',
+        'userName': 'أحمد',
+        'title': 'ماكينة خياطة',
+        'details': 'بحالة جيدة',
+        'budget': '2000 ج',
+        'contactPhone': '01012345678',
+        'commentsCount': 5,
+        'imageUrls': ['https://img.com/1.jpg'],
+        'status': 'open',
+        'isApproved': true,
+      };
+
+      final req = BuyRequest.fromJson(json, 'br1');
+      expect(req.id, 'br1');
+      expect(req.contactPhone, '01012345678');
+      expect(req.commentsCount, 5);
+      expect(req.isOpen, isTrue);
+
+      final out = req.toJson();
+      expect(out['contactPhone'], '01012345678');
+      expect(out['commentsCount'], 5);
+    });
+
+    test('BuyRequestComment serialization and defaults', () {
+      final now = DateTime(2026, 10, 11);
+      final json = <String, dynamic>{
+        'userId': 'u2',
+        'userName': 'محمد',
+        'userPhotoUrl': 'https://img.com/u.jpg',
+        'userRole': 'admin',
+        'userSellerType': 'gold',
+        'text': 'عندي ماكينة ممتازة تواصل معي',
+        'createdAt': Timestamp.fromDate(now),
+      };
+
+      final comment = BuyRequestComment.fromJson(json, 'c1');
+      expect(comment.id, 'c1');
+      expect(comment.userId, 'u2');
+      expect(comment.userName, 'محمد');
+      expect(comment.text, 'عندي ماكينة ممتازة تواصل معي');
+      expect(comment.userRole, 'admin');
+      expect(comment.createdAt, now);
+
+      final out = comment.toJson();
+      expect(out['userId'], 'u2');
+      expect(out['text'], 'عندي ماكينة ممتازة تواصل معي');
+      expect(out['userRole'], 'admin');
     });
   });
 }

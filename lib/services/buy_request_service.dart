@@ -128,4 +128,47 @@ class BuyRequestService {
     await _col.doc(id).delete();
     await CacheService.invalidateBuyRequests();
   }
+
+  // ───────────────── التعليقات والتواصل ─────────────────
+  CollectionReference<Map<String, dynamic>> _comments(String requestId) =>
+      _col.doc(requestId).collection('comments');
+
+  Stream<List<BuyRequestComment>> getCommentsStream(String requestId) {
+    return _comments(requestId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((s) => s.docs
+            .map((d) => BuyRequestComment.fromJson(d.data(), d.id, requestId))
+            .toList());
+  }
+
+  Future<String> addComment({
+    required String requestId,
+    required String text,
+    required String userId,
+    required String userName,
+    String userPhotoUrl = '',
+    String? userRole,
+    String? userSellerType,
+  }) async {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return '';
+    final comment = BuyRequestComment(
+      id: '',
+      requestId: requestId,
+      userId: userId,
+      userName: userName,
+      userPhotoUrl: userPhotoUrl,
+      userRole: userRole,
+      userSellerType: userSellerType,
+      text: trimmed,
+    );
+    final ref = await _comments(requestId).add(comment.toJson());
+    return ref.id;
+  }
+
+  Future<void> deleteComment(String requestId, String commentId) async {
+    await _comments(requestId).doc(commentId).delete();
+  }
 }
+

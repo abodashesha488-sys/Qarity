@@ -119,10 +119,12 @@ class BuyRequest {
   final String details;
   final String budget;
   final List<String> imageUrls;
+  final String contactPhone;
   final String status; // open | closed
   final bool isApproved;
   final String? userRole;
   final String? userSellerType;
+  final int commentsCount;
   final DateTime? createdAt;
 
   const BuyRequest({
@@ -133,10 +135,12 @@ class BuyRequest {
     this.details = '',
     this.budget = '',
     this.imageUrls = const [],
+    this.contactPhone = '',
     this.status = 'open',
     this.isApproved = false,
     this.userRole,
     this.userSellerType,
+    this.commentsCount = 0,
     this.createdAt,
   });
 
@@ -150,10 +154,14 @@ class BuyRequest {
       budget: json['budget'] as String? ?? '',
       imageUrls:
           (json['imageUrls'] as List<dynamic>?)?.cast<String>() ?? const [],
+      contactPhone: json['contactPhone'] as String? ?? json['phone'] as String? ?? '',
       status: json['status'] as String? ?? 'open',
       isApproved: json['isApproved'] as bool? ?? true,
       userRole: json['userRole'] as String?,
       userSellerType: json['userSellerType'] as String?,
+      commentsCount: (json['comments'] as num?)?.toInt() ??
+          (json['commentsCount'] as num?)?.toInt() ??
+          0,
       createdAt: json['createdAt'] != null ? tsOrNow(json['createdAt']) : null,
     );
   }
@@ -165,8 +173,11 @@ class BuyRequest {
         'details': details,
         'budget': budget,
         'imageUrls': imageUrls,
+        if (contactPhone.isNotEmpty) 'contactPhone': contactPhone,
         'status': status,
         'isApproved': isApproved,
+        if (commentsCount > 0) 'comments': commentsCount,
+        if (commentsCount > 0) 'commentsCount': commentsCount,
         if (userRole != null) 'userRole': userRole,
         if (userSellerType != null) 'userSellerType': userSellerType,
         'createdAt': createdAt != null
@@ -178,6 +189,61 @@ class BuyRequest {
   String get statusLabel => isOpen ? 'مطلوب الآن' : 'تمت التلبية';
   Color get statusColor => isOpen ? const Color(0xFF1565C0) : Colors.blueGrey;
   String get imageUrl => imageUrls.isNotEmpty ? imageUrls.first : '';
+}
+
+// ═══════════════════ BUY REQUEST COMMENT (تعليقات طلبات الشراء) ═══════════════════
+class BuyRequestComment {
+  final String id;
+  final String requestId;
+  final String userId;
+  final String userName;
+  final String userPhotoUrl;
+  final String? userRole;
+  final String? userSellerType;
+  final String text;
+  final DateTime? createdAt;
+
+  const BuyRequestComment({
+    required this.id,
+    required this.requestId,
+    required this.userId,
+    required this.userName,
+    this.userPhotoUrl = '',
+    this.userRole,
+    this.userSellerType,
+    required this.text,
+    this.createdAt,
+  });
+
+  factory BuyRequestComment.fromJson(
+      Map<String, dynamic> json, String docId, [String requestId = '']) {
+    return BuyRequestComment(
+      id: docId,
+      requestId: json['requestId'] as String? ?? requestId,
+      userId: json['userId'] as String? ?? '',
+      userName: json['userName'] as String? ?? '',
+      userPhotoUrl: json['userPhotoUrl'] as String? ??
+          json['userPhoto'] as String? ??
+          '',
+      userRole: json['userRole'] as String?,
+      userSellerType: json['userSellerType'] as String?,
+      text: json['text'] as String? ?? '',
+      createdAt: json['createdAt'] != null ? tsOrNow(json['createdAt']) : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'requestId': requestId,
+        'userId': userId,
+        'userName': userName,
+        'userPhotoUrl': userPhotoUrl,
+        if (userRole != null) 'userRole': userRole,
+        if (userSellerType != null) 'userSellerType': userSellerType,
+        'text': text,
+        'createdAt': createdAt != null
+            ? Timestamp.fromDate(createdAt!)
+            : FieldValue.serverTimestamp(),
+      };
 }
 
 // ═══════════════════════ DONATION (تبرعات) ═══════════════════════

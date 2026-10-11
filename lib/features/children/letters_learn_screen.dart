@@ -97,12 +97,23 @@ class LearnLettersScreen extends StatelessWidget {
                         fontSize: 20,
                         fontWeight: FontWeight.w900,
                         color: colors[1])),
-                IconButton(
-                  tooltip: 'اسمع',
-                  onPressed: () =>
-                      ChildrenSpeech.speak('حرف ${letter.name}. ${letter.word}'),
-                  icon: Icon(Icons.volume_up_rounded,
-                      color: colors[1], size: 24),
+                ValueListenableBuilder<TtsPlayState>(
+                  valueListenable: ChildrenSpeech.playState,
+                  builder: (context, state, _) {
+                    final isPlaying = state == TtsPlayState.playing;
+                    return IconButton(
+                      tooltip: isPlaying ? 'إيقاف مؤقت' : 'اسمع',
+                      onPressed: () => ChildrenSpeech.togglePlayPause(
+                          'حرف ${letter.name} .. ${letter.word}'),
+                      icon: Icon(
+                        isPlaying
+                            ? Icons.pause_circle_rounded
+                            : Icons.volume_up_rounded,
+                        color: colors[1],
+                        size: 26,
+                      ),
+                    );
+                  },
                 ),
               ],
             ),

@@ -178,9 +178,10 @@ void main() {
       expect(p.toJson()['isFeatured'], true);
     });
 
-    test('حِرف الفنيون تشمل كاميرات مراقبة ودش وأعمال منزلية', () {
+    test('حِرف الفنيون تشمل كاميرات مراقبة ودش وأعمال منزلية ودعاية وإعلان', () {
       final crafts = kSubcategoriesFor(ServiceCategory.technicians);
-      expect(crafts, containsAll(['كاميرات مراقبة ودش', 'أعمال منزلية']));
+      expect(crafts,
+          containsAll(['كاميرات مراقبة ودش', 'أعمال منزلية', 'دعاية وإعلان']));
       // «غير ذلك» يبقى الخيار الأخير في القائمة المنسدلة ونموذج الإضافة.
       expect(crafts.last, 'غير ذلك');
       expect(crafts.toSet().length, crafts.length, reason: 'بلا تكرار');

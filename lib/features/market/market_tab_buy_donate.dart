@@ -293,155 +293,516 @@ class _BuyRequestsTabState extends State<_BuyRequestsTab> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(18),
               side: BorderSide(
-                  color: _buyAccent.withValues(alpha: mine ? 0.55 : 0.3),
-                  width: mine ? 1.4 : 1),
+                color: mine
+                    ? _buyAccent.withValues(alpha: 0.6)
+                    : theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
+                width: mine ? 1.5 : 1,
+              ),
             ),
             child: InkWell(
-              onTap: () => _openMarketPage(context,
-                  _BuyRequestDetailPage(request: r, service: _service)),
-              child: IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+              onTap: () => _openMarketPage(
+                context,
+                _BuyRequestDetailPage(request: r, service: _service),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(13),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                SizedBox(
-                  width: 92,
-                  child: r.imageUrl.isEmpty
-                      ? ColoredBox(
-                          color: _buyAccent.withValues(alpha: 0.09),
-                          child: const Icon(Icons.request_quote_rounded,
-                              color: _buyAccent, size: 30),
-                        )
-                      : _net(r.imageUrl, theme),
-                ),
-                const VerticalDivider(
-                    width: 1, thickness: 1, color: Color(0x14000000)),
-                Expanded(
-                  child: Padding(
-                    padding:
-                        const EdgeInsets.fromLTRB(11, 10, 8, 9),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    // ─── رأس الكرت: الناشر والرتبة والوقت وشارة الحالة ───
+                    Row(
                       children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(r.title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w900,
-                                      fontSize: 14.5)),
-                            ),
-                            const SizedBox(width: 6),
-                            _StatusChip(
-                                label: mine
-                                    ? (r.isApproved
-                                        ? 'طلبك • ${r.statusLabel}'
-                                        : 'طلبك • بانتظار موافقة الإدارة')
-                                    : r.statusLabel,
-                                color: _buyAccent),
-                          ],
+                        Container(
+                          width: 34,
+                          height: 34,
+                          decoration: BoxDecoration(
+                            color: _buyAccent.withValues(alpha: 0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Center(
+                            child: Icon(Icons.person_rounded,
+                                color: _buyAccent, size: 19),
+                          ),
                         ),
-                        if (r.details.isNotEmpty) ...[
-                          const SizedBox(height: 3),
-                          Text(r.details,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                  fontSize: 11.5,
-                                  color:
-                                      theme.colorScheme.onSurfaceVariant,
-                                  height: 1.45)),
-                        ],
-                        const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            Flexible(
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              RoleNameText(
+                                name: r.userName,
+                                role: r.userRole,
+                                sellerType: r.userSellerType,
+                                style: const TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                                iconSize: 12,
+                              ),
+                              const SizedBox(height: 1),
+                              Row(
                                 children: [
-                                  const Icon(Icons.person_outline_rounded,
-                                      size: 13, color: Colors.black45),
+                                  Icon(Icons.schedule_rounded,
+                                      size: 11,
+                                      color:
+                                          theme.colorScheme.onSurfaceVariant),
                                   const SizedBox(width: 3),
-                                  Flexible(
-                                    child: RoleNameText(
-                                        name: r.userName,
-                                        role: r.userRole,
-                                        sellerType: r.userSellerType,
-                                        style: const TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w700),
-                                        iconSize: 11),
+                                  Text(
+                                    _agoLabel(r.createdAt),
+                                    style: TextStyle(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.w600,
+                                      color:
+                                          theme.colorScheme.onSurfaceVariant,
+                                    ),
                                   ),
                                 ],
                               ),
-                            ),
-                            if (r.budget.isNotEmpty) ...[
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 7, vertical: 1.5),
-                                decoration: BoxDecoration(
-                                    color: const Color(0xFFFFF3E0),
-                                    borderRadius:
-                                        BorderRadius.circular(7),
-                                    border: Border.all(
-                                        color: _donateAccent
-                                            .withValues(alpha: 0.4))),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(Icons.payments_rounded,
-                                        size: 11,
-                                        color: _donateInk),
-                                    const SizedBox(width: 3),
-                                    Text(r.budget,
-                                        style: const TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w900,
-                                            color: _donateInk)),
-                                  ],
-                                ),
-                              ),
                             ],
-                            const SizedBox(width: 8),
-                            Text(_agoLabel(r.createdAt),
-                                style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700,
-                                    color: theme.colorScheme
-                                        .onSurfaceVariant)),
-                            const Spacer(),
-                            const Icon(Icons.chevron_left_rounded,
-                                size: 18, color: Colors.black38),
-                          ],
+                          ),
+                        ),
+                        _StatusChip(
+                          label: mine
+                              ? (r.isApproved
+                                  ? 'طلبك • ${r.statusLabel}'
+                                  : 'طلبك • بانتظار موافقة الإدارة')
+                              : r.statusLabel,
+                          color: r.isOpen ? _buyAccent : Colors.teal,
                         ),
                       ],
                     ),
-                  ),
+                    const SizedBox(height: 10),
+
+                    // ─── عنوان السلعة المطلوبة ───
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(5),
+                          decoration: BoxDecoration(
+                            color: _buyAccent.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.search_rounded,
+                              size: 15, color: _buyAccent),
+                        ),
+                        const SizedBox(width: 7),
+                        Expanded(
+                          child: Text(
+                            r.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 15,
+                              height: 1.35,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // ─── التفاصيل (إن وجدت) ───
+                    if (r.details.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        r.details,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: theme.colorScheme.onSurfaceVariant,
+                          height: 1.45,
+                        ),
+                      ),
+                    ],
+
+                    // ─── صور السلعة المصغرة (إن وجدت) ───
+                    if (r.imageUrls.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: SizedBox(
+                          height: 90,
+                          width: double.infinity,
+                          child: r.imageUrls.length == 1
+                              ? _net(r.imageUrls.first, theme)
+                              : ListView.separated(
+                                  scrollDirection: Axis.horizontal,
+                                  itemCount: r.imageUrls.length,
+                                  separatorBuilder: (_, __) =>
+                                      const SizedBox(width: 6),
+                                  itemBuilder: (ctx, idx) => ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: SizedBox(
+                                      width: 120,
+                                      height: 90,
+                                      child: _net(r.imageUrls[idx], theme),
+                                    ),
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
+
+                    // ─── بادج الميزانية ───
+                    if (r.budget.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 9, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF8E1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                              color: const Color(0xFFFFB300)
+                                  .withValues(alpha: 0.5)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.payments_rounded,
+                                size: 13, color: Color(0xFFE65100)),
+                            const SizedBox(width: 4),
+                            Text(
+                              'الميزانية المتوقعة: ${r.budget}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFFE65100),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: 10),
+                    const Divider(height: 1, thickness: 0.7),
+                    const SizedBox(height: 8),
+
+                    // ─── شريط التفاعل: اتصال - واتساب - تعليقات - مشاركة ───
+                    Row(
+                      children: [
+                        if (r.contactPhone.isNotEmpty) ...[
+                          _ContactPillButton(
+                            icon: Icons.phone_rounded,
+                            label: 'اتصال',
+                            color: _buyAccent,
+                            onTap: () =>
+                                _makePhoneCall(context, r.contactPhone),
+                          ),
+                          const SizedBox(width: 6),
+                          _ContactPillButton(
+                            icon: Icons.chat_rounded,
+                            label: 'واتساب',
+                            color: const Color(0xFF128C7E),
+                            onTap: () =>
+                                _openWhatsApp(context, r.contactPhone),
+                          ),
+                          const SizedBox(width: 6),
+                        ],
+                        StreamBuilder<List<BuyRequestComment>>(
+                          stream: _service.getCommentsStream(r.id),
+                          builder: (context, commentSnap) {
+                            final count =
+                                commentSnap.data?.length ?? r.commentsCount;
+                            return _CommentPillButton(
+                              count: count,
+                              onTap: () => _openMarketPage(
+                                context,
+                                _BuyRequestDetailPage(
+                                  request: r,
+                                  service: _service,
+                                  focusComment: true,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        const Spacer(),
+                        IconButton(
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          iconSize: 18,
+                          tooltip: 'مشاركة',
+                          icon: const Icon(Icons.share_outlined,
+                              color: Colors.black54),
+                          onPressed: () => ShareService.shareText(
+                            title: '🔍 مطلوب: ${r.title}',
+                            body: [
+                              if (r.details.isNotEmpty) r.details,
+                              if (r.budget.isNotEmpty)
+                                'الميزانية: ${r.budget}',
+                              if (r.contactPhone.isNotEmpty)
+                                'للتواصل: ${r.contactPhone}',
+                              '— من سوق قرية أبوديشيشة',
+                            ].join('\n'),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.arrow_forward_ios_rounded,
+                            size: 13, color: Colors.black38),
+                      ],
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
-          ),
-        ).animate(delay: (i * 40).ms).fadeIn();
-      },
-    ),
+          ).animate(delay: (i * 40).ms).fadeIn();
+        },
+      ),
     );
   }
 }
 
-/// تفاصيل سلعة مطلوبة — مشاركة للجميع، وإغلاق/حذف لصاحب الطلب.
-class _BuyRequestDetailPage extends StatelessWidget {
-  const _BuyRequestDetailPage(
-      {required this.request, required this.service});
+/// زر تواصل مصغر داخل كرت الطلب
+class _ContactPillButton extends StatelessWidget {
+  const _ContactPillButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: color.withValues(alpha: 0.1),
+      borderRadius: BorderRadius.circular(9),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(9),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 13, color: color),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// زر عداد التعليقات داخل كرت الطلب
+class _CommentPillButton extends StatelessWidget {
+  const _CommentPillButton({
+    required this.count,
+    required this.onTap,
+  });
+
+  final int count;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.blueGrey.withValues(alpha: 0.08),
+      borderRadius: BorderRadius.circular(9),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(9),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.chat_bubble_outline_rounded,
+                  size: 13, color: Colors.blueGrey),
+              const SizedBox(width: 4),
+              Text(
+                count > 0 ? '$count تعليق' : 'تعليق',
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.blueGrey,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+Future<void> _makePhoneCall(BuildContext context, String phone) async {
+  final clean = phone.trim();
+  if (clean.isEmpty) return;
+  final error = await launchPhoneCall(clean);
+  if (error != null && context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+  }
+}
+
+Future<void> _openWhatsApp(BuildContext context, String phone) async {
+  final clean = phone.trim();
+  if (clean.isEmpty) return;
+  final waUrl = egyptianWhatsAppUrl(clean);
+  if (waUrl == null) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('رقم الهاتف غير صالح للمراسلة عبر واتساب.')));
+    }
+    return;
+  }
+  final error = await launchWhatsAppUrl(waUrl);
+  if (error != null && context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+  }
+}
+
+/// تفاصيل سلعة مطلوبة — تواصل مباشر، تعليقات وعروض، وإغلاق/حذف لصاحب الطلب.
+class _BuyRequestDetailPage extends StatefulWidget {
+  const _BuyRequestDetailPage({
+    required this.request,
+    required this.service,
+    this.focusComment = false,
+  });
+
   final BuyRequest request;
   final BuyRequestService service;
+  final bool focusComment;
+
+  @override
+  State<_BuyRequestDetailPage> createState() => _BuyRequestDetailPageState();
+}
+
+class _BuyRequestDetailPageState extends State<_BuyRequestDetailPage> {
+  final TextEditingController _commentCtrl = TextEditingController();
+  final FocusNode _commentFocus = FocusNode();
+  bool _isSending = false;
+  bool _isAdmin = false;
+  UserModel? _currentUserModel;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+    if (widget.focusComment) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _commentFocus.requestFocus();
+      });
+    }
+  }
+
+  Future<void> _loadUser() async {
+    final uid = BuyRequestService.viewerUid();
+    if (uid != null) {
+      final user = await UserService().getCurrentUser();
+      final admin = await AdminService().isAdminUser(uid);
+      if (mounted) {
+        setState(() {
+          _currentUserModel = user;
+          _isAdmin = admin;
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _commentCtrl.dispose();
+    _commentFocus.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submitComment() async {
+    final text = _commentCtrl.text.trim();
+    if (text.isEmpty) return;
+    final uid = BuyRequestService.viewerUid();
+    if (uid == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('يرجى تسجيل الدخول للتعليق على الطلب')),
+      );
+      return;
+    }
+    setState(() => _isSending = true);
+    try {
+      final name = _currentUserModel?.name.isNotEmpty == true
+          ? _currentUserModel!.name
+          : (FirebaseAuth.instance.currentUser?.displayName ?? 'مستخدم');
+      final photo = _currentUserModel?.photoUrl ??
+          FirebaseAuth.instance.currentUser?.photoURL ??
+          '';
+
+      await widget.service.addComment(
+        requestId: widget.request.id,
+        text: text,
+        userId: uid,
+        userName: name,
+        userPhotoUrl: photo,
+        userRole: _currentUserModel?.role,
+        userSellerType: _currentUserModel?.sellerType?.name,
+      );
+      _commentCtrl.clear();
+      _commentFocus.unfocus();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تمت إضافة تعليقك بنجاح'),
+            backgroundColor: _buyAccent,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('تعذّر إرسال التعليق: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSending = false);
+    }
+  }
+
+  Future<void> _deleteComment(String commentId) async {
+    final ok = await _marketConfirm(
+      context,
+      title: 'حذف التعليق؟',
+      body: 'هل أنت متأكد من حذف هذا التعليق نهائيًا؟',
+      okLabel: 'حذف',
+      color: AppColors.error,
+    );
+    if (ok == true) {
+      try {
+        await widget.service.deleteComment(widget.request.id, commentId);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('تم حذف التعليق')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('تعذّر حذف التعليق: $e')),
+          );
+        }
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final r = request;
+    final r = widget.request;
     final uid = BuyRequestService.viewerUid();
     final mine = uid != null && r.userId == uid;
 
@@ -453,167 +814,517 @@ class _BuyRequestDetailPage extends StatelessWidget {
             tooltip: 'مشاركة الطلب',
             icon: const Icon(Icons.share_rounded),
             onPressed: () => ShareService.shareText(
-                title: '🔍 مطلوب: ${r.title}',
-                body: [
-                  if (r.details.isNotEmpty) r.details,
-                  if (r.budget.isNotEmpty) 'الميزانية: ${r.budget}',
-                  '— من قرية أبوديشيشة',
-                ].join('\n')),
+              title: '🔍 مطلوب: ${r.title}',
+              body: [
+                if (r.details.isNotEmpty) r.details,
+                if (r.budget.isNotEmpty) 'الميزانية: ${r.budget}',
+                if (r.contactPhone.isNotEmpty) 'هاتف التواصل: ${r.contactPhone}',
+                '— من سوق قرية أبوديشيشة',
+              ].join('\n'),
+            ),
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+      body: Column(
         children: [
-          _MarketGallery(urls: r.imageUrls, accent: _buyAccent),
-          if (r.imageUrls.isEmpty)
-            Container(
-              height: 96,
-              decoration: BoxDecoration(
-                color: _buyAccent.withValues(alpha: 0.07),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                    color: _buyAccent.withValues(alpha: 0.3)),
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.request_quote_rounded,
-                      color: _buyAccent, size: 30),
-                  SizedBox(width: 10),
-                  Text('طلب بلا صور',
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                _MarketGallery(urls: r.imageUrls, accent: _buyAccent),
+                if (r.imageUrls.isEmpty)
+                  Container(
+                    height: 96,
+                    decoration: BoxDecoration(
+                      color: _buyAccent.withValues(alpha: 0.07),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                          color: _buyAccent.withValues(alpha: 0.3)),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.request_quote_rounded,
+                            color: _buyAccent, size: 30),
+                        SizedBox(width: 10),
+                        Text('طلب بدون صور',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                color: _buyAccent)),
+                      ],
+                    ),
+                  ),
+                const SizedBox(height: 14),
+
+                // ─── عنوان الطلب والشارة ───
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(r.title,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w900, fontSize: 19)),
+                    ),
+                    _StatusChip(
+                      label: mine && !r.isApproved
+                          ? 'بانتظار موافقة الإدارة'
+                          : r.statusLabel,
+                      color: r.isOpen ? _buyAccent : Colors.teal,
+                    ),
+                  ],
+                ),
+
+                // ─── ميزانية الطلب المميزة ───
+                if (r.budget.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF8E1),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                          color: const Color(0xFFFFB300)
+                              .withValues(alpha: 0.6)),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFE082),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.payments_rounded,
+                              size: 18, color: Color(0xFFE65100)),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('الميزانية المحددة',
+                                  style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF8D6E63))),
+                              Text(r.budget,
+                                  style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w900,
+                                      color: Color(0xFFE65100))),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 12),
+
+                // ─── بطاقة تفاصيل الطلب وبيانات الناشر ───
+                Card(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(
+                          color: theme.colorScheme.outlineVariant
+                              .withValues(alpha: 0.4))),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (r.details.isNotEmpty)
+                          _DetailRow(
+                              icon: Icons.notes_rounded,
+                              label: 'التفاصيل',
+                              value: r.details),
+                        _DetailRow(
+                            icon: Icons.person_rounded,
+                            label: 'مقدم الطلب',
+                            value: r.userName),
+                        _DetailRow(
+                            icon: Icons.schedule_rounded,
+                            label: 'تاريخ النشر',
+                            value: _agoLabel(r.createdAt),
+                            color: Colors.black45),
+                        if (r.contactPhone.isNotEmpty)
+                          _DetailRow(
+                              icon: Icons.phone_rounded,
+                              label: 'هاتف التواصل',
+                              value: r.contactPhone,
+                              color: _buyAccent),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // ─── قسم التواصل المباشر ───
+                if (r.contactPhone.isNotEmpty) ...[
+                  const Text('التواصل مع صاحب الطلب',
                       style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                          color: _buyAccent)),
+                          fontSize: 14.5, fontWeight: FontWeight.w900)),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: () =>
+                              _makePhoneCall(context, r.contactPhone),
+                          style: FilledButton.styleFrom(
+                              backgroundColor: _buyAccent,
+                              foregroundColor: Colors.white,
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 13)),
+                          icon: const Icon(Icons.call_rounded, size: 18),
+                          label: const Text('اتصال هاتفي',
+                              style: TextStyle(fontWeight: FontWeight.w800)),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: () =>
+                              _openWhatsApp(context, r.contactPhone),
+                          style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFF128C7E),
+                              foregroundColor: Colors.white,
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 13)),
+                          icon: const Icon(Icons.chat_rounded, size: 18),
+                          label: const Text('واتساب',
+                              style: TextStyle(fontWeight: FontWeight.w800)),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                ] else if (!mine) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: _buyAccent.withValues(alpha: 0.06),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                          color: _buyAccent.withValues(alpha: 0.2)),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.info_outline_rounded,
+                            color: _buyAccent, size: 20),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'لم يحدد صاحب الطلب رقم هاتف. يمكنك التواصل معه وعرض سلعتك مباشرة عبر قسم التعليقات بالأسفل.',
+                            style: TextStyle(
+                                fontSize: 12,
+                                height: 1.45,
+                                color: _buyAccent),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                 ],
-              ),
+
+                // ─── خيارات صاحب الطلب ───
+                if (mine) ...[
+                  FilledButton.icon(
+                    onPressed: () async {
+                      final ok = await _marketConfirm(context,
+                          title: 'تمت تلبية الطلب؟',
+                          body:
+                              'سيُغلق الطلب ويختفي من قائمة «مطلوب» — إن حصلت على ما تريد فمبروك، ويمكنك إضافة طلب جديد لاحقًا.',
+                          okLabel: 'نعم، تمت التلبية',
+                          color: _buyAccent);
+                      if (ok == true) {
+                        await widget.service.close(r.id);
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text('🎉 تمت تلبية الطلب وأُغلق',
+                                      style: TextStyle(color: Colors.white)),
+                                  backgroundColor: _buyAccent));
+                        }
+                      }
+                    },
+                    style: FilledButton.styleFrom(
+                        backgroundColor: _buyAccent,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14)),
+                    icon: const Icon(Icons.check_circle_rounded, size: 19),
+                    label: const Text('تمت التلبية — إغلاق الطلب',
+                        style: TextStyle(fontWeight: FontWeight.w900)),
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton.icon(
+                    onPressed: () async {
+                      final ok = await _marketConfirm(context,
+                          title: 'حذف الطلب نهائيًا؟',
+                          body: 'سيُحذف الطلب ولن يظهر لأحد بعد الآن.',
+                          okLabel: 'حذف',
+                          color: AppColors.error);
+                      if (ok == true) {
+                        await widget.service.delete(r.id);
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('تم حذف الطلب')));
+                        }
+                      }
+                    },
+                    style: TextButton.styleFrom(
+                        foregroundColor: AppColors.inkOn(
+                            AppColors.error, theme.brightness)),
+                    icon: const Icon(Icons.delete_outline_rounded, size: 17),
+                    label: const Text('حذف الطلب نهائيًا',
+                        style: TextStyle(fontWeight: FontWeight.w800)),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+
+                const Divider(height: 24, thickness: 1),
+
+                // ─── قسم التعليقات والعروض المتاحة ───
+                StreamBuilder<List<BuyRequestComment>>(
+                  stream: widget.service.getCommentsStream(r.id),
+                  builder: (context, snapshot) {
+                    final comments = snapshot.data ?? [];
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.forum_rounded,
+                                size: 19, color: _buyAccent),
+                            const SizedBox(width: 8),
+                            Text(
+                              'التعليقات والمقترحات (${comments.length})',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 15.5),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        if (snapshot.connectionState ==
+                                ConnectionState.waiting &&
+                            !snapshot.hasData)
+                          const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(20),
+                              child: CircularProgressIndicator(),
+                            ),
+                          )
+                        else if (comments.isEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 24),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surfaceContainerHighest
+                                  .withValues(alpha: 0.3),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: const Center(
+                              child: Column(
+                                children: [
+                                  Icon(Icons.chat_bubble_outline_rounded,
+                                      size: 32, color: Colors.black26),
+                                  SizedBox(height: 8),
+                                  Text(
+                                    'لا توجد تعليقات أو عروض بعد.\nهل لديك ما يطلبه صاحب المنشور؟ اكتب له أدناه!',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                        fontSize: 12.5,
+                                        height: 1.5,
+                                        color: Colors.black54),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        else
+                          ListView.separated(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: comments.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 10),
+                            itemBuilder: (ctx, idx) {
+                              final c = comments[idx];
+                              final canDelete =
+                                  (uid != null && c.userId == uid) ||
+                                      _isAdmin;
+                              return Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.surface,
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: theme.colorScheme.outlineVariant
+                                        .withValues(alpha: 0.4),
+                                  ),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        CircleAvatar(
+                                          radius: 14,
+                                          backgroundColor: _buyAccent
+                                              .withValues(alpha: 0.1),
+                                          backgroundImage: c
+                                                  .userPhotoUrl.isNotEmpty
+                                              ? CachedNetworkImageProvider(
+                                                  c.userPhotoUrl)
+                                              : null,
+                                          child: c.userPhotoUrl.isEmpty
+                                              ? const Icon(
+                                                  Icons.person_rounded,
+                                                  size: 16,
+                                                  color: _buyAccent)
+                                              : null,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              RoleNameText(
+                                                name: c.userName,
+                                                role: c.userRole,
+                                                sellerType: c.userSellerType,
+                                                style: const TextStyle(
+                                                    fontWeight:
+                                                        FontWeight.w800,
+                                                    fontSize: 12.5),
+                                                iconSize: 12,
+                                              ),
+                                              Text(
+                                                _agoLabel(c.createdAt),
+                                                style: TextStyle(
+                                                  fontSize: 10,
+                                                  color: theme.colorScheme
+                                                      .onSurfaceVariant,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        if (canDelete)
+                                          IconButton(
+                                            visualDensity:
+                                                VisualDensity.compact,
+                                            icon: const Icon(
+                                                Icons.delete_outline_rounded,
+                                                size: 17,
+                                                color: Colors.redAccent),
+                                            tooltip: 'حذف التعليق',
+                                            onPressed: () =>
+                                                _deleteComment(c.id),
+                                          ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 7),
+                                    Padding(
+                                      padding: const EdgeInsets.only(right: 36),
+                                      child: Text(
+                                        c.text,
+                                        style: const TextStyle(
+                                            fontSize: 13, height: 1.45),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        const SizedBox(height: 16),
+                      ],
+                    );
+                  },
+                ),
+              ],
             ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: Text(r.title,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w900, fontSize: 19)),
-              ),
-              _StatusChip(
-                  label: mine && !r.isApproved
-                      ? 'بانتظار موافقة الإدارة'
-                      : r.statusLabel,
-                  color: _buyAccent),
-            ],
           ),
-          const SizedBox(height: 10),
-          Card(
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: BorderSide(
-                    color: theme.colorScheme.outlineVariant
-                        .withValues(alpha: 0.4))),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 14, vertical: 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+
+          // ─── شريط كتابة التعليق في الأسفل ───
+          Container(
+            padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, -3),
+                ),
+              ],
+            ),
+            child: SafeArea(
+              top: false,
+              child: Row(
                 children: [
-                  if (r.details.isNotEmpty)
-                    _DetailRow(
-                        icon: Icons.notes_rounded,
-                        label: 'التفاصيل',
-                        value: r.details),
-                  if (r.budget.isNotEmpty)
-                    _DetailRow(
-                        icon: Icons.payments_rounded,
-                        label: 'الميزانية',
-                        value: r.budget,
-                        color: const Color(0xFFE65100)),
-                  _DetailRow(
-                      icon: Icons.person_rounded,
-                      label: 'مقدم الطلب',
-                      value: r.userName),
-                  _DetailRow(
-                      icon: Icons.schedule_rounded,
-                      label: 'التاريخ',
-                      value: _agoLabel(r.createdAt),
-                      color: Colors.black45),
+                  Expanded(
+                    child: TextField(
+                      controller: _commentCtrl,
+                      focusNode: _commentFocus,
+                      minLines: 1,
+                      maxLines: 4,
+                      decoration: InputDecoration(
+                        hintText: 'اكتب تعليقاً أو اعرض سلعتك...',
+                        hintStyle: const TextStyle(fontSize: 12.5),
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 10),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(22),
+                          borderSide: BorderSide(
+                              color: theme.colorScheme.outlineVariant),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(22),
+                          borderSide: BorderSide(
+                              color: theme.colorScheme.outlineVariant
+                                  .withValues(alpha: 0.5)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(22),
+                          borderSide:
+                              const BorderSide(color: _buyAccent, width: 1.5),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton.filled(
+                    onPressed: _isSending ? null : _submitComment,
+                    style: IconButton.styleFrom(
+                        backgroundColor: _buyAccent,
+                        foregroundColor: Colors.white),
+                    icon: _isSending
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.send_rounded, size: 18),
+                  ),
                 ],
               ),
             ),
           ),
-          const SizedBox(height: 18),
-          if (mine) ...[
-            FilledButton.icon(
-              onPressed: () async {
-                final ok = await _marketConfirm(context,
-                    title: 'تمت تلبية الطلب؟',
-                    body: 'سيُغلق الطلب ويختفي من قائمة «مطلوب» — إن حصلت على ما تريد فمبروك، ويمكنك إضافة طلب جديد لاحقًا.',
-                    okLabel: 'نعم، تمت التلبية',
-                    color: _buyAccent);
-                if (ok == true) {
-                  await service.close(r.id);
-                  if (context.mounted) {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('🎉 تمت تلبية الطلب وأُغلق',
-                                style: TextStyle(color: Colors.white)),
-                            backgroundColor: _buyAccent));
-                  }
-                }
-              },
-              style: FilledButton.styleFrom(
-                  backgroundColor: _buyAccent,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 15)),
-              icon: const Icon(Icons.check_circle_rounded, size: 20),
-              label: const Text('تمت التلبية — إغلاق الطلب',
-                  style: TextStyle(fontWeight: FontWeight.w900)),
-            ),
-            const SizedBox(height: 10),
-            TextButton.icon(
-              onPressed: () async {
-                final ok = await _marketConfirm(context,
-                    title: 'حذف الطلب نهائيًا؟',
-                    body: 'سيُحذف الطلب ولن يظهر لأحد بعد الآن.',
-                    okLabel: 'حذف',
-                    color: AppColors.error);
-                if (ok == true) {
-                  await service.delete(r.id);
-                  if (context.mounted) {
-                    Navigator.pop(context);
-                    // بلا أرضية خارج اللوحة: الحذف ليس خطأً، فالكلمة تأخذ
-                    // أرضية الثيم المحايدة وحبرها المرافق بدل `blueGrey`.
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('تم حذف الطلب')));
-                  }
-                }
-              },
-              style: TextButton.styleFrom(
-                  foregroundColor:
-                      AppColors.inkOn(AppColors.error, theme.brightness)),
-              icon: const Icon(Icons.delete_outline_rounded, size: 17),
-              label: const Text('حذف الطلب',
-                  style: TextStyle(fontWeight: FontWeight.w800)),
-            ),
-          ] else ...[
-            FilledButton.icon(
-              onPressed: () => ShareService.shareText(
-                  title: '🔍 مطلوب: ${r.title}',
-                  body: [
-                    if (r.details.isNotEmpty) r.details,
-                    if (r.budget.isNotEmpty) 'الميزانية: ${r.budget}',
-                    'تواصل مع ${r.userName} عبر التطبيق',
-                  ].join('\n')),
-              style: FilledButton.styleFrom(
-                  backgroundColor: _buyAccent,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 15)),
-              icon: const Icon(Icons.share_rounded, size: 19),
-              label: const Text('شارِك الطلب — عندك ما يطلب؟',
-                  style: TextStyle(fontWeight: FontWeight.w900)),
-            ),
-          ],
         ],
       ),
     );

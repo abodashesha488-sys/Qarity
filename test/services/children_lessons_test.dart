@@ -54,7 +54,7 @@ void main() {
     }
     expect(kWuduLessons.length, 8);
     expect(kSalahLessons.length, 8);
-    expect(kProphetStories.length, 8);
+    expect(kProphetStories.length, 13);
     expect(kMannersLessons.length, 10);
     final all = [
       ...kNumberLessons,

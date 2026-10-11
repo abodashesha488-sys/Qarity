@@ -13,6 +13,7 @@ import '../../core/utils/role_style.dart';
 import '../../models/data_models.dart';
 import '../../models/market_extra_models.dart';
 import '../../routes/app_routes.dart';
+import '../../services/admin_service.dart';
 import '../../services/buy_request_service.dart';
 import '../../services/cache_service.dart';
 import '../../services/donation_service.dart';
@@ -228,6 +229,7 @@ class _MarketTabsScreenState extends State<MarketTabsScreen>
     final titleC = TextEditingController();
     final detailsC = TextEditingController();
     final budgetC = TextEditingController();
+    final phoneC = TextEditingController(text: _profile?.phone ?? '');
     final images = <String>[];
     final max = _sellerType.maxImages;
     final ok = await showDialog<bool>(
@@ -274,6 +276,14 @@ class _MarketTabsScreenState extends State<MarketTabsScreen>
                     decoration: const InputDecoration(
                         labelText: 'الميزانية (اختياري)',
                         prefixIcon: Icon(Icons.payments_rounded))),
+                const SizedBox(height: 12),
+                TextField(
+                    controller: phoneC,
+                    decoration: const InputDecoration(
+                        labelText: 'هاتف التواصل / واتساب (اختياري)',
+                        prefixIcon: Icon(Icons.phone_rounded),
+                        hintText: '01xxxxxxxxx'),
+                    keyboardType: TextInputType.phone),
               ],
             ),
           ),
@@ -298,6 +308,7 @@ class _MarketTabsScreenState extends State<MarketTabsScreen>
           details: detailsC.text.trim(),
           budget: budgetC.text.trim(),
           imageUrls: List.from(images),
+          contactPhone: phoneC.text.trim(),
           userRole: _userRole,
           userSellerType: _sellerType.name,
         ));
