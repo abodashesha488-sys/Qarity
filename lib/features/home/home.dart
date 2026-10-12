@@ -802,20 +802,21 @@ class _HeroHeader extends StatelessWidget {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          // طرف البحث والوقت على نفس السطر
-                          Row(
+                          // طرف البحث وتحته الساعة
+                          Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               const _HeaderSearchButton(),
-                              const SizedBox(width: 6),
+                              const SizedBox(height: 3.5),
                               _pill(child: const _VillageClock()),
                             ],
                           ),
-                          const SizedBox(width: 8),
-                          // طرف التاريخ وزر الإشعارات على نفس السطر وغير متلاصقين
-                          Row(
+                          // طرف زر الإشعارات وتحته التاريخ
+                          Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
+                              const NotificationBellButton(compact: true),
+                              const SizedBox(height: 3.5),
                               _pill(
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
@@ -833,8 +834,6 @@ class _HeroHeader extends StatelessWidget {
                                   ],
                                 ),
                               ),
-                              const SizedBox(width: 7),
-                              const NotificationBellButton(compact: true),
                             ],
                           ),
                         ],
