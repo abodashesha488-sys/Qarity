@@ -308,7 +308,7 @@ class _OccasionsListScreenState extends State<OccasionsListScreen> {
                   ],
                 ),
               ),
-              Icon(Icons.chevron_left_rounded, color: theme.colorScheme.onSurfaceVariant),
+              Icon(Icons.keyboard_arrow_down_rounded, color: theme.colorScheme.onSurfaceVariant),
             ],
           ),
         ),

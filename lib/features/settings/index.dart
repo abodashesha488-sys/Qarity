@@ -669,10 +669,10 @@ class _SettingsTile extends StatelessWidget {
                 trailing!
               else
                 Icon(
-                  Icons.arrow_back_ios_new_rounded,
+                  Icons.keyboard_arrow_down_rounded,
                   color:
-                      theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                  size: 15,
+                      theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                  size: 20,
                 ),
             ],
           ),

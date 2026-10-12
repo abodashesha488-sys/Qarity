@@ -326,7 +326,7 @@ class _LostItemCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                Icon(Icons.chevron_left_rounded,
+                Icon(Icons.keyboard_arrow_down_rounded,
                     color: theme.colorScheme.onSurfaceVariant),
               ],
             ),

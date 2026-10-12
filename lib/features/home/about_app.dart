@@ -756,7 +756,7 @@ class _AboutScreenState extends State<AboutScreen> {
                   ],
                 ),
               ),
-              Icon(Icons.chevron_left_rounded,
+              Icon(Icons.keyboard_arrow_down_rounded,
                   size: 20, color: theme.hintColor),
             ],
           ),

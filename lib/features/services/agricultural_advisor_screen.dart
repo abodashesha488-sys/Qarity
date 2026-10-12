@@ -4,8 +4,9 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/constants/app_colors.dart';
 import '../../widgets/agriculture_promo_banner.dart';
 import '../../widgets/qurity_app_bar.dart';
+import 'crops_screen.dart';
 
-/// شاشة مستشارك الزراعي — إرشادات موثقة لمحاصيل شمال ووسط الدلتا
+/// شاشة مستشارك الزراعي — إرشادات موثقة لكافة المحاصيل المصرية وشمال ووسط الدلتا
 class AgriculturalAdvisorScreen extends StatefulWidget {
   const AgriculturalAdvisorScreen({super.key});
 
@@ -30,17 +31,59 @@ class _AgriculturalAdvisorScreenState extends State<AgriculturalAdvisorScreen> {
     final theme = Theme.of(context);
     const color = Color(0xFF2E7D32); // أخضر داكن
     final query = _searchQuery.toLowerCase();
-    final guidelines = _cropGuidelines.where((item) {
+    final guidelines = CropsScreen.crops.where((item) {
       final matchesCategory = switch (_selectedCategory) {
         'محاصيل شتوية' => item.season.contains('شتوي'),
         'محاصيل صيفية' => item.season.contains('صيفي'),
-        'أراضي طينية' => item.soil.contains('طينية'),
-        'ري حديث' => item.irrigation.contains('حديث'),
-        'مكافحة متكاملة' => item.pests.isNotEmpty,
+        'حبوب وعلف' => const [
+            'القمح',
+            'الأرز',
+            'الذرة الشامية',
+            'الشعير',
+            'الشوفان',
+            'البرسيم الحجازي'
+          ].contains(item.name),
+        'بقوليات وزيتية' => const [
+            'فول بلدي',
+            'فول الصويا',
+            'عباد الشمس',
+            'السمسم',
+            'الترمس',
+            'الحمّص',
+            'العدس',
+            'الكتان',
+            'حبة البركة'
+          ].contains(item.name),
+        'خضروات' => const [
+            'الطماطم',
+            'البطاطس',
+            'البصل',
+            'الثوم',
+            'الخيار',
+            'الفلفل',
+            'البامية',
+            'البطاطا الحلوة'
+          ].contains(item.name),
+        'فاكهة وأشجار' => const [
+            'البرتقال',
+            'العنب',
+            'الزيتون',
+            'الرمان',
+            'البطيخ',
+            'الشمام',
+            'البلح (نخيل التمر)',
+            'التين',
+            'المانجو'
+          ].contains(item.name),
+        'محاصيل سكرية' =>
+          const ['بنجر السكر', 'قصب السكر'].contains(item.name),
+        'ري حديث' =>
+          item.irrigation.contains('حديث') || item.irrigation.contains('تنقيط'),
         _ => true,
       };
-      final searchable = '${item.name} ${item.season} ${item.region} '
-              '${item.soil} ${item.irrigation} ${item.pests}'
+      final searchable = '${item.name} ${item.nameEn} ${item.scientificName} '
+              '${item.season} ${item.region} ${item.soilType} ${item.irrigation} '
+              '${item.pests} ${item.varieties} ${item.description}'
           .toLowerCase();
       return matchesCategory && (query.isEmpty || searchable.contains(query));
     }).toList();
@@ -59,7 +102,7 @@ class _AgriculturalAdvisorScreenState extends State<AgriculturalAdvisorScreen> {
             controller: _searchController,
             onChanged: (value) => setState(() => _searchQuery = value.trim()),
             decoration: InputDecoration(
-              hintText: 'ابحث عن محصول أو إرشاد أو آفة...',
+              hintText: 'ابحث عن محصول أو إرشاد أو آفة أو صنف...',
               prefixIcon: const Icon(Icons.search_rounded),
               suffixIcon: _searchQuery.isEmpty
                   ? null
@@ -70,39 +113,43 @@ class _AgriculturalAdvisorScreenState extends State<AgriculturalAdvisorScreen> {
                       },
                       icon: const Icon(Icons.clear_rounded),
                     ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
           ),
+          const SizedBox(height: 20),
+          _buildCategoryFilterRow(color),
           const SizedBox(height: 24),
-          _buildSectionTitle(theme, 'الإرشادات حسب المحصول', color),
+          _buildSectionTitle(
+              theme, 'دليل وإرشادات المحاصيل (${guidelines.length} محصول)', color),
           const SizedBox(height: 12),
           if (guidelines.isEmpty)
             const Padding(
               padding: EdgeInsets.all(24),
-              child: Center(child: Text('لا توجد نتائج لهذا التصنيف')),
+              child: Center(child: Text('لا توجد نتائج مطابقة لبحثك')),
             ),
           ...guidelines.asMap().entries.map((e) =>
-              _GuidelineCard(guideline: e.value, color: color)
-                  .animate(delay: (e.key * 60).ms)
-                  .fadeIn(duration: 400.ms)
-                  .slideY(begin: 0.1)),
+              _GuidelineCard(crop: e.value, color: color)
+                  .animate(delay: (e.key * 30).ms)
+                  .fadeIn(duration: 350.ms)
+                  .slideY(begin: 0.08)),
           const SizedBox(height: 24),
           _buildSectionTitle(
               theme, 'التقويم الزراعي الشهري (شمال ووسط الدلتا)', color),
           const SizedBox(height: 12),
           ..._monthlyCalendar.asMap().entries.map((e) =>
               _MonthCard(month: e.value, color: color)
-                  .animate(delay: (e.key * 60).ms)
+                  .animate(delay: (e.key * 40).ms)
                   .fadeIn(duration: 400.ms)
-                  .slideY(begin: 0.1)),
+                  .slideY(begin: 0.08)),
           const SizedBox(height: 24),
           _buildSectionTitle(theme, 'نصائح ذهبية للمزارع', color),
           const SizedBox(height: 12),
           ..._goldenTips.asMap().entries.map((e) =>
               _TipCard(tip: e.value, color: color)
-                  .animate(delay: (e.key * 60).ms)
+                  .animate(delay: (e.key * 40).ms)
                   .fadeIn(duration: 400.ms)
-                  .slideY(begin: 0.1)),
+                  .slideY(begin: 0.08)),
           const SizedBox(height: 24),
         ],
       ),
@@ -165,39 +212,63 @@ class _AgriculturalAdvisorScreenState extends State<AgriculturalAdvisorScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          Wrap(
+          const SizedBox(height: 14),
+          const Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
-              for (final category in const [
-                'محاصيل شتوية',
-                'محاصيل صيفية',
-                'أراضي طينية',
-                'ري حديث',
-                'مكافحة متكاملة',
-              ])
-                GestureDetector(
-                  onTap: () => setState(() => _selectedCategory =
-                      _selectedCategory == category ? 'الكل' : category),
-                  child: _Chip(
-                    label: _selectedCategory == category
-                        ? '✓ $category'
-                        : category,
-                    color: _selectedCategory == category
-                        ? Colors.amber
-                        : Colors.white,
-                    // الرقيقة لوحة مصمتة دائما (أبيض أو عنبري) لا سطح السمة،
-                    // فالرسم هنا لا يمر readableInk: الأخضر الداكن فوق
-                    // العنبري 2.14، وحبر الأرضيات العنبرية الموثق 7.93.
-                    textColor: _selectedCategory == category
-                        ? AppColors.onWarning
-                        : color,
-                  ),
-                ),
+              _Chip(label: '🌾 35 محصولاً موثقاً', color: Colors.white, textColor: Color(0xFF2E7D32)),
+              _Chip(label: '🧪 برامج التسميد والمكافحة', color: Colors.white, textColor: Color(0xFF2E7D32)),
+              _Chip(label: '🏛️ مركز البحوث الزراعية', color: Colors.white, textColor: Color(0xFF2E7D32)),
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryFilterRow(Color color) {
+    const categories = [
+      'الكل',
+      'محاصيل شتوية',
+      'محاصيل صيفية',
+      'حبوب وعلف',
+      'بقوليات وزيتية',
+      'خضروات',
+      'فاكهة وأشجار',
+      'محاصيل سكرية',
+      'ري حديث',
+    ];
+    return SizedBox(
+      height: 38,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: categories.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final cat = categories[index];
+          final isSelected = _selectedCategory == cat;
+          return ChoiceChip(
+            label: Text(cat),
+            selected: isSelected,
+            onSelected: (_) => setState(() => _selectedCategory = cat),
+            selectedColor: color,
+            labelStyle: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: isSelected
+                  ? Colors.white
+                  : AppColors.readableInk(
+                      color, Theme.of(context).brightness),
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+              side: BorderSide(
+                color: isSelected ? color : color.withValues(alpha: 0.25),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -224,90 +295,6 @@ class _AgriculturalAdvisorScreenState extends State<AgriculturalAdvisorScreen> {
   }
 }
 
-// ════════════════════════════════════════════════════════════════════
-// البيانات: إرشادات المحاصيل الرئيسية
-// ════════════════════════════════════════════════════════════════════
-
-final List<_CropGuideline> _cropGuidelines = [
-  const _CropGuideline(
-    name: 'القمح',
-    season: 'شتوي (نوفمبر - أبريل)',
-    icon: Icons.grass_rounded,
-    region: 'شمال ووسط الدلتا',
-    soil: 'طينية ثقيلة - جيدة الصرف',
-    irrigation: 'ري بالغمر كل 10-15 يوم / ري حديث كل 5-7 أيام',
-    fertilization:
-        'أزوت: 100-120 كجم/فدان (على 3 دفعات)\nفوسفات: 30-40 كجم P2O5/فدان\nبوتاس: 24 كجم K2O/فدان',
-    pests: 'حشرة الحشد الخريفية، صدأ القمح، بقعة سيبتوريا',
-    varieties: 'جميزة 11، سوهاج 3، مصر 1، سخا 94',
-    yieldTarget: '18-22 أردب/فدان',
-  ),
-  const _CropGuideline(
-    name: 'الأرز',
-    season: 'صيفي (مايو - أكتوبر)',
-    icon: Icons.grass_rounded,
-    region: 'شمال الدلتا (كفر الشيخ، البحيرة، الدقهلية)',
-    soil: 'طينية ثقيلة - تحتفظ بالماء',
-    irrigation: 'غمر مستمر - مستوى ماء 5-10 سم',
-    fertilization:
-        'أزوت: 80-100 كجم/فدان (على دفعتين)\nفوسفات: 30 كجم P2O5/فدان\nزنك: 5 كجم/فدان (كبريتات الزنك)',
-    pests: 'دودة ورق الأرز، حفار الساق، ذبابة الساق، تبقع الأوراق',
-    varieties: 'جيزة 177، جيزة 178، سخا 101، سخا 104',
-    yieldTarget: '3.5-4.5 طن/فدان',
-  ),
-  const _CropGuideline(
-    name: 'الذرة الشامية',
-    season: 'صيفي (أبريل - أغسطس) / نيلي (يوليو - نوفمبر)',
-    icon: Icons.grass_rounded,
-    region: 'شمال ووسط الدلتا',
-    soil: 'طينية صفراء - جيدة التهوية',
-    irrigation: 'ري حديث: كل 3-5 أيام\nري غمر: كل 7-10 أيام',
-    fertilization:
-        'أزوت: 120-150 كجم/فدان (على 3 دفعات)\nفوسفات: 40-50 كجم P2O5/فدان\nبوتاس: 48 كجم K2O/فدان',
-    pests: 'حفار الساق، دودة الحشد الخريفية، ذبابة الساق، لفحة التبقع',
-    varieties: 'هجين 10، هجين 168، هجين 310، توبة 1',
-    yieldTarget: '2.5-3.5 طن/فدان',
-  ),
-  const _CropGuideline(
-    name: 'القطن',
-    season: 'صيفي (مارس - أكتوبر)',
-    icon: Icons.grass_rounded,
-    region: 'وسط الدلتا (الغربية، المنوفية، القليوبية)',
-    soil: 'طينية صفراء - عميقة - جيدة الصرف',
-    irrigation: 'ري حديث: كل 5-7 أيام\nمهم: عدم العطش في طور التزهير والعقد',
-    fertilization:
-        'أزوت: 60-80 كجم/فدان (على دفعتين)\nفوسفات: 30 كجم P2O5/فدان\nبوتاس: 24 كجم K2O/فدان',
-    pests: 'دودة اللوز، دودة الورق، المن، ذبابة الورق، تبقع الأوراق',
-    varieties: 'جيزة 94، جيزة 95، جيزة 96، جيزة 97',
-    yieldTarget: '10-12 قنطار/فدان',
-  ),
-  const _CropGuideline(
-    name: 'فول بلدي',
-    season: 'شتوي (نوفمبر - أبريل)',
-    icon: Icons.grass_rounded,
-    region: 'شمال ووسط الدلتا',
-    soil: 'طينية - جيدة الصرف',
-    irrigation: 'ري غمر كل 15-20 يوم\nري حديث كل 7-10 أيام',
-    fertilization:
-        'أزوت: 15-20 كجم/فدان (بداية النمو)\nفوسفات: 30-40 كجم P2O5/فدان\nبوتاس: 24 كجم K2O/فدان',
-    pests: 'المن، دودة الأوراق، صدأ الفول، عفن الجذور',
-    varieties: 'جيزة 3، جيزة 40، جيزة 843، نوبارية 1',
-    yieldTarget: '12-15 أردب/فدان',
-  ),
-  const _CropGuideline(
-    name: 'بنجر السكر',
-    season: 'شتوي (أكتوبر - مايو)',
-    icon: Icons.grass_rounded,
-    region: 'شمال ووسط الدلتا',
-    soil: 'طينية عميقة - جيدة الصرف - خالية من الحجارة',
-    irrigation: 'ري حديث: كل 5-7 أيام\nمهم: انتظام الري لزيادة نسبة السكر',
-    fertilization:
-        'أزوت: 80-100 كجم/فدان (على دفعتين)\nفوسفات: 40 كجم P2O5/فدان\nبوتاس: 60 كجم K2O/فدان (مهم للسكر)',
-    pests: 'دودة الحشد، المن، عفن الجذور، تبقع الأوراق',
-    varieties: 'جلوريا، مونوفورت، كاسندرا، فيلينا',
-    yieldTarget: '25-30 طن/فدان (نسبة سكر 18-20%)',
-  ),
-];
 
 final List<_MonthGuideline> _monthlyCalendar = [
   const _MonthGuideline(
@@ -442,31 +429,6 @@ final List<String> _goldenTips = [
   '📝 سجل كل عملية (تسميد، ري، رش، حصاد) — التاريخ يعلمك للموسم القادم',
 ];
 
-class _CropGuideline {
-  final String name;
-  final String season;
-  final IconData icon;
-  final String region;
-  final String soil;
-  final String irrigation;
-  final String fertilization;
-  final String pests;
-  final String varieties;
-  final String yieldTarget;
-
-  const _CropGuideline({
-    required this.name,
-    required this.season,
-    required this.icon,
-    required this.region,
-    required this.soil,
-    required this.irrigation,
-    required this.fertilization,
-    required this.pests,
-    required this.varieties,
-    required this.yieldTarget,
-  });
-}
 
 class _MonthGuideline {
   final String month;
@@ -483,79 +445,235 @@ class _MonthGuideline {
 }
 
 class _GuidelineCard extends StatelessWidget {
-  final _CropGuideline guideline;
+  final CropRecord crop;
   final Color color;
-  const _GuidelineCard({required this.guideline, required this.color});
+  const _GuidelineCard({required this.crop, required this.color});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    // عنوان الكارت حبر بحروف 16 ثخين فوق سطح الكارت، فقيمة هذا الأخضر
-    // الداكن على سطح الداكن 3.4 ولا تجتاز 4.5؛ الغسالة 0.15 والإطار 0.3
-    // زخرفيان فيبقى اللون الأصلي فيهما.
     final ink = AppColors.readableInk(color, theme.brightness);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Card(
       elevation: 0,
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 14),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: color.withValues(alpha: 0.3)),
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(color: color.withValues(alpha: isDark ? 0.35 : 0.22)),
       ),
       clipBehavior: Clip.antiAlias,
-      child: ExpansionTile(
-        leading: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(12),
+      child: Theme(
+        data: theme.copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          trailing: Icon(Icons.keyboard_arrow_down_rounded, color: ink, size: 24),
+          leading: Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: color.withValues(alpha: 0.25)),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(11),
+              child: Image.asset(
+                crop.image,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => ColoredBox(
+                  color: color.withValues(alpha: 0.12),
+                  child: Icon(Icons.eco_rounded, color: ink, size: 26),
+                ),
+              ),
+            ),
           ),
-          child: Icon(guideline.icon, color: ink, size: 24),
-        ),
-        title: Text(guideline.name,
-            style: theme.textTheme.titleMedium
-                ?.copyWith(fontWeight: FontWeight.w900, color: ink)),
-        subtitle: Text('${guideline.season} • ${guideline.region}',
-            style: theme.textTheme.bodySmall
-                ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-        tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        expandedCrossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _DetailRow(
+          title: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  crop.name,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    color: ink,
+                    fontSize: 15.5,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  crop.season.contains('شتوي')
+                      ? 'شتوي'
+                      : (crop.season.contains('صيفي') ? 'صيفي' : 'حولي'),
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                    color: ink,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 2),
+              Text(
+                '${crop.nameEn} • ${crop.scientificName}',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontStyle: FontStyle.italic,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: [
+                  _miniPill(theme, Icons.timelapse_rounded, crop.growthPeriod, color),
+                  _miniPill(theme, Icons.grain_rounded, crop.seedRate, color),
+                  _miniPill(theme, Icons.trending_up_rounded, crop.yieldTarget, Colors.amber),
+                ],
+              ),
+            ],
+          ),
+          tilePadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          expandedCrossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Divider(height: 1, thickness: 0.7),
+            const SizedBox(height: 12),
+            if (crop.description.isNotEmpty)
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: color.withValues(alpha: 0.15)),
+                ),
+                child: Text(
+                  crop.description,
+                  style: theme.textTheme.bodyMedium?.copyWith(height: 1.45, fontSize: 12.5),
+                ),
+              ),
+            const SizedBox(height: 8),
+            _DetailRow(
               icon: Icons.location_on_rounded,
-              label: 'المنطقة',
-              value: guideline.region,
-              color: color),
-          _DetailRow(
+              label: 'المنطقة الملائمة',
+              value: crop.region,
+              color: color,
+            ),
+            _DetailRow(
               icon: Icons.terrain_rounded,
-              label: 'نوع التربة',
-              value: guideline.soil,
-              color: color),
-          _DetailRow(
+              label: 'نوع التربة والصرف',
+              value: crop.soilType,
+              color: color,
+            ),
+            _DetailRow(
               icon: Icons.water_drop_rounded,
-              label: 'الري',
-              value: guideline.irrigation,
-              color: color),
-          _DetailRow(
+              label: 'نظام ومواعيد الري',
+              value: crop.irrigation,
+              color: const Color(0xFF1976D2),
+            ),
+            _DetailRow(
               icon: Icons.science_rounded,
-              label: 'التسميد',
-              value: guideline.fertilization,
-              color: color),
-          _DetailRow(
+              label: 'برنامج التسميد الموصى به',
+              value: crop.fertilization,
+              color: const Color(0xFFE65100),
+            ),
+            _DetailRow(
               icon: Icons.bug_report_rounded,
-              label: 'أهم الآفات',
-              value: guideline.pests,
-              color: color),
-          _DetailRow(
+              label: 'أهم الآفات والمكافحة',
+              value: crop.pests,
+              color: const Color(0xFFC62828),
+            ),
+            _DetailRow(
               icon: Icons.eco_rounded,
-              label: 'الأصناف الموصى بها',
-              value: guideline.varieties,
-              color: color),
-          _DetailRow(
-              icon: Icons.trending_up_rounded,
-              label: 'الهدف الإنتاجي',
-              value: guideline.yieldTarget,
-              color: color),
+              label: 'الأصناف والهجن الموصى بها',
+              value: crop.varieties,
+              color: color,
+            ),
+            _DetailRow(
+              icon: Icons.agriculture_rounded,
+              label: 'طريقة ومسافات الزراعة',
+              value: crop.plantingMethod,
+              color: color,
+            ),
+            _DetailRow(
+              icon: Icons.content_cut_rounded,
+              label: 'طريقة وميعاد الحصاد',
+              value: crop.harvestMethod,
+              color: color,
+            ),
+            _DetailRow(
+              icon: Icons.monetization_on_rounded,
+              label: 'الأهمية الاقتصادية',
+              value: crop.economicImportance,
+              color: const Color(0xFFF57F17),
+            ),
+            _DetailRow(
+              icon: Icons.verified_user_rounded,
+              label: 'المرجع والجهة العلمية المعتمدة',
+              value: crop.source,
+              color: color,
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: ink,
+                  side: BorderSide(color: color.withValues(alpha: 0.5)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                ),
+                icon: const Icon(Icons.menu_book_rounded, size: 16),
+                label: const Text(
+                  'عرض صفحة المحصول التخصصية كاملة',
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12),
+                ),
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => CropDetailScreen(crop: crop)),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _miniPill(ThemeData theme, IconData icon, String text, Color accent) {
+    final ink = AppColors.readableInk(accent, theme.brightness);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.09),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: accent.withValues(alpha: 0.25), width: 0.8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: ink),
+          const SizedBox(width: 3.5),
+          Flexible(
+            child: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 9.5,
+                fontWeight: FontWeight.w800,
+                color: ink,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -581,6 +699,7 @@ class _MonthCard extends StatelessWidget {
         side: BorderSide(color: color.withValues(alpha: 0.25)),
       ),
       child: ExpansionTile(
+        trailing: Icon(Icons.keyboard_arrow_down_rounded, color: ink, size: 24),
         leading: CircleAvatar(
           backgroundColor: color.withValues(alpha: 0.15),
           child: Text(month.month.substring(0, 1),

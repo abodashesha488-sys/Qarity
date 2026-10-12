@@ -108,15 +108,6 @@ class _WeatherAdvisoryScreenState extends State<WeatherAdvisoryScreen> {
                           _buildForecastList(context),
                           const SizedBox(height: 20),
                         ],
-                        _buildSectionHeader(
-                          context,
-                          title: 'إرشادات زراعية حسب الطقس الحالي',
-                          subtitle: 'توجيهات ديناميكية فورية وفق مستشعرات الطقس',
-                          icon: Icons.eco_rounded,
-                        ),
-                        const SizedBox(height: 12),
-                        ..._buildWeatherBasedAdvisory(context),
-                        const SizedBox(height: 20),
                         _buildOfficialSourcesBanner(context),
                         const SizedBox(height: 32),
                       ],
@@ -629,6 +620,7 @@ class _WeatherAdvisoryScreenState extends State<WeatherAdvisoryScreen> {
       child: Theme(
         data: theme.copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
+          trailing: Icon(Icons.keyboard_arrow_down_rounded, color: data.color, size: 24),
           initiallyExpanded: data.crop.contains('القمح'),
           tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           leading: Container(
@@ -948,23 +940,6 @@ class _WeatherAdvisoryScreenState extends State<WeatherAdvisoryScreen> {
     if (temp < 10) return '❄️ بارد';
     if (humidity > 80) return '💧 رطب';
     return '☀️ ملائم';
-  }
-
-  List<Widget> _buildWeatherBasedAdvisory(BuildContext context) {
-    if (_current == null) return [];
-    final data = _current!;
-    final main = data['main'] as Map<String, dynamic>;
-    final weather = (data['weather'] as List).first as Map<String, dynamic>;
-    final wind = data['wind'] as Map<String, dynamic>;
-
-    final temp = (main['temp'] as num).toDouble();
-    final humidity = main['humidity'] as int;
-    final windSpeed = (wind['speed'] as num).toDouble();
-    final condition = (weather['main'] as String).toLowerCase();
-
-    final advisories = _generateAdvisories(temp, humidity, windSpeed, condition);
-
-    return advisories.map((a) => _AdvisoryItem(text: a, color: kAgriPrimary)).toList();
   }
 
   // ═════════════════════════════════════════════════════════════════════

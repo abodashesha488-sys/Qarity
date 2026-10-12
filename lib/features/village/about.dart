@@ -405,8 +405,8 @@ class _ContributeCta extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(Icons.arrow_back_ios_new_rounded,
-                  size: 15, color: Colors.white70),
+              const Icon(Icons.keyboard_arrow_down_rounded,
+                  size: 20, color: Colors.white70),
             ],
           ),
         ),
@@ -569,7 +569,7 @@ class _AdminReviewCard extends StatelessWidget {
         subtitle: const Text(
             'اعتماد / رفض / تثبيت على الرئيسية / إشعار المساهم',
             style: TextStyle(fontSize: 10.5)),
-        trailing: const Icon(Icons.arrow_back_ios_new_rounded, size: 14),
+        trailing: const Icon(Icons.keyboard_arrow_down_rounded, size: 20),
         onTap: onTap,
       ),
     );

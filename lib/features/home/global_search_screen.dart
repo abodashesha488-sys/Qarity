@@ -598,7 +598,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                       ),
                     ],
                   )
-                : const Icon(Icons.arrow_back_ios_rounded, size: 14, color: Colors.grey),
+                : const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: Colors.grey),
             onTap: () {
               if (item.onTapCustom != null) {
                 item.onTapCustom!();

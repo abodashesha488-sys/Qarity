@@ -67,18 +67,19 @@ class _NotificationBellButtonState extends State<NotificationBellButton> {
             onPressed: open,
           );
         }
-        // النسخة المضغوطة (هيدر الرئيسية) — كبسولة زمردية بنفس نسق البحث والوقت والتاريخ
+        // النسخة المضغوطة (هيدر الرئيسية) — زر دائري مكبّر دون نص «الإشعارات»
         return Material(
           color: Colors.transparent,
           child: InkWell(
             borderRadius: BorderRadius.circular(999),
             onTap: open,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding: const EdgeInsets.all(7.5),
               decoration: BoxDecoration(
                 color: const Color(0xE604392B),
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
+                shape: BoxShape.circle,
+                border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.45), width: 1.1),
                 boxShadow: const [
                   BoxShadow(
                     color: Color(0x40000000),
@@ -87,36 +88,22 @@ class _NotificationBellButtonState extends State<NotificationBellButton> {
                   ),
                 ],
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Badge(
-                    isLabelVisible: unread > 0,
-                    label: Text(
-                      unread > 99 ? '99+' : '$unread',
-                      style: const TextStyle(
-                        fontSize: 8.5,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                      ),
-                    ),
-                    backgroundColor: const Color(0xFFE53935),
-                    child: const Icon(
-                      Icons.notifications_none_rounded,
-                      size: 14,
-                      color: Color(0xFFFFE082),
-                    ),
+              child: Badge(
+                isLabelVisible: unread > 0,
+                label: Text(
+                  unread > 99 ? '99+' : '$unread',
+                  style: const TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
                   ),
-                  const SizedBox(width: 4),
-                  const Text(
-                    'الإشعارات',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
+                ),
+                backgroundColor: const Color(0xFFE53935),
+                child: const Icon(
+                  Icons.notifications_none_rounded,
+                  size: 21,
+                  color: Color(0xFFFFE082),
+                ),
               ),
             ),
           ),

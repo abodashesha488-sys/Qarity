@@ -1507,7 +1507,7 @@ class _LegalReferenceTab extends StatelessWidget {
                           fontWeight: FontWeight.w600,
                           color: theme.colorScheme.onSurfaceVariant)),
                 ),
-                trailing: const Icon(Icons.chevron_left_rounded, size: 18),
+                trailing: const Icon(Icons.keyboard_arrow_down_rounded, size: 20),
               ),
             ),
           ),

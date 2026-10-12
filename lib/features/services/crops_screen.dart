@@ -12,7 +12,7 @@ class CropsScreen extends StatelessWidget {
   /// حقن اختياري للاختبارات — الافتراضي يخدم الإنتاج.
   final AgricultureContentService? contentService;
 
-  static const List<CropRecord> _crops = [
+  static const List<CropRecord> crops = [
     CropRecord(
       name: 'القمح',
       scientificName: 'Triticum aestivum',
@@ -846,7 +846,7 @@ class CropsScreen extends StatelessWidget {
       ),
       body: GridView.builder(
         padding: const EdgeInsets.all(16),
-        itemCount: _crops.length,
+        itemCount: crops.length,
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
           mainAxisSpacing: 14,
@@ -854,7 +854,7 @@ class CropsScreen extends StatelessWidget {
           childAspectRatio: 0.68,
         ),
         itemBuilder: (context, index) => _CropCard(
-          crop: _crops[index],
+          crop: crops[index],
           color: color,
           index: index,
         ),

@@ -245,7 +245,7 @@ class _InstitutionCard extends StatelessWidget {
                                   color: Colors.black54)),
                         ],
                         const Spacer(),
-                        const Icon(Icons.chevron_left_rounded,
+                        const Icon(Icons.keyboard_arrow_down_rounded,
                             size: 16, color: Colors.black38),
                       ],
                     ),

@@ -303,6 +303,9 @@ class _ServiceProviderDetailScreenState
                       if (provider.isEducational) ...[
                         const SizedBox(height: 10),
                         _teachingCard(theme, provider, accent),
+                      ] else if (provider.category == ServiceCategory.agricultural) ...[
+                        const SizedBox(height: 10),
+                        _agriculturalDetailCard(theme, provider, accent),
                       ],
                       if (provider.description.isNotEmpty) ...[
                         const SizedBox(height: 10),
@@ -643,6 +646,40 @@ class _ServiceProviderDetailScreenState
           if (university.isNotEmpty)
             _factLine(theme, 'جامعي', [university], accent,
                 icon: Icons.account_balance_rounded),
+        ],
+      ),
+    );
+  }
+
+  /// بيانات الخدمة الزراعية والمعدات في كتلة مخصصة.
+  Widget _agriculturalDetailCard(
+      ThemeData theme, ServiceProvider provider, Color accent) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+      decoration: _cardDeco(theme, accent),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.agriculture_rounded, size: 17, color: _ink(accent)),
+              const SizedBox(width: 6),
+              Text('بيانات الخدمة الزراعية والمعدات',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w900, color: _ink(accent))),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (provider.displaySpecialty.isNotEmpty)
+            _factLine(theme, 'نوع الخدمة / المعدة', [provider.displaySpecialty], accent,
+                icon: Icons.handyman_rounded),
+          if (provider.address.isNotEmpty)
+            _factLine(theme, 'نطاق العمل والموقع', [provider.address], const Color(0xFF2E7D32),
+                icon: Icons.location_on_rounded),
+          if (provider.isFeatured)
+            _factLine(theme, 'حالة الاعتماد', ['مزود خدمة معتمد بالقرية ✓'], const Color(0xFFB8860B),
+                icon: Icons.verified_rounded),
         ],
       ),
     );

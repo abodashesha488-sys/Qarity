@@ -1226,39 +1226,36 @@ class _VillageNextPrayerPillState extends State<_VillageNextPrayerPill> {
         const Icon(Icons.mosque_rounded,
             size: 15, color: Color(0xFFFFD54F)),
         const SizedBox(width: 6),
-        Text(
-          'الصلاة القادمة: ${nextPrayer.nameAr}',
-          style: const TextStyle(
+        const Text(
+          'الصلاة القادمة: ',
+          style: TextStyle(
             color: Colors.white,
             fontSize: 12,
             fontWeight: FontWeight.w800,
           ),
         ),
-        const SizedBox(width: 6),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6.5, vertical: 2),
-          decoration: BoxDecoration(
-            color: const Color(0x33FFD54F),
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-              color: const Color(0x77FFD54F),
-              width: 0.8,
-            ),
+        Text(
+          nextPrayer.nameAr,
+          style: const TextStyle(
+            color: Color(0xFF80CBC4),
+            fontSize: 12,
+            fontWeight: FontWeight.w900,
           ),
-          child: Text(
-            remainingText,
-            style: const TextStyle(
-              color: Color(0xFFFFE082),
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-              fontFeatures: [FontFeature.tabularFigures()],
-            ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          remainingText,
+          style: const TextStyle(
+            color: Color(0xFFFFD54F),
+            fontSize: 11.5,
+            fontWeight: FontWeight.w900,
+            fontFeatures: [FontFeature.tabularFigures()],
           ),
         ),
         const SizedBox(width: 4),
         const Icon(
-          Icons.chevron_left_rounded,
-          size: 14,
+          Icons.keyboard_arrow_down_rounded,
+          size: 15,
           color: Colors.white70,
         ),
       ],

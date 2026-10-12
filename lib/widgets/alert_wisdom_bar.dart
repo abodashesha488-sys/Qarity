@@ -198,7 +198,7 @@ class _AlertWisdomBarState extends State<AlertWisdomBar> {
                       ],
                     ),
                   ),
-                  const Icon(Icons.chevron_left_rounded,
+                  const Icon(Icons.keyboard_arrow_down_rounded,
                       color: Colors.white70, size: 20),
                 ],
               ),

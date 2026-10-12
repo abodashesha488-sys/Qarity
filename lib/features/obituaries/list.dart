@@ -389,7 +389,7 @@ class _ObituariesListScreenState extends State<ObituariesListScreen> {
                   ],
                 ),
               ),
-              Icon(Icons.chevron_left_rounded,
+              Icon(Icons.keyboard_arrow_down_rounded,
                   color: theme.colorScheme.onSurfaceVariant, size: 20),
             ],
           ),
