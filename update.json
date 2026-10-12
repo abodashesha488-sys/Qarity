@@ -1,7 +1,7 @@
 {
-  "versionCode": 2046,
-  "versionName": "1.1.46",
+  "versionCode": 2047,
+  "versionName": "1.1.47",
   "apkUrl": "https://github.com/abodashesha488-sys/Qarity/releases/latest/download/Qarity.apk",
   "forceUpdate": false,
-  "releaseNotes": "sync: update"
+  "releaseNotes": "تنسيق هيدر الرئيسية ومنع كاش الويب"
 }
