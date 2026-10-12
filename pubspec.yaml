@@ -2,7 +2,7 @@ name: qurity
 description: "تطبيق قرية أبوديشيشة - التطبيق المجتمعي لخدمة قرى المنطقة"
 publish_to: 'none'
 
-version: 1.1.47+2047
+version: 1.1.48+2048
 
 environment:
   sdk: '>=3.2.0 <4.0.0'
