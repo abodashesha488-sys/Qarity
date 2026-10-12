@@ -178,8 +178,6 @@ class _LawyerDetailScreenState extends State<LawyerDetailScreen> {
                   _infoRow(theme, Icons.schedule_rounded, 'مواعيد العمل',
                       lawyer.workingHours),
                   _infoRow(theme, Icons.phone_rounded, 'الهاتف', lawyer.phone),
-                  _infoRow(theme, Icons.person_rounded, 'مقدّم التسجيل',
-                      lawyer.submittedByName),
                   _infoRow(theme, Icons.history_rounded, 'أُضيف',
                       relativeTimeLabelAr(lawyer.createdAt)),
                 ],

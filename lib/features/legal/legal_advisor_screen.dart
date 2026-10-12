@@ -416,34 +416,40 @@ class LawyerCard extends StatelessWidget {
                       const SizedBox(width: 10),
                       Expanded(
                         flex: 5,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Align(
-                              alignment: AlignmentDirectional.centerStart,
-                              child: FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Text(lawyer.name,
-                                    maxLines: 1,
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.w900,
-                                        fontSize: 15.5,
-                                        color: legalInk(theme.brightness))),
+                        child: Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Align(
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(lawyer.name,
+                                      maxLines: 1,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 15.5,
+                                          color: legalInk(theme.brightness))),
+                                ),
                               ),
-                            ),
-                            if (lawyer.office.isNotEmpty)
-                              Text(lawyer.office,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                      color: theme.colorScheme
-                                          .onSurfaceVariant)),
-                            const SizedBox(height: 4),
-                            if (lawyer.phone.isNotEmpty)
-                              _meta(theme, Icons.phone_rounded, lawyer.phone),
-                          ],
+                              if (lawyer.office.isNotEmpty) ...[
+                                const SizedBox(height: 3),
+                                Text(lawyer.office,
+                                    maxLines: 1,
+                                    textAlign: TextAlign.center,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: theme.colorScheme
+                                            .onSurfaceVariant)),
+                              ],
+                              if (lawyer.phone.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                _meta(theme, Icons.phone_rounded, lawyer.phone),
+                              ],
+                            ],
+                          ),
                         ),
                       ),
                       const SizedBox(width: 8),

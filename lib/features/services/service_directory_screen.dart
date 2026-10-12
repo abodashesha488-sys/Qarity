@@ -1060,11 +1060,16 @@ class _ProviderCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Wrap(
-                  alignment: WrapAlignment.end,
-                  spacing: 3,
-                  runSpacing: 3,
-                  children: _cardChips(theme),
+                Flexible(
+                  child: SingleChildScrollView(
+                    physics: const NeverScrollableScrollPhysics(),
+                    child: Wrap(
+                      alignment: WrapAlignment.end,
+                      spacing: 2.5,
+                      runSpacing: 2.5,
+                      children: _educationalStageChips(theme),
+                    ),
+                  ),
                 ),
                 FittedBox(
                   fit: BoxFit.scaleDown,
@@ -1460,6 +1465,47 @@ class _ProviderCard extends StatelessWidget {
           icon: Icons.location_on_rounded,
         ),
     ];
+  }
+
+  /// رقائق مراحل وتخصص المعلم كاملة للعمود الثالث في كارت المعلم
+  List<Widget> _educationalStageChips(ThemeData theme) {
+    final color = _color;
+    return <Widget>[
+      for (final s in provider.stageChips)
+        _miniStageTag(theme, s, color),
+      for (final t in provider.eduTypes)
+        _miniStageTag(theme, t, const Color(0xFF6A1B9A)),
+      if (provider.offersPrivateTutoring)
+        _miniStageTag(theme, 'تدريس خاص', kEduPrivateTagColor, filled: true),
+    ];
+  }
+
+  Widget _miniStageTag(ThemeData theme, String text, Color color,
+      {bool filled = false}) {
+    final Color ink = filled
+        ? Colors.white
+        : AppColors.inkOn(color, theme.brightness);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4.5, vertical: 1.5),
+      decoration: BoxDecoration(
+        color: filled ? color : color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: color.withValues(alpha: filled ? 1 : 0.35),
+          width: 0.7,
+        ),
+      ),
+      child: Text(
+        text,
+        maxLines: 1,
+        style: TextStyle(
+          fontSize: 8.5,
+          height: 1.2,
+          fontWeight: FontWeight.w800,
+          color: ink,
+        ),
+      ),
+    );
   }
 
   /// رقائق البطاقة: المراحل ثم أنواع التعليم، و«تدريس خاص» في موضعٍ محفوظ،

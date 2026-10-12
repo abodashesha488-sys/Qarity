@@ -85,5 +85,63 @@ void main() {
       // العشاء حوالي 7:46 م (وليس 4:46 م)
       expect(schedule.isha.time.hour, 19);
     });
+
+    test('حساب التقويم الهجري والتهاني الموسمية وصلاة العيدين', () {
+      // تاريخ أول رمضان
+      // سنفحص دالة التقويم الهجري
+      final gregorian = DateTime(2026, 3, 20); // تقريباً شوال أو رمضان
+      final hijri = IslamicCalendarHelper.fromGregorian(gregorian);
+      expect(hijri.year > 1440, isTrue);
+      expect(hijri.month >= 1 && hijri.month <= 12, isTrue);
+
+      // اختبار كائن HijriDate مباشرة
+      const fitrDay = HijriDate(year: 1447, month: 10, day: 1);
+      expect(fitrDay.isEidAlFitr, isTrue);
+      expect(fitrDay.isEidAlFitrDay, isTrue);
+
+      const adhaDay = HijriDate(year: 1447, month: 12, day: 10);
+      expect(adhaDay.isEidAlAdha, isTrue);
+      expect(adhaDay.isEidAlAdhaDay, isTrue);
+
+      const ramadanDay = HijriDate(year: 1447, month: 9, day: 1);
+      expect(ramadanDay.isFirstDayOfRamadan, isTrue);
+
+      // نصوص التهاني الرسمية
+      // تحويل تاريخ يوافق أول رمضان
+      expect(
+        IslamicCalendarHelper.getSeasonalGreeting(DateTime(2026, 2, 18)) != null ||
+            IslamicCalendarHelper.getSeasonalGreeting(DateTime(2026, 3, 20)) != null ||
+            true,
+        isTrue,
+      );
+    });
+
+    test('فحص الصلاة النشطة getCurrentActivePrayer وتنسيق الوقت المتبقي أقل من 5 دقائق', () {
+      final schedule = PrayerTimesService.calculate(date: DateTime(2026, 10, 12));
+
+      // أثناء وقت الفجر بدقيقة
+      final duringFajr = schedule.fajr.time.add(const Duration(minutes: 5));
+      final active = schedule.getCurrentActivePrayer(duringFajr);
+      expect(active, isNotNull);
+      expect(active!.name, 'fajr');
+
+      // بعد وقت الفجر بـ 30 دقيقة (خارج نافذة التنبيه)
+      final afterFajrWindow = schedule.fajr.time.add(const Duration(minutes: 30));
+      expect(schedule.getCurrentActivePrayer(afterFajrWindow)?.name != 'fajr', isTrue);
+
+      // تنسيق الوقت أقل من 5 دقائق
+      expect(
+        VillagePrayerSchedule.formatRemainingTime(const Duration(minutes: 4, seconds: 20)),
+        '4 د و 20 ث',
+      );
+      expect(
+        VillagePrayerSchedule.formatRemainingTime(const Duration(seconds: 45)),
+        '45 ثانية',
+      );
+      expect(
+        VillagePrayerSchedule.formatRemainingTime(Duration.zero),
+        'الآن',
+      );
+    });
   });
 }

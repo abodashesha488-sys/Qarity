@@ -31,6 +31,7 @@ class VillagePrayerSchedule {
   final PrayerTimeEntry asr;
   final PrayerTimeEntry maghrib;
   final PrayerTimeEntry isha;
+  final PrayerTimeEntry? eidPrayer;
 
   const VillagePrayerSchedule({
     required this.date,
@@ -40,13 +41,24 @@ class VillagePrayerSchedule {
     required this.asr,
     required this.maghrib,
     required this.isha,
+    this.eidPrayer,
   });
 
   List<PrayerTimeEntry> get all => [fajr, sunrise, dhuhr, asr, maghrib, isha];
 
-  /// الصلاة القادمة والوقت المتبقي لها
+  List<PrayerTimeEntry> get allWithEid => [
+        fajr,
+        sunrise,
+        if (eidPrayer != null) eidPrayer!,
+        dhuhr,
+        asr,
+        maghrib,
+        isha,
+      ];
+
+  /// الصلاة القادمة والوقت المتبقي لها (تشمل صلاة العيد في يومها)
   (PrayerTimeEntry, Duration) getNextPrayer(DateTime now) {
-    for (final p in all) {
+    for (final p in allWithEid) {
       if (p.time.isAfter(now)) {
         return (p, p.time.difference(now));
       }
@@ -61,13 +73,36 @@ class VillagePrayerSchedule {
     );
   }
 
+  /// الصلاة التي حان وقتها الآن (خلال نافذة 25 دقيقة من دخول الوقت)
+  PrayerTimeEntry? getCurrentActivePrayer(DateTime now) {
+    for (final p in allWithEid.reversed) {
+      if (!p.time.isAfter(now) &&
+          now.isBefore(p.time.add(const Duration(minutes: 25)))) {
+        return p;
+      }
+    }
+    return null;
+  }
+
   static String formatRemainingTime(Duration d) {
+    if (d.isNegative || d.inSeconds <= 0) {
+      return 'الآن';
+    }
     final hours = d.inHours;
     final minutes = d.inMinutes % 60;
+    final seconds = d.inSeconds % 60;
     if (hours > 0 && minutes > 0) {
       return '$hours س و $minutes د';
     } else if (hours > 0) {
       return '$hours س';
+    } else if (d.inMinutes < 5) {
+      if (minutes > 0 && seconds > 0) {
+        return '$minutes د و $seconds ث';
+      } else if (seconds > 0) {
+        return '$seconds ثانية';
+      } else {
+        return '$minutes دقيقة';
+      }
     } else if (minutes > 0) {
       return '$minutes دقيقة';
     } else {
@@ -168,6 +203,25 @@ class PrayerTimesService {
     final maghribHours = localNoon + sunriseHa; // الغروب وزاوية الشروق متناظرتان
     final ishaHours = localNoon + ishaHa;
 
+    // حساب صلاة العيدين طبقاً للشريعة والمواقيت الفلكية المصرية (بعد الشروق بـ 20 دقيقة)
+    final hijri = IslamicCalendarHelper.fromGregorian(target);
+    PrayerTimeEntry? eid;
+    if (hijri.isEidAlFitrDay) {
+      eid = PrayerTimeEntry(
+        name: 'eid_fitr',
+        nameAr: 'صلاة عيد الفطر المبارك',
+        emoji: '🎉',
+        time: _hoursToDateTime(target, sunriseHours + (20.0 / 60.0)),
+      );
+    } else if (hijri.isEidAlAdhaDay) {
+      eid = PrayerTimeEntry(
+        name: 'eid_adha',
+        nameAr: 'صلاة عيد الأضحى المبارك',
+        emoji: '🐑',
+        time: _hoursToDateTime(target, sunriseHours + (20.0 / 60.0)),
+      );
+    }
+
     return VillagePrayerSchedule(
       date: target,
       fajr: PrayerTimeEntry(
@@ -206,6 +260,7 @@ class PrayerTimesService {
         emoji: '🌙',
         time: _hoursToDateTime(target, ishaHours),
       ),
+      eidPrayer: eid,
     );
   }
 
@@ -265,5 +320,99 @@ class PrayerTimesService {
       return DateTime.utc(date.year, date.month, date.day, h % 24, m, s);
     }
     return DateTime(date.year, date.month, date.day, h % 24, m, s);
+  }
+}
+
+/// نموذج التاريخ الهجري
+class HijriDate {
+  final int year;
+  final int month; // 1..12
+  final int day; // 1..30
+
+  const HijriDate({required this.year, required this.month, required this.day});
+
+  String get monthNameAr => switch (month) {
+        1 => 'محرم',
+        2 => 'صفر',
+        3 => 'ربيع الأول',
+        4 => 'ربيع الآخر',
+        5 => 'جمادى الأولى',
+        6 => 'جمادى الآخرة',
+        7 => 'رجب',
+        8 => 'شعبان',
+        9 => 'رمضان',
+        10 => 'شوال',
+        11 => 'ذو القعدة',
+        12 => 'ذو الحجة',
+        _ => '',
+      };
+
+  /// أول أيام شهر رمضان المبارك
+  bool get isFirstDayOfRamadan => month == 9 && day == 1;
+
+  /// أيام عيد الفطر المبارك (1 - 3 شوال)
+  bool get isEidAlFitr => month == 10 && day >= 1 && day <= 3;
+
+  /// يوم صلاة عيد الفطر (1 شوال)
+  bool get isEidAlFitrDay => month == 10 && day == 1;
+
+  /// أيام عيد الأضحى المبارك (10 - 13 ذو الحجة)
+  bool get isEidAlAdha => month == 12 && day >= 10 && day <= 13;
+
+  /// يوم صلاة عيد الأضحى (10 ذو الحجة)
+  bool get isEidAlAdhaDay => month == 12 && day == 10;
+}
+
+/// مساعد الحسابات الفلكية الهجرية والتهاني الرسمية لقرية أبودشيشة
+class IslamicCalendarHelper {
+  /// تحويل التاريخ الميلادي إلى التاريخ الهجري الفلكي المعتمد بمصر
+  static HijriDate fromGregorian(DateTime date) {
+    final y = date.year;
+    final m = date.month;
+    final d = date.day;
+
+    var yy = y;
+    var mm = m;
+    if (mm <= 2) {
+      yy -= 1;
+      mm += 12;
+    }
+    final a = (yy / 100).floor();
+    final b = 2 - a + (a / 4).floor();
+    final jd = (365.25 * (yy + 4716)).floor() +
+        (30.6001 * (mm + 1)).floor() +
+        d +
+        b -
+        1524;
+
+    final l = jd - 1948440 + 10632;
+    final n = ((l - 1) / 10631).floor();
+    final l1 = l - 10631 * n + 354;
+    final j = ((10985 - l1) / 5316).floor() * ((50 * l1) / 17719).floor() +
+        (l1 / 5670).floor() * ((43 * l1) / 15238).floor();
+    final l2 = l1 -
+        ((30 - j) / 15).floor() * ((17719 * j) / 50).floor() -
+        (j / 16).floor() * ((15238 * j) / 43).floor() +
+        29;
+    final hMonth = ((24 * l2) / 709).floor();
+    final hDay = l2 - ((709 * hMonth) / 24).floor();
+    final hYear = 30 * n + j - 30;
+
+    return HijriDate(year: hYear, month: hMonth, day: hDay);
+  }
+
+  /// نص التهنئة الرسمية لجميع المستخدمين عند دخول أول أيام رمضان أو أيام العيدين
+  static String? getSeasonalGreeting(DateTime date) {
+    final h = fromGregorian(date);
+    if (h.isFirstDayOfRamadan) {
+      return 'تطبيق قرية أبودشيشة يهنئكم بحلول شهر رمضان المبارك، تقبل الله منا ومنكم صالح الأعمال 🌙';
+    }
+    if (h.isEidAlFitr) {
+      return 'تطبيق قرية أبودشيشة يهنئكم بحلول عيد الفطر المبارك، وكل عام وأنتم بخير 🎉';
+    }
+    if (h.isEidAlAdha) {
+      return 'تطبيق قرية أبودشيشة يهنئكم بحلول عيد الأضحى المبارك، وكل عام وأنتم بخير 🐑';
+    }
+    return null;
   }
 }

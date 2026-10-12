@@ -18,6 +18,7 @@ import '../../services/cache_service.dart';
 import '../../services/forum_service.dart';
 import '../../services/market_service.dart';
 import '../../services/news_service.dart';
+import '../../services/notification_inbox_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/prayer_times_service.dart';
 import '../../services/update_service.dart';
@@ -339,6 +340,9 @@ class _HomeContentState extends State<HomeContent> {
   // منتجات الرئيسية تعرض الخصم من نفس الوثيقة التي لا تتغيّر عند انتهاء العرض،
   // فنبض الدقيقة يعيد الرسم فقط ليختفي الشارة والسعر المخفّض تلقائيًا.
   Timer? _offerTicker;
+  Timer? _prayerAlertTicker;
+  String? _dismissedPrayerKey;
+  bool _dismissedSeasonalGreeting = false;
 
   @override
   void initState() {
@@ -347,19 +351,77 @@ class _HomeContentState extends State<HomeContent> {
         Timer.periodic(const Duration(minutes: 1), (_) {
           if (mounted) setState(() {});
         });
+    // فحص وقت الصلاة الفعلي كل ثانية لمن هو فاتح للتطبيق أثناء دخول الوقت
+    _prayerAlertTicker =
+        Timer.periodic(const Duration(seconds: 1), (_) {
+          if (mounted) setState(() {});
+        });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAndSendSeasonalGreeting();
+    });
   }
 
   @override
   void dispose() {
     _offerTicker?.cancel();
+    _prayerAlertTicker?.cancel();
     super.dispose();
+  }
+
+  Future<void> _checkAndSendSeasonalGreeting() async {
+    final now = WeatherService.villageNow();
+    final greeting = IslamicCalendarHelper.getSeasonalGreeting(now);
+    if (greeting == null) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final key = 'seasonal_greeting_sent_${now.year}_${now.month}_${now.day}';
+      if (prefs.getBool(key) == true) return;
+      await prefs.setBool(key, true);
+
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid != null && uid.isNotEmpty) {
+        await NotificationInboxService.instance.push(
+          userId: uid,
+          title: 'تهنئة مباركة',
+          body: greeting,
+          kind: 'info',
+        );
+      }
+    } catch (_) {}
   }
 
   @override
   Widget build(BuildContext context) {
+    final now = WeatherService.villageNow();
+    final schedule = PrayerTimesService.calculate(date: now);
+    final activePrayer = schedule.getCurrentActivePrayer(now);
+    final seasonalGreeting = IslamicCalendarHelper.getSeasonalGreeting(now);
+
+    Widget? prayerAlertBanner;
+    if (activePrayer != null) {
+      final prayerKey =
+          '${activePrayer.name}_${now.year}_${now.month}_${now.day}_${activePrayer.time.hour}_${activePrayer.time.minute}';
+      if (_dismissedPrayerKey != prayerKey) {
+        prayerAlertBanner = _VillagePrayerAlertBanner(
+          prayer: activePrayer,
+          onClose: () => setState(() => _dismissedPrayerKey = prayerKey),
+        );
+      }
+    }
+
+    Widget? greetingBanner;
+    if (seasonalGreeting != null && !_dismissedSeasonalGreeting) {
+      greetingBanner = _VillageSeasonalGreetingBanner(
+        message: seasonalGreeting,
+        onClose: () => setState(() => _dismissedSeasonalGreeting = true),
+      );
+    }
+
     return Column(
       children: [
         _HeroHeader(dateLabel: HomeContent._dateLabel()),
+        if (prayerAlertBanner != null) prayerAlertBanner,
+        if (greetingBanner != null) greetingBanner,
         const AlertWisdomBar(),
         const VillageWeatherBar(),
         Expanded(
@@ -1196,13 +1258,25 @@ class _VillageNextPrayerPill extends StatefulWidget {
   State<_VillageNextPrayerPill> createState() => _VillageNextPrayerPillState();
 }
 
-class _VillageNextPrayerPillState extends State<_VillageNextPrayerPill> {
+class _VillageNextPrayerPillState extends State<_VillageNextPrayerPill>
+    with SingleTickerProviderStateMixin {
   Timer? _ticker;
+  late final AnimationController _blinkController;
+  late final Animation<double> _blinkAnimation;
 
   @override
   void initState() {
     super.initState();
-    _ticker = Timer.periodic(const Duration(seconds: 30), (_) {
+    _blinkController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 650),
+    );
+    _blinkAnimation = Tween<double>(begin: 1.0, end: 0.2).animate(
+      CurvedAnimation(parent: _blinkController, curve: Curves.easeInOut),
+    );
+
+    // تحديث كل ثانية لمتابعة العد التنازلي بدقة وبدء الوميض فور الوصول للـ 5 دقائق
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() {});
     });
   }
@@ -1210,6 +1284,7 @@ class _VillageNextPrayerPillState extends State<_VillageNextPrayerPill> {
   @override
   void dispose() {
     _ticker?.cancel();
+    _blinkController.dispose();
     super.dispose();
   }
 
@@ -1220,11 +1295,39 @@ class _VillageNextPrayerPillState extends State<_VillageNextPrayerPill> {
     final (nextPrayer, remaining) = schedule.getNextPrayer(now);
     final remainingText = VillagePrayerSchedule.formatRemainingTime(remaining);
 
+    // عندما يقل الوقت المتبقي عن 5 دقائق، يصبح لونه أحمر ويومض
+    final isUrgent = remaining.inSeconds > 0 &&
+        remaining <= const Duration(minutes: 5);
+
+    if (isUrgent) {
+      if (!_blinkController.isAnimating) {
+        _blinkController.repeat(reverse: true);
+      }
+    } else {
+      if (_blinkController.isAnimating) {
+        _blinkController.stop();
+        _blinkController.value = 0.0;
+      }
+    }
+
+    final timeWidget = Text(
+      remainingText,
+      style: TextStyle(
+        color: isUrgent ? const Color(0xFFFF3B30) : const Color(0xFFFFD54F),
+        fontSize: 11.5,
+        fontWeight: FontWeight.w900,
+        fontFeatures: const [FontFeature.tabularFigures()],
+      ),
+    );
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(Icons.mosque_rounded,
-            size: 15, color: Color(0xFFFFD54F)),
+        Icon(
+          Icons.mosque_rounded,
+          size: 15,
+          color: isUrgent ? const Color(0xFFFF5252) : const Color(0xFFFFD54F),
+        ),
         const SizedBox(width: 6),
         const Text(
           'الصلاة القادمة: ',
@@ -1236,22 +1339,20 @@ class _VillageNextPrayerPillState extends State<_VillageNextPrayerPill> {
         ),
         Text(
           nextPrayer.nameAr,
-          style: const TextStyle(
-            color: Color(0xFF80CBC4),
+          style: TextStyle(
+            color: isUrgent ? const Color(0xFFFF8A80) : const Color(0xFF80CBC4),
             fontSize: 12,
             fontWeight: FontWeight.w900,
           ),
         ),
         const SizedBox(width: 6),
-        Text(
-          remainingText,
-          style: const TextStyle(
-            color: Color(0xFFFFD54F),
-            fontSize: 11.5,
-            fontWeight: FontWeight.w900,
-            fontFeatures: [FontFeature.tabularFigures()],
-          ),
-        ),
+        if (isUrgent)
+          FadeTransition(
+            opacity: _blinkAnimation,
+            child: timeWidget,
+          )
+        else
+          timeWidget,
         const SizedBox(width: 4),
         const Icon(
           Icons.keyboard_arrow_down_rounded,
@@ -1260,6 +1361,182 @@ class _VillageNextPrayerPillState extends State<_VillageNextPrayerPill> {
         ),
       ],
     );
+  }
+}
+
+// ═══════════════ بانر تنبيه حان موعد الصلاة والعيد ═══════════════
+class _VillagePrayerAlertBanner extends StatelessWidget {
+  const _VillagePrayerAlertBanner({
+    required this.prayer,
+    required this.onClose,
+  });
+
+  final PrayerTimeEntry prayer;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final isEid = prayer.name.startsWith('eid');
+    final prayerTitle = isEid ? prayer.nameAr : 'صلاة «${prayer.nameAr}»';
+    final message = 'حان الآن موعد $prayerTitle حسب التوقيت الخاص بقرية أبودشيشة';
+
+    return Container(
+      key: const ValueKey('home-prayer-alert-banner'),
+      margin: const EdgeInsets.fromLTRB(14, 6, 14, 4),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFF04392B),
+            Color(0xFF0A5C44),
+          ],
+          begin: Alignment.centerRight,
+          end: Alignment.centerLeft,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFFFFD54F),
+          width: 1.4,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF04392B).withValues(alpha: 0.35),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFD54F).withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.mosque_rounded,
+              color: Color(0xFFFFD54F),
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w900,
+                height: 1.35,
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              key: const ValueKey('home-prayer-alert-close'),
+              borderRadius: BorderRadius.circular(999),
+              onTap: onClose,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.close_rounded,
+                  color: Colors.white,
+                  size: 16,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ).animate().fadeIn(duration: 400.ms).slideY(begin: -0.2);
+  }
+}
+
+// ═══════════════ بانر التهاني بالمناسبات الإسلامية ═══════════════
+class _VillageSeasonalGreetingBanner extends StatelessWidget {
+  const _VillageSeasonalGreetingBanner({
+    required this.message,
+    required this.onClose,
+  });
+
+  final String message;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const ValueKey('home-seasonal-greeting-banner'),
+      margin: const EdgeInsets.fromLTRB(14, 6, 14, 4),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFF1B5E20),
+            Color(0xFF2E7D32),
+            Color(0xFF0D5338),
+          ],
+          begin: Alignment.centerRight,
+          end: Alignment.centerLeft,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFFFFE082),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF1B5E20).withValues(alpha: 0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          const Text('🌙', style: TextStyle(fontSize: 20)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w800,
+                height: 1.35,
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              key: const ValueKey('home-seasonal-greeting-close'),
+              borderRadius: BorderRadius.circular(999),
+              onTap: onClose,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.close_rounded,
+                  color: Colors.white,
+                  size: 16,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ).animate().fadeIn(duration: 400.ms).slideY(begin: -0.2);
   }
 }
 

@@ -130,4 +130,16 @@ class NotificationInboxService {
       await batch.commit();
     } catch (_) {}
   }
+
+  Future<void> deleteAll(String userId) async {
+    if (userId.isEmpty) return;
+    try {
+      final q = await _col.where('userId', isEqualTo: userId).get();
+      final batch = _firestore.batch();
+      for (final d in q.docs) {
+        batch.delete(d.reference);
+      }
+      await batch.commit();
+    } catch (_) {}
+  }
 }

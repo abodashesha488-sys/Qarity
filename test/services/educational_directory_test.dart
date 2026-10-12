@@ -932,10 +932,6 @@ void main() {
       expect(tester.getSize(image), const Size(104, 104),
           reason: 'إطار البطاقة مثبّت فلا تطول البطاقة بنسبة صورة صاحبها');
 
-      expect(
-          find.descendant(of: card, matching: find.text('+5')),
-          findsOneWidget,
-          reason: 'الرقائق السبع تُعرض ثلاثة: رقيقة مرحلة واحدة + تدريس خاص + العدّ');
       expect(find.descendant(of: card, matching: find.text('تدريس خاص')),
           findsOneWidget);
 
@@ -949,8 +945,8 @@ void main() {
           .where((s) =>
               find.descendant(of: card, matching: find.text(s)).evaluate().isNotEmpty)
           .length;
-      expect(surviving, 1,
-          reason: 'لا تُعرض أكثر من مرحلة — الباقي يُعدّ صراحةً في «+5»');
+      expect(surviving, 4,
+          reason: 'العمود الثالث يحتوي على كافة المراحل الخاصة بالمعلم');
 
       expect(tester.widget<Text>(find.descendant(
               of: card, matching: find.text(description)))

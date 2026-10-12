@@ -29,11 +29,53 @@ class _NotificationsInboxScreenState extends State<NotificationsInboxScreen> {
     });
   }
 
+  Future<void> _confirmDeleteAll() async {
+    if (_uid.isEmpty) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('حذف كافة الإشعارات'),
+        content: const Text(
+            'هل أنت متأكد من حذف جميع الإشعارات المسجلة؟ لا يمكن التراجع عن هذا الإجراء.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.error),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('حذف الكل'),
+          ),
+        ],
+      ),
+    );
+    if (ok == true && mounted) {
+      await _service.deleteAll(_uid);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تم حذف كافة الإشعارات بنجاح')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: const QurityAppBar(title: 'إشعاراتي'),
+      appBar: QurityAppBar(
+        title: 'إشعاراتي',
+        actions: [
+          IconButton(
+            key: const Key('inbox-delete-all'),
+            tooltip: 'حذف كافة الإشعارات',
+            icon: const Icon(Icons.delete_sweep_rounded),
+            onPressed: _confirmDeleteAll,
+          ),
+        ],
+      ),
       body: _uid.isEmpty
           ? const Center(
               child: Text('سجّل الدخول لعرض إشعاراتك',
