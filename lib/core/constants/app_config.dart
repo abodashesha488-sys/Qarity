@@ -3,6 +3,7 @@ class AppConfig {
   // مثال: flutter build web --dart-define=IMGBB_API_KEY=xxxxx
   static const String imgbbApiKey = String.fromEnvironment(
     'IMGBB_API_KEY',
+    defaultValue: '5adf17954a21d7d9146824fde7061c6d',
   );
 
   // البريد الافتراضي للمالك يُقرأ من dart-define (اختياري)، يُستخدم فقط في
