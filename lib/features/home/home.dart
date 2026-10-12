@@ -794,47 +794,53 @@ class _HeroHeader extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(26, 12, 26, 48),
               child: SizedBox(
                 height: kHeroBodyHeight,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // زر البحث وتحته الوقت مباشرة
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const _HeaderSearchButton(),
-                        const SizedBox(height: 4.5),
-                        _pill(child: const _VillageClock()),
-                      ],
-                    ),
-                    const Spacer(),
-                    // زر الإشعارات وتحته التاريخ مباشرة
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        const NotificationBellButton(compact: true),
-                        const SizedBox(height: 4.5),
-                        _pill(
-                          child: Row(
+                child: Center(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: SizedBox(
+                      width: MediaQuery.sizeOf(context).width - 52,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // طرف البحث والوقت على نفس السطر
+                          Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.event_rounded,
-                                  size: 11, color: Color(0xFFFFE082)),
-                              const SizedBox(width: 4),
-                              Text(dateLabel,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w700)),
+                              const _HeaderSearchButton(),
+                              const SizedBox(width: 6),
+                              _pill(child: const _VillageClock()),
                             ],
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 8),
+                          // طرف التاريخ وزر الإشعارات على نفس السطر وغير متلاصقين
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _pill(
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.event_rounded,
+                                        size: 11, color: Color(0xFFFFE082)),
+                                    const SizedBox(width: 4),
+                                    Text(dateLabel,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w700)),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 7),
+                              const NotificationBellButton(compact: true),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),

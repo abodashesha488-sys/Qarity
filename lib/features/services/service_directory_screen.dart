@@ -942,7 +942,7 @@ class _ProviderCard extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(9),
           child: provider.isEducational
-              ? _buildEducational3ColumnCard(theme, color)
+              ? _buildEducationalCard(theme, color)
               : (provider.category == ServiceCategory.agricultural
                   ? _buildAgricultural3ColumnCard(theme, color)
                   : _buildGeneral2ColumnCard(
@@ -975,108 +975,166 @@ class _ProviderCard extends StatelessWidget {
     );
   }
 
-  /// كارت المعلم مقسّم إلى 3 أعمدة بارتفاع مثبّت 5 أسطر:
-  /// 1) الصورة تملأ كامل العمود طولاً وعرضاً بلا اقتصاص.
-  /// 2) الاسم، المادة، نبذة تعريفية.
-  /// 3) التخصص والمراحل التعليمية + أزرار اتصال ومشاركة مصغرة.
-  Widget _buildEducational3ColumnCard(ThemeData theme, Color color) {
-    return SizedBox(
-      height: _kImageSide,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // العمود الأول: الصورة ملء العمود طولاً وعرضاً
-          SizedBox(
-            width: _kImageSide,
-            height: _kImageSide,
-            child: _image(theme, color),
-          ),
-          const SizedBox(width: 8),
-          // العمود الثاني: اسم المعلم، المادة، نبذة تعريفية
-          Expanded(
-            flex: 11,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _headline(theme),
-                if (provider.displaySpecialty.isNotEmpty)
-                  Row(
-                    children: [
-                      Icon(Icons.menu_book_rounded,
-                          size: 11.5,
-                          color: AppColors.inkOn(color, theme.brightness)),
-                      const SizedBox(width: 3.5),
-                      Expanded(
-                        child: Text(
-                          provider.displaySpecialty,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.inkOn(color, theme.brightness),
+  /// كارت المعلم العصري: تصميم احترافي متناسق يبرز هوية المعلم ومادته
+  /// ومراحله التعليمية بوضوح وانسيابية، مع أزرار تواصل وتفاصيل أنيقة.
+  Widget _buildEducationalCard(ThemeData theme, Color color) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 1. القسم العلوي: الصورة الشخصية + المعلومات الأساسية
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // صورة المعلم بإطار مثبّت وأنيق
+            _image(theme, color),
+            const SizedBox(width: 10),
+            // بيانات المعلم الرئيسية
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _headline(theme),
+                  if (provider.displaySpecialty.isNotEmpty) ...[
+                    const SizedBox(height: 5),
+                    _educationalSubjectBadge(theme, color),
+                  ],
+                  if (provider.universityNote.trim().isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.school_outlined,
+                            size: 11.5,
+                            color: theme.colorScheme.onSurfaceVariant),
+                        const SizedBox(width: 3.5),
+                        Expanded(
+                          child: Text(
+                            provider.universityNote.trim(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                if (provider.description.isNotEmpty)
-                  Text(
-                    provider.description,
-                    maxLines: provider.isEducational ? 1 : 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      fontSize: 10,
-                      height: 1.25,
-                      color: theme.colorScheme.onSurfaceVariant,
+                      ],
                     ),
-                  ),
-                if (provider.ratingCount > 0)
-                  Row(
-                    children: [
-                      const Icon(Icons.star_rounded,
-                          size: 11.5, color: Colors.amber),
-                      const SizedBox(width: 2),
-                      Text(
-                        '${provider.rating.toStringAsFixed(1)} (${provider.ratingCount})',
+                  ],
+                  if (provider.description.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      provider.description,
+                      maxLines: provider.isEducational ? 1 : 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontSize: 10.5,
+                        height: 1.3,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                  if (provider.ratingCount > 0) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(Icons.star_rounded,
+                            size: 13, color: Colors.amber),
+                        const SizedBox(width: 2.5),
+                        Text(
+                          '${provider.rating.toStringAsFixed(1)} (${provider.ratingCount})',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.readableInk(
+                                Colors.amber, theme.brightness),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+
+        // 2. شريط المراحل وأنواع التعليم والتدريس الخاص (إن وجدت)
+        if (provider.stageChips.isNotEmpty ||
+            provider.eduTypes.isNotEmpty ||
+            provider.offersPrivateTutoring) ...[
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 4.5,
+            runSpacing: 4.5,
+            children: _educationalStageChips(theme),
+          ),
+        ],
+
+        // 3. الشريط السفلي: العنوان (إن وجد) + أزرار الإجراءات
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            if (provider.address.isNotEmpty)
+              Expanded(
+                child: Row(
+                  children: [
+                    Icon(Icons.location_on_rounded,
+                        size: 12,
+                        color: theme.colorScheme.onSurfaceVariant),
+                    const SizedBox(width: 3),
+                    Expanded(
+                      child: Text(
+                        provider.address,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.readableInk(
-                              Colors.amber, theme.brightness),
+                          fontSize: 10,
+                          color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
-                    ],
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 6),
-          // العمود الثالث: التخصص + المراحل التعليمية + زر اتصال وزر مشاركة
-          Expanded(
-            flex: 10,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Flexible(
-                  child: SingleChildScrollView(
-                    physics: const NeverScrollableScrollPhysics(),
-                    child: Wrap(
-                      alignment: WrapAlignment.end,
-                      spacing: 2.5,
-                      runSpacing: 2.5,
-                      children: _educationalStageChips(theme),
                     ),
-                  ),
+                  ],
                 ),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: AlignmentDirectional.centerEnd,
-                  child: _actions(),
-                ),
-              ],
+              )
+            else
+              const Spacer(),
+            const SizedBox(width: 8),
+            _actions(),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _educationalSubjectBadge(ThemeData theme, Color color) {
+    final Color ink = AppColors.inkOn(color, theme.brightness);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(7),
+        border: Border.all(
+          color: color.withValues(alpha: 0.28),
+          width: 0.8,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.menu_book_rounded, size: 12, color: ink),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              provider.displaySpecialty,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                color: ink,
+              ),
             ),
           ),
         ],
@@ -1467,43 +1525,55 @@ class _ProviderCard extends StatelessWidget {
     ];
   }
 
-  /// رقائق مراحل وتخصص المعلم كاملة للعمود الثالث في كارت المعلم
+  /// رقائق مراحل وتخصص المعلم لكارت المعلم
   List<Widget> _educationalStageChips(ThemeData theme) {
     final color = _color;
     return <Widget>[
       for (final s in provider.stageChips)
-        _miniStageTag(theme, s, color),
+        _miniStageTag(theme, s, color, icon: Icons.school_rounded),
       for (final t in provider.eduTypes)
-        _miniStageTag(theme, t, const Color(0xFF6A1B9A)),
+        _miniStageTag(theme, t, const Color(0xFF6A1B9A),
+            icon: Icons.category_rounded),
       if (provider.offersPrivateTutoring)
-        _miniStageTag(theme, 'تدريس خاص', kEduPrivateTagColor, filled: true),
+        _miniStageTag(theme, 'تدريس خاص', kEduPrivateTagColor,
+            icon: Icons.cast_for_education_rounded, filled: true),
     ];
   }
 
   Widget _miniStageTag(ThemeData theme, String text, Color color,
-      {bool filled = false}) {
+      {IconData? icon, bool filled = false}) {
     final Color ink = filled
         ? Colors.white
         : AppColors.inkOn(color, theme.brightness);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4.5, vertical: 1.5),
+      padding: EdgeInsets.symmetric(
+          horizontal: icon != null ? 6.5 : 5.5, vertical: 2.5),
       decoration: BoxDecoration(
         color: filled ? color : color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(7),
         border: Border.all(
           color: color.withValues(alpha: filled ? 1 : 0.35),
-          width: 0.7,
+          width: 0.8,
         ),
       ),
-      child: Text(
-        text,
-        maxLines: 1,
-        style: TextStyle(
-          fontSize: 8.5,
-          height: 1.2,
-          fontWeight: FontWeight.w800,
-          color: ink,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 10.5, color: ink),
+            const SizedBox(width: 3.5),
+          ],
+          Text(
+            text,
+            maxLines: 1,
+            style: TextStyle(
+              fontSize: 9.5,
+              height: 1.2,
+              fontWeight: FontWeight.w800,
+              color: ink,
+            ),
+          ),
+        ],
       ),
     );
   }
