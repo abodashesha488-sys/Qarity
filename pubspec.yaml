@@ -49,8 +49,10 @@ dev_dependencies:
   fake_cloud_firestore: ^4.2.0
 
 # إصلاح بناء الويب: image_picker_for_web 3.1.1 لا يترجم مع package:web 1.1.x
+# وتثبيت path_provider_foundation على 2.4.1 لتجنب خطأ Out of Memory في هوك objective_c على أندرويد
 dependency_overrides:
   web: ">=1.0.0 <1.1.0"
+  path_provider_foundation: "2.4.1"
 
 flutter:
   uses-material-design: true
