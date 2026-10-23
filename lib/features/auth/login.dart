@@ -47,11 +47,12 @@ class _LoginScreenState extends State<LoginScreen> {
         return _startRedirectSignIn(provider);
       }
     }
-    final GoogleSignInAccount? googleUser = await GoogleSignIn(
-      scopes: const <String>['openid', 'email', 'profile'],
+    final GoogleSignIn googleSignIn = GoogleSignIn(
+      scopes: const <String>['email'],
       serverClientId:
           '339029236820-dge33hdrb7mqg24pb0jhb6fgejol76r6.apps.googleusercontent.com',
-    ).signIn();
+    );
+    final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
     if (googleUser == null) return null; // أُلغيت العملية
     final GoogleSignInAuthentication googleAuth =
         await googleUser.authentication;
