@@ -1,7 +1,7 @@
 {
-  "versionCode": 2048,
-  "versionName": "1.1.48",
+  "versionCode": 2050,
+  "versionName": "1.1.50",
   "apkUrl": "https://github.com/abodashesha488-sys/Qarity/releases/latest/download/Qarity.apk",
   "forceUpdate": false,
-  "releaseNotes": "sync: update"
+  "releaseNotes": "تحسينات استقرار البناء وسياسات الأمان"
 }
