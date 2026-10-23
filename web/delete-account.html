@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>طلب حذف الحساب والبيانات - تطبيق أبودشيشة</title>
+    <style>
+        :root {
+            --primary: #2E7D32;
+            --danger: #c62828;
+            --surface: #ffffff;
+            --background: #f8faf8;
+            --text-primary: #1a1a1a;
+            --text-secondary: #555555;
+            --border: #e0e6e0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Cairo", Tahoma, sans-serif;
+            background-color: var(--background);
+            color: var(--text-primary);
+            line-height: 1.8;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: var(--primary);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        header h1 {
+            margin: 0 0 10px;
+            font-size: 24px;
+        }
+        .container {
+            max-width: 650px;
+            margin: 30px auto;
+            background: var(--surface);
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+            border: 1px solid var(--border);
+        }
+        .danger-box {
+            background: #ffebee;
+            border: 1px solid #ffcdd2;
+            color: #b71c1c;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-top: 15px;
+            margin-bottom: 6px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+        button {
+            margin-top: 25px;
+            width: 100%;
+            background-color: var(--danger);
+            color: white;
+            border: none;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        .footer {
+            text-align: center;
+            padding: 25px 20px;
+            font-size: 13px;
+            color: #777;
+        }
+        .success-message {
+            display: none;
+            background: #e8f5e9;
+            color: #1b5e20;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 15px;
+            font-weight: bold;
+            border: 1px solid #c8e6c9;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>تطبيق أبودشيشة (Qarity)</h1>
+    <p>طلب حذف الحساب والبيانات الشخصية</p>
+</header>
+
+<div class="container">
+    <div class="danger-box">
+        <strong>تنبيه هام:</strong> يؤدي حذف الحساب إلى مسح بيانات ملفك الشخصي وجميع معلوماتك من خوادم التطبيق بصورة نهائية ولا يمكن استرجاعها.
+    </div>
+
+    <p style="font-size: 14px; color: var(--text-secondary);">
+        يمكنك حذف حسابك مباشرة في ثوانٍ من داخل التطبيق عبر صفحة <strong>«الملف الشخصي» &larr; «حذف الحساب نهائياً»</strong>.
+        أو يمكنك تقديم طلب حذف حسابك عبر النموذج أدناه دون فتح التطبيق وسيتم معالجة طلبك وحذف كافة بياناتك في غضون 48 ساعة:
+    </p>
+
+    <div id="successBox" class="success-message">
+        تم استلام طلبك بنجاح. سيتم مراجعة الطلب وحذف حسابك وكافة البيانات المرتبطة به نهائياً خلال 48 ساعة كحد أقصى.
+    </div>
+
+    <form id="deleteForm" onsubmit="handleSubmit(event)">
+        <label for="email">البريد الإلكتروني المسجل في التطبيق:</label>
+        <input type="email" id="email" required placeholder="name@example.com">
+
+        <label for="phone">رقم الهاتف المرتبط بالحساب (اختياري):</label>
+        <input type="tel" id="phone" placeholder="01xxxxxxxxx">
+
+        <label for="reason">سبب الحذف (اختياري):</label>
+        <textarea id="reason" rows="3" placeholder="أخبرنا بالسبب لمساعدتنا في تحسين خدماتنا..."></textarea>
+
+        <button type="submit">تأكيد طلب حذف الحساب نهائياً</button>
+    </form>
+</div>
+
+<div class="footer">
+    <a href="privacy.html" style="color: var(--primary); text-decoration: none;">العودة إلى سياسة الخصوصية</a>
+    <br><br>
+    &copy; 2026 تطبيق أبودشيشة - جميع الحقوق محفوظة
+</div>
+
+<script>
+function handleSubmit(e) {
+    e.preventDefault();
+    var email = document.getElementById('email').value;
+    if (!email) return;
+
+    // إخفاء النموذج وإظهار رسالة النجاح
+    document.getElementById('deleteForm').style.display = 'none';
+    document.getElementById('successBox').style.display = 'block';
+
+    // إرسال إشعار عبر mailto كنسخة احتياطية
+    var subject = encodeURIComponent("طلب حذف حساب في تطبيق أبودشيشة: " + email);
+    var body = encodeURIComponent("البريد الإلكتروني: " + email + "\nرقم الهاتف: " + document.getElementById('phone').value + "\nالسبب: " + document.getElementById('reason').value);
+    
+    // محاولة إرسال بريد
+    window.location.href = "mailto:abudshisha.app@gmail.com?subject=" + subject + "&body=" + body;
+}
+</script>
+
+</body>
+</html>

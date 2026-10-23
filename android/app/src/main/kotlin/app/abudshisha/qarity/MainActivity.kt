@@ -1,4 +1,4 @@
-package com.example.qarity
+package app.abudshisha.qarity
 
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -70,7 +70,6 @@ class MainActivity : FlutterActivity() {
                 addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
             }
 
-            // منح صلاحية قراءة الملف لجميع الأنشطة المطابقة
             val resInfoList = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 packageManager.queryIntentActivities(
                     intent,
@@ -86,7 +85,6 @@ class MainActivity : FlutterActivity() {
                 grantUriPermission(pkgName, contentUri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
 
-            // منح الصلاحية صراحة لمثبتات النظام الشائعة لضمان عدم رفض الوصول عبر التفويض
             val commonInstallers = listOf(
                 "com.google.android.packageinstaller",
                 "com.android.packageinstaller",

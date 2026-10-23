@@ -86,3 +86,6 @@ download/*.apk
 .env.*
 *.env
 !.env.example
+*.jks
+*.keystore
+key.properties

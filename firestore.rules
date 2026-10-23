@@ -124,9 +124,10 @@ service cloud.firestore {
                         && (!('isActive' in request.resource.data)
                             || request.resource.data.isActive == resource.data.isActive));
       // المدير العام يحذف أي حساب. الأدمن المساعد يحذف كل الحسابات
-      // ما عدا حساب المدير العام.
+      // ما عدا حساب المدير العام. والمستخدم يحذف حسابه الخاص طالما لم يكن مديراً عاماً.
       allow delete: if isGeneralAdmin()
-                    || (isAdmin() && resource.data.role != 'admin');
+                    || (isAdmin() && resource.data.role != 'admin')
+                    || (isOwner(userId) && resource.data.role != 'admin');
     }
 
     // ───────────────────────── الأخبار ─────────────────────────
@@ -796,6 +797,13 @@ service cloud.firestore {
       allow write: if isAdmin() ||
         (isAgriculturalAdmin() && request.resource.data.placement in
           ['agri_fertilizers', 'agri_pesticides', 'agri_both']);
+    }
+
+    // ───────────────────────── بلاغات المحتوى المسيء (UGC Reports) ─────────────────────────
+    // إرسال البلاغ مسموح لأي مستخدم مسجل، والقراءة والمراجعة للإدارة فقط
+    match /reports/{docId} {
+      allow create: if isSignedIn();
+      allow read, update, delete: if isAdmin();
     }
   }
 }

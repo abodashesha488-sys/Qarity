@@ -10,6 +10,7 @@ import '../../core/utils/role_style.dart';
 import '../../core/widgets/shared_cards.dart';
 import '../../models/data_models.dart';
 import '../../services/forum_service.dart';
+import '../../services/moderation_service.dart';
 import '../../services/share_service.dart';
 import '../../services/user_service.dart';
 import '../../widgets/owner_actions.dart';
@@ -224,6 +225,16 @@ class _ForumPostDetailScreenState extends State<ForumPostDetailScreen> {
                     : 'منشور من ${passedPost.userName}',
                 body: passedPost.content,
               ),
+            ),
+          if (passedPost != null)
+            ModerationService.instance.buildMoreOptionsButton(
+              context: context,
+              targetType: 'forum_post',
+              targetId: passedPost.id,
+              authorId: passedPost.userId,
+              authorName: passedPost.userName,
+              contentSnippet: passedPost.title.isNotEmpty ? passedPost.title : passedPost.content,
+              onBlocked: () => Navigator.pop(context),
             ),
           // جرس الإشعارات يُضاف تلقائياً من QurityAppBar — لا نكرره هنا.
         ],

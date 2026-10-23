@@ -12,6 +12,7 @@ import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
 import '../../services/cache_service.dart';
 import '../../services/forum_service.dart';
+import '../../services/moderation_service.dart';
 import '../../services/share_service.dart';
 import '../../services/user_service.dart';
 import '../../widgets/offline_stream_builder.dart';
@@ -58,6 +59,9 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
     super.initState();
     _initUser();
     _searchController.addListener(_onSearchChanged);
+    ModerationService.instance.getBlockedUserIds().then((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
@@ -109,6 +113,7 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
 
   List<ForumPost> _applyFilters(List<ForumPost> source) {
     var posts = List<ForumPost>.of(source);
+    posts = posts.where((p) => !ModerationService.instance.isUserBlockedSync(p.userId)).toList();
     if (_topic != 'الكل') {
       posts = posts.where((p) => (p.category.isEmpty ? 'عام' : p.category) == _topic).toList();
     }
@@ -426,6 +431,16 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
                           : 'منشور من ${post.userName}',
                       body: post.content,
                     ),
+                  ),
+                  ModerationService.instance.buildMoreOptionsButton(
+                    context: context,
+                    targetType: 'forum_post',
+                    targetId: post.id,
+                    authorId: post.userId,
+                    authorName: post.userName,
+                    contentSnippet: post.title.isNotEmpty ? post.title : post.content,
+                    onBlocked: () => setState(() {}),
+                    iconColor: theme.colorScheme.onSurfaceVariant,
                   ),
                 ],
               ),

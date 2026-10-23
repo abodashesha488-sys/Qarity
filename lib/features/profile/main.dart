@@ -324,6 +324,75 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> _confirmDeleteAccount() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('حذف الحساب نهائياً'),
+        content: const Text(
+          'هل أنت متأكد من رغبتك في حذف حسابك؟\n\n'
+          'سيؤدي هذا الإجراء إلى حذف بيانات ملفك الشخصي وجميع معلوماتك المسجلة نهائياً ولا يمكن التراجع عن هذه الخطوة.',
+          style: TextStyle(height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            child: const Text('تأكيد الحذف', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(
+          child: Card(
+            child: Padding(
+              padding: EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('جاري حذف الحساب...'),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await _userService.deleteAccount();
+
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تم حذف الحساب بنجاح')),
+        );
+        Navigator.pushNamedAndRemoveUntil(context, AppRoutes.login, (r) => false);
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('تعذر حذف الحساب: $e. قد يتطلب الأمر إعادة تسجيل الدخول أولاً ثم المحاولة.'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -402,6 +471,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   // الساطع يعطي 3.7 مع البياض لا 6.6).
                   backgroundColor: AppColors.error,
                   foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 48,
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _confirmDeleteAccount,
+                icon: const Icon(Icons.delete_forever_rounded, color: AppColors.error),
+                label: const Text(
+                  'حذف الحساب نهائياً',
+                  style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold),
+                ),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: AppColors.error),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
               ),

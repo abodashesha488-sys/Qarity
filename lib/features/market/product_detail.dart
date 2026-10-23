@@ -11,6 +11,7 @@ import '../../core/utils/role_style.dart';
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
 import '../../services/market_service.dart';
+import '../../services/moderation_service.dart';
 import '../../services/product_interaction_service.dart';
 import '../../services/share_service.dart';
 import '../../widgets/full_fit_image.dart';
@@ -175,7 +176,20 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final product = _product!;
 
     return Scaffold(
-      appBar: QurityAppBar(title: product.name),
+      appBar: QurityAppBar(
+        title: product.name,
+        actions: [
+          ModerationService.instance.buildMoreOptionsButton(
+            context: context,
+            targetType: 'product',
+            targetId: product.id,
+            authorId: product.sellerId ?? '',
+            authorName: product.sellerName,
+            contentSnippet: product.name,
+            onBlocked: () => Navigator.pop(context),
+          ),
+        ],
+      ),
       body: RefreshIndicator(
         onRefresh: _refreshProduct,
         color: theme.colorScheme.primary,

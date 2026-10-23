@@ -153,6 +153,29 @@ class UserService {
   }
 
   Future<void> signOut() async => await _auth.signOut();
+
+  /// حذف الحساب نهائياً مع بيانات الملف الشخصي (مطلب إجباري لمتجر Google Play)
+  Future<void> deleteAccount() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+    final uid = user.uid;
+
+    try {
+      await _firestore.collection('users').doc(uid).delete();
+    } catch (e) {
+      debugPrint('Failed to delete user document: $e');
+    }
+
+    try {
+      await _firestore.collection('seller_profiles').doc(uid).delete();
+    } catch (_) {}
+
+    await CacheService.invalidateUser(uid);
+
+    // حذف الحساب من Firebase Auth
+    await user.delete();
+  }
+
   Future<bool> isAdmin(String uid) async {
     final user = await getUser(uid);
     return user?.isAdmin ?? false;

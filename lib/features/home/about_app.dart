@@ -787,15 +787,57 @@ class _AboutScreenState extends State<AboutScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('سياسة الخصوصية'),
-        content: const Text(
-          'نحرص على حماية بياناتك الشخصية؛ تُستخدم اسمك وصورتك ورقمك لإظهار إضافاتك والتواصل داخل القرية فقط، '
-          'ولا تُشارك مع أطراف خارجية دون موافقتك.',
-          style: TextStyle(height: 1.7),
+        title: Row(
+          children: [
+            Icon(Icons.privacy_tip_rounded, color: AppColors.primary, size: 22),
+            const SizedBox(width: 8),
+            const Text('سياسة الخصوصية والأمان'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'نحرص في تطبيق «أبودشيشة» على حماية خصوصية بياناتك الشخصية والتزام أعلى معايير الأمان وسياسات متجر Google Play:\n\n'
+                '• البيانات المجمعة: اسمك وبريدك وصورتك ورقمك وتوكن الإشعارات لتسهيل تقديم الخدمات والتواصل داخل القرية.\n'
+                '• لا نشارك بياناتك إطلاقاً مع أطراف تسويقية أو إعلانية خارجية.\n'
+                '• المحتوى المنشأ بواسطة المستخدمين يخضع لإشراف صارم وتوفير خيارات الإبلاغ والحظر الفوري.\n'
+                '• لك الحق الكامل في حذف حسابك وبياناتك نهائياً في أي وقت من صفحة الملف الشخصي.',
+                style: TextStyle(height: 1.7, fontSize: 13),
+              ),
+              const SizedBox(height: 14),
+              InkWell(
+                onTap: () {
+                  launchUrl(
+                    Uri.parse('https://abudshisha.web.app/privacy.html'),
+                  );
+                },
+                child: Row(
+                  children: [
+                    Icon(Icons.open_in_new_rounded, size: 16, color: AppColors.primary),
+                    const SizedBox(width: 6),
+                    Text(
+                      'عرض وثيقة الخصوصية الكاملة عبر الويب',
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('حسناً')),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('إغلاق'),
+          ),
         ],
       ),
     );
