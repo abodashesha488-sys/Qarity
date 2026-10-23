@@ -616,23 +616,34 @@ class _NewsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Card(
-      elevation: 0,
-      margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-        side: BorderSide(
-            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
+    final isDark = theme.brightness == Brightness.dark;
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? theme.colorScheme.surfaceContainerLow : theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => Navigator.pushNamed(context, AppRoutes.newsView,
-            arguments: item),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () => Navigator.pushNamed(context, AppRoutes.newsView,
+              arguments: item),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -687,7 +698,8 @@ class _NewsCard extends StatelessWidget {
           ),
         ),
       ),
-    ).animate(delay: (index * 45).ms).fadeIn(duration: 350.ms).slideY(begin: 0.06);
+    ),
+  ).animate(delay: (index * 45).ms).fadeIn(duration: 350.ms).slideY(begin: 0.06);
   }
 }
 

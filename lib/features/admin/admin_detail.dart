@@ -406,6 +406,8 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
       'photoUrl': 'صورة السجل',
       'imageUrl': 'الصورة',
       'imageUrls': 'الصور',
+      'isOnOffer': 'عليه عرض',
+      'offerPrice': 'سعر العرض',
     };
     return labels[key] ?? key;
   }

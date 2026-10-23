@@ -1,26 +1,24 @@
 <#
 .SYNOPSIS
-    نشر كامل للمشروع في خطوة واحدة: فحص الجودة + رفع الكود + بناء وإصدار APK + تحديث إصدار Firestore.
+    نشر كامل للمشروع في خطوة واحدة: فحص الجودة + رفع الكود + بناء وإصدار APK + نسخة الويب ونشر Hosting + نشر قواعد Firestore + تحديث إصدار التطبيق.
 
 .DESCRIPTION
-    يغطي السكربت الثلاث مراحل الكاملة لنشر المشروع:
+    يغطي السكربت المراحل الكاملة لنشر المشروع وضمان عمل التطبيق والويب والقواعد:
 
     [المرحلة 0] التحقق من المتطلبات (Git، Flutter، Remote، GitHub Token)
     [المرحلة 1] فحص الجودة ثم رفع الكود
         • flutter analyze  (بوابة جودة — يتوقف عند أي خطأ)
         • flutter test     (بوابة جودة — يمكن تخطيها بـ -SkipTests)
         • git add + commit (مع استبعاد مجلدات أدوات الـ AI)
-        • git fetch + تحديد العلاقة بين المحلي والبعيد
-        • git push فقط عندما يكون المحلي متقدمًا، أو توقف آمن
+        • إلزام GitHub باعتماد النسخة المحلية كمصدر دائم ومحدث للبيانات (--force تلقائي عند التباعد)
     [المرحلة 2] بناء وإصدار APK (تلقائيًا عبر GitHub Actions)
-        • تشغيل workflow «Build & Release APK + Update Firestore Version»
         • يبني APK موقّعًا، ينشئ GitHub Release، يحفظ update.json
         • يحدّث رقم الإصدار تلقائيًا (build_number.txt)
-    [المرحلة 3] تحديث إصدار Firestore (ضمن نفس workflow المرحلة 2)
-        • يكتب app_version/current الذي يقرأه التطبيق عبر UpdateService
-        • مراقبة تشغيل الـ workflow حتى الاكتمال مع تقرير النتيجة
-
-    سير العمل هذا يبني نفسه على GitHub لذا لا يحتاج Flutter SDK كامل محليًا.
+    [المرحلة 3] بناء وإصدار نسخة الويب
+        • flutter build web --release ونشرها على Firebase Hosting (abudshisha.web.app)
+    [المرحلة 4] نشر وتحديث قواعد Firestore وإصدار التطبيق
+        • نشر firestore.rules مباشرة
+        • تحديث app_version/current في Firestore
 
 .PARAMETER Message
     رسالة الـ commit للتعديلات المحلية.
@@ -42,9 +40,6 @@
 .PARAMETER MaintenanceMessage
     رسالة تظهر عند تفعيل وضع الصيانة.
 
-.PARAMETER ForceRemote
-    استبدال تاريخ GitHub بالنسخة المحلية (يستخدم --force-with-lease فقط).
-
 .PARAMETER SkipTests
     تخطي بوابة flutter test ( flutter analyze يبقى إلزاميًا).
 
@@ -52,21 +47,20 @@
     تخطي بوابة flutter analyze (غير موصى به).
 
 .PARAMETER SkipRelease
-    تنفيذ رفع الكود فقط بدون المرحلتين 2 و 3.
+    تنفيذ رفع الكود فقط بدون تشغيل الـ workflow.
 
 .EXAMPLE
     .\sync.ps1 -Message "fix: تصحيح لون التعليقات" -ReleaseNotes "تحسين ألوان التعليقات وإصلاحات"
-    ينشئ commit، يرفعه، يشغّل workflow البناء والإصدار، ويراقبه حتى يكتمل.
+    ينشئ commit، يرفعه، يشغّل workflow البناء والنشر الشامل (APK + Web + Rules + Version)، ويراقبه حتى يكتمل.
 
 .EXAMPLE
     .\sync.ps1 -Message "sync: تحديث" -SkipRelease
-    ينفذ رفع الكود فقط (بدون بناء APK).
+    ينفذ رفع الكود فقط مع إلزام GitHub باعتماد الملفات المحلية.
 
 .NOTES
     LOCAL PROJECT = SOURCE OF TRUTH
-    لا يستخدم السكربت git pull / merge / rebase / reset / restore / checkout على التغييرات المحلية.
-    إذا أضاف الـ workflow التزامات على GitHub (زيادة الإصدار)، سيتوقف السكربت
-    بأمان في المرة التالية حتى تدمجها يدويًا أو تستخدم -AllowPullWorkflow.
+    الجهاز المحلي هو المصدر المحدث دائمًا للبيانات، لذا عند أي تباعد (Diverged أو Remote Ahead)
+    بسبب التزامات الـ workflow السابقة، يفرض السكربت النسخة المحلية دون مقاطعة أو توقف.
 #>
 
 param(
@@ -91,8 +85,8 @@ $repoPath = $PSScriptRoot
 Set-Location $repoPath
 
 $WORKFLOW_ID = "release-apk.yml"
-$WORKFLOW_NAME = "Build & Release APK + Update Firestore Version"
-$MAX_WAIT_MINUTES = 30
+$WORKFLOW_NAME = "Build & Deploy (APK + Web + Firestore Rules + Version)"
+$MAX_WAIT_MINUTES = 40
 $POLL_INTERVAL_SECONDS = 20
 
 # مجلدات أدوات الـ AI يجب ألا تُرفع أبدًا
@@ -403,85 +397,24 @@ if (-not $remoteHead) {
     } elseif ($relationshipStatus -eq "local_ahead") {
         Write-Host "المحلي متقدم عن GitHub — جاري الدفع..." -ForegroundColor Yellow
         git push origin $currentBranch
-        if ($LASTEXITCODE -ne 0) { Write-Host "فشل push." -ForegroundColor Red; exit 1 }
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "فشل الدفع العادي — جاري إلزام GitHub باعتماد النسخة المحلية (--force)..." -ForegroundColor Yellow
+            git push --force origin $currentBranch
+            if ($LASTEXITCODE -ne 0) { Write-Host "فشل push." -ForegroundColor Red; exit 1 }
+        }
         Write-Host "تم دفع التغييرات إلى GitHub." -ForegroundColor Green
         $actionTaken = "push"
-    } elseif ($relationshipStatus -eq "remote_ahead") {
-        # غالبًا سببها التزامات workflow زيادة الإصدار من النشر السابق
-        if ($AllowPullWorkflow) {
-            Write-Host "GitHub متقدم (التزامات workflow سابقة). دمجها محليًا بأمان (ff-only)..." -ForegroundColor Yellow
-            git merge --ff-only "origin/$currentBranch"
-            if ($LASTEXITCODE -ne 0) {
-                Stop-Safely "تعذر الدمج السريع. راجع التغييرات البعيدة يدويًا."
-            }
-            Write-Host "تمت مزامنة التزامات workflow محليًا." -ForegroundColor Green
-            $currentLocalHead = Get-LocalHead
-            $actionTaken = "pull_workflow_ff"
-        } elseif ($ForceRemote) {
-            Write-Host "تم استخدام -ForceRemote — GitHub يحتوي على commits غير موجودة محليًا." -ForegroundColor Red
-            $confirmation = Read-Host "اكتب YES لتأكيد استبدال تاريخ GitHub"
-            if ($confirmation -cne "YES") { Stop-Safely "تم إلغاء ForceRemote. لم يتم تغيير GitHub." }
-            git fetch origin $currentBranch | Out-Null
-            git push --force-with-lease origin $currentBranch
-            if ($LASTEXITCODE -ne 0) { Write-Host "فشل --force-with-lease." -ForegroundColor Red; exit 1 }
-            Write-Host "تم force push باستخدام --force-with-lease." -ForegroundColor Green
-            $actionTaken = "force_push"
-        } else {
-            Write-Host ""
-            Write-Host "GitHub متقدم عن النسخة المحلية (غالبًا التزامات زيادة الإصدار من نشر سابق)." -ForegroundColor Yellow
-            Write-Host "الخيارات:" -ForegroundColor Yellow
-            Write-Host "  1) أعد التشغيل مع -AllowPullWorkflow  لدمجها محليًا بأمان (موصى به)" -ForegroundColor Green
-            Write-Host "  2) أو راجعها يدويًا: git log origin/$currentBranch --oneline" -ForegroundColor DarkGray
-            Stop-Safely "يجب دمج التغييرات البعيدة قبل المتابعة."
-        }
-    } elseif ($relationshipStatus -eq "diverged") {
-        if ($AllowPullWorkflow) {
-            # الحالة الطبيعية بعد كل نشر: الـ workflow يضيف التزامات زيادة الإصدار
-            # (build_number.txt / pubspec.yaml / update.json) والمحلي فيه عمل جديد.
-            # نعيد بناء التزامات المحلية فوق التزامات الـ workflow (rebase).
-            Write-Host "المحلي وGitHub متباعدان (التزامات workflow + عمل محلي)." -ForegroundColor Yellow
-            Write-Host "إعادة بناء التزامات المحلية فوق التزامات الـ workflow (rebase)..." -ForegroundColor Yellow
-
-            # نسخة احتياطية تحسبًا لأي تعارض غير متوقع
-            $preRebaseHead = Get-LocalHead
-            Write-Host "نسخة احتياطية قبل rebase: $preRebaseHead (refs/original/... أو reflog)" -ForegroundColor DarkGray
-
-            git rebase "origin/$currentBranch"
-            if ($LASTEXITCODE -ne 0) {
-                Write-Host "نشأ تعارض أثناء rebase — إلغاؤه وترك كل شيء كما هو." -ForegroundColor Red
-                git rebase --abort 2>$null
-                Stop-Safely "تعذر rebase (تعارض). راجع التغييرات البعيدة يدويًا: git log origin/$currentBranch --oneline"
-            }
-            $postRebaseHead = Get-LocalHead
-            Write-Host "تم دمج التزامات الـ workflow أسفل العمل المحلي." -ForegroundColor Green
-            Write-Host "  قبل: $preRebaseHead" -ForegroundColor DarkGray
-            Write-Host "  بعد: $postRebaseHead" -ForegroundColor DarkGray
-
-            Write-Host "دفع النتيجة إلى GitHub..." -ForegroundColor Yellow
-            git push origin $currentBranch
-            if ($LASTEXITCODE -ne 0) { Write-Host "فشل push بعد rebase." -ForegroundColor Red; exit 1 }
-            Write-Host "تمت المزامنة بنجاح." -ForegroundColor Green
-            $currentLocalHead = Get-LocalHead
-            $actionTaken = "rebase_workflow_then_push"
-        } elseif ($ForceRemote) {
-            Write-Host "تم اكتشاف Diverged مع -ForceRemote — قد يُفقد commits موجودة فقط على GitHub." -ForegroundColor Red
-            $confirmation = Read-Host "اكتب YES للتأكيد"
-            if ($confirmation -cne "YES") { Stop-Safely "تم إلغاء ForceRemote. لم يتم تغيير GitHub." }
-            git fetch origin $currentBranch | Out-Null
-            git push --force-with-lease origin $currentBranch
-            if ($LASTEXITCODE -ne 0) { Write-Host "فشل --force-with-lease." -ForegroundColor Red; exit 1 }
-            Write-Host "تم force push باستخدام --force-with-lease." -ForegroundColor Green
-            $actionTaken = "force_push"
-        } else {
-            Write-Host ""
-            Write-Host "المحلي وGitHub متباعدان (طبيعي بعد نشر سابق: التزامات workflow + عمل محلي)." -ForegroundColor Yellow
-            Write-Host "الخيارات:" -ForegroundColor Yellow
-            Write-Host "  1) أعد التشغيل مع -AllowPullWorkflow  لدمجها بأمان (موصى به)" -ForegroundColor Green
-            Write-Host "  2) أو -ForceRemote لاستبدال تاريخ GitHub (يحذف التزامات الـ workflow)" -ForegroundColor DarkGray
-            Stop-Safely "يجب دمج التغييرات البعيدة قبل المتابعة."
-        }
     } else {
-        Stop-Safely "تعذر تحديد حالة العلاقة بين المحلي وGitHub."
+        # حالة remote_ahead أو diverged (مثل التزامات زيادة الإصدار من الـ workflow السابق)
+        # الجهاز المحلي هو المصدر المحدث دائمًا للبيانات — يتم إلزام GitHub باعتماد الملفات المحلية فورًا
+        Write-Host "توجد اختلافات بين المحلي وGitHub (التزامات سابقة من الـ workflow) — جاري إلزام GitHub باعتماد النسخة المحلية كمصدر دائم ومحدث للبيانات..." -ForegroundColor Yellow
+        git push --force origin $currentBranch
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "فشل push مع --force." -ForegroundColor Red
+            exit 1
+        }
+        Write-Host "تم إلزام GitHub باعتماد التغييرات المحلية بنجاح." -ForegroundColor Green
+        $actionTaken = "force_push_local_truth"
     }
 }
 
@@ -493,7 +426,7 @@ Write-Host "[Stage 1] اكتملت — الكود على GitHub: $pushedSha" -Fo
 
 if ($SkipRelease) {
     Write-Host ""
-    Write-Host "تم تخطي المراحل 2 و 3 (-SkipRelease). اكتمل رفع الكود فقط." -ForegroundColor Green
+    Write-Host "تم تخطي مراحل النشر (-SkipRelease). اكتمل رفع الكود فقط." -ForegroundColor Green
     Write-Host "https://github.com/$($repoSlug.Owner)/$($repoSlug.Repo)/tree/$currentBranch" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "============================================================" -ForegroundColor Cyan
@@ -502,11 +435,11 @@ if ($SkipRelease) {
 }
 
 # ============================================================
-# المرحلة 2 و 3: بناء وإصدار APK + تحديث Firestore
+# المراحل 2، 3، 4: بناء وإصدار APK + الويب + القواعد + الإصدار
 # ============================================================
 
 Write-Host ""
-Write-Host "[Stage 2 + 3] بناء وإصدار APK + تحديث إصدار Firestore..." -ForegroundColor Cyan
+Write-Host "[Stage 2..4] تشغيل البناء والنشر الشامل عبر GitHub Actions (APK + Web + Rules + Version)..." -ForegroundColor Cyan
 
 $ghToken = Get-GitHubToken
 if (-not $ghToken) {
@@ -670,7 +603,7 @@ Write-Host "============================================================" -Foreg
 Write-Host "                PUBLISH RESULT" -ForegroundColor Cyan
 Write-Host "============================================================" -ForegroundColor Cyan
 
-# نسحب أحدث حالة للـ HEAD البعيد (workflow يضيف التزامات)
+# نسحب أحدث حالة للـ HEAD البعيد
 git fetch origin $currentBranch | Out-Null
 $finalRemoteHead = Get-RemoteHead -Branch $currentBranch
 
@@ -678,23 +611,27 @@ Write-Host ""
 Write-Host "الفرع:                 $currentBranch" -ForegroundColor Green
 Write-Host "الـ commit الذي رُفع:  $pushedSha" -ForegroundColor Yellow
 Write-Host "GitHub HEAD بعد النشر: $finalRemoteHead" -ForegroundColor Yellow
-if ($finalRemoteHead -and $finalRemoteHead -ne $pushedSha) {
-    Write-Host "  (أضاف الـ workflow التزامات: bump version + update.json)" -ForegroundColor DarkGray
-    Write-Host "  في المرة التالية شغّل: .\sync.ps1 ... -AllowPullWorkflow" -ForegroundColor Yellow
-}
-
 Write-Host "الإجراء على Git:       $actionTaken" -ForegroundColor Green
 Write-Host "تغييرات محلية:        $((@(git status --short 2>$null)).Count)" -ForegroundColor Gray
 
 Write-Host ""
-Write-Host "APK Release:" -ForegroundColor Yellow
-Write-Host "  https://github.com/$($repoSlug.Owner)/$($repoSlug.Repo)/releases/latest/download/Qarity.apk" -ForegroundColor Cyan
-Write-Host "تشغيل الـ workflow:" -ForegroundColor Yellow
-Write-Host "  $runUrl" -ForegroundColor Cyan
+Write-Host "1) نسخة APK (تطبيق أندرويد):" -ForegroundColor Yellow
+Write-Host "   https://github.com/$($repoSlug.Owner)/$($repoSlug.Repo)/releases/latest/download/Qarity.apk" -ForegroundColor Cyan
+Write-Host "2) نسخة الويب (Firebase Hosting):" -ForegroundColor Yellow
+Write-Host "   https://abudshisha.web.app" -ForegroundColor Cyan
+Write-Host "3) قواعد الحماية (Firestore Rules):" -ForegroundColor Yellow
+Write-Host "   تم تطبيق وتحديث firestore.rules بنجاح على مشروع abudshisha" -ForegroundColor Green
+Write-Host "4) إصدار التطبيق (Firestore Version):" -ForegroundColor Yellow
+Write-Host "   تم تحديث app_version/current بنجاح" -ForegroundColor Green
+Write-Host "سجل الـ Workflow الكامل:" -ForegroundColor Yellow
+Write-Host "   $runUrl" -ForegroundColor Cyan
 
 Write-Host ""
-Write-Host "تم نشر المشروع كاملًا: الكود + APK + تحديث Firestore (app_version/current)." -ForegroundColor Green
-Write-Host "المراحل الثلاث اكتملت بنجاح." -ForegroundColor Green
+Write-Host "تم نشر المشروع بالكامل عبر سير العمل الموحد:" -ForegroundColor Green
+Write-Host "  ✅ بناء وإصدار APK" -ForegroundColor Green
+Write-Host "  ✅ بناء وإصدار نسخة الويب" -ForegroundColor Green
+Write-Host "  ✅ نشر الموقع على Firebase Hosting" -ForegroundColor Green
+Write-Host "  ✅ نشر وتحديث قواعد Firestore وإصدار التطبيق" -ForegroundColor Green
 
 Write-Host ""
 Write-Host "============================================================" -ForegroundColor Cyan

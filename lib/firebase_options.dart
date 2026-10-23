@@ -19,7 +19,7 @@ class DefaultFirebaseOptions {
       case TargetPlatform.android:
         return const FirebaseOptions(
           apiKey: 'AIzaSyCMeydEO6IX_YtiR-kynhCBc5YFqxLbo3A',
-          appId: '1:339029236820:android:b7a97499104509fdaba1c1',
+          appId: '1:339029236820:android:b94448736c8c5296aba1c1',
           messagingSenderId: '339029236820',
           projectId: 'abudshisha',
           storageBucket: 'abudshisha.firebasestorage.app',

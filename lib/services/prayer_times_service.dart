@@ -73,11 +73,11 @@ class VillagePrayerSchedule {
     );
   }
 
-  /// الصلاة التي حان وقتها الآن (خلال نافذة 25 دقيقة من دخول الوقت)
+  /// الصلاة التي حان وقتها الآن (خلال نافذة 5 دقائق من دخول الوقت)
   PrayerTimeEntry? getCurrentActivePrayer(DateTime now) {
     for (final p in allWithEid.reversed) {
       if (!p.time.isAfter(now) &&
-          now.isBefore(p.time.add(const Duration(minutes: 25)))) {
+          now.isBefore(p.time.add(const Duration(minutes: 5)))) {
         return p;
       }
     }

@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/utils/helpers.dart';
+import '../../core/utils/launch_link.dart';
 import '../../core/utils/relative_time.dart';
 import '../../models/village_ad_model.dart';
 import '../../routes/app_routes.dart';
@@ -315,105 +317,158 @@ class VillageAdCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Card(
-      elevation: 0,
-      margin: EdgeInsets.zero,
-      clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-        side: BorderSide(color: kVillageAdsColor.withValues(alpha: 0.28)),
+    final isDark = theme.brightness == Brightness.dark;
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? theme.colorScheme.surfaceContainerLow : theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: kVillageAdsColor.withValues(alpha: 0.25),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
-      child: InkWell(
-        onTap: onTap,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AdPhotoFrame(
-              imageUrl: ad.imageUrl,
-              height: kVillageAdCardImageHeight,
-              accent: kVillageAdsColor,
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      _KindMark(kind: ad.kind),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(ad.title,
+      clipBehavior: Clip.antiAlias,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: onTap,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AdPhotoFrame(
+                imageUrl: ad.imageUrl,
+                height: kVillageAdCardImageHeight,
+                accent: kVillageAdsColor,
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        _KindMark(kind: ad.kind),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            ad.title,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
-                                fontWeight: FontWeight.w900, fontSize: 16.5)),
-                      ),
-                    ],
-                  ),
-                  if (ad.businessName.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(ad.businessName,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 16,
+                              height: 1.3,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (ad.businessName.isNotEmpty) ...[
+                      const SizedBox(height: 5),
+                      Text(
+                        ad.businessName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w800,
-                            color: adsInk(theme.brightness))),
-                  ],
-                  if (ad.description.isNotEmpty) ...[
-                    const SizedBox(height: 7),
-                    Text(ad.description,
-                        maxLines: 4,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w800,
+                          color: adsInk(theme.brightness),
+                        ),
+                      ),
+                    ],
+                    if (ad.description.isNotEmpty) ...[
+                      const SizedBox(height: 7),
+                      Text(
+                        ad.description,
+                        maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                            fontSize: 13.5,
-                            height: 1.6,
-                            fontWeight: FontWeight.w600,
-                            color: theme.colorScheme.onSurfaceVariant)),
-                  ],
-                  const SizedBox(height: 9),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 5,
-                    children: [
-                      if (ad.location.isNotEmpty)
-                        _Meta(icon: Icons.place_rounded, text: ad.location),
-                      if (ad.phone.isNotEmpty)
-                        _Meta(icon: Icons.phone_rounded, text: ad.phone),
-                      _Meta(
-                          icon: Icons.schedule_rounded,
-                          text: relativeTimeLabelAr(ad.createdAt)),
+                          fontSize: 13,
+                          height: 1.55,
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
                     ],
-                  ),
-                  if (showStatus) ...[
                     const SizedBox(height: 10),
                     Row(
                       children: [
-                        _StatusMark(approved: ad.isApproved),
-                        const Spacer(),
-                        if (onEdit != null)
-                          IconButton(
-                            key: Key('ad-edit-${ad.id}'),
-                            tooltip: 'تعديل الإعلان',
-                            icon: const Icon(Icons.edit_rounded, size: 19),
-                            onPressed: onEdit,
+                        Expanded(
+                          child: Wrap(
+                            spacing: 12,
+                            runSpacing: 5,
+                            children: [
+                              if (ad.location.isNotEmpty)
+                                _Meta(icon: Icons.place_rounded, text: ad.location),
+                              if (ad.phone.isNotEmpty)
+                                _Meta(icon: Icons.phone_rounded, text: ad.phone),
+                              _Meta(
+                                icon: Icons.schedule_rounded,
+                                text: relativeTimeLabelAr(ad.createdAt),
+                              ),
+                            ],
                           ),
-                        if (onDelete != null)
-                          IconButton(
-                            key: Key('ad-delete-${ad.id}'),
-                            tooltip: 'حذف الإعلان',
-                            icon: Icon(Icons.delete_outline_rounded,
-                                size: 19, color: theme.colorScheme.error),
-                            onPressed: onDelete,
+                        ),
+                        if (ad.phone.isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          FilledButton.icon(
+                            onPressed: () async {
+                              final err = await launchPhoneCall(ad.phone);
+                              if (err != null && context.mounted) {
+                                AppHelpers.showToast(err, isError: true);
+                              }
+                            },
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFF2E7D32),
+                              foregroundColor: Colors.white,
+                              visualDensity: VisualDensity.compact,
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            icon: const Icon(Icons.call_rounded, size: 14),
+                            label: const Text('اتصال', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800)),
                           ),
+                        ],
                       ],
                     ),
+                    if (showStatus) ...[
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          _StatusMark(approved: ad.isApproved),
+                          const Spacer(),
+                          if (onEdit != null)
+                            IconButton(
+                              key: Key('ad-edit-${ad.id}'),
+                              tooltip: 'تعديل الإعلان',
+                              icon: const Icon(Icons.edit_rounded, size: 19),
+                              onPressed: onEdit,
+                            ),
+                          if (onDelete != null)
+                            IconButton(
+                              key: Key('ad-delete-${ad.id}'),
+                              tooltip: 'حذف الإعلان',
+                              icon: Icon(Icons.delete_outline_rounded,
+                                  size: 19, color: theme.colorScheme.error),
+                              onPressed: onDelete,
+                            ),
+                        ],
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

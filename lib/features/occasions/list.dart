@@ -221,95 +221,173 @@ class _OccasionsListScreenState extends State<OccasionsListScreen> {
 
   Widget _buildOccasionCard(ThemeData theme, Occasion occasion, int index) {
     final soon = _isSoon(occasion);
-    return Card(
-      elevation: 0,
-      margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
+    final isDark = theme.brightness == Brightness.dark;
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: soon
+              ? theme.colorScheme.error.withValues(alpha: 0.35)
+              : (isDark
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : theme.colorScheme.outlineVariant.withValues(alpha: 0.45)),
+          width: soon ? 1.2 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: (soon ? theme.colorScheme.error : (isDark ? Colors.black : theme.colorScheme.primary))
+                .withValues(alpha: isDark ? 0.2 : (soon ? 0.08 : 0.04)),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => Navigator.pushNamed(context, AppRoutes.occasionsDetail, arguments: occasion),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(14),
-                child: SizedBox(width: 64, height: 64, child: _thumb(occasion, theme)),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(occasion.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900)),
-                        ),
-                        if (soon)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.error,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Text('قريباً',
-                                style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800)),
-                          ),
-                      ],
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => Navigator.pushNamed(context, AppRoutes.occasionsDetail, arguments: occasion),
+          child: Padding(
+            padding: const EdgeInsets.all(13),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(15),
+                  child: Container(
+                    width: 66,
+                    height: 66,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(15),
+                      border: Border.all(
+                        color: theme.colorScheme.primary.withValues(alpha: 0.15),
+                      ),
                     ),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        Icon(Icons.event_rounded, size: 14, color: theme.colorScheme.primary),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(occasion.date,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700)),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 3),
-                    Row(
-                      children: [
-                        Icon(Icons.place_outlined, size: 14, color: theme.colorScheme.onSurfaceVariant),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(occasion.location,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant)),
-                        ),
-                      ],
-                    ),
-                    if (occasion.organizer != null && occasion.organizer!.isNotEmpty) ...[
-                      const SizedBox(height: 3),
+                    child: _thumb(occasion, theme),
+                  ),
+                ),
+                const SizedBox(width: 13),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Row(
                         children: [
-                          Icon(Icons.person_outline_rounded, size: 13, color: theme.colorScheme.onSurfaceVariant),
-                          const SizedBox(width: 4),
                           Expanded(
-                            child: Text(occasion.organizer!,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant)),
+                            child: Text(
+                              occasion.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 14.5,
+                                letterSpacing: -0.2,
+                              ),
+                            ),
+                          ),
+                          if (soon) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.error,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.bolt_rounded, size: 11, color: Colors.white),
+                                  SizedBox(width: 2),
+                                  Text(
+                                    'قريباً',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: -0.2,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 7),
+                      Row(
+                        children: [
+                          Icon(Icons.event_rounded, size: 13.5, color: theme.colorScheme.primary),
+                          const SizedBox(width: 4.5),
+                          Expanded(
+                            child: Text(
+                              occasion.date,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
                           ),
                         ],
                       ),
+                      if (occasion.location.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(Icons.place_rounded, size: 13.5, color: theme.colorScheme.onSurfaceVariant),
+                            const SizedBox(width: 4.5),
+                            Expanded(
+                              child: Text(
+                                occasion.location,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                      if (occasion.organizer != null && occasion.organizer!.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(Icons.person_rounded, size: 13, color: theme.colorScheme.onSurfaceVariant),
+                            const SizedBox(width: 4.5),
+                            Expanded(
+                              child: Text(
+                                occasion.organizer!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
-              Icon(Icons.keyboard_arrow_down_rounded, color: theme.colorScheme.onSurfaceVariant),
-            ],
+                const SizedBox(width: 4),
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Icon(
+                    Icons.chevron_left_rounded,
+                    size: 20,
+                    color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

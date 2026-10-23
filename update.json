@@ -1,7 +1,7 @@
 {
-  "versionCode": 2050,
-  "versionName": "1.1.50",
+  "versionCode": 1,
+  "versionName": "1.0.1",
   "apkUrl": "https://github.com/abodashesha488-sys/Qarity/releases/latest/download/Qarity.apk",
   "forceUpdate": false,
-  "releaseNotes": "تحسينات استقرار البناء وسياسات الأمان"
+  "releaseNotes": "الإصدار الأولي 1.0.1 المتوافق مع سياسات Google Play"
 }

@@ -47,9 +47,7 @@ android {
 
     buildTypes {
         debug {
-            // نسخة التطوير تُثبَّت تطبيقًا مستقلًا بجانب المنشورة (لا فوقها)،
-            // فلا يُطلب حذفها ولا تُمسّ بياناتها ولا يصطدم برقم بنائها الأعلى.
-            applicationIdSuffix = ".debug"
+            // استخدام نفس معرف التطبيق لتعمل خدمات Firebase وGoogle Sign-In بسلاسة
         }
         release {
             val releaseSigning = signingConfigs.findByName("release")

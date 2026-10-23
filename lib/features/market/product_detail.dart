@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
@@ -365,14 +366,47 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     ),
                     const SizedBox(height: 20),
                     Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('التعليقات',
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              'التعليقات والتقييمات',
                               style: theme.textTheme.titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.w800)),
-                          Text('${_reviews.length} تعليق',
-                              style: theme.textTheme.bodySmall)
-                        ]),
+                                  ?.copyWith(fontWeight: FontWeight.w800),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primaryContainer,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                '${_reviews.length}',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                  color: theme.colorScheme.onPrimaryContainer,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        TextButton.icon(
+                          onPressed: _openAddReviewSheet,
+                          icon: const Icon(Icons.rate_review_rounded, size: 16),
+                          label: const Text('أضف تقييماً'),
+                          style: TextButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                            foregroundColor: theme.colorScheme.primary,
+                            textStyle: const TextStyle(
+                                fontWeight: FontWeight.w800, fontSize: 13),
+                          ),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 12),
                     _buildReviewsSection(theme),
                     if (_similarProducts.isNotEmpty) ...[
@@ -689,6 +723,235 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     }
   }
 
+  void _openAddReviewSheet() async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('يرجى تسجيل الدخول أولاً لتتمكن من إضافة تقييم أو تعليق'),
+        ),
+      );
+      return;
+    }
+
+    if (_product == null) return;
+
+    // فحص ما إذا كان المستخدم قد قيّم هذا المنتج مسبقاً
+    final alreadyReviewed = _reviews.any((r) => r.userId == user.uid);
+    if (alreadyReviewed) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('لقد قمت بتقييم هذا المنتج مسبقاً'),
+        ),
+      );
+      return;
+    }
+
+    double selectedRating = 5.0;
+    final textController = TextEditingController();
+    bool isSubmitting = false;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          final theme = Theme.of(context);
+          return Container(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              16,
+              20,
+              MediaQuery.of(ctx).viewInsets.bottom + 20,
+            ),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.outlineVariant,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  Text(
+                    'تقييم وتعليق على المنتج',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  // نجوم التقييم
+                  Center(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: List.generate(5, (index) {
+                        final star = index + 1;
+                        return IconButton(
+                          iconSize: 34,
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          onPressed: () {
+                            setModalState(() => selectedRating = star.toDouble());
+                          },
+                          icon: Icon(
+                            star <= selectedRating
+                                ? Icons.star_rounded
+                                : Icons.star_border_rounded,
+                            color: const Color(0xFFFFB300),
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
+                  Center(
+                    child: Text(
+                      _ratingLabel(selectedRating),
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: textController,
+                    maxLines: 4,
+                    minLines: 2,
+                    decoration: InputDecoration(
+                      hintText: 'اكتب تجربتك أو رأيك في هذا المنتج بكل أمانة...',
+                      hintStyle: TextStyle(
+                        color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                        fontSize: 13,
+                      ),
+                      filled: true,
+                      fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(
+                          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  FilledButton(
+                    onPressed: isSubmitting
+                        ? null
+                        : () async {
+                            final commentText = textController.text.trim();
+                            if (commentText.isEmpty) {
+                              ScaffoldMessenger.of(ctx).showSnackBar(
+                                const SnackBar(content: Text('يرجى كتابة نص التعليق')),
+                              );
+                              return;
+                            }
+
+                            setModalState(() => isSubmitting = true);
+                            try {
+                              String userName = user.displayName ?? '';
+                              String? userPhoto = user.photoURL;
+                              try {
+                                final userDoc = await FirebaseFirestore.instance
+                                    .collection('users')
+                                    .doc(user.uid)
+                                    .get();
+                                final data = userDoc.data();
+                                if (data != null) {
+                                  final n = (data['name'] as String? ?? '').trim();
+                                  if (n.isNotEmpty) userName = n;
+                                  final p = (data['photoUrl'] as String? ?? '').trim();
+                                  if (p.isNotEmpty) userPhoto = p;
+                                }
+                              } catch (_) {}
+
+                              if (userName.isEmpty) userName = 'مستخدم';
+
+                              final review = ProductReview(
+                                id: '',
+                                productId: _product!.id,
+                                userId: user.uid,
+                                userName: userName,
+                                userPhotoUrl: userPhoto,
+                                rating: selectedRating,
+                                comment: commentText,
+                                createdAt: DateTime.now(),
+                              );
+
+                              await _marketService.addReview(review);
+                              if (ctx.mounted) Navigator.pop(ctx);
+                              await _loadReviews();
+
+                              final updatedProduct =
+                                  await _marketService.getProductById(_product!.id);
+                              if (mounted) {
+                                setState(() {
+                                  _product = updatedProduct;
+                                });
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('شكراً لك! تم نشر تقييمك بنجاح'),
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              setModalState(() => isSubmitting = false);
+                              if (ctx.mounted) {
+                                ScaffoldMessenger.of(ctx).showSnackBar(
+                                  SnackBar(content: Text('تعذر حفظ التقييم: $e')),
+                                );
+                              }
+                            }
+                          },
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: isSubmitting
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text(
+                            'نشر التقييم والتعليق',
+                            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  String _ratingLabel(double rating) {
+    if (rating >= 5.0) return 'ممتاز جداً 🌟🌟🌟🌟🌟';
+    if (rating >= 4.0) return 'جيد جداً ⭐⭐⭐⭐';
+    if (rating >= 3.0) return 'جيد ⭐⭐⭐';
+    if (rating >= 2.0) return 'مقبول ⭐⭐';
+    return 'يحتاج إلى تحسين ⭐';
+  }
+
   Widget _buildReviewsSection(ThemeData theme) {
     if (_loadingReviews) {
       return const Center(
@@ -698,11 +961,37 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     }
     if (_reviews.isEmpty) {
       return Center(
-          child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Text('لا توجد تقييمات بعد',
-                  style: theme.textTheme.bodyMedium
-                      ?.copyWith(color: theme.colorScheme.onSurfaceVariant))));
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.rate_review_outlined,
+                size: 38,
+                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'لا توجد تعليقات أو تقييمات بعد',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: _openAddReviewSheet,
+                icon: const Icon(Icons.star_outline_rounded, size: 16),
+                label: const Text('كن أول من يقيّم هذا المنتج'),
+                style: OutlinedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
     }
     return Column(
       children: [

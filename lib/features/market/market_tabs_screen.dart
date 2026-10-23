@@ -19,6 +19,7 @@ import '../../services/cache_service.dart';
 import '../../services/donation_service.dart';
 import '../../services/image_upload_service.dart';
 import '../../services/market_service.dart';
+import '../../services/product_interaction_service.dart';
 import '../../services/share_service.dart';
 import '../../services/shop_service.dart';
 import '../../services/user_service.dart';

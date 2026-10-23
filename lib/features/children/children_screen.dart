@@ -486,10 +486,14 @@ class _LargeFeatureCard extends StatelessWidget {
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(22),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.24),
+              width: 1.2,
+            ),
             boxShadow: [
               BoxShadow(
                 color: colors[1].withValues(alpha: 0.35),
-                blurRadius: 10,
+                blurRadius: 12,
                 offset: const Offset(0, 5),
               ),
             ],
@@ -576,10 +580,14 @@ class _GameCard extends StatelessWidget {
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(22),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.24),
+              width: 1.2,
+            ),
             boxShadow: [
               BoxShadow(
                 color: colors[1].withValues(alpha: 0.35),
-                blurRadius: 10,
+                blurRadius: 12,
                 offset: const Offset(0, 5),
               ),
             ],
@@ -676,10 +684,14 @@ class _ProphetStoriesHeroCard extends StatelessWidget {
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(22),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.22),
+              width: 1.2,
+            ),
             boxShadow: [
               BoxShadow(
                 color: const Color(0xFF5D4037).withValues(alpha: 0.35),
-                blurRadius: 10,
+                blurRadius: 12,
                 offset: const Offset(0, 5),
               ),
             ],
@@ -751,8 +763,8 @@ class _ProphetStoriesHeroCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(Icons.keyboard_arrow_down_rounded,
-                  color: Colors.white70, size: 20),
+              const Icon(Icons.chevron_left_rounded,
+                  color: Colors.white70, size: 22),
             ],
           ),
         ),

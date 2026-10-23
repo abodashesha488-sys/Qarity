@@ -945,10 +945,164 @@ class _ProviderCard extends StatelessWidget {
               ? _buildEducationalCard(theme, color)
               : (provider.category == ServiceCategory.agricultural
                   ? _buildAgricultural3ColumnCard(theme, color)
-                  : _buildGeneral2ColumnCard(
-                      theme, color, serviceTags, eduTags)),
+                  : (provider.category == ServiceCategory.technicians
+                      ? _buildTechnicianCard(theme, color, serviceTags)
+                      : _buildGeneral2ColumnCard(
+                          theme, color, serviceTags, eduTags))),
         ),
       ),
+    );
+  }
+
+  static IconData _craftIcon(String craft) {
+    if (craft.contains('كهربا')) return Icons.bolt_rounded;
+    if (craft.contains('سباك')) return Icons.plumbing_rounded;
+    if (craft.contains('نجار')) return Icons.carpenter_rounded;
+    if (craft.contains('تكييف') || craft.contains('تبريد')) return Icons.ac_unit_rounded;
+    if (craft.contains('دهان') || craft.contains('نقاش')) return Icons.format_paint_rounded;
+    if (craft.contains('حداد') || craft.contains('لحام')) return Icons.hardware_rounded;
+    if (craft.contains('بناء') || craft.contains('محار')) return Icons.foundation_rounded;
+    if (craft.contains('ألومنيوم') || craft.contains('زجاج')) return Icons.window_rounded;
+    if (craft.contains('صيانة') || craft.contains('موبايل')) return Icons.home_repair_service_rounded;
+    if (craft.contains('كاميرات') || craft.contains('دش')) return Icons.videocam_rounded;
+    return Icons.handyman_rounded;
+  }
+
+  /// كارت الحرفي العصري المتطور: يبرز الحرفة والأيقونة وسرعة الاتصال والموقع
+  Widget _buildTechnicianCard(
+      ThemeData theme, Color color, List<Widget> serviceTags) {
+    final craftIcon = _craftIcon(provider.specialty);
+    final accentInk = AppColors.inkOn(color, theme.brightness);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _image(theme, color),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _headline(theme),
+                  const SizedBox(height: 5),
+                  // شارة الحرفة المخصصة
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: color.withValues(alpha: 0.3),
+                        width: 0.8,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(craftIcon, size: 13, color: accentInk),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            provider.displaySpecialty.isNotEmpty
+                                ? provider.displaySpecialty
+                                : 'حرفي عام',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: accentInk,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (provider.description.isNotEmpty) ...[
+                    const SizedBox(height: 5),
+                    Text(
+                      provider.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontSize: 10.5,
+                        height: 1.3,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      if (provider.ratingCount > 0) ...[
+                        const Icon(Icons.star_rounded,
+                            size: 13, color: Colors.amber),
+                        const SizedBox(width: 2.5),
+                        Text(
+                          '${provider.rating.toStringAsFixed(1)} (${provider.ratingCount})',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.readableInk(
+                                Colors.amber, theme.brightness),
+                          ),
+                        ),
+                      ] else ...[
+                        const Icon(Icons.check_circle_rounded,
+                            size: 12, color: Colors.green),
+                        const SizedBox(width: 2.5),
+                        Text(
+                          'متاح للخدمة الفورية',
+                          style: TextStyle(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.readableInk(
+                                Colors.green, theme.brightness),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            if (provider.address.isNotEmpty)
+              Expanded(
+                child: Row(
+                  children: [
+                    Icon(Icons.location_on_rounded,
+                        size: 12, color: theme.colorScheme.onSurfaceVariant),
+                    const SizedBox(width: 3),
+                    Expanded(
+                      child: Text(
+                        provider.address,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              const Spacer(),
+            const SizedBox(width: 8),
+            _actions(),
+          ],
+        ),
+      ],
     );
   }
 

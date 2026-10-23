@@ -14,6 +14,22 @@
       },
       "oauth_client": [
         {
+          "client_id": "339029236820-42to4sigvvpp5sve234k5c4u6vgbdrpm.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "app.abudshisha.qarity",
+            "certificate_hash": "ee04d2b9eb840102345349c4171e097c8d2da8dc"
+          }
+        },
+        {
+          "client_id": "339029236820-4afd20a6fgl2ulpgpoqdmbir77od246d.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "app.abudshisha.qarity",
+            "certificate_hash": "06b8d21318d631edabc2fe15ad3d23d5c15b7bbc"
+          }
+        },
+        {
           "client_id": "339029236820-dge33hdrb7mqg24pb0jhb6fgejol76r6.apps.googleusercontent.com",
           "client_type": 3
         }

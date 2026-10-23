@@ -369,171 +369,344 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
 
   Widget _buildPostCard(ThemeData theme, ForumPost post, int index) {
     final isLiked = _currentUserId.isNotEmpty && post.likedBy.contains(_currentUserId);
+    final isDark = theme.brightness == Brightness.dark;
 
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? theme.colorScheme.surfaceContainerLow : theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: post.isPinned
+              ? const Color(0xFFB8860B).withValues(alpha: 0.5)
+              : theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
+          width: post.isPinned ? 1.4 : 1.0,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => Navigator.pushNamed(context, AppRoutes.forumPostDetail, arguments: post),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 22,
-                    backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
-                    backgroundImage:
-                        post.userPhotoUrl.isNotEmpty ? CachedNetworkImageProvider(post.userPhotoUrl) : null,
-                    child: post.userPhotoUrl.isEmpty
-                        ? Icon(Icons.person_rounded, color: theme.colorScheme.primary)
-                        : null,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        RoleNameText(
-                          name: post.userName,
-                          role: post.userRole,
-                          sellerType: post.userSellerType,
-                          style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () => Navigator.pushNamed(context, AppRoutes.forumPostDetail, arguments: post),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 1. رأس المنشور: الكاتب والرتبة والوقت والتثبيت
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: post.isPinned
+                              ? const Color(0xFFB8860B)
+                              : theme.colorScheme.primary.withValues(alpha: 0.4),
+                          width: 1.5,
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          AppHelpers.formatRelativeDate(post.createdAt),
-                          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                      ),
+                      child: CircleAvatar(
+                        radius: 20,
+                        backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
+                        backgroundImage: post.userPhotoUrl.isNotEmpty
+                            ? CachedNetworkImageProvider(post.userPhotoUrl)
+                            : null,
+                        child: post.userPhotoUrl.isEmpty
+                            ? Icon(Icons.person_rounded, color: theme.colorScheme.primary, size: 22)
+                            : null,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          RoleNameText(
+                            name: post.userName,
+                            role: post.userRole,
+                            sellerType: post.userSellerType,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 14.5,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              Icon(Icons.schedule_rounded,
+                                  size: 11.5, color: theme.colorScheme.onSurfaceVariant),
+                              const SizedBox(width: 4),
+                              Text(
+                                AppHelpers.formatRelativeDate(post.createdAt),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (post.isPinned)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        margin: const EdgeInsets.only(left: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFD54F).withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: const Color(0xFFB8860B).withValues(alpha: 0.4),
+                            width: 0.8,
+                          ),
                         ),
-                      ],
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.push_pin_rounded, size: 12, color: Color(0xFFB8860B)),
+                            SizedBox(width: 3),
+                            Text(
+                              'مثبّت',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFFB8860B),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    IconButton(
+                      tooltip: 'مشاركة المنشور',
+                      visualDensity: VisualDensity.compact,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                      icon: Icon(Icons.share_rounded,
+                          size: 17, color: theme.colorScheme.onSurfaceVariant),
+                      onPressed: () => ShareService.shareText(
+                        title: post.title.isNotEmpty
+                            ? post.title
+                            : 'منشور من ${post.userName}',
+                        body: post.content,
+                      ),
                     ),
-                  ),
-                  if (post.isPinned)
-                    Icon(Icons.push_pin_rounded, size: 18, color: theme.colorScheme.primary),
-                  IconButton(
-                    tooltip: 'مشاركة المنشور',
-                    visualDensity: VisualDensity.compact,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
-                    icon: Icon(Icons.share_rounded,
-                        size: 17, color: theme.colorScheme.onSurfaceVariant),
-                    onPressed: () => ShareService.shareText(
-                      title: post.title.isNotEmpty
-                          ? post.title
-                          : 'منشور من ${post.userName}',
-                      body: post.content,
+                    ModerationService.instance.buildMoreOptionsButton(
+                      context: context,
+                      targetType: 'forum_post',
+                      targetId: post.id,
+                      authorId: post.userId,
+                      authorName: post.userName,
+                      contentSnippet: post.title.isNotEmpty ? post.title : post.content,
+                      onBlocked: () => setState(() {}),
+                      iconColor: theme.colorScheme.onSurfaceVariant,
                     ),
-                  ),
-                  ModerationService.instance.buildMoreOptionsButton(
-                    context: context,
-                    targetType: 'forum_post',
-                    targetId: post.id,
-                    authorId: post.userId,
-                    authorName: post.userName,
-                    contentSnippet: post.title.isNotEmpty ? post.title : post.content,
-                    onBlocked: () => setState(() {}),
-                    iconColor: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ],
-              ),
-              if (post.isPinned)
-                const SizedBox(height: 8),
-              if (post.category.isNotEmpty && post.category != 'عام')
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  ],
+                ),
+
+                // 2. تصنيف الموضوع
+                if (post.category.isNotEmpty && post.category != 'عام') ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.secondary.withValues(alpha: 0.12),
+                      color: theme.colorScheme.primary.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: theme.colorScheme.primary.withValues(alpha: 0.25),
+                        width: 0.8,
+                      ),
                     ),
-                    child: Text(post.category,
-                        style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                            color: theme.colorScheme.secondary)),
-                  ),
-                ),
-              if (post.title.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Text(
-                    post.title,
-                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              const SizedBox(height: 4),
-              Text(
-                post.content,
-                style: theme.textTheme.bodyMedium?.copyWith(height: 1.6, color: theme.colorScheme.onSurface),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-              ),
-              if (post.imageUrl != null && post.imageUrl!.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
-                  child: CachedNetworkImage(
-                    imageUrl: post.imageUrl!,
-                    width: double.infinity,
-                    height: 180,
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) => Container(
-                      height: 180,
-                      color: theme.colorScheme.surfaceContainerHighest,
-                      child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                    ),
-                    errorWidget: (context, url, error) => Container(
-                      height: 180,
-                      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
-                      child: Center(
-                        child: Icon(Icons.broken_image_rounded, color: theme.colorScheme.onSurfaceVariant),
+                    child: Text(
+                      '# ${post.category}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: theme.colorScheme.primary,
                       ),
                     ),
                   ),
-                ),
-              ],
-              const SizedBox(height: 12),
-              Divider(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4), height: 1),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  _ForumAction(
-                    icon: isLiked ? Icons.thumb_up_rounded : Icons.thumb_up_alt_outlined,
-                    label: '${post.likes}',
-                    highlighted: isLiked,
-                    onTap: _currentUserId.isEmpty ? null : () => _toggleLike(post),
-                  ),
-                  const SizedBox(width: 8),
-                  _ForumAction(
-                    icon: Icons.chat_bubble_outline_rounded,
-                    label: '${post.comments}',
-                    onTap: () => _showComments(post),
-                  ),
-                  const Spacer(),
-                  Icon(Icons.visibility_outlined, size: 16, color: theme.colorScheme.onSurfaceVariant),
-                  const SizedBox(width: 4),
+                ],
+
+                // 3. العنوان والمحتوى
+                if (post.title.isNotEmpty) ...[
+                  const SizedBox(height: 8),
                   Text(
-                    '${post.views} مشاهدة',
-                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                    post.title,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 15.5,
+                      height: 1.35,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
-              ),
-            ],
+                const SizedBox(height: 6),
+                Text(
+                  post.content,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    height: 1.6,
+                    fontSize: 13.5,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
+                  ),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+
+                // 4. صورة المنشور (إن وجدت)
+                if (post.imageUrl != null && post.imageUrl!.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: CachedNetworkImage(
+                        imageUrl: post.imageUrl!,
+                        width: double.infinity,
+                        height: 190,
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => Container(
+                          height: 190,
+                          color: theme.colorScheme.surfaceContainerHighest,
+                          child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                        ),
+                        errorWidget: (context, url, error) => Container(
+                          height: 190,
+                          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+                          child: Center(
+                            child: Icon(Icons.broken_image_rounded,
+                                color: theme.colorScheme.onSurfaceVariant),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+
+                // 5. شريط التفاعل السفلي العصري
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.only(top: 8),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      top: BorderSide(
+                        color: theme.colorScheme.outlineVariant.withValues(alpha: 0.25),
+                      ),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      // زر الإعجاب
+                      InkWell(
+                        borderRadius: BorderRadius.circular(20),
+                        onTap: _currentUserId.isEmpty ? null : () => _toggleLike(post),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: isLiked
+                                ? Colors.red.withValues(alpha: 0.12)
+                                : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.45),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                isLiked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                                size: 16,
+                                color: isLiked ? Colors.red : theme.colorScheme.onSurfaceVariant,
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                '${post.likes}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  color: isLiked ? Colors.red : theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+
+                      // زر التعليقات
+                      InkWell(
+                        borderRadius: BorderRadius.circular(20),
+                        onTap: () => _showComments(post),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.45),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.chat_bubble_outline_rounded,
+                                size: 15,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                '${post.comments}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      const Spacer(),
+
+                      // عداد المشاهدات
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.remove_red_eye_outlined,
+                              size: 14, color: theme.colorScheme.onSurfaceVariant),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${post.views}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
-    ).animate(delay: (index * 60).ms).fade(duration: 350.ms).slideY(begin: 0.1);
+    ).animate(delay: (index * 45).ms).fade(duration: 300.ms).slideY(begin: 0.08);
   }
 
   Widget _buildErrorState(ThemeData theme) {
@@ -600,50 +773,6 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
         forumService: _forumService,
         currentUserName: _currentUserName,
         canComment: _currentUserId.isNotEmpty,
-      ),
-    );
-  }
-}
-
-class _ForumAction extends StatelessWidget {
-  const _ForumAction({
-    required this.icon,
-    required this.label,
-    this.onTap,
-    this.highlighted = false,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback? onTap;
-  final bool highlighted;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final color = highlighted ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: highlighted
-              ? theme.colorScheme.primary.withValues(alpha: 0.1)
-              : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 16, color: color),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: theme.textTheme.labelMedium?.copyWith(color: color, fontWeight: FontWeight.w700),
-            ),
-          ],
-        ),
       ),
     );
   }

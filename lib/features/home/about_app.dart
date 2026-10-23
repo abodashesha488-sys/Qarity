@@ -526,6 +526,7 @@ class _AboutScreenState extends State<AboutScreen> {
           Color(0xFFF9A825)),
     ];
 
+    final isDark = theme.brightness == Brightness.dark;
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -549,8 +550,17 @@ class _AboutScreenState extends State<AboutScreen> {
               color: theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                  color:
-                      theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.08)
+                      : theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+              boxShadow: [
+                BoxShadow(
+                  color: (isDark ? Colors.black : section.color)
+                      .withValues(alpha: isDark ? 0.2 : 0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
             ),
             child: Row(
               children: [

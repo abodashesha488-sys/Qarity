@@ -286,112 +286,169 @@ class _ObituariesListScreenState extends State<ObituariesListScreen> {
 
   Widget _buildObituaryCard(BuildContext context, Obituary obituary) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final isNew = obituary.createdAt != null &&
         DateTime.now().difference(obituary.createdAt!).inHours < 24;
 
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isNew
+              ? theme.colorScheme.primary.withValues(alpha: 0.35)
+              : (isDark
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : theme.colorScheme.outlineVariant.withValues(alpha: 0.45)),
+          width: isNew ? 1.2 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: (isDark ? Colors.black : Colors.black87)
+                .withValues(alpha: isDark ? 0.22 : 0.04),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => Navigator.pushNamed(context, AppRoutes.obituariesDetail,
-            arguments: obituary),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              _ObituaryThumb(imageUrl: obituary.imageUrl, size: 72),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            obituary.name,
-                            style: theme.textTheme.titleMedium
-                                ?.copyWith(fontWeight: FontWeight.w800),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        // لا تُعرض «رجل/امرأة» في مخرجات الإدخال: النوع يُسأل
-                        // في النموذج وحده لأنه يحسم تسميات مجموعات القرابة.
-                        if (isNew) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.primary,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              'جديد',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: theme.colorScheme.onPrimary,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => Navigator.pushNamed(context, AppRoutes.obituariesDetail,
+              arguments: obituary),
+          child: Padding(
+            padding: const EdgeInsets.all(13),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.1)
+                          : theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
                     ),
-                    const SizedBox(height: 4),
-                    if (obituary.age.isNotEmpty)
-                      Text(
-                        'العمر: ${obituary.age}',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant),
-                      ),
-                    const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        Icon(Icons.calendar_today_rounded,
-                            size: 12, color: theme.colorScheme.error),
-                        const SizedBox(width: 4),
-                        Text(
-                          obituary.dateOfDeath,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.error,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (obituary.funeralLocation.isNotEmpty) ...[
-                      const SizedBox(height: 2),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(15),
+                    child: _ObituaryThumb(imageUrl: obituary.imageUrl, size: 70),
+                  ),
+                ),
+                const SizedBox(width: 13),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Row(
                         children: [
-                          Icon(Icons.location_on_rounded,
-                              size: 12,
-                              color: theme.colorScheme.onSurfaceVariant),
-                          const SizedBox(width: 4),
                           Expanded(
                             child: Text(
-                              obituary.funeralLocation,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                  color:
-                                      theme.colorScheme.onSurfaceVariant),
+                              obituary.name,
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 15,
+                                letterSpacing: -0.2,
+                              ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          if (isNew) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primary,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                'جديد',
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: theme.colorScheme.onPrimary,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 9.5,
+                                  letterSpacing: -0.2,
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
+                      const SizedBox(height: 5),
+                      if (obituary.age.isNotEmpty) ...[
+                        Row(
+                          children: [
+                            Icon(Icons.info_outline_rounded,
+                                size: 12.5,
+                                color: theme.colorScheme.onSurfaceVariant),
+                            const SizedBox(width: 4),
+                            Text(
+                              'العمر: ${obituary.age}',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 3),
+                      ],
+                      Row(
+                        children: [
+                          Icon(Icons.calendar_today_rounded,
+                              size: 12.5, color: theme.colorScheme.error),
+                          const SizedBox(width: 4),
+                          Text(
+                            obituary.dateOfDeath,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.error,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 11.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (obituary.funeralLocation.isNotEmpty) ...[
+                        const SizedBox(height: 3.5),
+                        Row(
+                          children: [
+                            Icon(Icons.location_on_rounded,
+                                size: 13,
+                                color: theme.colorScheme.onSurfaceVariant),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                obituary.funeralLocation,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                  fontSize: 11.5,
+                                  height: 1.25,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
-              Icon(Icons.keyboard_arrow_down_rounded,
-                  color: theme.colorScheme.onSurfaceVariant, size: 20),
-            ],
+                const SizedBox(width: 4),
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Icon(
+                    Icons.chevron_left_rounded,
+                    size: 20,
+                    color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

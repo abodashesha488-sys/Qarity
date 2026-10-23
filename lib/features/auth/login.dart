@@ -49,6 +49,8 @@ class _LoginScreenState extends State<LoginScreen> {
     }
     final GoogleSignInAccount? googleUser = await GoogleSignIn(
       scopes: const <String>['openid', 'email', 'profile'],
+      serverClientId:
+          '339029236820-dge33hdrb7mqg24pb0jhb6fgejol76r6.apps.googleusercontent.com',
     ).signIn();
     if (googleUser == null) return null; // أُلغيت العملية
     final GoogleSignInAuthentication googleAuth =

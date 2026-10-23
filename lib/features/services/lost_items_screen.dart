@@ -221,114 +221,198 @@ class _LostItemCard extends StatelessWidget {
   const _LostItemCard({required this.item});
   final LostItem item;
 
-  Color get _typeColor =>
-      item.isResolved ? Colors.blueGrey : (item.isLostType ? const Color(0xFFC62828) : const Color(0xFF00897B));
+  Color get _typeColor => item.isResolved
+      ? const Color(0xFF546E7A)
+      : (item.isLostType ? const Color(0xFFD32F2F) : const Color(0xFF00897B));
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final dimmed = item.isResolved;
+
     return Opacity(
-      opacity: dimmed ? 0.65 : 1,
-      child: Card(
-        elevation: 0,
-        margin: EdgeInsets.zero,
-        clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(
-              color: _typeColor.withValues(alpha: dimmed ? 0.25 : 0.45),
-              width: dimmed ? 1 : 1.2),
+      opacity: dimmed ? 0.72 : 1.0,
+      child: Container(
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.08)
+                : _typeColor.withValues(alpha: dimmed ? 0.2 : 0.35),
+            width: dimmed ? 1 : 1.2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: (isDark ? Colors.black : _typeColor)
+                  .withValues(alpha: isDark ? 0.2 : (dimmed ? 0.03 : 0.07)),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        child: InkWell(
-          onTap: () => Navigator.pushNamed(context, AppRoutes.lostItemDetail,
-              arguments: item),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: SizedBox(
-                    width: 54,
-                    height: 54,
-                    child: item.imageUrl.isNotEmpty
-                        ? CachedNetworkImage(
-                            imageUrl: item.imageUrl,
-                            fit: BoxFit.cover,
-                            errorWidget: (_, __, ___) => _thumb(theme),
-                          )
-                        : _thumb(theme),
+        clipBehavior: Clip.antiAlias,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => Navigator.pushNamed(context, AppRoutes.lostItemDetail,
+                arguments: item),
+            child: Padding(
+              padding: const EdgeInsets.all(13),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(15),
+                    child: Container(
+                      width: 62,
+                      height: 62,
+                      decoration: BoxDecoration(
+                        color: _typeColor.withValues(alpha: isDark ? 0.2 : 0.09),
+                        borderRadius: BorderRadius.circular(15),
+                        border: Border.all(
+                          color: _typeColor.withValues(alpha: 0.18),
+                        ),
+                      ),
+                      child: item.imageUrl.isNotEmpty
+                          ? CachedNetworkImage(
+                              imageUrl: item.imageUrl,
+                              fit: BoxFit.cover,
+                              errorWidget: (_, __, ___) => _thumb(theme),
+                            )
+                          : _thumb(theme),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 11),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(item.title,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                item.title,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
-                                    fontWeight: FontWeight.w900,
-                                    fontSize: 14)),
-                          ),
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 7, vertical: 2),
-                            decoration: BoxDecoration(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 14.5,
+                                  letterSpacing: -0.2,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 3.5),
+                              decoration: BoxDecoration(
                                 color: _typeColor,
-                                borderRadius: BorderRadius.circular(7)),
-                            child: Text(
-                                dimmed
-                                    ? 'تم التسليم ✓'
-                                    : (item.isLostType
-                                        ? 'مفقود'
-                                        : 'تم العثور عليه'),
-                                style: const TextStyle(
-                                    fontSize: 8.5,
-                                    fontWeight: FontWeight.w900,
-                                    color: Colors.white)),
-                          ),
-                        ],
-                      ),
-                      if (item.description.isNotEmpty) ...[
-                        const SizedBox(height: 3),
-                        Text(item.description,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    dimmed
+                                        ? Icons.verified_rounded
+                                        : (item.isLostType
+                                            ? Icons.search_rounded
+                                            : Icons.check_circle_rounded),
+                                    size: 11,
+                                    color: Colors.white,
+                                  ),
+                                  const SizedBox(width: 3.5),
+                                  Text(
+                                    dimmed
+                                        ? 'تم التسليم ✓'
+                                        : (item.isLostType
+                                            ? 'مفقود'
+                                            : 'تم العثور عليه'),
+                                    style: const TextStyle(
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                      letterSpacing: -0.2,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (item.description.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            item.description,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                                fontSize: 11.5,
-                                color: theme.colorScheme.onSurfaceVariant,
-                                height: 1.4)),
-                      ],
-                      const SizedBox(height: 5),
-                      Wrap(
-                        spacing: 10,
-                        runSpacing: 2,
-                        children: [
-                          if (item.location.isNotEmpty)
-                            _meta(Icons.place_rounded, item.location,
-                                AppColors.inkOn(_typeColor, theme.brightness)),
-                          if (item.date != null)
-                            _meta(Icons.event_rounded, _fmtDate(item.date),
-                                AppColors.inkOn(_typeColor, theme.brightness)),
-                          if (item.userName.isNotEmpty)
-                            _meta(Icons.person_rounded, item.userName,
-                                AppColors.inkOn(_typeColor, theme.brightness)),
+                              fontSize: 12,
+                              color: theme.colorScheme.onSurfaceVariant,
+                              height: 1.35,
+                            ),
+                          ),
                         ],
-                      ),
-                    ],
+                        const SizedBox(height: 7),
+                        Wrap(
+                          spacing: 9,
+                          runSpacing: 4,
+                          children: [
+                            if (item.location.isNotEmpty)
+                              _meta(
+                                Icons.place_rounded,
+                                item.location,
+                                AppColors.inkOn(_typeColor, theme.brightness),
+                              ),
+                            if (item.date != null)
+                              _meta(
+                                Icons.event_rounded,
+                                _fmtDate(item.date),
+                                AppColors.inkOn(_typeColor, theme.brightness),
+                              ),
+                            if (item.userName.isNotEmpty)
+                              _meta(
+                                Icons.person_rounded,
+                                item.userName,
+                                AppColors.inkOn(_typeColor, theme.brightness),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                Icon(Icons.keyboard_arrow_down_rounded,
-                    color: theme.colorScheme.onSurfaceVariant),
-              ],
+                  const SizedBox(width: 4),
+                  if (item.phone.isNotEmpty && !dimmed) ...[
+                    IconButton(
+                      tooltip: 'اتصال فوري',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                      icon: Container(
+                        padding: const EdgeInsets.all(7),
+                        decoration: BoxDecoration(
+                          color: _typeColor.withValues(alpha: isDark ? 0.25 : 0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.phone_in_talk_rounded,
+                            size: 16,
+                            color: AppColors.inkOn(_typeColor, theme.brightness)),
+                      ),
+                      onPressed: () => launchPhoneCall(item.phone),
+                    ),
+                  ] else ...[
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Icon(
+                        Icons.chevron_left_rounded,
+                        size: 20,
+                        color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
         ),
@@ -338,23 +422,30 @@ class _LostItemCard extends StatelessWidget {
 
   Widget _thumb(ThemeData theme) => ColoredBox(
         color: _typeColor.withValues(alpha: 0.12),
-        child: Icon(item.isLostType
-            ? Icons.help_outline_rounded
-            : Icons.search_rounded,
-            color: AppColors.inkOn(_typeColor, theme.brightness),
-            size: 26),
+        child: Icon(
+          item.isLostType
+              ? Icons.help_outline_rounded
+              : Icons.search_rounded,
+          color: AppColors.inkOn(_typeColor, theme.brightness),
+          size: 26,
+        ),
       );
 
   Widget _meta(IconData icon, String text, Color color) => Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 12, color: color),
-          const SizedBox(width: 3),
-          Builder(builder: (context) => Text(text,
+          Icon(icon, size: 12.5, color: color),
+          const SizedBox(width: 3.5),
+          Builder(
+            builder: (context) => Text(
+              text,
               style: TextStyle(
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w700,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant))),
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
         ],
       );
 }

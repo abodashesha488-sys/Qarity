@@ -119,14 +119,14 @@ void main() {
     test('فحص الصلاة النشطة getCurrentActivePrayer وتنسيق الوقت المتبقي أقل من 5 دقائق', () {
       final schedule = PrayerTimesService.calculate(date: DateTime(2026, 10, 12));
 
-      // أثناء وقت الفجر بدقيقة
-      final duringFajr = schedule.fajr.time.add(const Duration(minutes: 5));
+      // أثناء وقت الفجر بدقيقتين (داخل نافذة الـ 5 دقائق)
+      final duringFajr = schedule.fajr.time.add(const Duration(minutes: 2));
       final active = schedule.getCurrentActivePrayer(duringFajr);
       expect(active, isNotNull);
       expect(active!.name, 'fajr');
 
-      // بعد وقت الفجر بـ 30 دقيقة (خارج نافذة التنبيه)
-      final afterFajrWindow = schedule.fajr.time.add(const Duration(minutes: 30));
+      // بعد وقت الفجر بـ 6 دقائق (خارج نافذة التنبيه التي تنتهي بعد 5 دقائق)
+      final afterFajrWindow = schedule.fajr.time.add(const Duration(minutes: 6));
       expect(schedule.getCurrentActivePrayer(afterFajrWindow)?.name != 'fajr', isTrue);
 
       // تنسيق الوقت أقل من 5 دقائق

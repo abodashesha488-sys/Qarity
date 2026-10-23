@@ -179,6 +179,13 @@ service cloud.firestore {
       }
     }
 
+    // ───────────────────────── تقييمات ومراجعات منتجات السوق ─────────────────────────
+    match /product_reviews/{reviewId} {
+      allow list, get: if true;
+      allow create: if accountActive() && request.auth.uid == request.resource.data.userId;
+      allow update, delete: if isAdmin() || (accountActive() && request.auth.uid == resource.data.userId);
+    }
+
     // ───────────────────────── العزاء ─────────────────────────
     // نعوة المستخدم له: يعيد تحريرها في أي وقت (فتعود للمراجعة) ويحذفها فورًا.
     // حقل المالك `submittedBy` تكتبه الخدمة وقت الإنشاء.

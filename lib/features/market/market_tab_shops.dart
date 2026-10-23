@@ -1,4 +1,4 @@
-﻿part of 'market_tabs_screen.dart';
+part of 'market_tabs_screen.dart';
 
 // ═══════════════════ Tab 2: المحلات ═══════════════════
 
@@ -536,7 +536,7 @@ class _ShopDetailScreenState extends State<_ShopDetailScreen> {
                       crossAxisCount: 2,
                       mainAxisSpacing: 14,
                       crossAxisSpacing: 14,
-                      childAspectRatio: 0.62),
+                      childAspectRatio: 0.58),
                   itemCount: products.length,
                   itemBuilder: (context, i) =>
                       _MiniProductCard(product: products[i]),

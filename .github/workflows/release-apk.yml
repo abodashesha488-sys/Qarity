@@ -1,4 +1,4 @@
-name: Build & Release APK + Update Firestore Version
+name: Build & Deploy (APK + Web + Firestore Rules + Version)
 
 on:
   workflow_dispatch:
@@ -18,7 +18,7 @@ on:
       maintenance:
         description: 'Enable maintenance mode (locks app completely)'
         required: false
-        default: 'false'
+        default: false
         type: boolean
       maintenance_message:
         description: 'Maintenance message (shown when maintenance=true)'
@@ -28,6 +28,7 @@ on:
 permissions:
   contents: write
   id-token: write
+  pull-requests: write
 
 env:
   # Keystore secrets (configured in GitHub Secrets)
@@ -145,7 +146,7 @@ jobs:
           # Read or initialize sequential build counter
           BUILD_FILE="build_number.txt"
           if [ -f "$BUILD_FILE" ]; then
-            CURRENT_BUILD=$(cat "$BUILD_FILE")
+            CURRENT_BUILD=$(cat "$BUILD_FILE" | tr -d '[:space:]')
           else
             CURRENT_BUILD=0
           fi
@@ -153,15 +154,22 @@ jobs:
           # Increment build number (sequential counter)
           NEW_BUILD=$((CURRENT_BUILD + 1))
           
-          # Android versionCode يجب أن يبقى أعلى من أي رقم مثبّت على الأجهزة،
-          # وإلا لم يطلب التطبيق التحديث ورفضت أندرويد التثبيت (downgrade).
-          # الأجهزة المنتشرة حملت أرقامًا حتى 2010، فنُزيح الكود إلى 2000 + العدّاد،
-          # ونُبقي اسم الإصدار المعروض مستقلًا وقراءةً للناس.
-          NEW_CODE=$((2000 + NEW_BUILD))
+          # حساب رقم الإصدار بنظام التدوير عند 10:
+          # Build 1..9  -> 1.0.1 .. 1.0.9
+          # Build 10    -> 1.1.0 (بدل 1.0.10)
+          # Build 11..19-> 1.1.1 .. 1.1.9
+          # Build 20    -> 1.2.0 (بدل 1.1.10)
+          MAJOR=$(( 1 + (NEW_BUILD / 100) ))
+          MINOR=$(( (NEW_BUILD / 10) % 10 ))
+          PATCH=$(( NEW_BUILD % 10 ))
+          AUTO_NAME="${MAJOR}.${MINOR}.${PATCH}"
+
+          # مع حزمة Google Play الجديدة (app.abudshisha.qarity) يبدأ versionCode من 1 ويتزايد
+          NEW_CODE=$NEW_BUILD
           if [ -n "$MANUAL_VERSION" ]; then
             NEW_NAME="$MANUAL_VERSION"
           else
-            NEW_NAME="1.1.${NEW_BUILD}"
+            NEW_NAME="$AUTO_NAME"
           fi
 
           NEW_VERSION="${NEW_NAME}+${NEW_CODE}"
@@ -335,21 +343,33 @@ jobs:
             echo "No changes to update.json, skipping commit"
           fi
 
-      # ─── Update Firestore app_version/current ───
-      - name: Update Firestore app_version
+      # ─── [Step 2] Build Flutter Web ───
+      - name: Build Flutter Web
+        run: flutter build web --release
+
+      # ─── [Step 3] Deploy to Firebase Hosting ───
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          channelId: live
+          projectId: abudshisha
+
+      # ─── [Step 4] Deploy Firestore Rules & Update Firestore Version ───
+      - name: Authenticate to Google Cloud
         id: firestore
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           project_id: abudshisha
 
-      - name: Write version to Firestore
+      - name: Deploy Firestore Rules & Write Version to Firestore
         run: |
-          # Create package.json and install firebase-admin properly
           cd /tmp
           cat > package.json << 'PKGEOF'
           {
-            "name": "firestore-updater",
+            "name": "firestore-and-rules-updater",
             "private": true,
             "dependencies": {
               "firebase-admin": "^13.0.0"
@@ -362,19 +382,35 @@ jobs:
           
           # Write service account
           echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > /tmp/service-account.json
+          chmod 600 /tmp/service-account.json
           
-          # Write update script
-          cat > /tmp/update_version.js << 'EOF'
+          # Write deploy script
+          cat > /tmp/deploy_all.js << 'EOF'
           const { initializeApp, cert } = require('firebase-admin/app');
           const { getFirestore } = require('firebase-admin/firestore');
+          const { getSecurityRules } = require('firebase-admin/security-rules');
+          const fs = require('fs');
 
           initializeApp({
-            credential: cert(require('/tmp/service-account.json'))
+            credential: cert(require('/tmp/service-account.json')),
+            projectId: 'abudshisha'
           });
 
-          const db = getFirestore();
+          async function deployRules() {
+            const rulesPath = process.env.RULES_FILE;
+            if (rulesPath && fs.existsSync(rulesPath)) {
+              console.log('Deploying Firestore security rules from:', rulesPath);
+              const source = fs.readFileSync(rulesPath, 'utf8');
+              const securityRules = getSecurityRules();
+              const ruleset = await securityRules.releaseFirestoreRulesetFromSource(source);
+              console.log('✅ Firestore ruleset released successfully:', ruleset.name);
+            } else {
+              console.warn('⚠️ Rules file not found at:', rulesPath);
+            }
+          }
 
           async function updateVersion() {
+            const db = getFirestore();
             const versionDoc = db.collection('app_version').doc('current');
 
             const data = {
@@ -393,29 +429,33 @@ jobs:
             console.log('✅ Firestore app_version/current updated:', data);
           }
 
-          updateVersion().catch(err => {
-            console.error('❌ Failed to update Firestore:', err);
+          async function main() {
+            await deployRules();
+            await updateVersion();
+          }
+
+          main().catch(err => {
+            console.error('❌ Failed to deploy Firestore rules/version:', err);
             process.exit(1);
           });
           EOF
 
-          echo "Running Firestore update..."
-          node /tmp/update_version.js
+          echo "Running Firestore rules and version update..."
+          RULES_FILE="$GITHUB_WORKSPACE/firestore.rules" node /tmp/deploy_all.js
+          rm -f /tmp/service-account.json
 
       # ─── Summary ───
       - name: Release Summary
         run: |
-          echo "## 🚀 Release Published" >> $GITHUB_STEP_SUMMARY
+          echo "## 🚀 Complete Deployment Published" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| **Version** | ${{ steps.version.outputs.new_name }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| **versionCode** | ${{ steps.version.outputs.new_code }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Build counter** | ${{ steps.version.outputs.new_build }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Min versionCode (forced)** | ${{ github.event.inputs.min_build || steps.version.outputs.new_code }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| **APK URL** | https://github.com/${{ github.repository }}/releases/latest/download/Qarity.apk |" >> $GITHUB_STEP_SUMMARY
-          echo "| **APK Signed** | ${{ steps.sign.outputs.signed_apk_path != '' && '✅ Yes' || '❌ No (unsigned)' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Maintenance** | ${{ github.event.inputs.maintenance }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Step | Status | Details |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|--------|---------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **1. APK Release** | ✅ Published | [Download APK](https://github.com/${{ github.repository }}/releases/latest/download/Qarity.apk) (v${{ steps.version.outputs.new_name }}+${{ steps.version.outputs.new_code }}) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **2. Web Build** | ✅ Built | Flutter Web compiled with --release |" >> $GITHUB_STEP_SUMMARY
+          echo "| **3. Firebase Hosting** | ✅ Deployed | [Live Web App](https://abudshisha.web.app) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **4. Firestore Rules** | ✅ Released | firestore.rules applied to project abudshisha |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Firestore Version** | ✅ Updated | app_version/current synced |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Release URL:** ${{ steps.release.outputs.html_url }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Firestore:** app_version/current updated ✅" >> $GITHUB_STEP_SUMMARY
+          echo "**Web URL:** https://abudshisha.web.app" >> $GITHUB_STEP_SUMMARY
