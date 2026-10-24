@@ -561,12 +561,12 @@ class _LostItemDetailScreenState extends State<LostItemDetailScreen> {
             onPressed: () => ShareService.shareText(
               title:
                   '${item.isLostType ? '🔎 مفقود' : '📦 تم العثور عليه'}: ${item.title}',
+              imageUrls: [if (item.imageUrl.isNotEmpty) item.imageUrl],
               body: [
                 if (item.location.isNotEmpty) 'المكان: ${item.location}',
                 if (item.date != null) 'التاريخ: ${_fmtDate(item.date)}',
                 if (item.description.isNotEmpty) item.description,
                 if (item.phone.isNotEmpty) 'تواصل: ${item.phone}',
-                '— من قرية أبوديشيشة',
               ].join('\n'),
             ),
           ),

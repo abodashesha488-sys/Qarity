@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -17,29 +18,108 @@ class ShareService {
   static const String appSignature =
       '📲 تمت المشاركة من خلال تطبيق قرية أبوديشيشة';
 
+  /// مشاركة شاملة وموحّدة لأي محتوى (خبر/منتج/فني/معلم/إعلان/مفقودات/محصول...)
+  /// مع كامل تفاصيله وصورته الفعلية المرفقة وتوقيع التطبيق.
+  static Future<void> shareContent({
+    required String title,
+    String? body,
+    List<String> imageUrls = const [],
+    Map<String, String>? details,
+    String? link,
+  }) async {
+    final buffer = StringBuffer();
+    buffer.writeln('📢 ${title.trim()}');
+    buffer.writeln();
+
+    if (details != null && details.isNotEmpty) {
+      for (final entry in details.entries) {
+        final val = entry.value.trim();
+        if (val.isNotEmpty) {
+          buffer.writeln('▫️ ${entry.key}: $val');
+        }
+      }
+      buffer.writeln();
+    }
+
+    if (body != null && body.trim().isNotEmpty) {
+      buffer.writeln(body.trim());
+      buffer.writeln();
+    }
+
+    if (link != null && link.trim().isNotEmpty) {
+      buffer.writeln('🔗 ${link.trim()}');
+      buffer.writeln();
+    }
+
+    buffer.write(appSignature);
+    final fullText = buffer.toString().trim();
+
+    // محاولة جلب الصورة وإرفاقها مع المشاركة إن توفرت
+    final validUrls = imageUrls.where((u) => u.trim().startsWith('http')).toList();
+    if (validUrls.isNotEmpty) {
+      try {
+        final uri = Uri.parse(validUrls.first.trim());
+        final response = await http.get(uri).timeout(const Duration(seconds: 8));
+        if (response.statusCode == 200 && response.bodyBytes.isNotEmpty) {
+          final bytes = response.bodyBytes;
+          if (!kIsWeb) {
+            final tempDir = await getTemporaryDirectory();
+            final isPng = validUrls.first.toLowerCase().contains('.png');
+            final ext = isPng ? 'png' : 'jpg';
+            final file = File(
+                '${tempDir.path}/share_${DateTime.now().millisecondsSinceEpoch}.$ext');
+            await file.writeAsBytes(bytes);
+            await SharePlus.instance.share(
+              ShareParams(
+                text: fullText,
+                subject: title.trim(),
+                files: [XFile(file.path)],
+              ),
+            );
+            return;
+          } else {
+            await SharePlus.instance.share(
+              ShareParams(
+                text: fullText,
+                subject: title.trim(),
+                files: [
+                  XFile.fromData(
+                    bytes,
+                    mimeType: 'image/jpeg',
+                    name: 'share_image.jpg',
+                  ),
+                ],
+              ),
+            );
+            return;
+          }
+        }
+      } catch (e) {
+        if (kDebugMode) debugPrint('ShareService image download fallback: $e');
+      }
+    }
+
+    // بديل فوري بالنص الكامل في حال تعذر جلب الصورة أو عدم وجودها
+    await SharePlus.instance.share(
+      ShareParams(text: fullText, subject: title.trim()),
+    );
+  }
+
   /// مشاركة نصية موحّدة لأي محتوى (خبر/منتج/منشور/مناسبة/عيادة/صيدلية/طلب…)
-  /// مع توقيع التطبيق في نهاية النص.
+  /// مع توقيع التطبيق في نهاية النص، ودعم اختياري للصور والتفاصيل.
   static Future<void> shareText({
     required String title,
     String? body,
     String? link,
+    List<String> imageUrls = const [],
+    Map<String, String>? details,
   }) async {
-    final buffer = StringBuffer(title.trim());
-    if (body != null && body.trim().isNotEmpty) {
-      buffer
-        ..write('\n\n')
-        ..write(body.trim());
-    }
-    if (link != null && link.trim().isNotEmpty) {
-      buffer
-        ..write('\n\n')
-        ..write(link.trim());
-    }
-    buffer
-      ..write('\n\n')
-      ..write(appSignature);
-    await SharePlus.instance.share(
-      ShareParams(text: buffer.toString(), subject: title.trim()),
+    await shareContent(
+      title: title,
+      body: body,
+      imageUrls: imageUrls,
+      details: details,
+      link: link,
     );
   }
 

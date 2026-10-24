@@ -2,15 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../routes/app_routes.dart';
 import '../../services/agriculture_content_service.dart';
+import '../../services/favorites_service.dart';
+import '../../services/share_service.dart';
+import '../../widgets/favorite_button.dart';
 import '../../widgets/qurity_app_bar.dart';
 
-/// شاشة المحاصيل — شبكة من المحاصيل المصرية تفتح تفاصيل علمية موثقة.
-class CropsScreen extends StatelessWidget {
+/// شاشة المحاصيل — شبكة من المحاصيل المصرية تفتح تفاصيل علمية موثقة مع بحث وتصفية.
+class CropsScreen extends StatefulWidget {
   const CropsScreen({super.key, this.contentService});
 
   /// حقن اختياري للاختبارات — الافتراضي يخدم الإنتاج.
   final AgricultureContentService? contentService;
+
+  @override
+  State<CropsScreen> createState() => _CropsScreenState();
 
   static const List<CropRecord> crops = [
     CropRecord(
@@ -835,29 +842,368 @@ class CropsScreen extends StatelessWidget {
       source: 'معهد بحوث المحاصيل السكرية - قسم بحوث قصب السكر، مركز البحوث الزراعية',
     ),
   ];
+}
+
+class _CropsScreenState extends State<CropsScreen> {
+  final TextEditingController _search = TextEditingController();
+  String _query = '';
+  String _selectedSeason = '';
+  String _selectedCategory = '';
+  bool _filtersOpen = false;
+
+  int get _activeFilterCount =>
+      [_selectedSeason, _selectedCategory].where((v) => v.isNotEmpty).length;
+
+  List<String> get _filterSummaryParts => [
+        if (_selectedSeason.isNotEmpty) _selectedSeason,
+        if (_selectedCategory.isNotEmpty) _selectedCategory,
+        if (_query.isNotEmpty) 'بحث: ${_search.text.trim()}',
+      ];
+
+  void _clearAllFilters() {
+    setState(() {
+      _selectedSeason = '';
+      _selectedCategory = '';
+      _search.clear();
+      _query = '';
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _search.addListener(
+        () => setState(() => _query = _search.text.trim().toLowerCase()));
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  bool _matches(CropRecord c) {
+    if (_selectedSeason.isNotEmpty) {
+      if (_selectedSeason == 'شتوي' && !c.season.contains('شتوي')) return false;
+      if (_selectedSeason == 'صيفي' && !c.season.contains('صيفي')) return false;
+      if (_selectedSeason == 'نيلي' && !c.season.contains('نيلي')) return false;
+      if (_selectedSeason == 'معمر' &&
+          !c.season.contains('معمر') &&
+          !c.season.contains('دائم')) {
+        return false;
+      }
+    }
+    if (_selectedCategory.isNotEmpty) {
+      final inCat = switch (_selectedCategory) {
+        'حبوب وأعلاف' => const [
+            'القمح',
+            'الأرز',
+            'الذرة الشامية',
+            'الشعير',
+            'الشوفان',
+            'البرسيم الحجازي'
+          ].contains(c.name),
+        'بقوليات وزيتية' => const [
+            'فول بلدي',
+            'فول الصويا',
+            'عباد الشمس',
+            'السمسم',
+            'الترمس',
+            'الحمّص',
+            'العدس',
+            'الكتان',
+            'حبة البركة'
+          ].contains(c.name),
+        'خضروات' => const [
+            'الطماطم',
+            'البطاطس',
+            'البصل',
+            'الثوم',
+            'الخيار',
+            'الفلفل',
+            'البامية',
+            'البطاطا الحلوة'
+          ].contains(c.name),
+        'فاكهة وأشجار' => const [
+            'البرتقال',
+            'العنب',
+            'الزيتون',
+            'الرمان',
+            'البطيخ',
+            'الشمام',
+            'البلح (نخيل التمر)',
+            'التين',
+            'المانجو'
+          ].contains(c.name),
+        'محاصيل سكرية' =>
+          const ['بنجر السكر', 'قصب السكر'].contains(c.name),
+        _ => true,
+      };
+      if (!inCat) return false;
+    }
+    if (_query.isEmpty) return true;
+    final searchable =
+        '${c.name} ${c.nameEn} ${c.scientificName} ${c.season} ${c.region} ${c.soilType} ${c.pests} ${c.varieties} ${c.description}'
+            .toLowerCase();
+    return searchable.contains(_query);
+  }
+
+  Widget _filterCard(ThemeData theme, Color color) {
+    final summary = _filterSummaryParts;
+    final Color accentInk = AppColors.inkOn(color, theme.brightness);
+    final Color clearInk =
+        AppColors.inkOn(const Color(0xFFB71C1C), theme.brightness);
+    return Material(
+      color: color.withValues(alpha: 0.06),
+      child: Column(
+        children: [
+          InkWell(
+            key: const Key('filters-toggle'),
+            onTap: () => setState(() => _filtersOpen = !_filtersOpen),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              child: Row(
+                children: [
+                  Icon(_filtersOpen ? Icons.tune_rounded : Icons.search_rounded,
+                      size: 18, color: accentInk),
+                  const SizedBox(width: 8),
+                  Text('بحث وتصفية',
+                      style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w900,
+                          color: accentInk)),
+                  if (_activeFilterCount > 0) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      key: const Key('filters-count'),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: color,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text('$_activeFilterCount',
+                          style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white)),
+                    ),
+                  ],
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Text(
+                        _filtersOpen || summary.isEmpty
+                            ? ''
+                            : summary.join(' · '),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                            color: theme.colorScheme.onSurfaceVariant),
+                      ),
+                    ),
+                  ),
+                  if (_activeFilterCount > 0 || _query.isNotEmpty)
+                    IconButton(
+                      key: const Key('filters-clear'),
+                      tooltip: 'مسح الكل',
+                      visualDensity: VisualDensity.compact,
+                      icon: Icon(Icons.layers_clear_rounded,
+                          size: 18, color: clearInk),
+                      onPressed: _clearAllFilters,
+                    ),
+                  AnimatedRotation(
+                    turns: _filtersOpen ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 180),
+                    child: Icon(Icons.expand_more_rounded,
+                        size: 20, color: accentInk),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOutCubic,
+            alignment: Alignment.topCenter,
+            child: _filtersOpen
+                ? Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        TextField(
+                          controller: _search,
+                          decoration: InputDecoration(
+                            hintText: 'ابحث باسم المحصول، الأصناف، الآفات...',
+                            prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                            suffixIcon: _query.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear_rounded, size: 18),
+                                    onPressed: () => _search.clear(),
+                                  )
+                                : null,
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 10),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text('الموسم الزراعي:',
+                            style: TextStyle(
+                                fontSize: 12, fontWeight: FontWeight.w800)),
+                        const SizedBox(height: 6),
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              for (final s in ['الكل', 'شتوي', 'صيفي', 'نيلي', 'معمر'])
+                                Padding(
+                                  padding: const EdgeInsetsDirectional.only(end: 6),
+                                  child: ChoiceChip(
+                                    label: Text(s),
+                                    selected: s == 'الكل'
+                                        ? _selectedSeason.isEmpty
+                                        : _selectedSeason == s,
+                                    onSelected: (val) {
+                                      setState(() {
+                                        _selectedSeason =
+                                            (s == 'الكل' || !val) ? '' : s;
+                                      });
+                                    },
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        const Text('تصنيف المحصول:',
+                            style: TextStyle(
+                                fontSize: 12, fontWeight: FontWeight.w800)),
+                        const SizedBox(height: 6),
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              for (final cat in [
+                                'الكل',
+                                'حبوب وأعلاف',
+                                'بقوليات وزيتية',
+                                'خضروات',
+                                'فاكهة وأشجار',
+                                'محاصيل سكرية'
+                              ])
+                                Padding(
+                                  padding: const EdgeInsetsDirectional.only(end: 6),
+                                  child: ChoiceChip(
+                                    label: Text(cat),
+                                    selected: cat == 'الكل'
+                                        ? _selectedCategory.isEmpty
+                                        : _selectedCategory == cat,
+                                    onSelected: (val) {
+                                      setState(() {
+                                        _selectedCategory =
+                                            (cat == 'الكل' || !val) ? '' : cat;
+                                      });
+                                    },
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     const color = Color(0xFF6A1B9A); // بنفسجي
+    final theme = Theme.of(context);
+    final filtered = CropsScreen.crops.where(_matches).toList();
 
     return Scaffold(
       appBar: const QurityAppBar(
         title: 'المحاصيل الزراعية',
       ),
-      body: GridView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: crops.length,
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          mainAxisSpacing: 14,
-          crossAxisSpacing: 14,
-          childAspectRatio: 0.68,
-        ),
-        itemBuilder: (context, index) => _CropCard(
-          crop: crops[index],
-          color: color,
-          index: index,
-        ),
+      body: Column(
+        children: [
+          _filterCard(theme, color),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                Text(
+                  'عدد المحاصيل: ${filtered.length}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                if (_activeFilterCount > 0 || _query.isNotEmpty) ...[
+                  const Spacer(),
+                  const Text(
+                    'مُصفّى',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w800,
+                      color: color,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          Expanded(
+            child: filtered.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.grass_rounded,
+                            size: 56, color: color.withValues(alpha: 0.3)),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'لا توجد محاصيل مطابقة للبحث أو التصفية',
+                          style: TextStyle(
+                              fontSize: 14, fontWeight: FontWeight.w800),
+                        ),
+                        const SizedBox(height: 8),
+                        TextButton.icon(
+                          onPressed: _clearAllFilters,
+                          icon: const Icon(Icons.refresh_rounded, size: 18),
+                          label: const Text('إعادة ضبط الفلاتر'),
+                        ),
+                      ],
+                    ),
+                  )
+                : GridView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                    itemCount: filtered.length,
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 14,
+                      crossAxisSpacing: 14,
+                      childAspectRatio: 0.68,
+                    ),
+                    itemBuilder: (context, index) => _CropCard(
+                      crop: filtered[index],
+                      color: color,
+                      index: index,
+                    ),
+                  ),
+          ),
+        ],
       ),
     );
   }
@@ -1032,6 +1378,41 @@ class CropDetailScreen extends StatelessWidget {
     return Scaffold(
       appBar: QurityAppBar(
         title: crop.name,
+        actions: [
+          FavoriteButton(
+            item: FavoriteItem(
+              id: 'crop_${crop.name}',
+              targetId: crop.name,
+              collection: 'crops',
+              title: '🌾 ${crop.name} (${crop.scientificName})',
+              subtitle: '${crop.season} • ${crop.yieldTarget}',
+              route: AppRoutes.farmerCrops,
+              createdAt: DateTime.now(),
+            ),
+          ),
+          IconButton(
+            tooltip: 'مشاركة إرشادات المحصول',
+            icon: const Icon(Icons.share_rounded),
+            onPressed: () => ShareService.shareContent(
+              title: '🌾 إرشادات زراعة ${crop.name} (${crop.scientificName})',
+              body: crop.description,
+              details: {
+                'الموسم': crop.season,
+                'المنطقة': crop.region,
+                'مدة النمو': crop.growthPeriod,
+                'معدل البذار': crop.seedRate,
+                'نوع التربة': crop.soilType,
+                'الإنتاجية': crop.yieldTarget,
+                'طريقة الزراعة': crop.plantingMethod,
+                'نظام الري': crop.irrigation,
+                'برنامج التسميد': crop.fertilization,
+                'أهم الآفات': crop.pests,
+                'الأصناف الموصى بها': crop.varieties,
+                'طريقة الحصاد': crop.harvestMethod,
+              },
+            ),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),

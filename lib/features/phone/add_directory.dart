@@ -86,16 +86,7 @@ class _AddPhoneDirectoryScreenState extends State<AddPhoneDirectoryScreen> {
       if (duplicate.id.isNotEmpty && duplicate.phone.isNotEmpty) {
         if (!mounted) return;
         setState(() => _isSaving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          // أرضيات الشريط هنا ألوان ثابتة في السمتين (`error` و`primary`)، بينما
-          // حبره الافتراضي يُقرأ من `onInverseSurface` وهو في الداكن داكن ⇒
-          // البياض يُثبَّت. الأحمر هنا الهادئ الموثّق لا `Colors.red` الساطع.
-          SnackBar(
-            content: Text('هذا الرقم مسجل في الدليل تحت اسم: ${duplicate.name}',
-                style: const TextStyle(color: Colors.white)),
-            backgroundColor: AppColors.error,
-          ),
-        );
+        _showDuplicatePhoneDialog(duplicate, phone);
         return;
       }
       final job = _jobController.text.trim();
@@ -137,6 +128,274 @@ class _AddPhoneDirectoryScreenState extends State<AddPhoneDirectoryScreen> {
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
+  }
+
+  void _showDuplicatePhoneDialog(
+      PhoneDirectoryEntry duplicate, String phone) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.phone_locked_rounded, color: AppColors.error, size: 24),
+            SizedBox(width: 8),
+            Text('الرقم مسجل مسبقاً',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            RichText(
+              text: TextSpan(
+                style: TextStyle(
+                  fontSize: 14,
+                  height: 1.5,
+                  color: Theme.of(ctx).colorScheme.onSurface,
+                  fontFamily: 'Cairo',
+                ),
+                children: [
+                  const TextSpan(text: 'هذا الرقم مسجل من قبل باسم: '),
+                  TextSpan(
+                    text: '«${duplicate.name}»\n\n',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.error,
+                    ),
+                  ),
+                  const TextSpan(
+                    text:
+                        'لا يمكن تكرار نفس رقم الهاتف لأكثر من شخص في الدليل. إذا كان هذا الرقم يخصك حالياً، يمكنك تقديم طلب مراجعة للإدارة للتحقق منه.',
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton.icon(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+            ),
+            icon: const Icon(Icons.rule_folder_rounded, size: 18),
+            label: const Text('طلب مراجعة الرقم'),
+            onPressed: () {
+              Navigator.pop(ctx);
+              _showDisputeSheet(duplicate, phone);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDisputeSheet(PhoneDirectoryEntry duplicate, String phone) {
+    final reasonController = TextEditingController();
+    final newName = _nameController.text.trim();
+    bool isSubmitting = false;
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetCtx) => StatefulBuilder(
+        builder: (context, setSheetState) => Padding(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 10,
+            bottom: MediaQuery.of(sheetCtx).viewInsets.bottom + 24,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.assignment_ind_rounded,
+                        color: AppColors.primary, size: 24),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'طلب مراجعة ملكية الرقم',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .surfaceContainerHighest
+                        .withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .outline
+                          .withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      _disputeRow('رقم الهاتف:', phone, isBold: true),
+                      const Divider(height: 14),
+                      _disputeRow('الاسم المسجل حالياً:', duplicate.name,
+                          color: AppColors.error),
+                      const Divider(height: 14),
+                      _disputeRow('الاسم الجديد المطلوب:', newName,
+                          color: AppColors.primary, isBold: true),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'سبب وتوضيح الطلب:',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: reasonController,
+                  maxLines: 4,
+                  autofocus: true,
+                  decoration: InputDecoration(
+                    hintText:
+                        'اكتب هنا توضيحك (مثلاً: قمت بشراء الخط حديثاً، أو الاسم القديم غير صحيح...)',
+                    filled: true,
+                    fillColor: Theme.of(context)
+                        .colorScheme
+                        .surfaceContainerHighest
+                        .withValues(alpha: 0.25),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed:
+                            isSubmitting ? null : () => Navigator.pop(sheetCtx),
+                        child: const Text('إلغاء'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        onPressed: isSubmitting
+                            ? null
+                            : () async {
+                                final reason = reasonController.text.trim();
+                                if (reason.isEmpty) {
+                                  ScaffoldMessenger.of(sheetCtx).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                          'يرجى كتابة سبب أو توضيح الطلب أولاً'),
+                                      behavior: SnackBarBehavior.floating,
+                                    ),
+                                  );
+                                  return;
+                                }
+                                setSheetState(() => isSubmitting = true);
+                                try {
+                                  await _service.submitPhoneDispute(
+                                    phone: phone,
+                                    newName: newName,
+                                    oldEntryId: duplicate.id,
+                                    oldEntryName: duplicate.name,
+                                    reason: reason,
+                                    job: _jobController.text.trim(),
+                                    photoUrl: _photoUrl,
+                                  );
+                                  if (!sheetCtx.mounted) return;
+                                  Navigator.pop(sheetCtx);
+                                  if (!mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: const Text(
+                                        'تم إرسال طلب مراجعة الرقم للإدارة بنجاح وسيتم البت فيه.',
+                                        style: TextStyle(color: Colors.white),
+                                      ),
+                                      backgroundColor: AppColors.primary,
+                                    ),
+                                  );
+                                  Navigator.pop(context, true);
+                                } catch (e) {
+                                  setSheetState(() => isSubmitting = false);
+                                  if (sheetCtx.mounted) {
+                                    ScaffoldMessenger.of(sheetCtx).showSnackBar(
+                                      SnackBar(content: Text('خطأ: $e')),
+                                    );
+                                  }
+                                }
+                              },
+                        icon: isSubmitting
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.send_rounded, size: 18),
+                        label: Text(
+                            isSubmitting ? 'جاري الإرسال...' : 'إرسال للإدارة'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _disputeRow(String label, String value,
+      {bool isBold = false, Color? color}) {
+    return Row(
+      children: [
+        Text(label,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: isBold ? FontWeight.w900 : FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   String _normalizePhone(String phone) {

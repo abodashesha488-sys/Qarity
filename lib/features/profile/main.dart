@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -38,9 +39,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoading = true;
   bool _isSaving = false;
   bool _isSeller = false;
-  SellerRequest? _sellerRequest;
-  bool _checkingRequest = false;
   String? _loadError;
+  Map<String, dynamic>? _pendingUpgradeRequest;
 
   // stream منتجاتي مثبت لكل مستخدم — إنشاؤه داخل build كان يعيد الاشتراك
   // (وفوترة قراءة كاملة) عند كل إعادة بناء للشاشة.
@@ -79,14 +79,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _fetchData() async {
     final user = await _userService.getCurrentUser();
     var isSeller = false;
-    SellerRequest? request;
+    Map<String, dynamic>? pendingReq;
     try {
-      if (user != null) isSeller = await _marketService.isUserSeller(user.id);
-      if (user != null && !isSeller) {
-        request = await _marketService.getUserSellerRequest(user.id);
+      if (user != null) {
+        isSeller = await _marketService.isUserSeller(user.id);
+        final snap = await FirebaseFirestore.instance
+            .collection('upgrade_requests')
+            .where('userId', isEqualTo: user.id)
+            .where('status', isEqualTo: 'pending')
+            .limit(1)
+            .get();
+        if (snap.docs.isNotEmpty) {
+          pendingReq = {'id': snap.docs.first.id, ...snap.docs.first.data()};
+        }
       }
     } catch (_) {
-      // لا نُفشل الشاشة إذا تعذّر جلب حالة البائع (أوفلاين مثلاً).
+      // لا نُفشل الشاشة إذا تعذّر جلب حالة البائع أو الطلب (أوفلاين مثلاً).
     }
     if (!mounted) return;
     setState(() {
@@ -94,7 +102,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _nameController.text = user?.name ?? '';
       _phoneController.text = user?.phone ?? '';
       _isSeller = isSeller;
-      _sellerRequest = request;
+      _pendingUpgradeRequest = pendingReq;
       _loadError = null;
     });
   }
@@ -187,135 +195,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  Future<void> _submitSellerRequest() async {
-    if (_user == null) return;
-
-    // Show dialog to get shop details
-    final shopNameController =
-        TextEditingController(text: '${_user!.name}\'s Shop');
-    final shopDescController = TextEditingController();
-    final shopAddressController = TextEditingController();
-    String? selectedCategory;
-    SellerType selectedType = SellerType.regular;
-
-    final categories = [
-      'مواد غذائية', 'خضار وفواكه', 'لحوم وطيور وأسماك',
-      'ألبان وخير البلد', 'حلويات ومخبوزات', 'مشروبات ومقاهي',
-      'أدوات منزلية ومنظفات', 'إلكترونيات وهواتف', 'أثاث ومفروشات',
-      'ملابس وأحذية', 'مستلزمات زراعة وأعلاف', 'سوق المستعمل',
-      'ورش صيانة', 'كهرباء وسباكة', 'نجارة وألمنيوم', 'حدادة ولحام',
-      'تكييف وتبريد', 'سيارات وموتوسيكلات', 'مخازن ومستودعات',
-      'حرف يدوية', 'خياطة وتفصيل', 'مطاعم ومخابز', 'صيدليات', 'خدمات أخرى',
-    ];
-
-    final result = await showDialog<Map<String, dynamic>>(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('طلب فتح متجر'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: shopNameController,
-                  decoration: const InputDecoration(labelText: 'اسم المتجر *', border: OutlineInputBorder()),
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: shopDescController,
-                  decoration: const InputDecoration(labelText: 'وصف المتجر', border: OutlineInputBorder()),
-                  maxLines: 3,
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: shopAddressController,
-                  decoration: const InputDecoration(labelText: 'عنوان المتجر', border: OutlineInputBorder()),
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: selectedCategory,
-                  decoration: const InputDecoration(labelText: 'الفئة الرئيسية *', border: OutlineInputBorder()),
-                  items: categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                  onChanged: (v) => setState(() => selectedCategory = v),
-                  menuMaxHeight: 360,
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<SellerType>(
-                  initialValue: selectedType,
-                  decoration: const InputDecoration(labelText: 'نوع البائع *', border: OutlineInputBorder()),
-                  items: SellerType.values.map((t) => DropdownMenuItem(
-                    value: t,
-                    child: Row(
-                      children: [
-                        Icon(t.icon, size: 18, color: Theme.of(context).colorScheme.primary),
-                        const SizedBox(width: 8),
-                        Text('${t.label} (حتى ${t.maxImages} صور)'),
-                      ],
-                    ),
-                  )).toList(),
-                  onChanged: (v) => setState(() => selectedType = v ?? selectedType),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
-            FilledButton(
-              onPressed: () {
-                if (shopNameController.text.isEmpty || selectedCategory == null) return;
-                Navigator.pop(context, {
-                  'shopName': shopNameController.text,
-                  'shopDescription': shopDescController.text,
-                  'shopAddress': shopAddressController.text,
-                  'category': selectedCategory!,
-                  'sellerType': selectedType.name,
-                });
-              },
-              child: const Text('إرسال الطلب'),
-            ),
-          ],
-        ),
-      ),
-    );
-
-    if (result == null) return;
-
-    setState(() => _checkingRequest = true);
-    try {
-      final request = SellerRequest(
-        id: '',
-        userId: _user!.id,
-        userName: _user!.name,
-        userPhone: _user!.phone ?? '',
-        userPhotoUrl: _user!.photoUrl,
-        shopName: result['shopName'] as String,
-        shopDescription: result['shopDescription'] as String,
-        shopAddress: result['shopAddress'] as String,
-        categories: [result['category'] as String],
-        requestedSellerType: result['sellerType'] as String,
-      );
-      await _marketService.submitSellerRequest(request);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: const Text('تم إرسال طلبك بنجاح! سنراجعه قريباً',
-                style: TextStyle(color: Colors.white)),
-            backgroundColor: AppColors.primary),
-      );
-      await _fetchData();
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text('خطأ: $e',
-                style: const TextStyle(color: Colors.white)),
-            backgroundColor: AppColors.error),
-      );
-    } finally {
-      if (mounted) setState(() => _checkingRequest = false);
-    }
-  }
 
   Future<void> _signOut() async {
     await _userService.signOut();
@@ -452,6 +331,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           padding: const EdgeInsets.all(16),
           children: [
             _buildProfileHeader(theme),
+            const SizedBox(height: 16),
+            _buildUpgradeCard(theme),
             const SizedBox(height: 16),
             _buildSettingsSection(theme),
             if (_isSeller) ...[
@@ -826,11 +707,406 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Widget _buildUpgradeCard(ThemeData theme) {
+    final pendingReq = _pendingUpgradeRequest;
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF673AB7).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.upgrade_rounded,
+                      color: Color(0xFF673AB7), size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'ترقية الحساب والامتيازات',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w800, fontSize: 15),
+                      ),
+                      Text(
+                        'ارتقِ بحسابك إلى بائع مميز أو اطلب الانضمام لفريق الإدارة',
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: theme.colorScheme.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            if (pendingReq != null) ...[
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.amber.withValues(alpha: 0.35)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.hourglass_top_rounded,
+                        color: Colors.amber, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('طلب ترقية الحساب قيد المراجعة',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 12,
+                                  color: Colors.amber)),
+                          const SizedBox(height: 2),
+                          Text(
+                            'طلب الترقية إلى «${pendingReq['targetTitle'] ?? ''}» قيد المراجعة حالياً من قبل المدير العام.',
+                            style: const TextStyle(fontSize: 11),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'سيتم تحديث تصنيف حسابك فور اتخاذ القرار.',
+                            style: TextStyle(
+                                fontSize: 10,
+                                color: theme.colorScheme.onSurfaceVariant),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              height: 46,
+              child: FilledButton.icon(
+                onPressed: pendingReq != null
+                    ? () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                                'طلب ترقيتك إلى «${pendingReq['targetTitle'] ?? ''}» قيد المراجعة حالياً من قبل المدير العام.'),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      }
+                    : () => _showUpgradeDialog(context, theme),
+                icon: const Icon(Icons.auto_awesome_rounded, size: 18),
+                label: Text(
+                  pendingReq != null
+                      ? 'طلب الترقية قيد المراجعة'
+                      : 'ترقية الحساب',
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+                style: FilledButton.styleFrom(
+                  backgroundColor: pendingReq != null
+                      ? Colors.amber[700]
+                      : const Color(0xFF673AB7),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showUpgradeDialog(BuildContext context, ThemeData theme) async {
+    if (_user == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final notesController = TextEditingController();
+    var isSellerCategory = true;
+    var selectedTarget = 'gold'; // default
+    var isSubmitting = false;
+
+    final sellerOptions = [
+      (
+        'premium',
+        'بائع مميز',
+        'رفع حتى 10 صور لكل منتج • شارة وأولوية قصوى في العرض',
+        Icons.emergency_rounded,
+        const Color(0xFFD32F2F),
+      ),
+      (
+        'super_seller',
+        'بائع فائق',
+        'رفع حتى 3 صور لكل منتج • شارة ولون فضي جذاب',
+        Icons.storefront_rounded,
+        const Color(0xFF78909C),
+      ),
+      (
+        'gold',
+        'بائع ذهبي',
+        'رفع حتى 5 صور لكل منتج • شارة وإطار ولون ذهبي فاخر',
+        Icons.star_rounded,
+        const Color(0xFFFFB300),
+      ),
+    ];
+
+    final adminOptions = [
+      (
+        'assistant_admin',
+        'أدمن مساعد',
+        'مراجعة وإدارة محتوى التطبيق مع المدير العام',
+        Icons.shield_rounded,
+        const Color(0xFF6A1B9A),
+      ),
+      (
+        'medical_admin',
+        'مدير المركز الطبي',
+        'إدارة عيادات ومواعيد أطباء المركز الطبي الخيري',
+        Icons.medical_services_rounded,
+        const Color(0xFF00897B),
+      ),
+      (
+        'agricultural_admin',
+        'مدير الخدمات الزراعية',
+        'إدارة بوابة المزارع والمحتوى الزراعي والاستشارات',
+        Icons.agriculture_rounded,
+        const Color(0xFF558B2F),
+      ),
+      (
+        'legal_admin',
+        'أدمن الاستشارات القانونية',
+        'متابعة والرد على الاستشارات القانونية في مستشار القرية',
+        Icons.gavel_rounded,
+        const Color(0xFF2E7D32),
+      ),
+      (
+        'moderator',
+        'مشرف مجتمعي',
+        'إشراف ومتابعة المجتمع ومشاركات القرية',
+        Icons.verified_user_rounded,
+        Colors.orange,
+      ),
+    ];
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: theme.colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) {
+          final options = isSellerCategory ? sellerOptions : adminOptions;
+          final currentSelectedTitle = options
+              .firstWhere((o) => o.$1 == selectedTarget,
+                  orElse: () => options.first)
+              .$2;
+
+          return SafeArea(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                  20, 0, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.upgrade_rounded,
+                            color: Color(0xFF673AB7), size: 24),
+                        const SizedBox(width: 8),
+                        Text(
+                          'ترقية الحساب',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 18,
+                          ),
+                        ),
+                        const Spacer(),
+                        IconButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          icon: const Icon(Icons.close_rounded),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'اختر التصنيف أو الدور الذي ترغب في الترقية إليه. تُرفع الطلبات إلى المدير العام للمراجعة والاعتماد.',
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: theme.colorScheme.onSurfaceVariant),
+                    ),
+                    const SizedBox(height: 14),
+                    SegmentedButton<bool>(
+                      segments: const [
+                        ButtonSegment(
+                          value: true,
+                          label: Text('ترقية بائع'),
+                          icon: Icon(Icons.store_rounded),
+                        ),
+                        ButtonSegment(
+                          value: false,
+                          label: Text('دور إداري'),
+                          icon: Icon(Icons.admin_panel_settings_rounded),
+                        ),
+                      ],
+                      selected: {isSellerCategory},
+                      onSelectionChanged: (set) {
+                        setSheet(() {
+                          isSellerCategory = set.first;
+                          selectedTarget =
+                              isSellerCategory ? 'gold' : 'assistant_admin';
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 14),
+                    RadioGroup<String>(
+                      groupValue: selectedTarget,
+                      onChanged: (v) {
+                        if (v != null) setSheet(() => selectedTarget = v);
+                      },
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          for (final opt in options)
+                            RadioListTile<String>(
+                              value: opt.$1,
+                              dense: true,
+                              title: Text(opt.$2,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 14)),
+                              subtitle: Text(opt.$3,
+                                  style: const TextStyle(fontSize: 11)),
+                              secondary: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: opt.$5.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(opt.$4, color: opt.$5, size: 20),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: notesController,
+                      maxLines: 2,
+                      decoration: InputDecoration(
+                        labelText: 'ملاحظات أو نبذة عن خبرتك (اختياري)',
+                        hintText: 'اكتب سبب طلب الترقية أو نشاطك التجاري...',
+                        alignLabelWithHint: true,
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    SizedBox(
+                      height: 48,
+                      child: FilledButton.icon(
+                        onPressed: isSubmitting
+                            ? null
+                            : () async {
+                                setSheet(() => isSubmitting = true);
+                                try {
+                                  await FirebaseFirestore.instance
+                                      .collection('upgrade_requests')
+                                      .add({
+                                    'userId': _user!.id,
+                                    'userName': _user!.name,
+                                    'userEmail': _user!.email,
+                                    'userPhone': _user!.phone,
+                                    'userPhoto': _user!.photoUrl,
+                                    'currentRole': _user!.role,
+                                    'currentSellerType':
+                                        _user!.sellerType?.name ?? 'regular',
+                                    'type': isSellerCategory
+                                        ? 'seller'
+                                        : 'admin',
+                                    'targetType': selectedTarget,
+                                    'targetTitle': currentSelectedTitle,
+                                    'notes': notesController.text.trim(),
+                                    'status': 'pending',
+                                    'createdAt': FieldValue.serverTimestamp(),
+                                  });
+                                  if (ctx.mounted) Navigator.pop(ctx);
+                                  messenger.showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                          'تم إرسال طلب الترقية إلى «$currentSelectedTitle» بنجاح للمدير العام.'),
+                                      backgroundColor: AppColors.success,
+                                      behavior: SnackBarBehavior.floating,
+                                    ),
+                                  );
+                                  await _fetchData();
+                                } catch (e) {
+                                  setSheet(() => isSubmitting = false);
+                                  messenger.showSnackBar(
+                                    SnackBar(
+                                      content: Text('تعذر إرسال الطلب: $e'),
+                                      backgroundColor: AppColors.error,
+                                    ),
+                                  );
+                                }
+                              },
+                        icon: isSubmitting
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white),
+                              )
+                            : const Icon(Icons.send_rounded, size: 18),
+                        label: Text(
+                          isSubmitting
+                              ? 'جاري الإرسال...'
+                              : 'إرسال طلب الترقية للمدير العام',
+                          style: const TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF673AB7),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   Widget _buildSettingsSection(ThemeData theme) {
-    Widget? sellerAction;
+    Widget? statusCard;
     if (_isSeller) {
       final st = _user?.sellerType ?? SellerType.regular;
-      sellerAction = Container(
+      statusCard = Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -840,7 +1116,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ],
           ),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.25)),
+          border: Border.all(
+              color: theme.colorScheme.primary.withValues(alpha: 0.25)),
         ),
         child: Row(
           children: [
@@ -850,83 +1127,57 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('أنت بائع', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800, color: theme.colorScheme.primary)),
-                  Text(st.label, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-                  Text('الحد الأقصى للصور: ${st.maxImages}', style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                  Text('أنت بائع معتمد: ${st.label}',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: theme.colorScheme.primary)),
+                  Text(st.label,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant)),
+                  Text('الحد الأقصى للصور: ${st.maxImages} صور لكل منتج',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant)),
                 ],
               ),
             ),
           ],
         ),
       );
-    } else if (_sellerRequest?.isPending == true) {
-      // التظليل هنا خفيف (0.1) فالرمز والعنوان حبرٌ فوق أرضية قريبة من البياض:
-      // البرتقالي 2.16 لا يُقرأ عند 13px، و«البرتقالي الغامق» 3.08 لا يجتاز هو
-      // الآخر — فيُشتق حبرٌ واحد منهما معًا ويبقى اللون دلالته على التعليق.
-      final pendingInk =
-          AppColors.readableInk(AppColors.warning, theme.brightness);
-      sellerAction = Container(
+    } else if (_user != null && _user!.role != 'user') {
+      final roleColor = switch (_user!.role) {
+        'admin' => const Color(0xFF1565C0),
+        'assistant_admin' => const Color(0xFF6A1B9A),
+        'medical_admin' => const Color(0xFF00897B),
+        'agricultural_admin' => const Color(0xFF558B2F),
+        'legal_admin' => const Color(0xFF2E7D32),
+        'moderator' => Colors.orange,
+        _ => theme.colorScheme.primary,
+      };
+      statusCard = Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.orange.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+          color: roleColor.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: roleColor.withValues(alpha: 0.3)),
         ),
         child: Row(
           children: [
-            Icon(Icons.hourglass_empty_rounded, color: pendingInk),
+            Icon(Icons.verified_user_rounded, color: roleColor, size: 28),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('طلبك قيد المراجعة', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: pendingInk)),
-                  Text('سيتم مراجعة طلبك من قبل الإدارة', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                  Text('صلاحية الحساب: ${_user!.roleLabel}',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800, color: roleColor)),
+                  Text('حسابك يملك صلاحيات إدارية معتمدة بالتطبيق',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant)),
                 ],
               ),
             ),
           ],
-        ),
-      );
-    } else if (_sellerRequest?.isRejected == true) {
-      sellerAction = Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.errorContainer.withValues(alpha: 0.3),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: theme.colorScheme.error.withValues(alpha: 0.3)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.cancel_rounded, color: theme.colorScheme.error),
-                const SizedBox(width: 12),
-                Text('تم رفض طلبك', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: theme.colorScheme.error)),
-              ],
-            ),
-            if (_sellerRequest!.adminNotes != null) ...[
-              const SizedBox(height: 8),
-              Text('السبب: ${_sellerRequest!.adminNotes}', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-            ],
-            const SizedBox(height: 12),
-            FilledButton.icon(
-              onPressed: _checkingRequest ? null : _submitSellerRequest,
-              icon: _checkingRequest ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.add_business_rounded),
-              label: Text(_checkingRequest ? 'جاري الإرسال...' : 'إعادة المحاولة'),
-            ),
-          ],
-        ),
-      );
-    } else {
-      sellerAction = FilledButton.icon(
-        onPressed: _checkingRequest ? null : _submitSellerRequest,
-        icon: _checkingRequest ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.storefront_rounded),
-        label: Text(_checkingRequest ? 'جاري الإرسال...' : 'أريد أن أصبح بائع'),
-        style: FilledButton.styleFrom(
-          minimumSize: const Size(double.infinity, 48),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
     }
@@ -935,15 +1186,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
+        side: BorderSide(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
       ),
       child: Column(
         children: [
           AnimatedBuilder(
             animation: _themeService,
             builder: (context, _) => SwitchListTile(
-              title: Text('الوضع الليلي', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-              subtitle: Text('تفعيل المظهر الداكن للتطبيق', style: theme.textTheme.bodySmall),
+              title: Text('الوضع الليلي',
+                  style: theme.textTheme.titleSmall
+                      ?.copyWith(fontWeight: FontWeight.w700)),
+              subtitle: Text('تفعيل المظهر الداكن للتطبيق',
+                  style: theme.textTheme.bodySmall),
               value: _themeService.isDarkMode,
               onChanged: (value) => _themeService.setDarkMode(value),
               secondary: Container(
@@ -955,7 +1210,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
-                  _themeService.isDarkMode ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                  _themeService.isDarkMode
+                      ? Icons.dark_mode_rounded
+                      : Icons.light_mode_rounded,
                   color: theme.colorScheme.primary,
                 ),
               ),
@@ -964,10 +1221,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const Divider(height: 1),
           _SettingsTile(
             theme: theme,
+            icon: Icons.favorite_rounded,
+            title: 'قائمتي المفضلة',
+            subtitle: 'الأخبار والمنتجات والفنيون والمحاصيل المحفوظة',
+            onTap: () => Navigator.pushNamed(context, AppRoutes.favorites),
+          ),
+          const Divider(height: 1),
+          _SettingsTile(
+            theme: theme,
             icon: Icons.notifications_rounded,
             title: 'الإشعارات',
             subtitle: 'إعدادات الإشعارات التي تصلك',
-            onTap: () => Navigator.pushNamed(context, AppRoutes.notificationsSettings),
+            onTap: () =>
+                Navigator.pushNamed(context, AppRoutes.notificationsSettings),
           ),
           const Divider(height: 1),
           _SettingsTile(
@@ -977,11 +1243,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             subtitle: 'المظهر واللغة والحساب',
             onTap: () => Navigator.pushNamed(context, AppRoutes.settingsIndex),
           ),
-          const Divider(height: 1),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: sellerAction,
-          ),
+          if (statusCard != null) ...[
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: statusCard,
+            ),
+          ],
         ],
       ),
     );

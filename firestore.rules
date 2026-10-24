@@ -110,12 +110,14 @@ service cloud.firestore {
                     && request.resource.data.isActive == true;
 
       // المدير العام يغيّر أي شيء في أي حساب (الأدوار/النوع/التفعيل).
-      // الأدمن المساعد يدير بقية الحالات، لكنه لا يستطيع المساس بحساب
-      // المدير العام إطلاقاً (لا حذف ولا تنحية الدور) — حماية مالك التطبيق.
+      // الأدمن المساعد يدير بقية الحالات، لكنه لا يستطيع إعطاء أو تغيير
+      // أدوار المستخدمين وصلاحياتهم إطلاقاً (role / sellerType)، ولا المساس بحساب المدير العام.
       // المالك يحدّث بياناته فقط دون المساس بحقول الصلاحيات:
       //   role / sellerType / isActive
       allow update: if isGeneralAdmin()
-                    || (isAdmin() && resource.data.role != 'admin')
+                    || (isAdmin() && resource.data.role != 'admin'
+                        && !request.resource.data.diff(resource.data)
+                             .affectedKeys().hasAny(['role', 'sellerType']))
                     || (isOwner(userId)
                         && !request.resource.data.diff(resource.data)
                              .affectedKeys().hasAny(['role', 'sellerType', 'isActive'])
@@ -474,6 +476,44 @@ service cloud.firestore {
                              .affectedKeys().hasAny(['userName']));
       allow delete: if isAdmin() || isLegalAdmin()
                     || ownerDelete(resource.data.userId);
+
+      match /replies/{replyId} {
+        allow read: if true;
+        allow create: if accountActive()
+                      && request.auth.uid == request.resource.data.authorId
+                      && (isAdmin() || isLegalAdmin()
+                          || request.auth.uid == get(/databases/$(database)/documents/legal_consultations/$(docId)).data.userId);
+        allow update, delete: if isAdmin() || isLegalAdmin()
+                              || (accountActive() && request.auth.uid == resource.data.authorId);
+      }
+    }
+
+    // ────────────────── مستشارك الزراعي: استشارات الأهالي والمزارعين ──────────────────
+    match /agriculture_consultations/{docId} {
+      allow get: if isAdmin() || isAgriculturalAdmin() || resource.data.isApproved == true
+                 || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow list: if isAdmin() || isAgriculturalAdmin() || resource.data.isApproved == true
+                  || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if accountActive()
+                    && request.auth.uid == request.resource.data.userId
+                    && request.resource.data.isApproved == false;
+      allow update: if isAdmin() || isAgriculturalAdmin()
+                    || (ownerEdit(resource.data.userId, request.resource.data.userId)
+                        && request.resource.data.answer == ''
+                        && !request.resource.data.diff(resource.data)
+                             .affectedKeys().hasAny(['userName']));
+      allow delete: if isAdmin() || isAgriculturalAdmin()
+                    || ownerDelete(resource.data.userId);
+
+      match /replies/{replyId} {
+        allow read: if true;
+        allow create: if accountActive()
+                      && request.auth.uid == request.resource.data.authorId
+                      && (isAdmin() || isAgriculturalAdmin()
+                          || request.auth.uid == get(/databases/$(database)/documents/agriculture_consultations/$(docId)).data.userId);
+        allow update, delete: if isAdmin() || isAgriculturalAdmin()
+                              || (accountActive() && request.auth.uid == resource.data.authorId);
+      }
     }
 
     // محلات القرية — الإنشاء لصاحب المحل (يبدأ غير معتمد)، والتعديل لصاحبه أو الأدمن
@@ -811,6 +851,18 @@ service cloud.firestore {
     match /reports/{docId} {
       allow create: if isSignedIn();
       allow read, update, delete: if isAdmin();
+    }
+
+    // ───────────────────────── طلبات ترقية الحساب ─────────────────────────
+    // طلبات الترقية (بائع مميز/فائق/ذهبي أو أدوار إدارية)
+    // الإرسال للمستخدم نفسه بحالة معلّقة، والاعتماد/الرفض حصري للمدير العام فقط
+    match /upgrade_requests/{docId} {
+      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow list: if isAdmin();
+      allow create: if accountActive()
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.status == 'pending';
+      allow update, delete: if isGeneralAdmin();
     }
   }
 }

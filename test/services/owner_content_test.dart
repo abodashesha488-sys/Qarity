@@ -29,14 +29,16 @@ const List<String> kOwnerEditableCollections = <String>[
   'village_ads',
   'lawyers',
   'legal_consultations',
+  'agriculture_consultations',
 ];
 
-/// المجموعات الثلاث بلا شاشة تفاصيل — أزرارها على الكارت/الحوار نفسه.
+/// المجموعات الخمس بلا شاشة تفاصيل — أزرارها على الكارت/الحوار نفسه.
 const List<String> kOwnerCardCollections = <String>[
   'blood_donors',
   'blood_requests',
   'phone_directory',
   'legal_consultations',
+  'agriculture_consultations',
 ];
 
 String _src(String path) => File(path).readAsStringSync();
@@ -52,7 +54,7 @@ String _rulesBlock(String collection) {
 
 void main() {
   group('عقد المجموعات (١) — المحرك والقواعد', () {
-    test('المحرك يغطي الثماني عشرة مجموعة ولا مجموعة زائدة', () {
+    test('المحرك يغطي التسع عشرة مجموعة ولا مجموعة زائدة', () {
       expect(OwnerContentService.editableCollections,
           unorderedEquals(kOwnerEditableCollections));
       for (final c in kOwnerEditableCollections) {
@@ -88,13 +90,14 @@ void main() {
 
     test('لا مجموعة في الواجهة تمر بمسار حذف أو تعديل خارج المحرك', () {
       final engine = _src('lib/services/owner_content_service.dart');
-      expect(RegExp(r"collection: '").allMatches(engine).length, 18);
+      expect(RegExp(r"collection: '").allMatches(engine).length, 19);
       for (final f in [
         'lib/services/news_service.dart',
         'lib/services/obituary_service.dart',
         'lib/services/phone_directory_service.dart',
         'lib/services/village_ad_service.dart',
         'lib/services/legal_service.dart',
+        'lib/services/agriculture_consultation_service.dart',
       ]) {
         expect(_src(f), contains('OwnerContentService.edit('), reason: f);
         expect(_src(f), contains('OwnerContentService.remove('), reason: f);
@@ -366,14 +369,16 @@ void main() {
       ]) {
         expect(_src(f), contains('OwnerActions('), reason: f);
       }
-      // المجموعات الأربع بلا شاشة تفاصيل: الأزرار على الكارت/الحوار نفسه.
+      // المجموعات الخمس بلا شاشة تفاصيل: الأزرار على الكارت/الحوار نفسه.
       expect(_src('lib/features/medical/medical_home_screen.dart'),
           contains('OwnerActions('));
       expect(_src('lib/features/phone/directory.dart'),
           contains('OwnerActions('));
       expect(_src('lib/features/legal/legal_advisor_screen.dart'),
           contains('OwnerActions('));
-      expect(kOwnerCardCollections, hasLength(4));
+      expect(_src('lib/features/services/agricultural_advisor_screen.dart'),
+          contains('OwnerActions('));
+      expect(kOwnerCardCollections, hasLength(5));
     });
 
     test('لا شاشة تستعمل العنصر الموحّد تعيد اختراع نافذة حذف الإضافة', () {

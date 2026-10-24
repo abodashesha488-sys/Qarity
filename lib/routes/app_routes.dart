@@ -45,6 +45,7 @@ import '../features/occasions/detail.dart';
 import '../features/occasions/list.dart';
 import '../features/phone/add_directory.dart';
 import '../features/phone/directory.dart';
+import '../features/profile/favorites_screen.dart';
 import '../features/profile/main.dart';
 import '../features/services/agricultural_advisor_screen.dart';
 import '../features/services/crops_screen.dart';
@@ -145,6 +146,7 @@ static const String marketProducts = '/market';
   static const String phoneDirectory = '/phone-directory';
   static const String phoneDirectoryAdd = '/phone-directory-add';
   static const String profileMain = '/profile';
+  static const String favorites = '/profile/favorites';
   static const String completeProfile = '/complete-profile';
   static const String settingsIndex = '/settings';
   static const String notificationsSettings = '/settings/notifications';
@@ -241,6 +243,7 @@ obituariesAdd: (_) => const AddObituaryScreen(),
     phoneDirectory: (_ ) => const PhoneDirectoryScreen(),
     phoneDirectoryAdd: (_ ) => const AddPhoneDirectoryScreen(),
     profileMain: (_ ) => const ProfileScreen(),
+    favorites: (_ ) => const FavoritesScreen(),
     settingsIndex: (_ ) => const SettingsScreen(),
     notificationsSettings: (_ ) => const NotificationsSettingsScreen(),
     serviceProviderDetail: (_ ) => const ServiceProviderDetailScreen(),

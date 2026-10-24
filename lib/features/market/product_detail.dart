@@ -2,19 +2,21 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/comment_style.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/utils/launch_link.dart';
+import '../../core/utils/relative_time.dart';
 import '../../core/utils/role_style.dart';
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
+import '../../services/favorites_service.dart';
 import '../../services/market_service.dart';
 import '../../services/moderation_service.dart';
 import '../../services/product_interaction_service.dart';
 import '../../services/share_service.dart';
+import '../../widgets/favorite_button.dart';
 import '../../widgets/full_fit_image.dart';
 import '../../widgets/image_gallery_wrap.dart';
 import '../../widgets/owner_actions.dart';
@@ -180,6 +182,26 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       appBar: QurityAppBar(
         title: product.name,
         actions: [
+          FavoriteButton(
+            item: FavoriteItem(
+              id: 'product_${product.id}',
+              targetId: product.id,
+              collection: 'products',
+              title: product.name,
+              subtitle: '${product.effectivePrice.toStringAsFixed(0)} ج.م • ${product.sellerName}',
+              imageUrl: product.imageUrl.isNotEmpty
+                  ? product.imageUrl
+                  : (product.imageUrls.isNotEmpty ? product.imageUrls.first : ''),
+              route: AppRoutes.marketProductDetail,
+              arguments: {'id': product.id},
+              createdAt: DateTime.now(),
+            ),
+          ),
+          IconButton(
+            tooltip: 'مشاركة',
+            icon: const Icon(Icons.share_rounded),
+            onPressed: _shareProduct,
+          ),
           ModerationService.instance.buildMoreOptionsButton(
             context: context,
             targetType: 'product',
@@ -409,6 +431,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     ),
                     const SizedBox(height: 12),
                     _buildReviewsSection(theme),
+                    const SizedBox(height: 24),
+                    _buildCommentsStreamSection(theme),
                     if (_similarProducts.isNotEmpty) ...[
                       const SizedBox(height: 24),
                       Row(
@@ -666,8 +690,21 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       '${ShareService.appSignature}';
 
   void _shareProduct() async {
-    await SharePlus.instance.share(
-        ShareParams(text: _productShareText, subject: _product!.name));
+    await ShareService.shareContent(
+      title: '🛒 ${_product!.name}',
+      body: _product!.description,
+      imageUrls: [
+        if (_product!.imageUrl.isNotEmpty) _product!.imageUrl,
+        ..._product!.imageUrls,
+      ],
+      details: {
+        'السعر': '${_product!.effectivePrice.toStringAsFixed(0)} ج.م',
+        'البائع': _product!.sellerName,
+        'الهاتف': _product!.sellerPhone,
+        'التصنيف': _product!.category,
+        'الحالة': _product!.isInStock ? 'متوفر' : 'غير متوفر',
+      },
+    );
   }
 
   /// بلا بوّابة `canLaunchUrl`: الفحص القبلي كان يرجع false على أندرويد 11+ للحزم
@@ -1160,6 +1197,205 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     if (diff.inDays > 0) return '${diff.inDays} يوم';
     if (diff.inHours > 0) return '${diff.inHours} ساعة';
     return '${diff.inMinutes} دقيقة';
+  }
+
+  Future<void> _submitComment() async {
+    final text = _commentController.text.trim();
+    if (text.isEmpty) return;
+    final user = _auth.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('يرجى تسجيل الدخول للتعليق على المنتج')),
+      );
+      return;
+    }
+    try {
+      await _interactionService.addComment(
+        productId: _product!.id,
+        userName: user.displayName ?? 'مستخدم',
+        text: text,
+      );
+      if (!mounted) return;
+      _commentController.clear();
+      FocusScope.of(context).unfocus();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تم إرسال تعليقك بنجاح')),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('تعذر إرسال التعليق: $e')),
+        );
+      }
+    }
+  }
+
+  Widget _buildCommentsStreamSection(ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.chat_bubble_outline_rounded,
+                  size: 18, color: theme.colorScheme.primary),
+              const SizedBox(width: 8),
+              Text(
+                'استفسارات وتعليقات المشترين',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _commentController,
+                  decoration: InputDecoration(
+                    hintText: 'اسأل البائع أو علّق على هذا المنتج...',
+                    hintStyle: TextStyle(
+                      fontSize: 12.5,
+                      color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                    ),
+                    filled: true,
+                    fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(22),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  onSubmitted: (_) => _submitComment(),
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton.filled(
+                style: IconButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: Colors.white,
+                ),
+                icon: const Icon(Icons.send_rounded, size: 18),
+                onPressed: _submitComment,
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          StreamBuilder<List<Map<String, dynamic>>>(
+            stream: _interactionService.getCommentsStream(_product!.id),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(12),
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+                );
+              }
+              final comments = snapshot.data ?? [];
+              if (comments.isEmpty) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Center(
+                    child: Text(
+                      'لا توجد استفسارات بعد، كن أول من يسأل أو يعلق!',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                );
+              }
+
+              return ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: comments.length,
+                separatorBuilder: (_, __) => const Divider(height: 14),
+                itemBuilder: (context, index) {
+                  final c = comments[index];
+                  final name = c['userName'] as String? ?? 'مستخدم';
+                  final text = c['text'] as String? ?? '';
+                  final photo = c['userPhotoUrl'] as String?;
+                  final ts = c['createdAt'];
+                  DateTime? date;
+                  if (ts is Timestamp) date = ts.toDate();
+
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CircleAvatar(
+                        radius: 16,
+                        backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.12),
+                        backgroundImage: (photo != null && photo.isNotEmpty)
+                            ? CachedNetworkImageProvider(photo)
+                            : null,
+                        child: (photo == null || photo.isEmpty)
+                            ? Icon(Icons.person, size: 18, color: theme.colorScheme.primary)
+                            : null,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  name,
+                                  style: const TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                const Spacer(),
+                                if (date != null)
+                                  Text(
+                                    relativeTimeLabelAr(date),
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              text,
+                              style: TextStyle(
+                                fontSize: 13,
+                                height: 1.5,
+                                color: theme.colorScheme.onSurface,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildSimilarProductsSection(ThemeData theme) {

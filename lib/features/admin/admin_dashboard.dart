@@ -120,8 +120,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         Colors.indigo),
     const _Cat('occasions', 'المناسبات', Icons.celebration_rounded, Colors.teal),
     const _Cat('forum_posts', 'المنتدى', Icons.forum_rounded, Colors.brown),
-    const _Cat('seller_requests', 'طلبات المتاجر', Icons.storefront_rounded,
-        Colors.orange),
+    const _Cat('upgrade_requests', 'طلبات الترقية', Icons.upgrade_rounded,
+        Color(0xFF673AB7)),
     const _Cat('phone_directory', 'دليل الهاتف', Icons.phone_rounded, Colors.cyan),
     // دليل الخدمات صفحةٌ لكل فئة؛ والتبويب هنا صفحةٌ كذلك، لا سجل واحد يخلط
     // الحرفيين بالزراعة بالتعليم. كلها `service_providers` بتصفية `category`.
@@ -147,6 +147,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     const _Cat('lawyers', 'سجل المحامين', Icons.gavel_rounded, Color(0xFF006064)),
     const _Cat('legal_consultations', 'الاستشارات القانونية',
         Icons.help_center_rounded, Color(0xFF00838F)),
+    const _Cat('agriculture_consultations', 'الاستشارات الزراعية',
+        Icons.eco_rounded, Color(0xFF2E7D32)),
     const _Cat('medical_center_clinics', 'عيادات المركز الخيري',
         Icons.local_hospital_rounded, Color(0xFF00695C)),
     const _Cat('village_clinics', 'عيادات القرية', Icons.add_business_rounded,
@@ -507,7 +509,33 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     if (_busyActions.contains(key)) return;
     setState(() => _busyActions.add(key));
     try {
-      if (collection == 'seller_requests') {
+      if (collection == 'upgrade_requests') {
+        final uid = _auth.currentUser?.uid ?? '';
+        final isGenAdmin = await _adminService.isGeneralAdminUser(uid);
+        if (!isGenAdmin) {
+          if (!mounted) return;
+          ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+            const SnackBar(
+              content: Text(
+                  'الموافقة على طلبات الترقية وتغيير الصلاحيات محصورة بالمدير العام فقط'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
+        if (!mounted) return;
+        if (action == 'approve') {
+          final notes = await _showAdminNotesDialog(context);
+          if (notes == null) return;
+          await _adminService.approveUpgradeRequest(docId, notes: notes);
+        } else if (action == 'reject') {
+          final notes = await _showAdminNotesDialog(context, isReject: true);
+          if (notes == null) return;
+          await _adminService.rejectUpgradeRequest(docId, notes: notes);
+        } else if (action == 'delete') {
+          await _adminService.deleteItem(collection, docId);
+        }
+      } else if (collection == 'seller_requests') {
         if (action == 'approve') {
           final notes = await _showAdminNotesDialog(context);
           if (notes == null) return;

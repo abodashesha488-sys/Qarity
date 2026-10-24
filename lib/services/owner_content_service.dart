@@ -255,6 +255,15 @@ class OwnerContentService {
       // معه — والقواعد ترفض تعديل المالك ما بقي على وثيقته ردّ.
       extraWritesOnEdit: {'answer': ''},
     ),
+    OwnerCollectionSpec(
+      collection: 'agriculture_consultations',
+      ownerField: 'userId',
+      itemLabel: 'الاستشارة الزراعية',
+      titleField: 'question',
+      route: '/services/agricultural-advisor',
+      attributionFields: ['userName'],
+      extraWritesOnEdit: {'answer': ''},
+    ),
   ];
 
   static final Map<String, OwnerCollectionSpec> _specs = {

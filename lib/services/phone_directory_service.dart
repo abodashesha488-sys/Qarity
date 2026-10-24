@@ -113,4 +113,55 @@ class PhoneDirectoryService {
   /// حذف فوري لمقدّم البيان.
   Future<void> deletePhoneDirectoryEntry(String entryId) =>
       OwnerContentService.remove(_firestore, 'phone_directory', entryId);
+
+  /// تقديم طلب مراجعة وتحديث ملكية رقم هاتف مسجل مسبقاً باسم آخر.
+  Future<void> submitPhoneDispute({
+    required String phone,
+    required String newName,
+    required String oldEntryId,
+    required String oldEntryName,
+    required String reason,
+    String? job,
+    String? photoUrl,
+  }) async {
+    String? uid;
+    try {
+      uid = FirebaseAuth.instance.currentUser?.uid;
+    } catch (_) {
+      // اختبارات الواجهة
+    }
+
+    await _firestore.collection('phone_directory').add({
+      'name': newName,
+      'title': job ?? '',
+      'phone': phone,
+      'job': job,
+      'photoUrl': photoUrl,
+      'isPublic': true,
+      'isApproved': false,
+      'isDispute': true,
+      'oldEntryId': oldEntryId,
+      'oldEntryName': oldEntryName,
+      'disputeReason': reason,
+      'submittedBy': uid,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+    await CacheService.invalidatePhoneDirectory();
+    unawaited(RemotePushService.notifyAdmins('phone_directory'));
+    await NotificationService.showLocalNotification(
+      title: '📞 طلب مراجعة رقم هاتف',
+      body: 'طلب تعديل اسم الرقم $phone إلى «$newName»',
+      payload: '/phone-directory',
+    );
+    if (uid != null) {
+      unawaited(NotificationInboxService.instance.push(
+        userId: uid,
+        title: '📞 تم إرسال طلب مراجعة الرقم',
+        body:
+            'تم استلام طلبك لمراجعة الرقم $phone وسيتم اتخاذ القرار من قبل الإدارة.',
+        route: '/phone-directory',
+        kind: 'info',
+      ));
+    }
+  }
 }

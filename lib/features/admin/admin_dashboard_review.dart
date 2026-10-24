@@ -685,8 +685,11 @@ class _ReviewCard extends StatelessWidget {
         'obituaries' => 'نعوة بانتظار النشر',
         'occasions' => 'مناسبة بانتظار النشر',
         'forum_posts' => 'منشور في المندرة',
+        'upgrade_requests' => 'طلب ترقية الحساب',
         'seller_requests' => 'طلب تحوّل إلى بائع',
-        'phone_directory' => 'رقم في دليل الهاتف',
+        'phone_directory' => item['isDispute'] == true
+            ? 'طلب مراجعة ملكية رقم هاتف'
+            : 'رقم في دليل الهاتف',
         'service_providers' => switch ('${item['category'] ?? ''}') {
             ServiceCategory.agricultural => 'سجل في صفحة خدمات زراعية',
             ServiceCategory.educational => 'سجل في صفحة خدمات تعليمية',
@@ -696,6 +699,7 @@ class _ReviewCard extends StatelessWidget {
         'village_ads' => 'إعلان تجاري/خدمي في القرية',
         'lawyers' => 'تسجيل في سجل المحامين',
         'legal_consultations' => 'سؤال استشارة قانونية',
+        'agriculture_consultations' => 'سؤال استشارة زراعية',
         'medical_center_clinics' => 'عيادة المركز الطبي الخيري',
         'village_clinics' => 'عيادة من الخدمات الطبية',
         'pharmacies' => 'صيدلية من الخدمات الطبية',
@@ -707,6 +711,14 @@ class _ReviewCard extends StatelessWidget {
       };
 
   String get _title {
+    if (collection == 'phone_directory' && item['isDispute'] == true) {
+      return 'مراجعة رقم: ${item['phone'] ?? ''} (الاسم المقترح: ${item['name'] ?? ''})';
+    }
+    if (collection == 'upgrade_requests') {
+      final t = item['targetTitle'] ?? 'ترقية';
+      final u = item['userName'] ?? 'مستخدم';
+      return 'طلب ترقية: $t ($u)';
+    }
     final t = item['title'] ??
         item['name'] ??
         item['shopName'] ??
@@ -720,6 +732,21 @@ class _ReviewCard extends StatelessWidget {
   }
 
   String get _subtitle {
+    if (collection == 'phone_directory' && item['isDispute'] == true) {
+      final oldN = item['oldEntryName'] ?? '';
+      final newN = item['name'] ?? '';
+      final reason = item['disputeReason'] ?? '';
+      return 'المسجل حالياً: «$oldN» ← المطلوب: «$newN»\nتوضيح المستخدم: $reason';
+    }
+    if (collection == 'upgrade_requests') {
+      final cRole = (item['currentRole'] ?? 'user').toString();
+      final current = cRole == 'seller'
+          ? 'بائع (${item['currentSellerType'] ?? 'عادي'})'
+          : (cRole == 'admin' ? 'مدير عام' : cRole);
+      final notes = (item['notes'] ?? item['reason'] ?? '').toString();
+      final noteStr = notes.isNotEmpty ? '\nملاحظات: $notes' : '';
+      return 'الحالي: $current ← المطلوب: ${item['targetTitle'] ?? ''}$noteStr';
+    }
     return item['description'] ??
         item['content'] ??
         item['question'] ??
@@ -745,7 +772,7 @@ class _ReviewCard extends StatelessWidget {
   DateTime? get _createdAt => tsToDateTime(item['createdAt']);
 
   bool get _isApproved {
-    if (collection == 'seller_requests') {
+    if (collection == 'seller_requests' || collection == 'upgrade_requests') {
       return item['status'] == 'approved';
     }
     if (collection == 'seller_profiles') {

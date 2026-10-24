@@ -1,21 +1,102 @@
+import 'dart:async';
+
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/utils/relative_time.dart';
+import '../../models/agriculture_consultation_model.dart';
+import '../../services/admin_service.dart';
+import '../../services/agriculture_consultation_service.dart';
 import '../../widgets/agriculture_promo_banner.dart';
+import '../../widgets/consultation_widgets.dart';
+import '../../widgets/document_field_editor.dart';
+import '../../widgets/owner_actions.dart';
 import '../../widgets/qurity_app_bar.dart';
 import 'crops_screen.dart';
 
-/// شاشة مستشارك الزراعي — إرشادات موثقة لكافة المحاصيل المصرية وشمال ووسط الدلتا
+const Color kAgriColor = Color(0xFF2E7D32); // أخضر زراعي داكن
+
+/// شاشة مستشارك الزراعي — إرشادات موثقة واستشارات زراعية متخصصة
 class AgriculturalAdvisorScreen extends StatefulWidget {
-  const AgriculturalAdvisorScreen({super.key});
+  const AgriculturalAdvisorScreen({super.key, this.service});
+
+  final AgricultureConsultationService? service;
 
   @override
   State<AgriculturalAdvisorScreen> createState() =>
       _AgriculturalAdvisorScreenState();
 }
 
-class _AgriculturalAdvisorScreenState extends State<AgriculturalAdvisorScreen> {
+class _AgriculturalAdvisorScreenState extends State<AgriculturalAdvisorScreen>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabs = TabController(length: 2, vsync: this);
+  final GlobalKey<_AgriConsultationsTabState> _consultationsKey =
+      GlobalKey<_AgriConsultationsTabState>();
+
+  @override
+  void dispose() {
+    _tabs.dispose();
+    super.dispose();
+  }
+
+  void _onAddPressed() {
+    if (_tabs.index == 1) {
+      _consultationsKey.currentState?.openAskSheet();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: QurityAppBar(
+        title: 'مستشارك الزراعي',
+        onAdd: _tabs.index == 1 ? _onAddPressed : null,
+        addTooltip: 'طرح استشارة زراعية',
+        bottom: TabBar(
+          controller: _tabs,
+          onTap: (_) => setState(() {}),
+          dividerColor: Colors.transparent,
+          indicatorColor: Colors.white,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
+          labelStyle: const TextStyle(fontWeight: FontWeight.w800),
+          tabs: const [
+            Tab(
+              icon: Icon(Icons.menu_book_rounded, size: 20),
+              text: 'الدليل والإرشادات',
+            ),
+            Tab(
+              icon: Icon(Icons.psychology_alt_rounded, size: 20),
+              text: 'الاستشارات الزراعية',
+            ),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabs,
+        children: [
+          const _AgriGuideTab(),
+          _AgriConsultationsTab(
+            key: _consultationsKey,
+            service: widget.service,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════ تبويب الدليل والإرشادات ═══════════════════════════
+class _AgriGuideTab extends StatefulWidget {
+  const _AgriGuideTab();
+
+  @override
+  State<_AgriGuideTab> createState() => _AgriGuideTabState();
+}
+
+class _AgriGuideTabState extends State<_AgriGuideTab> {
   final TextEditingController _searchController = TextEditingController();
   String _selectedCategory = 'الكل';
   String _searchQuery = '';
@@ -29,7 +110,7 @@ class _AgriculturalAdvisorScreenState extends State<AgriculturalAdvisorScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    const color = Color(0xFF2E7D32); // أخضر داكن
+    const color = kAgriColor;
     final query = _searchQuery.toLowerCase();
     final guidelines = CropsScreen.crops.where((item) {
       final matchesCategory = switch (_selectedCategory) {
@@ -88,71 +169,66 @@ class _AgriculturalAdvisorScreenState extends State<AgriculturalAdvisorScreen> {
       return matchesCategory && (query.isEmpty || searchable.contains(query));
     }).toList();
 
-    return Scaffold(
-      appBar: const QurityAppBar(
-        title: 'مستشارك الزراعي',
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _buildHeroSection(theme, color),
-          const AgriculturePromoBanner(placement: 'svc_agricultural'),
-          const SizedBox(height: 14),
-          TextField(
-            controller: _searchController,
-            onChanged: (value) => setState(() => _searchQuery = value.trim()),
-            decoration: InputDecoration(
-              hintText: 'ابحث عن محصول أو إرشاد أو آفة أو صنف...',
-              prefixIcon: const Icon(Icons.search_rounded),
-              suffixIcon: _searchQuery.isEmpty
-                  ? null
-                  : IconButton(
-                      onPressed: () {
-                        _searchController.clear();
-                        setState(() => _searchQuery = '');
-                      },
-                      icon: const Icon(Icons.clear_rounded),
-                    ),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            ),
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        _buildHeroSection(theme, color),
+        const AgriculturePromoBanner(placement: 'svc_agricultural'),
+        const SizedBox(height: 14),
+        TextField(
+          controller: _searchController,
+          onChanged: (value) => setState(() => _searchQuery = value.trim()),
+          decoration: InputDecoration(
+            hintText: 'ابحث عن محصول أو إرشاد أو آفة أو صنف...',
+            prefixIcon: const Icon(Icons.search_rounded),
+            suffixIcon: _searchQuery.isEmpty
+                ? null
+                : IconButton(
+                    onPressed: () {
+                      _searchController.clear();
+                      setState(() => _searchQuery = '');
+                    },
+                    icon: const Icon(Icons.clear_rounded),
+                  ),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
-          const SizedBox(height: 20),
-          _buildCategoryFilterRow(color),
-          const SizedBox(height: 24),
-          _buildSectionTitle(
-              theme, 'دليل وإرشادات المحاصيل (${guidelines.length} محصول)', color),
-          const SizedBox(height: 12),
-          if (guidelines.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(24),
-              child: Center(child: Text('لا توجد نتائج مطابقة لبحثك')),
-            ),
-          ...guidelines.asMap().entries.map((e) =>
-              _GuidelineCard(crop: e.value, color: color)
-                  .animate(delay: (e.key * 30).ms)
-                  .fadeIn(duration: 350.ms)
-                  .slideY(begin: 0.08)),
-          const SizedBox(height: 24),
-          _buildSectionTitle(
-              theme, 'التقويم الزراعي الشهري (شمال ووسط الدلتا)', color),
-          const SizedBox(height: 12),
-          ..._monthlyCalendar.asMap().entries.map((e) =>
-              _MonthCard(month: e.value, color: color)
-                  .animate(delay: (e.key * 40).ms)
-                  .fadeIn(duration: 400.ms)
-                  .slideY(begin: 0.08)),
-          const SizedBox(height: 24),
-          _buildSectionTitle(theme, 'نصائح ذهبية للمزارع', color),
-          const SizedBox(height: 12),
-          ..._goldenTips.asMap().entries.map((e) =>
-              _TipCard(tip: e.value, color: color)
-                  .animate(delay: (e.key * 40).ms)
-                  .fadeIn(duration: 400.ms)
-                  .slideY(begin: 0.08)),
-          const SizedBox(height: 24),
-        ],
-      ),
+        ),
+        const SizedBox(height: 20),
+        _buildCategoryFilterRow(color),
+        const SizedBox(height: 24),
+        _buildSectionTitle(
+            theme, 'دليل وإرشادات المحاصيل (${guidelines.length} محصول)', color),
+        const SizedBox(height: 12),
+        if (guidelines.isEmpty)
+          const Padding(
+            padding: EdgeInsets.all(24),
+            child: Center(child: Text('لا توجد نتائج مطابقة لبحثك')),
+          ),
+        ...guidelines.asMap().entries.map((e) =>
+            _GuidelineCard(crop: e.value, color: color)
+                .animate(delay: (e.key * 30).ms)
+                .fadeIn(duration: 350.ms)
+                .slideY(begin: 0.08)),
+        const SizedBox(height: 24),
+        _buildSectionTitle(
+            theme, 'التقويم الزراعي الشهري (شمال ووسط الدلتا)', color),
+        const SizedBox(height: 12),
+        ..._monthlyCalendar.asMap().entries.map((e) =>
+            _MonthCard(month: e.value, color: color)
+                .animate(delay: (e.key * 40).ms)
+                .fadeIn(duration: 400.ms)
+                .slideY(begin: 0.08)),
+        const SizedBox(height: 24),
+        _buildSectionTitle(theme, 'نصائح ذهبية للمزارع', color),
+        const SizedBox(height: 12),
+        ..._goldenTips.asMap().entries.map((e) =>
+            _TipCard(tip: e.value, color: color)
+                .animate(delay: (e.key * 40).ms)
+                .fadeIn(duration: 400.ms)
+                .slideY(begin: 0.08)),
+        const SizedBox(height: 24),
+      ],
     );
   }
 
@@ -276,7 +352,6 @@ class _AgriculturalAdvisorScreenState extends State<AgriculturalAdvisorScreen> {
   Widget _buildSectionTitle(ThemeData theme, String title, Color color) {
     return Row(
       children: [
-        // الشريط الزخرفي يبقى على لونه الأصلي: رسم 4×24 يكفيه 3.0 في السمتين.
         Container(
           width: 4,
           height: 24,
@@ -295,6 +370,1280 @@ class _AgriculturalAdvisorScreenState extends State<AgriculturalAdvisorScreen> {
   }
 }
 
+// ═══════════════════════════ تبويب الاستشارات الزراعية ═══════════════════════════
+class _AgriConsultationsTab extends StatefulWidget {
+  const _AgriConsultationsTab({super.key, this.service});
+
+  final AgricultureConsultationService? service;
+
+  @override
+  State<_AgriConsultationsTab> createState() => _AgriConsultationsTabState();
+}
+
+class _AgriConsultationsTabState extends State<_AgriConsultationsTab> {
+  late final AgricultureConsultationService _service =
+      widget.service ?? AgricultureConsultationService();
+  late final Stream<List<AgricultureConsultation>> _feed =
+      _service.watchApproved();
+
+  Stream<List<AgricultureConsultation>>? _mineStream;
+  Stream<List<AgricultureConsultation>>? _allStream;
+
+  final TextEditingController _searchController = TextEditingController();
+  String _selectedCategory = 'الكل';
+  String _searchQuery = '';
+  bool _mineOnly = false;
+  bool _isAgriAdmin = false;
+  String _myUid = '';
+
+  @override
+  void initState() {
+    super.initState();
+    try {
+      _myUid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    } catch (_) {
+      _myUid = '';
+    }
+    _checkAgriAdmin();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _checkAgriAdmin() async {
+    if (_myUid.isEmpty) return;
+    try {
+      final isAdm = await AdminService().isAgriculturalAdmin(_myUid);
+      if (mounted && isAdm) {
+        setState(() {
+          _isAgriAdmin = true;
+          _allStream = _service.watchAll();
+        });
+      }
+    } catch (_) {}
+  }
+
+  void _toggleMine() {
+    if (_myUid.isEmpty) {
+      _snack('يرجى تسجيل الدخول لعرض استشاراتك الخاصة');
+      return;
+    }
+    setState(() {
+      _mineOnly = !_mineOnly;
+      if (_mineOnly) {
+        _mineStream ??= _service.watchMine(_myUid);
+      }
+    });
+  }
+
+  void _snack(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg),
+      behavior: SnackBarBehavior.floating,
+    ));
+  }
+
+  void openAskSheet({AgricultureConsultation? existing}) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      _snack('يرجى تسجيل الدخول لطرح استشارة زراعية');
+      return;
+    }
+
+    final questionCtrl = TextEditingController(text: existing?.question ?? '');
+    final detailsCtrl = TextEditingController(text: existing?.details ?? '');
+    final cropCtrl = TextEditingController(text: existing?.cropName ?? '');
+    var selectedCat = existing?.category ?? 'زراعة محصول';
+    var pickedImages = List<String>.from(existing?.images ?? []);
+    var isSubmitting = false;
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetCtx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => SafeArea(
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 6,
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: kAgriColor.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.psychology_alt_rounded,
+                            color: kAgriColor, size: 24),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        existing != null
+                            ? 'تعديل الاستشارة الزراعية'
+                            : 'طرح استشارة زراعية جديدة',
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w900),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  const Text('مجال الاستشارة:',
+                      style:
+                          TextStyle(fontSize: 13, fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: kAgricultureConsultationCategories.map((cat) {
+                      final isSel = selectedCat == cat;
+                      return ChoiceChip(
+                        label: Text(cat),
+                        selected: isSel,
+                        selectedColor: kAgriColor,
+                        labelStyle: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w800,
+                          color: isSel ? Colors.white : null,
+                        ),
+                        onSelected: (v) {
+                          if (v) setSheetState(() => selectedCat = cat);
+                        },
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: cropCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'اسم المحصول أو النبات (اختياري)',
+                      hintText: 'مثلاً: طماطم، قمح، بطاطس، نخيل...',
+                      prefixIcon: Icon(Icons.grass_rounded),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: questionCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'موضوع الاستشارة أو المشكلة *',
+                      hintText: 'مثلاً: اصفرار أوراق الطماطم، مكافحة المن...',
+                      prefixIcon: Icon(Icons.help_outline_rounded),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: detailsCtrl,
+                    maxLines: 4,
+                    decoration: const InputDecoration(
+                      labelText: 'تفاصيل السؤال أو الأعراض والظروف *',
+                      hintText:
+                          'اكتب عمر النبات، مواعيد الري، الأسمدة المضافة، وأي أعراض تلاحظها بدقة...',
+                      alignLabelWithHint: true,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  ImageListEditor(
+                    label: 'صور الإصابة أو النبات (حتى ٣ صور)',
+                    fieldKey: 'agriConsultationImages',
+                    maxImages: 3,
+                    urls: pickedImages,
+                    onChanged: (imgs) =>
+                        setSheetState(() => pickedImages = imgs),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed:
+                              isSubmitting ? null : () => Navigator.pop(sheetCtx),
+                          child: const Text('إلغاء'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: kAgriColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          onPressed: isSubmitting
+                              ? null
+                              : () async {
+                                  final q = questionCtrl.text.trim();
+                                  final d = detailsCtrl.text.trim();
+                                  if (q.isEmpty || d.isEmpty) {
+                                    ScaffoldMessenger.of(sheetCtx).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                            'يرجى ملء موضوع الاستشارة وتفاصيلها'),
+                                        behavior: SnackBarBehavior.floating,
+                                      ),
+                                    );
+                                    return;
+                                  }
+                                  setSheetState(() => isSubmitting = true);
+                                  try {
+                                    if (existing != null) {
+                                      final updated = existing.copyWith(
+                                        question: q,
+                                        details: d,
+                                        category: selectedCat,
+                                        cropName: cropCtrl.text.trim(),
+                                        images: pickedImages,
+                                      );
+                                      await _service.update(existing.id, updated);
+                                      if (sheetCtx.mounted) {
+                                        Navigator.pop(sheetCtx);
+                                      }
+                                      _snack('تم تعديل استشارتك بنجاح');
+                                    } else {
+                                      final c = AgricultureConsultation(
+                                        question: q,
+                                        details: d,
+                                        category: selectedCat,
+                                        cropName: cropCtrl.text.trim(),
+                                        userId: user.uid,
+                                        userName: (user.displayName ?? '')
+                                                .trim()
+                                                .isNotEmpty
+                                            ? user.displayName!.trim()
+                                            : 'مزارع',
+                                        images: pickedImages,
+                                      );
+                                      await _service.create(c);
+                                      if (sheetCtx.mounted) {
+                                        Navigator.pop(sheetCtx);
+                                      }
+                                      _snack(
+                                          'تم إرسال الاستشارة وسيتم الرد عليها من المستشار الزراعي');
+                                    }
+                                  } catch (e) {
+                                    setSheetState(() => isSubmitting = false);
+                                    if (sheetCtx.mounted) {
+                                      ScaffoldMessenger.of(sheetCtx).showSnackBar(
+                                        SnackBar(content: Text('خطأ: $e')),
+                                      );
+                                    }
+                                  }
+                                },
+                          icon: isSubmitting
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2, color: Colors.white),
+                                )
+                              : const Icon(Icons.send_rounded, size: 18),
+                          label: Text(isSubmitting
+                              ? 'جاري الإرسال...'
+                              : (existing != null
+                                  ? 'حفظ التعديل'
+                                  : 'إرسال الاستشارة')),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showAnswerDialog(AgricultureConsultation c) async {
+    final controller = TextEditingController(text: c.answer);
+    var approve = true;
+    var submitting = false;
+    var selectedResponder = c.answeredByName.isNotEmpty
+        ? c.answeredByName
+        : 'أدمن الزراعة';
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => SafeArea(
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 8,
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: kAgriColor.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.eco_rounded,
+                            color: kAgriColor, size: 22),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          c.hasAnswer
+                              ? 'تعديل الرد الزراعي'
+                              : 'الرد على الاستشارة الزراعية',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: kAgriColor.withValues(alpha: 0.06),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                          color: kAgriColor.withValues(alpha: 0.2)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 7, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: kAgriColor,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                c.category,
+                                style: const TextStyle(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white),
+                              ),
+                            ),
+                            if (c.cropName.isNotEmpty) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: kAgriColor.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text('محصول: ${c.cropName}',
+                                    style: const TextStyle(
+                                        fontSize: 9.5,
+                                        fontWeight: FontWeight.w800,
+                                        color: kAgriColor)),
+                              ),
+                            ],
+                            const Spacer(),
+                            if (c.userName.isNotEmpty)
+                              Text(
+                                'السائل: ${c.userName}',
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: Theme.of(ctx)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          c.question,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 13.5,
+                            height: 1.45,
+                          ),
+                        ),
+                        if (c.details.isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            c.details,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(ctx)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                              height: 1.5,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'نص الرد والتوجيه الزراعي:',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: Theme.of(ctx).colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: controller,
+                    maxLines: 5,
+                    autofocus: true,
+                    decoration: InputDecoration(
+                      hintText:
+                          'اكتب التوجيه العلمي أو العلاج أو المبيد الموصى به وطريقة التطبيق...',
+                      filled: true,
+                      fillColor: Theme.of(ctx)
+                          .colorScheme
+                          .surfaceContainerHighest
+                          .withValues(alpha: 0.3),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                            color: kAgriColor.withValues(alpha: 0.3)),
+                      ),
+                      focusedBorder: const OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(12)),
+                        borderSide:
+                            BorderSide(color: kAgriColor, width: 1.8),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'المستشار الذي قام بالرد:',
+                    style:
+                        TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 8,
+                    children: ['أدمن الزراعة', 'الأدمن العام'].map((role) {
+                      final isSel = selectedResponder == role;
+                      return ChoiceChip(
+                        label: Text(
+                          role,
+                          style: TextStyle(
+                            fontWeight:
+                                isSel ? FontWeight.w900 : FontWeight.w700,
+                            fontSize: 12,
+                          ),
+                        ),
+                        selected: isSel,
+                        selectedColor: kAgriColor.withValues(alpha: 0.18),
+                        onSelected: (v) {
+                          if (v) setModalState(() => selectedResponder = role);
+                        },
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 10),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('اعتماد ونشر الاستشارة للقرية',
+                        style: TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.w700)),
+                    subtitle: const Text(
+                      'عند التفعيل، ستظهر الاستشارة وردها للجميع في قسم الاستشارات',
+                      style: TextStyle(fontSize: 11),
+                    ),
+                    value: approve,
+                    activeThumbColor: kAgriColor,
+                    onChanged: (v) => setModalState(() => approve = v),
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed:
+                              submitting ? null : () => Navigator.pop(ctx),
+                          child: const Text('إلغاء'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: kAgriColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          onPressed: submitting
+                              ? null
+                              : () async {
+                                  final text = controller.text.trim();
+                                  if (text.isEmpty && approve) {
+                                    ScaffoldMessenger.of(ctx).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                            'يرجى كتابة الرد أولاً قبل الاعتماد'),
+                                        behavior: SnackBarBehavior.floating,
+                                      ),
+                                    );
+                                    return;
+                                  }
+                                  setModalState(() => submitting = true);
+                                  try {
+                                    await _service.submitAnswer(
+                                      c.id,
+                                      text,
+                                      approve: approve,
+                                      answeredByName: selectedResponder,
+                                    );
+                                    if (ctx.mounted) Navigator.pop(ctx);
+                                    _snack('تم حفظ الرد ونشر الاستشارة بنجاح');
+                                  } catch (e) {
+                                    setModalState(() => submitting = false);
+                                    if (ctx.mounted) {
+                                      ScaffoldMessenger.of(ctx).showSnackBar(
+                                        SnackBar(
+                                            content: Text('خطأ في الحفظ: $e')),
+                                      );
+                                    }
+                                  }
+                                },
+                          icon: submitting
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2, color: Colors.white),
+                                )
+                              : const Icon(Icons.send_rounded, size: 18),
+                          label: Text(
+                              submitting ? 'جاري الحفظ...' : 'حفظ وإرسال الرد'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showConsultationDetails(AgricultureConsultation c) {
+    final theme = Theme.of(context);
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: kAgriColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(c.category,
+                          style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w900,
+                              color: kAgriColor)),
+                    ),
+                    if (c.cropName.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: kAgriColor.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                              color: kAgriColor.withValues(alpha: 0.2)),
+                        ),
+                        child: Text('🌾 ${c.cropName}',
+                            style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: kAgriColor)),
+                      ),
+                    ],
+                    const Spacer(),
+                    Text(relativeTimeLabelAr(c.createdAt),
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: theme.colorScheme.onSurfaceVariant)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(c.question,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                        height: 1.5)),
+                if (c.details.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(c.details,
+                      style: TextStyle(
+                          fontSize: 13.5,
+                          height: 1.6,
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.onSurfaceVariant)),
+                ],
+                if (c.images.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  ConsultationImageGallery(images: c.images),
+                ],
+                const SizedBox(height: 14),
+                if (c.hasAnswer) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                        color: kAgriColor.withValues(alpha: 0.07),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                            color: kAgriColor.withValues(alpha: 0.3))),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.verified_rounded,
+                                size: 16, color: kAgriColor),
+                            const SizedBox(width: 6),
+                            Text('رد المستشار الزراعي (${c.responderTitle})',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 13,
+                                    color: kAgriColor)),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(c.answer,
+                            style: const TextStyle(
+                                fontSize: 13.5,
+                                height: 1.7,
+                                fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ConsultationRepliesThread(
+                    consultationId: c.id,
+                    ownerId: c.userId,
+                    currentUserId: _myUid,
+                    primaryColor: kAgriColor,
+                    isAdvisor: _isAgriAdmin,
+                    advisorTitle: 'المستشار الزراعي',
+                    repliesStream: _service.watchReplies(c.id),
+                    onSendReply: (text) => _service.addReply(
+                      c.id,
+                      ConsultationReply(
+                        consultationId: c.id,
+                        authorId: _myUid,
+                        authorName: FirebaseAuth.instance.currentUser?.displayName ?? 'مزارع',
+                        text: text,
+                        isAdvisor: _isAgriAdmin,
+                        advisorTitle: _isAgriAdmin ? 'المستشار الزراعي' : '',
+                        createdAt: DateTime.now(),
+                      ),
+                    ),
+                  ),
+                ] else ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHighest
+                          .withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.hourglass_empty_rounded,
+                            size: 18,
+                            color: theme.colorScheme.onSurfaceVariant),
+                        const SizedBox(width: 8),
+                        Text(
+                          'بانتظار رد وتوجيه المستشار الزراعي...',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                if (c.userId == _myUid || _isAgriAdmin) ...[
+                  const SizedBox(height: 16),
+                  OwnerActions(
+                    keyTag: 'agri-consult-modal-${c.id}',
+                    ownerId: c.userId,
+                    currentUserId: _myUid,
+                    isAdmin: _isAgriAdmin,
+                    itemName: 'الاستشارة',
+                    editLabel: 'تعديل الاستشارة',
+                    deleteLabel: 'حذف الاستشارة',
+                    onEdit: () {
+                      Navigator.of(ctx).pop();
+                      openAskSheet(existing: c);
+                    },
+                    onDelete: () async {
+                      try {
+                        await _service.delete(c.id);
+                        if (ctx.mounted) Navigator.of(ctx).pop();
+                        _snack('تم حذف الاستشارة');
+                        return true;
+                      } catch (e) {
+                        _snack('خطأ: $e');
+                        return false;
+                      }
+                    },
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final stream = _mineOnly
+        ? (_mineStream ??= _service.watchMine(_myUid))
+        : (_isAgriAdmin ? (_allStream ?? _service.watchAll()) : _feed);
+
+    return Column(
+      children: [
+        // شريط رأس تبويب الاستشارات
+        Container(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          color: theme.colorScheme.surface,
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (v) => setState(() => _searchQuery = v.trim()),
+                      decoration: InputDecoration(
+                        hintText: 'ابحث في الاستشارات أو المحاصيل...',
+                        prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                        suffixIcon: _searchQuery.isEmpty
+                            ? null
+                            : IconButton(
+                                icon: const Icon(Icons.clear_rounded, size: 18),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() => _searchQuery = '');
+                                },
+                              ),
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  FilterChip(
+                    label: const Text('استشاراتي'),
+                    avatar: Icon(
+                      _mineOnly
+                          ? Icons.person_rounded
+                          : Icons.person_outline_rounded,
+                      size: 16,
+                      color: _mineOnly ? Colors.white : kAgriColor,
+                    ),
+                    selected: _mineOnly,
+                    selectedColor: kAgriColor,
+                    labelStyle: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w800,
+                      color: _mineOnly ? Colors.white : kAgriColor,
+                    ),
+                    onSelected: (_) => _toggleMine(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              // فلاتر التصنيف
+              SizedBox(
+                height: 34,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: ['الكل', ...kAgricultureConsultationCategories].length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 6),
+                  itemBuilder: (context, i) {
+                    final cat = ['الكل', ...kAgricultureConsultationCategories][i];
+                    final isSel = _selectedCategory == cat;
+                    return ChoiceChip(
+                      label: Text(cat),
+                      selected: isSel,
+                      selectedColor: kAgriColor,
+                      labelStyle: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: isSel ? Colors.white : null,
+                      ),
+                      onSelected: (_) =>
+                          setState(() => _selectedCategory = cat),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (_isAgriAdmin && !_mineOnly)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            color: kAgriColor.withValues(alpha: 0.1),
+            child: const Row(
+              children: [
+                Icon(Icons.admin_panel_settings_rounded,
+                    size: 16, color: kAgriColor),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'لوحة تحكم المستشار الزراعي — الرد على الاستشارات والاعتماد',
+                    style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: kAgriColor),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        Expanded(
+          child: StreamBuilder<List<AgricultureConsultation>>(
+            stream: stream,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: CircularProgressIndicator(color: kAgriColor),
+                );
+              }
+              if (snapshot.hasError) {
+                return Center(
+                  child: Text('خطأ في تحميل الاستشارات: ${snapshot.error}'),
+                );
+              }
+              var items = snapshot.data ?? [];
+              if (_selectedCategory != 'الكل') {
+                items = items
+                    .where((c) => c.category == _selectedCategory)
+                    .toList();
+              }
+              if (_searchQuery.isNotEmpty) {
+                final q = _searchQuery.toLowerCase();
+                items = items.where((c) {
+                  return c.question.toLowerCase().contains(q) ||
+                      c.details.toLowerCase().contains(q) ||
+                      c.cropName.toLowerCase().contains(q) ||
+                      c.answer.toLowerCase().contains(q);
+                }).toList();
+              }
+
+              if (items.isEmpty) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.psychology_alt_outlined,
+                            size: 64, color: kAgriColor.withValues(alpha: 0.3)),
+                        const SizedBox(height: 12),
+                        Text(
+                          _mineOnly
+                              ? 'لم تطرح أي استشارة زراعية بعد'
+                              : 'لا توجد استشارات زراعية مطابقة',
+                          style: const TextStyle(
+                              fontSize: 15, fontWeight: FontWeight.w800),
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'اطرح سؤالك عن زراعة أي محصول أو آفة أو تسميد وسيقوم المستشار بالرد عليك',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                        const SizedBox(height: 16),
+                        FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: kAgriColor,
+                            foregroundColor: Colors.white,
+                          ),
+                          onPressed: openAskSheet,
+                          icon: const Icon(Icons.add_rounded),
+                          label: const Text('طرح استشارة الآن'),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              return ListView.separated(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
+                itemCount: items.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (context, i) {
+                  final c = items[i];
+                  return _AgriConsultationCard(
+                    consultation: c,
+                    currentUserId: _myUid,
+                    isAgriAdmin: _isAgriAdmin,
+                    showStatus: _mineOnly || _isAgriAdmin,
+                    onTap: () => _showConsultationDetails(c),
+                    onAnswer: _isAgriAdmin ? () => _showAnswerDialog(c) : null,
+                    onEdit: (c.userId == _myUid || _isAgriAdmin)
+                        ? () => openAskSheet(existing: c)
+                        : null,
+                    onDelete: c.userId == _myUid || _isAgriAdmin
+                        ? () async {
+                            try {
+                              await _service.delete(c.id);
+                              _snack('تم حذف الاستشارة');
+                              return true;
+                            } catch (e) {
+                              _snack('خطأ: $e');
+                              return false;
+                            }
+                          }
+                        : null,
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AgriConsultationCard extends StatelessWidget {
+  const _AgriConsultationCard({
+    required this.consultation,
+    required this.currentUserId,
+    this.isAgriAdmin = false,
+    this.showStatus = false,
+    this.onTap,
+    this.onAnswer,
+    this.onEdit,
+    this.onDelete,
+  });
+
+  final AgricultureConsultation consultation;
+  final String currentUserId;
+  final bool isAgriAdmin;
+  final bool showStatus;
+  final VoidCallback? onTap;
+  final VoidCallback? onAnswer;
+  final VoidCallback? onEdit;
+  final Future<bool> Function()? onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final c = consultation;
+    final isMine = c.userId == currentUserId;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: kAgriColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        c.category,
+                        style: const TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w900,
+                          color: kAgriColor,
+                        ),
+                      ),
+                    ),
+                    if (c.cropName.isNotEmpty) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          '🌾 ${c.cropName}',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                      ),
+                    ],
+                    const Spacer(),
+                    Text(
+                      relativeTimeLabelAr(c.createdAt),
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  c.question,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    height: 1.4,
+                  ),
+                ),
+                if (c.details.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    c.details,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurfaceVariant,
+                      height: 1.5,
+                    ),
+                  ),
+                ],
+                if (c.images.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  ConsultationImageGallery(images: c.images, thumbHeight: 52),
+                ],
+                const SizedBox(height: 10),
+                // صندوق رد المستشار الزراعي
+                if (c.hasAnswer) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: kAgriColor.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                          color: kAgriColor.withValues(alpha: 0.3)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.verified_rounded,
+                                size: 14, color: kAgriColor),
+                            const SizedBox(width: 5),
+                            Text(
+                              'رد المستشار الزراعي (${c.responderTitle})',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 12,
+                                color: kAgriColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          c.answer,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            height: 1.6,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ] else ...[
+                  Text(
+                    'بانتظار رد المستشار الزراعي',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w700,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+                if (showStatus) ...[
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: c.isApproved
+                              ? AppColors.success.withValues(alpha: 0.12)
+                              : Colors.orange.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: c.isApproved
+                                ? AppColors.success.withValues(alpha: 0.3)
+                                : Colors.orange.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Text(
+                          c.isApproved ? 'معتمدة ومنشورة' : 'بانتظار المراجعة',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: c.isApproved
+                                ? AppColors.success
+                                : Colors.orange,
+                          ),
+                        ),
+                      ),
+                      const Spacer(),
+                      if (c.userName.isNotEmpty && !isMine)
+                        Text(
+                          'السائل: ${c.userName}',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w600,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+                if ((isMine || isAgriAdmin) && onEdit != null) ...[
+                  const SizedBox(height: 8),
+                  OwnerActions(
+                    keyTag: 'agri-consult-${c.id}',
+                    ownerId: c.userId,
+                    currentUserId: currentUserId,
+                    isAdmin: isAgriAdmin,
+                    itemName: 'الاستشارة',
+                    editLabel: 'تعديل السؤال',
+                    deleteLabel: 'حذف السؤال',
+                    onEdit: onEdit ?? () {},
+                    onDelete: onDelete ?? () async => false,
+                  ),
+                ],
+                if (isAgriAdmin && onAnswer != null) ...[
+                  const SizedBox(height: 10),
+                  Align(
+                    alignment: AlignmentDirectional.centerEnd,
+                    child: FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: kAgriColor,
+                        foregroundColor: Colors.white,
+                        visualDensity: VisualDensity.compact,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: onAnswer,
+                      icon: const Icon(Icons.reply_rounded, size: 16),
+                      label: Text(
+                        c.hasAnswer ? 'تعديل الرد' : 'الرد على الاستشارة',
+                        style: const TextStyle(
+                            fontSize: 12, fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 final List<_MonthGuideline> _monthlyCalendar = [
   const _MonthGuideline(
@@ -428,7 +1777,6 @@ final List<String> _goldenTips = [
   '☀️ تجنب الرش في ساعات الحرارة (10 ص - 4 م) — رش فجراً أو غروباً',
   '📝 سجل كل عملية (تسميد، ري، رش، حصاد) — التاريخ يعلمك للموسم القادم',
 ];
-
 
 class _MonthGuideline {
   final String month;
@@ -688,8 +2036,6 @@ class _MonthCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    // حرف الشهر وعنوانه وسطر الفصل وأيقونة السهم والعتبة — كلها حبر على
-    // سطح الكارت، فالأصلي 3.4 على سطح الداكن ولا يجتاز 4.5.
     final ink = AppColors.readableInk(color, theme.brightness);
     return Card(
       elevation: 0,
@@ -782,8 +2128,6 @@ class _DetailRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    // التسمية حبر بحروف 14 ثخين فقدرها 4.5، والأيقونة رسم 18 يكفيه 3.0؛
-    // يستعمل الحبر الموثق واحدا حتى لا يختلف لونهما في السطر نفسه.
     final ink = AppColors.readableInk(color, theme.brightness);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),

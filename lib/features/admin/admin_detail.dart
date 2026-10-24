@@ -440,6 +440,8 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
         return Icons.gavel_rounded;
       case 'legal_consultations':
         return Icons.help_center_rounded;
+      case 'agriculture_consultations':
+        return Icons.eco_rounded;
       case 'medical_labs':
         return Icons.science_rounded;
       case 'optical_shops':
@@ -481,6 +483,8 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
         return 'تسجيل محامٍ';
       case 'legal_consultations':
         return 'استشارة قانونية';
+      case 'agriculture_consultations':
+        return 'استشارة زراعية';
       case 'medical_labs':
         return 'معمل تحاليل';
       case 'optical_shops':

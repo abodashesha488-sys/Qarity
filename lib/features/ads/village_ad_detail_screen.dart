@@ -7,9 +7,12 @@ import '../../core/utils/helpers.dart';
 import '../../core/utils/launch_link.dart';
 import '../../core/utils/relative_time.dart';
 import '../../models/village_ad_model.dart';
+import '../../routes/app_routes.dart';
+import '../../services/favorites_service.dart';
 import '../../services/share_service.dart';
 import '../../services/village_ad_service.dart';
 import '../../widgets/ad_photo_frame.dart';
+import '../../widgets/favorite_button.dart';
 import '../../widgets/owner_actions.dart';
 import '../../widgets/qurity_app_bar.dart';
 import 'village_ads_screen.dart';
@@ -123,19 +126,32 @@ class _VillageAdDetailScreenState extends State<VillageAdDetailScreen> {
       appBar: QurityAppBar(
         title: ad.title,
         actions: [
+          FavoriteButton(
+            item: FavoriteItem(
+              id: 'ad_${ad.id}',
+              targetId: ad.id,
+              collection: 'ads',
+              title: ad.title,
+              subtitle: ad.businessName.isNotEmpty ? ad.businessName : ad.kindLabel,
+              imageUrl: ad.imageUrls.isNotEmpty ? ad.imageUrls.first : '',
+              route: AppRoutes.villageAdDetail,
+              arguments: {'ad': ad},
+              createdAt: DateTime.now(),
+            ),
+          ),
           IconButton(
             key: const Key('ad-detail-share'),
             tooltip: 'مشاركة الإعلان',
             icon: const Icon(Icons.share_rounded),
-            onPressed: () => ShareService.shareText(
-              title: '📢 ${ad.kindLabel}: ${ad.title}',
-              body: [
-                if (ad.businessName.isNotEmpty) ad.businessName,
-                if (ad.description.isNotEmpty) ad.description,
-                if (ad.location.isNotEmpty) 'المكان: ${ad.location}',
-                if (ad.phone.isNotEmpty) 'تواصل: ${ad.phone}',
-                '— من إعلانات قرية أبوديشيشة',
-              ].join('\n'),
+            onPressed: () => ShareService.shareContent(
+              title: '${ad.kindLabel}: ${ad.title}',
+              imageUrls: ad.imageUrls,
+              body: ad.description,
+              details: {
+                if (ad.businessName.isNotEmpty) 'الجهة / النشاط': ad.businessName,
+                if (ad.location.isNotEmpty) 'المكان': ad.location,
+                if (ad.phone.isNotEmpty) 'تواصل': ad.phone,
+              },
             ),
           ),
         ],

@@ -117,6 +117,7 @@ class MedDetailHeader extends StatelessWidget {
     this.onShare,
     this.onAdd,
     this.addTooltip = 'إضافة',
+    this.favoriteButton,
   });
   final String title;
   final Color accent;
@@ -128,6 +129,7 @@ class MedDetailHeader extends StatelessWidget {
   /// إجراء إضافة الشاشة — يظهر كزر «+» الأخضر في الهيدر (لا في شاشات لا إضافة لها).
   final VoidCallback? onAdd;
   final String addTooltip;
+  final Widget? favoriteButton;
 
   @override
   Widget build(BuildContext context) {
@@ -159,6 +161,7 @@ class MedDetailHeader extends StatelessWidget {
             ],
           ),
           actions: [
+            if (favoriteButton != null) favoriteButton!,
             if (onShare != null)
               IconButton(
                   tooltip: 'مشاركة',

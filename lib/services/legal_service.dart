@@ -189,12 +189,18 @@ class LegalConsultationService {
   }
 
   /// الرد على الاستشارة وحفظه مع اعتمادها من قبل أدمن الاستشارات القانونية أو الإدارة.
-  Future<void> submitAnswer(String id, String answer,
-      {bool approve = true}) async {
+  Future<void> submitAnswer(
+    String id,
+    String answer, {
+    bool approve = true,
+    String? answeredByName,
+  }) async {
     final trimmed = answer.trim();
     await _col.doc(id).update({
       'answer': trimmed,
       'isApproved': approve,
+      if (answeredByName != null && answeredByName.isNotEmpty)
+        'answeredByName': answeredByName,
       'answeredAt': FieldValue.serverTimestamp(),
     });
     try {
@@ -217,4 +223,62 @@ class LegalConsultationService {
       // إرسال الإشعار لا يعطل الرد إن فشل
     }
   }
+
+  /// متابعة الردود التعقيبية للاستشارة بالترتيب الزمني.
+  Stream<List<ConsultationReply>> watchReplies(String consultationId) {
+    return _col
+        .doc(consultationId)
+        .collection('replies')
+        .snapshots()
+        .map((s) {
+      final list = s.docs
+          .map((d) => ConsultationReply.fromJson(d.data(), d.id, consultationId))
+          .toList();
+      list.sort((a, b) {
+        final da = a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+        final db = b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+        return da.compareTo(db);
+      });
+      return list;
+    });
+  }
+
+  /// إضافة رد تعقيبي على الاستشارة (سواء من السائل أو المستشار).
+  Future<String> addReply(String consultationId, ConsultationReply reply) async {
+    final ref = await _col
+        .doc(consultationId)
+        .collection('replies')
+        .add(reply.toJson());
+
+    // إرسال إشعار للطرف الآخر
+    try {
+      final snap = await _col.doc(consultationId).get();
+      final data = snap.data();
+      final ownerUid = data?['userId'] as String? ?? '';
+      final question = data?['question'] as String? ?? '';
+
+      if (reply.isAdvisor) {
+        // المستشار رد -> نرسل إشعاراً لصاحب الاستشارة
+        if (ownerUid.isNotEmpty && ownerUid != reply.authorId) {
+          unawaited(NotificationInboxService.instance.push(
+            userId: ownerUid,
+            title: '⚖️ تعقيب جديد من المستشار القانوني',
+            body: 'أضاف المستشار رداً جديداً على استشارتك: «$question»',
+            route: '/legal',
+            kind: 'info',
+          ));
+        }
+      } else {
+        // المستخدم رد -> نرسل إشعاراً للأدمن
+        unawaited(RemotePushService.notifyAdmins('legal_consultations'));
+      }
+    } catch (_) {}
+
+    return ref.id;
+  }
+
+  /// حذف رد تعقيبي
+  Future<void> deleteReply(String consultationId, String replyId) =>
+      _col.doc(consultationId).collection('replies').doc(replyId).delete();
 }
+

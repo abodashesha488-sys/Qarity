@@ -10,9 +10,12 @@ import '../../core/utils/relative_time.dart';
 import '../../core/utils/role_style.dart';
 import '../../core/widgets/shared_cards.dart';
 import '../../models/data_models.dart';
+import '../../routes/app_routes.dart';
+import '../../services/favorites_service.dart';
 import '../../services/news_service.dart';
 import '../../services/share_service.dart';
 import '../../services/user_service.dart';
+import '../../widgets/favorite_button.dart';
 import '../../widgets/owner_actions.dart';
 import '../../widgets/qurity_app_bar.dart';
 import 'add.dart';
@@ -193,7 +196,19 @@ class _NewsViewScreenState extends State<NewsViewScreen> {
   }
 
   Future<void> _shareNews(NewsItem item) async {
-    await ShareService.shareText(title: item.title, body: item.subtitle);
+    await ShareService.shareContent(
+      title: item.title,
+      body: item.subtitle,
+      imageUrls: [
+        if (item.imageUrl.isNotEmpty) item.imageUrl,
+        ...item.imageUrls,
+      ],
+      details: {
+        if (item.category.isNotEmpty) 'التصنيف': item.category,
+        if (item.authorName != null && item.authorName!.isNotEmpty)
+          'المصدر': item.authorName!,
+      },
+    );
   }
 
   @override
@@ -205,12 +220,26 @@ class _NewsViewScreenState extends State<NewsViewScreen> {
       appBar: QurityAppBar(
         title: 'تفاصيل الخبر',
         actions: [
-          if (passedItem != null)
+          if (passedItem != null) ...[
+            FavoriteButton(
+              item: FavoriteItem(
+                id: 'news_${passedItem.id}',
+                targetId: passedItem.id,
+                collection: 'news',
+                title: passedItem.title,
+                subtitle: passedItem.category,
+                imageUrl: passedItem.imageUrl,
+                route: AppRoutes.newsView,
+                arguments: {'id': passedItem.id},
+                createdAt: DateTime.now(),
+              ),
+            ),
             IconButton(
               tooltip: 'مشاركة',
               icon: const Icon(Icons.share_rounded),
               onPressed: () => _shareNews(passedItem),
             ),
+          ],
         ],
       ),
       body: passedItem == null

@@ -8,10 +8,13 @@ import '../../core/utils/comment_style.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/utils/launch_link.dart';
 import '../../models/service_provider_model.dart';
+import '../../routes/app_routes.dart';
+import '../../services/favorites_service.dart';
 import '../../services/service_provider_service.dart';
 import '../../services/share_service.dart';
 import '../../services/user_service.dart';
 import '../../widgets/edu_kind_mark.dart';
+import '../../widgets/favorite_button.dart';
 import '../../widgets/full_fit_image.dart';
 import '../../widgets/owner_actions.dart';
 import '../medical/clinic_detail_screen.dart';
@@ -62,10 +65,25 @@ class _ServiceProviderDetailScreenState
     super.didChangeDependencies();
     if (_bootstrapped) return;
     _bootstrapped = true;
-    // قراءة المعطيات من الـroute هنا وليست في initState — السياق آمن الآن.
-    _resolved = widget.provider ??
-        (ModalRoute.of(context)?.settings.arguments as ServiceProvider?) ??
-        _fallbackProvider;
+    final routeArgs = ModalRoute.of(context)?.settings.arguments;
+    if (widget.provider != null) {
+      _resolved = widget.provider;
+    } else if (routeArgs is ServiceProvider) {
+      _resolved = routeArgs;
+    } else if (routeArgs is Map && routeArgs['id'] != null) {
+      final id = routeArgs['id'].toString();
+      _resolved = ServiceProvider(id: id, category: 'technicians', name: 'خدمة');
+      _service.getById(id).then((p) {
+        if (mounted && p != null) setState(() => _resolved = p);
+      }).catchError((_) {});
+    } else if (routeArgs is String && routeArgs.isNotEmpty) {
+      _resolved = ServiceProvider(id: routeArgs, category: 'technicians', name: 'خدمة');
+      _service.getById(routeArgs).then((p) {
+        if (mounted && p != null) setState(() => _resolved = p);
+      }).catchError((_) {});
+    } else {
+      _resolved = _fallbackProvider;
+    }
     String? uid;
     try {
       uid = FirebaseAuth.instance.currentUser?.uid;
@@ -262,10 +280,24 @@ class _ServiceProviderDetailScreenState
                 // لسجلٍ صورته عمودية أو ممتدة.
                 imageUrl: '',
                 icon: ServiceCategory.icon(provider.category),
+                favoriteButton: FavoriteButton(
+                  item: FavoriteItem(
+                    id: 'svc_${provider.id}',
+                    targetId: provider.id,
+                    collection: provider.isEducational ? 'teachers' : 'technicians',
+                    title: provider.name,
+                    subtitle: provider.displaySpecialty,
+                    imageUrl: imageUrl,
+                    route: AppRoutes.serviceProviderDetail,
+                    arguments: {'id': provider.id},
+                    createdAt: DateTime.now(),
+                  ),
+                ),
                 onShare: () => ShareService.shareText(
                     title: provider.isEducational
                         ? '🎓 ${provider.name}'
                         : '🛠️ ${provider.name}',
+                    imageUrls: [if (imageUrl.isNotEmpty) imageUrl],
                     body: [
                       if (provider.isEducational &&
                           provider.providerKindLabel.isNotEmpty)

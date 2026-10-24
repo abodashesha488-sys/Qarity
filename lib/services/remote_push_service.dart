@@ -321,6 +321,7 @@ const Set<String> kAdminNotifyCollections = {
   'village_ads',
   'lawyers',
   'legal_consultations',
+  'agriculture_consultations',
   'seller_requests',
   'village_clinics',
   'pharmacies',

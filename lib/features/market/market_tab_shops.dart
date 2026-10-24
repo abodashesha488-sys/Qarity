@@ -449,11 +449,29 @@ class _ShopDetailScreenState extends State<_ShopDetailScreen> {
             : null,
         addTooltip: 'أضف منتجاً لمحلي',
         actions: [
+          FavoriteButton(
+            item: FavoriteItem(
+              id: 'shop_${shop.id}',
+              targetId: shop.id,
+              collection: 'shops',
+              title: shop.name,
+              subtitle: '🏬 ${shop.category} • ${shop.ownerName}',
+              imageUrl: shop.imageUrl.isNotEmpty
+                  ? shop.imageUrl
+                  : (shop.imageUrls.isNotEmpty ? shop.imageUrls.first : ''),
+              route: AppRoutes.marketTabs,
+              createdAt: DateTime.now(),
+            ),
+          ),
           IconButton(
             tooltip: 'مشاركة المحل',
             icon: const Icon(Icons.share_rounded),
             onPressed: () => ShareService.shareText(
               title: '🏬 ${shop.name}',
+              imageUrls: [
+                if (shop.imageUrl.isNotEmpty) shop.imageUrl,
+                ...shop.imageUrls,
+              ],
               body: [
                 'التصنيف: ${shop.category}',
                 'يديره: ${shop.ownerName}',

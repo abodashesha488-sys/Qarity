@@ -8,8 +8,10 @@ import '../../core/utils/launch_link.dart';
 import '../../core/utils/relative_time.dart';
 import '../../models/legal_models.dart';
 import '../../routes/app_routes.dart';
+import '../../services/favorites_service.dart';
 import '../../services/legal_service.dart';
 import '../../services/share_service.dart';
+import '../../widgets/favorite_button.dart';
 import '../../widgets/full_fit_image.dart';
 import '../../widgets/owner_actions.dart';
 import '../../widgets/qurity_app_bar.dart';
@@ -34,7 +36,23 @@ class _LawyerDetailScreenState extends State<LawyerDetailScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _lawyer ??= ModalRoute.of(context)?.settings.arguments as Lawyer?;
+    if (_lawyer == null) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is Lawyer) {
+        _lawyer = args;
+      } else if (args is String && args.isNotEmpty) {
+        _fetchLawyer(args);
+      } else if (args is Map && args['id'] != null) {
+        _fetchLawyer(args['id'].toString());
+      }
+    }
+  }
+
+  Future<void> _fetchLawyer(String id) async {
+    final fetched = await _safeGet(id);
+    if (mounted && fetched != null) {
+      setState(() => _lawyer = fetched);
+    }
   }
 
   /// فتح مباشر بلا بوّابة `canLaunchUrl`: الفحص القبلي كان يرجع false على أندرويد
@@ -116,22 +134,35 @@ class _LawyerDetailScreenState extends State<LawyerDetailScreen> {
       appBar: QurityAppBar(
         title: lawyer.name,
         actions: [
+          FavoriteButton(
+            item: FavoriteItem(
+              id: 'lawyer_${lawyer.id}',
+              targetId: lawyer.id,
+              collection: 'lawyers',
+              title: lawyer.name,
+              subtitle: lawyer.specializationsLine.isNotEmpty
+                  ? lawyer.specializationsLine
+                  : lawyer.office,
+              imageUrl: lawyer.photoUrl,
+              route: AppRoutes.lawyerDetail,
+              arguments: {'id': lawyer.id},
+              createdAt: DateTime.now(),
+            ),
+          ),
           IconButton(
             key: const Key('lawyer-detail-share'),
             tooltip: 'مشاركة بيانات المحامي',
             icon: const Icon(Icons.share_rounded),
-            onPressed: () => ShareService.shareText(
-              title: '⚖️ ${lawyer.name}',
-              body: [
-                if (lawyer.specializationsLine.isNotEmpty)
-                  'التخصص: ${lawyer.specializationsLine}',
-                if (lawyer.office.isNotEmpty) 'المكتب: ${lawyer.office}',
-                if (lawyer.workingHours.isNotEmpty)
-                  'مواعيد العمل: ${lawyer.workingHours}',
-                if (lawyer.bio.isNotEmpty) lawyer.bio,
-                if (lawyer.phone.isNotEmpty) 'تواصل: ${lawyer.phone}',
-                '— من سجل المحامين في تطبيق قرية أبوديشيشة',
-              ].join('\n'),
+            onPressed: () => ShareService.shareContent(
+              title: '⚖️ المحامي ${lawyer.name}',
+              body: lawyer.bio,
+              imageUrls: [if (lawyer.photoUrl.isNotEmpty) lawyer.photoUrl],
+              details: {
+                if (lawyer.specializationsLine.isNotEmpty) 'التخصص': lawyer.specializationsLine,
+                if (lawyer.office.isNotEmpty) 'المكتب': lawyer.office,
+                if (lawyer.workingHours.isNotEmpty) 'مواعيد العمل': lawyer.workingHours,
+                if (lawyer.phone.isNotEmpty) 'الهاتف': lawyer.phone,
+              },
             ),
           ),
         ],

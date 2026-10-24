@@ -332,7 +332,21 @@ class _AdminEditScreenState extends State<AdminEditScreen> {
           DocFieldSpec('category', 'التصنيف (أحوال شخصية / قضايا جنائية / …)'),
           DocFieldSpec('answer', 'رد المستشار (يظهر للقرية)',
               kind: DocFieldKind.multiline),
+          DocFieldSpec('answeredByName', 'صفة / اسم المستشار الراد'),
           DocFieldSpec('userName', 'اسم صاحب السؤال'),
+        ];
+      case 'agriculture_consultations':
+        return const [
+          DocFieldSpec('question', 'موضوع الاستشارة',
+              required: true, kind: DocFieldKind.multiline),
+          DocFieldSpec('details', 'تفاصيل المشكلة / الأعراض',
+              kind: DocFieldKind.multiline),
+          DocFieldSpec('category', 'التصنيف (زراعة محصول / آفات / …)'),
+          DocFieldSpec('cropName', 'اسم المحصول'),
+          DocFieldSpec('answer', 'رد المستشار الزراعي (يظهر للقرية)',
+              kind: DocFieldKind.multiline),
+          DocFieldSpec('answeredByName', 'صفة / اسم المستشار الراد'),
+          DocFieldSpec('userName', 'اسم صاحب الاستشارة'),
         ];
       case 'medical_center_clinics':
         return const [

@@ -54,9 +54,22 @@ class AdminService {
   /// شارة حيّة؛ صفر زائف يعني «لا معلّقات» فيمضي المراجع دون أن ينظر. يترك
   /// المشترِك الرقم القديم كما هو ويستعيد بالسحب للتحديث.
   Future<int> recountPending(String collection) =>
-      collection == 'seller_requests'
+      (collection == 'seller_requests' || collection == 'upgrade_requests')
           ? _statusPendingCount(collection, strict: true)
           : _pendingCountOnce(collection, strict: true);
+
+  /// هل هذا المستخدم «المدير العام» فقط (role == 'admin')؟
+  /// الصلاحية الحصرية: تعديل الأدوار ومنح الصلاحيات وترقية الحسابات.
+  Future<bool> isGeneralAdminUser(String uid) async {
+    try {
+      final doc = await _firestore.collection('users').doc(uid).get();
+      final role = doc.data()?['role'] as String?;
+      return role == 'admin';
+    } catch (e) {
+      debugPrint('isGeneralAdminUser error: $e');
+      return false;
+    }
+  }
 
   Future<bool> isAdminUser(String uid) async {
     try {
@@ -99,6 +112,21 @@ class AdminService {
           role == 'assistant_admin';
     } catch (e) {
       debugPrint('isLegalAdmin error: $e');
+      return false;
+    }
+  }
+
+  /// هل هذا المستخدم «أدمن الزراعة» أو أي مدير (عام/مساعد)؟
+  /// مهمته: الرد على الاستشارات الزراعية وإدارة المحتوى الزراعي.
+  Future<bool> isAgriculturalAdmin(String uid) async {
+    try {
+      final doc = await _firestore.collection('users').doc(uid).get();
+      final role = doc.data()?['role'] as String?;
+      return role == 'agricultural_admin' ||
+          role == 'admin' ||
+          role == 'assistant_admin';
+    } catch (e) {
+      debugPrint('isAgriculturalAdmin error: $e');
       return false;
     }
   }
@@ -210,6 +238,7 @@ class AdminService {
       'occasions',
       'forum_posts',
       'seller_requests',
+      'upgrade_requests',
       'shops',
       'buy_requests',
       'donations',
@@ -219,6 +248,7 @@ class AdminService {
       'village_ads',
       'lawyers',
       'legal_consultations',
+      'agriculture_consultations',
       'medical_center_clinics',
       'village_clinics',
       'pharmacies',
@@ -505,6 +535,9 @@ class AdminService {
     if (collection == 'seller_requests') {
       return getPendingSellerRequestsStream();
     }
+    if (collection == 'upgrade_requests') {
+      return getPendingUpgradeRequestsStream();
+    }
     return _pendingStream(collection);
   }
 
@@ -581,15 +614,38 @@ class AdminService {
       throw Exception('بيانات غير صالحة: معرّف العنصر أو المجموعة فارغ');
     }
     final doc = await _firestore.collection(collection).doc(docId).get();
-    final title = doc.data()?['title'] as String? ??
-        doc.data()?['name'] as String? ??
-        doc.data()?['content'] as String? ??
+    final docData = doc.data() ?? {};
+    final title = docData['title'] as String? ??
+        docData['name'] as String? ??
+        docData['content'] as String? ??
         doc.id;
-    await _firestore.collection(collection).doc(docId).update({
-      'isApproved': true,
-      'approvedAt': FieldValue.serverTimestamp(),
-      'approvedBy': _auth.currentUser?.uid,
-    });
+
+    if (collection == 'phone_directory' && docData['isDispute'] == true) {
+      final oldEntryId = docData['oldEntryId'] as String?;
+      final newName = docData['name'] as String?;
+      final job = docData['job'] as String?;
+      final photoUrl = docData['photoUrl'] as String?;
+      if (oldEntryId != null && oldEntryId.isNotEmpty) {
+        final updates = <String, dynamic>{
+          if (newName != null && newName.isNotEmpty) 'name': newName,
+          if (job != null) 'job': job,
+          if (job != null) 'title': job,
+          if (photoUrl != null) 'photoUrl': photoUrl,
+          'updatedAt': FieldValue.serverTimestamp(),
+        };
+        await _firestore
+            .collection('phone_directory')
+            .doc(oldEntryId)
+            .update(updates);
+        await _firestore.collection('phone_directory').doc(docId).delete();
+      }
+    } else {
+      await _firestore.collection(collection).doc(docId).update({
+        'isApproved': true,
+        'approvedAt': FieldValue.serverTimestamp(),
+        'approvedBy': _auth.currentUser?.uid,
+      });
+    }
     _invalidateContentCache(collection);
     _emitPendingCountEvent(collection);
     try {
@@ -616,6 +672,7 @@ class AdminService {
     'shops': 'ownerUid',
     'buy_requests': 'userId',
     'donations': 'userId',
+    'phone_directory': 'submittedBy',
     'village_clinics': 'submittedBy',
     'pharmacies': 'submittedBy',
     'medical_labs': 'submittedBy',
@@ -625,6 +682,7 @@ class AdminService {
     'village_ads': 'userId',
     'lawyers': 'submittedBy',
     'legal_consultations': 'userId',
+    'agriculture_consultations': 'userId',
     'blood_requests': 'userId',
     'blood_donors': 'userId',
     'service_requests': 'userId',
@@ -697,11 +755,17 @@ class AdminService {
         return '/services/technicians';
       case 'lost_items':
         return '/services/lost-items';
+      case 'upgrade_requests':
+        return '/profile';
       case 'village_ads':
         return '/ads';
       case 'lawyers':
       case 'legal_consultations':
         return '/legal';
+      case 'agriculture_consultations':
+        return '/services/agricultural-advisor';
+      case 'phone_directory':
+        return '/phone-directory';
       case 'village_clinics':
       case 'pharmacies':
       case 'medical_labs':
@@ -756,6 +820,10 @@ class AdminService {
         return 'تسجيل المحامي';
       case 'legal_consultations':
         return 'الاستشارة القانونية';
+      case 'agriculture_consultations':
+        return 'الاستشارة الزراعية';
+      case 'phone_directory':
+        return 'رقم دليل الهاتف';
       case 'pharmacies':
         return 'الصيدلية';
       case 'blood_requests':
@@ -766,6 +834,8 @@ class AdminService {
         return 'التبرع';
       case 'buy_requests':
         return 'الطلب';
+      case 'upgrade_requests':
+        return 'طلب الترقية';
       default:
         return 'المحتوى';
     }
@@ -827,6 +897,8 @@ class AdminService {
       'village_ads' => ('📢 إعلان جديد في القرية', preview, '/ads'),
       'lawyers' => ('⚖️ محامٍ جديد في السجل', preview, '/legal'),
       'legal_consultations' => ('⚖️ استشارة قانونية جديدة', preview, '/legal'),
+      'agriculture_consultations' =>
+        ('🌱 استشارة زراعية جديدة', preview, '/services/agricultural-advisor'),
       'medical_center_clinics' => (
           '🏥 عيادة جديدة بالمركز الطبي الخيري',
           preview,
@@ -970,8 +1042,10 @@ class AdminService {
       _pendingCountOnce('village_ads'),
       _pendingCountOnce('lawyers'),
       _pendingCountOnce('legal_consultations'),
+      _pendingCountOnce('agriculture_consultations'),
       _pendingCountOnce('buy_requests'),
       _pendingCountOnce('donations'),
+      _statusPendingCount('upgrade_requests'),
     ]);
     return {
       'news': results[0],
@@ -994,8 +1068,10 @@ class AdminService {
       'village_ads': results[17],
       'lawyers': results[18],
       'legal_consultations': results[19],
-      'buy_requests': results[20],
-      'donations': results[21],
+      'agriculture_consultations': results[20],
+      'buy_requests': results[21],
+      'donations': results[22],
+      'upgrade_requests': results[23],
     };
   }
 
@@ -1177,6 +1253,163 @@ class AdminService {
     } catch (e) {
       debugPrint('notifySellerRequest failed: $e');
     }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // Upgrade Requests (ترقية الحساب)
+  // ═══════════════════════════════════════════════════════════════
+  Stream<List<Map<String, dynamic>>> getPendingUpgradeRequestsStream() {
+    return _firestore
+        .collection('upgrade_requests')
+        .where('status', isEqualTo: 'pending')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList());
+  }
+
+  Stream<List<Map<String, dynamic>>> getAllUpgradeRequestsStream() {
+    return _firestore
+        .collection('upgrade_requests')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList());
+  }
+
+  Future<void> approveUpgradeRequest(String docId, {String? notes}) async {
+    final adminUid = _auth.currentUser?.uid ?? 'unknown';
+    final reqSnap =
+        await _firestore.collection('upgrade_requests').doc(docId).get();
+    if (!reqSnap.exists) return;
+    final data = reqSnap.data()!;
+    final userId = data['userId'] as String;
+    final type = (data['type'] as String?) ?? 'seller';
+    final targetType = (data['targetType'] as String?) ?? 'regular';
+    final targetTitle = (data['targetTitle'] as String?) ?? '';
+
+    await _firestore.collection('upgrade_requests').doc(docId).update({
+      'status': 'approved',
+      'adminNotes': notes,
+      'reviewedAt': FieldValue.serverTimestamp(),
+      'reviewedBy': adminUid,
+    });
+
+    if (type == 'seller') {
+      final sType = switch (targetType) {
+        'superSeller' || 'super_seller' => 'super_seller',
+        'goldSeller' || 'gold' => 'gold',
+        'premiumSeller' || 'premium' => 'premium',
+        _ => 'regular',
+      };
+      await _firestore.collection('users').doc(userId).set({
+        'role': 'seller',
+        'sellerType': sType,
+      }, SetOptions(merge: true));
+
+      final spRef = _firestore.collection('seller_profiles').doc(userId);
+      final spSnap = await spRef.get();
+      if (spSnap.exists) {
+        await spRef.update({
+          'sellerType': sType,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      } else {
+        await spRef.set({
+          'userId': userId,
+          'name': data['userName'] ?? '',
+          'phone': data['userPhone'] ?? '',
+          'sellerType': sType,
+          'rating': 0.0,
+          'reviewCount': 0,
+          'totalProducts': 0,
+          'totalSales': 0,
+          'isVerified': true,
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+      await _syncSellerTypeToContent(userId, sType);
+    } else {
+      await _firestore.collection('users').doc(userId).set({
+        'role': targetType,
+      }, SetOptions(merge: true));
+    }
+
+    await CacheService.invalidateUser(userId);
+
+    try {
+      final notifTitle = 'تهانينا! تمت الموافقة على طلب ترقية حسابك 🎉';
+      final notifBody = 'تمت ترقية حسابك إلى: $targetTitle بنجاح.';
+      await NotificationInboxService.instance.push(
+        userId: userId,
+        title: notifTitle,
+        body: notifBody,
+        route: '/profile',
+        kind: 'approve',
+      );
+      final udoc = await _firestore.collection('users').doc(userId).get();
+      final token = udoc.data()?['fcmToken'] as String?;
+      if (token != null && token.isNotEmpty) {
+        await RemotePushService.sendToDevice(
+          fcmToken: token,
+          title: notifTitle,
+          body: notifBody,
+          route: '/profile',
+        );
+      }
+    } catch (e) {
+      debugPrint('notify upgrade approval failed: $e');
+    }
+
+    await _logActivity(
+      action: 'approve',
+      targetCollection: 'upgrade_requests',
+      targetDocId: docId,
+      targetTitle: 'ترقية: $targetTitle للمستخدم: ${data['userName'] ?? userId}',
+    );
+    _emitPendingCountEvent('upgrade_requests');
+  }
+
+  Future<void> rejectUpgradeRequest(String docId, {String? notes}) async {
+    final adminUid = _auth.currentUser?.uid ?? 'unknown';
+    final reqSnap =
+        await _firestore.collection('upgrade_requests').doc(docId).get();
+    if (!reqSnap.exists) return;
+    final data = reqSnap.data()!;
+    final userId = data['userId'] as String;
+    final targetTitle = (data['targetTitle'] as String?) ?? '';
+
+    await _firestore.collection('upgrade_requests').doc(docId).update({
+      'status': 'rejected',
+      'adminNotes': notes,
+      'reviewedAt': FieldValue.serverTimestamp(),
+      'reviewedBy': adminUid,
+    });
+
+    try {
+      final notifTitle = 'بخصوص طلب ترقية الحساب';
+      final notifBody = notes != null && notes.isNotEmpty
+          ? 'تم رفض طلب الترقية إلى $targetTitle. السبب: $notes'
+          : 'نعتذر، لم تتم الموافقة على طلب ترقية حسابك إلى $targetTitle حالياً.';
+      await NotificationInboxService.instance.push(
+        userId: userId,
+        title: notifTitle,
+        body: notifBody,
+        route: '/profile',
+        kind: 'reject',
+      );
+    } catch (e) {
+      debugPrint('notify upgrade rejection failed: $e');
+    }
+
+    await _logActivity(
+      action: 'reject',
+      targetCollection: 'upgrade_requests',
+      targetDocId: docId,
+      targetTitle: 'رفض ترقية: $targetTitle للمستخدم: ${data['userName'] ?? userId}',
+    );
+    _emitPendingCountEvent('upgrade_requests');
   }
 
   // Seller Profiles

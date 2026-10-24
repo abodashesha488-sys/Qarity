@@ -131,6 +131,8 @@ class LegalConsultation {
     this.userId = '',
     this.userName = '',
     this.answer = '',
+    this.answeredByName = '',
+    this.images = const [],
     this.isApproved = false,
     this.createdAt,
   });
@@ -142,10 +144,17 @@ class LegalConsultation {
   final String userId;
   final String userName;
   final String answer;
+  final String answeredByName;
+  final List<String> images;
   final bool isApproved;
   final DateTime? createdAt;
 
   bool get hasAnswer => answer.trim().isNotEmpty;
+
+  /// صفة أو اسم المستشار الذي رد على الاستشارة.
+  String get responderTitle => answeredByName.trim().isNotEmpty
+      ? answeredByName.trim()
+      : 'أدمن الاستشارات';
 
   factory LegalConsultation.fromJson(
           Map<String, dynamic> json, String docId) =>
@@ -159,6 +168,14 @@ class LegalConsultation {
         userId: json['userId'] as String? ?? '',
         userName: json['userName'] as String? ?? '',
         answer: json['answer'] as String? ?? '',
+        answeredByName: json['answeredByName'] as String? ??
+            json['responderName'] as String? ??
+            '',
+        images: (json['images'] as List<dynamic>?)
+                ?.map((e) => e?.toString() ?? '')
+                .where((e) => e.isNotEmpty)
+                .toList() ??
+            const [],
         isApproved: json['isApproved'] as bool? ?? false,
         createdAt: tsToDateTime(json['createdAt']),
       );
@@ -172,13 +189,15 @@ class LegalConsultation {
         'userId': userId,
         'userName': userName,
         'answer': answer,
+        'answeredByName': answeredByName,
+        'images': images,
         'isApproved': false,
         'createdAt': createdAt != null
             ? Timestamp.fromDate(createdAt!)
             : FieldValue.serverTimestamp(),
       };
 
-  /// حقول المالك: سؤاله وتصنيفه فقط. الرد حقل إداري، فكتابته من المالك
+  /// حقول المالك: سؤاله وتصنيفه وصوره فقط. الرد حقل إداري، فكتابته من المالك
   /// ستُنسب زورًا للمستشار في واجهة كل القرية.
   Map<String, dynamic> toWriteMap() => {
         'question': question,
@@ -188,12 +207,17 @@ class LegalConsultation {
             : 'استشارات عامة',
         'userId': userId,
         'userName': userName,
+        'images': images,
       };
 
   LegalConsultation copyWith({
     String? question,
     String? details,
     String? category,
+    String? answeredByName,
+    String? answer,
+    List<String>? images,
+    bool? isApproved,
   }) =>
       LegalConsultation(
         id: id,
@@ -202,8 +226,58 @@ class LegalConsultation {
         category: category ?? this.category,
         userId: userId,
         userName: userName,
-        answer: answer,
-        isApproved: isApproved,
+        answer: answer ?? this.answer,
+        answeredByName: answeredByName ?? this.answeredByName,
+        images: images ?? this.images,
+        isApproved: isApproved ?? this.isApproved,
         createdAt: createdAt,
       );
 }
+
+/// رد تعقيبي / توضيحي على الاستشارة (سواء من السائل أو من المستشار/الأدمن)
+class ConsultationReply {
+  const ConsultationReply({
+    this.id = '',
+    required this.consultationId,
+    required this.authorId,
+    required this.authorName,
+    required this.text,
+    this.isAdvisor = false,
+    this.advisorTitle = '',
+    this.createdAt,
+  });
+
+  final String id;
+  final String consultationId;
+  final String authorId;
+  final String authorName;
+  final String text;
+  final bool isAdvisor;
+  final String advisorTitle;
+  final DateTime? createdAt;
+
+  factory ConsultationReply.fromJson(
+          Map<String, dynamic> json, String docId, String cId) =>
+      ConsultationReply(
+        id: docId,
+        consultationId: cId,
+        authorId: json['authorId'] as String? ?? '',
+        authorName: json['authorName'] as String? ?? '',
+        text: json['text'] as String? ?? '',
+        isAdvisor: json['isAdvisor'] as bool? ?? false,
+        advisorTitle: json['advisorTitle'] as String? ?? '',
+        createdAt: tsToDateTime(json['createdAt']),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'authorId': authorId,
+        'authorName': authorName,
+        'text': text,
+        'isAdvisor': isAdvisor,
+        'advisorTitle': advisorTitle,
+        'createdAt': createdAt != null
+            ? Timestamp.fromDate(createdAt!)
+            : FieldValue.serverTimestamp(),
+      };
+}
+

@@ -12,6 +12,7 @@ import '../../services/admin_service.dart';
 import '../../services/image_upload_service.dart';
 import '../../services/legal_service.dart';
 import '../../services/user_service.dart';
+import '../../widgets/consultation_widgets.dart';
 import '../../widgets/document_field_editor.dart';
 import '../../widgets/full_fit_image.dart';
 import '../../widgets/owner_actions.dart';
@@ -709,6 +710,9 @@ class _ConsultationsTabState extends State<_ConsultationsTab> {
     final controller = TextEditingController(text: c.answer);
     var approve = true;
     var submitting = false;
+    var selectedResponder = c.answeredByName.isNotEmpty
+        ? c.answeredByName
+        : 'ادمن الاستشارات';
 
     await showModalBottomSheet<void>(
       context: context,
@@ -859,6 +863,35 @@ class _ConsultationsTabState extends State<_ConsultationsTab> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'المستشار الذي قام بالرد:',
+                    style:
+                        TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 8,
+                    children: ['ادمن الاستشارات', 'الأدمن العام'].map((role) {
+                      final isSel = selectedResponder == role;
+                      return ChoiceChip(
+                        label: Text(
+                          role,
+                          style: TextStyle(
+                            fontWeight:
+                                isSel ? FontWeight.w900 : FontWeight.w700,
+                            fontSize: 12,
+                          ),
+                        ),
+                        selected: isSel,
+                        selectedColor: const Color(0xFF2E7D32)
+                            .withValues(alpha: 0.18),
+                        onSelected: (v) {
+                          if (v) setModalState(() => selectedResponder = role);
+                        },
+                      );
+                    }).toList(),
+                  ),
                   const SizedBox(height: 10),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
@@ -908,8 +941,12 @@ class _ConsultationsTabState extends State<_ConsultationsTab> {
                                   }
                                   setModalState(() => submitting = true);
                                   try {
-                                    await _service.submitAnswer(c.id, text,
-                                        approve: approve);
+                                    await _service.submitAnswer(
+                                      c.id,
+                                      text,
+                                      approve: approve,
+                                      answeredByName: selectedResponder,
+                                    );
                                     if (ctx.mounted) Navigator.pop(ctx);
                                     _snack('تم حفظ الرد ونشر الاستشارة بنجاح');
                                   } catch (e) {
@@ -999,6 +1036,10 @@ class _ConsultationsTabState extends State<_ConsultationsTab> {
                           fontWeight: FontWeight.w600,
                           color: theme.colorScheme.onSurfaceVariant)),
                 ],
+                if (c.images.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  ConsultationImageGallery(images: c.images),
+                ],
                 const SizedBox(height: 14),
                 if (c.hasAnswer) ...[
                   Container(
@@ -1017,7 +1058,7 @@ class _ConsultationsTabState extends State<_ConsultationsTab> {
                             Icon(Icons.verified_rounded,
                                 size: 16, color: legalInk(theme.brightness)),
                             const SizedBox(width: 6),
-                            Text('رد المستشار القانوني',
+                            Text('رد المستشار (${c.responderTitle})',
                                 style: TextStyle(
                                     fontWeight: FontWeight.w900,
                                     fontSize: 13,
@@ -1032,6 +1073,28 @@ class _ConsultationsTabState extends State<_ConsultationsTab> {
                                 fontWeight: FontWeight.w600)),
                       ],
                     ),
+                  ),
+                  const SizedBox(height: 16),
+                  ConsultationRepliesThread(
+                    consultationId: c.id,
+                    ownerId: c.userId,
+                    currentUserId: _myUid,
+                    repliesStream: _service.watchReplies(c.id),
+                    primaryColor: kLegalAdvisorColor,
+                    isAdvisor: _isLegalAdmin,
+                    advisorTitle: c.responderTitle,
+                    onSendReply: (text) async {
+                      final author = await UserService().resolveAuthor();
+                      final reply = ConsultationReply(
+                        consultationId: c.id,
+                        authorId: _myUid,
+                        authorName: author.name,
+                        text: text,
+                        isAdvisor: _isLegalAdmin,
+                        advisorTitle: _isLegalAdmin ? c.responderTitle : '',
+                      );
+                      await _service.addReply(c.id, reply);
+                    },
                   ),
                 ] else ...[
                   Container(
@@ -1055,6 +1118,25 @@ class _ConsultationsTabState extends State<_ConsultationsTab> {
                     ),
                   ),
                 ],
+                const SizedBox(height: 14),
+                OwnerActions(
+                  keyTag: 'consult-detail-${c.id}',
+                  ownerId: c.userId,
+                  currentUserId: _myUid,
+                  isAdmin: _isLegalAdmin,
+                  itemName: 'الاستشارة',
+                  editLabel: 'تعديل الاستشارة',
+                  deleteLabel: 'حذف الاستشارة',
+                  onEdit: () {
+                    Navigator.pop(ctx);
+                    _openEdit(c);
+                  },
+                  onDelete: () async {
+                    final ok = await _delete(c);
+                    if (ok && ctx.mounted) Navigator.pop(ctx);
+                    return ok;
+                  },
+                ),
                 if (_isLegalAdmin) ...[
                   const SizedBox(height: 16),
                   SizedBox(
@@ -1236,8 +1318,8 @@ class _ConsultationsTabState extends State<_ConsultationsTab> {
                   final c = items[i];
                   return ConsultationCard(
                     consultation: c,
-                    showStatus: _mineOnly || _isLegalAdmin,
-                    currentUserId: _mineOnly ? _myUid : '',
+                    showStatus: _mineOnly || _isLegalAdmin || c.userId == _myUid,
+                    currentUserId: _myUid,
                     isLegalAdmin: _isLegalAdmin,
                     onTap: () => _showConsultationDetails(c),
                     onAnswer:
@@ -1351,6 +1433,10 @@ class ConsultationCard extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                         color: theme.colorScheme.onSurfaceVariant)),
               ],
+              if (c.images.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                ConsultationImageGallery(images: c.images, thumbHeight: 52),
+              ],
               if (c.hasAnswer) ...[
                 const SizedBox(height: 11),
                 Container(
@@ -1368,7 +1454,7 @@ class ConsultationCard extends StatelessWidget {
                           Icon(Icons.verified_rounded,
                               size: 14, color: legalInk(theme.brightness)),
                           const SizedBox(width: 5),
-                          Text('رد المستشار',
+                          Text('رد المستشار (${c.responderTitle})',
                               style: TextStyle(
                                   fontWeight: FontWeight.w900,
                                   fontSize: 12,
@@ -1400,6 +1486,7 @@ class ConsultationCard extends StatelessWidget {
                   keyTag: 'consult-${c.id}',
                   ownerId: c.userId,
                   currentUserId: currentUserId,
+                  isAdmin: isLegalAdmin,
                   itemName: 'استشارتك',
                   editLabel: 'تعديل السؤال',
                   deleteLabel: 'حذف السؤال',
@@ -1990,6 +2077,7 @@ class _ConsultationFormSheetState extends State<ConsultationFormSheet> {
   late final TextEditingController _details =
       TextEditingController(text: widget.existing?.details ?? '');
   late String _category = widget.existing?.category ?? 'استشارات عامة';
+  late List<String> _images = List<String>.from(widget.existing?.images ?? []);
   String _error = '';
   bool _saving = false;
   String _uid = '';
@@ -2036,6 +2124,7 @@ class _ConsultationFormSheetState extends State<ConsultationFormSheet> {
           ? widget.existing!.userName
           : _userName,
       answer: widget.existing?.answer ?? '',
+      images: _images,
       isApproved: widget.existing?.isApproved ?? false,
       createdAt: widget.existing?.createdAt,
     );
@@ -2122,6 +2211,14 @@ class _ConsultationFormSheetState extends State<ConsultationFormSheet> {
                   decoration: _dec(
                       'تفاصيل الحالة: ما حدث، التواريخ، الأوراق التي لديك، وما '
                       'الخطوة التي تحتار فيها…'),
+                ),
+                const SizedBox(height: 14),
+                ImageListEditor(
+                  label: 'صور أوراق أو مستندات توضيحية (حتى ٣ صور)',
+                  fieldKey: 'consultationImages',
+                  maxImages: 3,
+                  urls: _images,
+                  onChanged: (imgs) => setState(() => _images = imgs),
                 ),
                 if (_error.isNotEmpty) ...[
                   const SizedBox(height: 10),

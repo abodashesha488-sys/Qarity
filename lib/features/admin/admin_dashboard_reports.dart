@@ -255,8 +255,6 @@ class _ReportsPageState extends State<_ReportsPage> {
           Icons.shopping_cart_rounded, Colors.green),
       _StatItem('التبرعات', '${stats['donations'] ?? 0}',
           Icons.favorite_rounded, Colors.pink),
-      _StatItem('طلبات المتاجر', '${stats['seller_requests'] ?? 0}',
-          Icons.storefront_rounded, Colors.orange),
     ];
 
     return _buildSection(
@@ -269,7 +267,7 @@ class _ReportsPageState extends State<_ReportsPage> {
           GridView.count(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 3,
+            crossAxisCount: 2,
             mainAxisSpacing: 10,
             crossAxisSpacing: 10,
             mainAxisExtent: 96,

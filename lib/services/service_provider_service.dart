@@ -95,6 +95,12 @@ class ServiceProviderService {
         d.exists ? ServiceProvider.fromJson(d.data()!, d.id) : null);
   }
 
+  /// جلب بيان واحد بالمعرّف
+  Future<ServiceProvider?> getById(String id) async {
+    final doc = await _col.doc(id).get();
+    return doc.exists ? ServiceProvider.fromJson(doc.data()!, doc.id) : null;
+  }
+
   // ───────────────── التقييمات والتعليقات ─────────────────
   Stream<List<ServiceProviderComment>> getCommentsStream(String providerId) {
     return _comments(providerId)

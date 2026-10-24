@@ -1157,6 +1157,7 @@ class _UsersPageState extends State<_UsersPage> {
     final active = u['isActive'] != false;
     final isSelf = uid == widget.currentUid;
     final service = widget.adminService;
+    final isGeneralAdmin = _actingRole == 'admin';
     // حساب المدير العام محمي: الأدمن المساعد لا يغيّر دوره ولا يحذفه.
     final protected = _isProtectedGeneralAdmin(role);
     // الحذف فعل لا رجعة فيه: الأحمر الهادئ لا `Colors.red` الخام، ويُزار
@@ -1214,6 +1215,28 @@ class _UsersPageState extends State<_UsersPage> {
                             fontSize: 12, fontWeight: FontWeight.w700)),
                   ),
                 ),
+              if (!isGeneralAdmin)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                        color: Colors.blueGrey.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10)),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.lock_rounded, size: 16, color: Colors.blueGrey),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                              'منح وتغيير صلاحيات وأدوار المستخدمين ورتب البائعين محصور بالمدير العام فقط.',
+                              style: TextStyle(
+                                  fontSize: 12, fontWeight: FontWeight.w700)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               if (protected)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
@@ -1239,7 +1262,7 @@ class _UsersPageState extends State<_UsersPage> {
               RadioGroup<String>(
                 groupValue: role,
                 onChanged: (v) async {
-                  if (v == null || isSelf || protected) return;
+                  if (v == null || isSelf || protected || !isGeneralAdmin) return;
                   await service.setUserRole(uid, v);
                   if (ctx.mounted) Navigator.pop(ctx);
                   _snack('تم تعيين الدور: ${_roleOptions[v]!.$1}');
@@ -1274,7 +1297,7 @@ class _UsersPageState extends State<_UsersPage> {
               RadioGroup<String>(
                 groupValue: sellerType.isEmpty ? null : sellerType,
                 onChanged: (v) async {
-                  if (v == null) return;
+                  if (v == null || !isGeneralAdmin) return;
                   await service.updateUserAccess(uid, sellerType: v);
                   if (ctx.mounted) Navigator.pop(ctx);
                   _snack('تم تحديث نوع البائع: ${_typeLabel(v)}');
