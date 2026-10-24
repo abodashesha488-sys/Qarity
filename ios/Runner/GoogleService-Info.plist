@@ -3,9 +3,11 @@
 <plist version="1.0">
 <dict>
 	<key>CLIENT_ID</key>
-	<string>339029236820-emppvqhnc3limh261jbpl70fmajkk6j1.apps.googleusercontent.com</string>
+	<string>339029236820-f9h7fd5fd6ob0557u9327lhhmfhqos0n.apps.googleusercontent.com</string>
 	<key>REVERSED_CLIENT_ID</key>
-	<string>com.googleusercontent.apps.339029236820-emppvqhnc3limh261jbpl70fmajkk6j1</string>
+	<string>com.googleusercontent.apps.339029236820-f9h7fd5fd6ob0557u9327lhhmfhqos0n</string>
+	<key>ANDROID_CLIENT_ID</key>
+	<string>339029236820-42to4sigvvpp5sve234k5c4u6vgbdrpm.apps.googleusercontent.com</string>
 	<key>API_KEY</key>
 	<string>AIzaSyB3jkKZNhv0Zv8HaaOVTVFTmfCjAt2N-GU</string>
 	<key>GCM_SENDER_ID</key>
@@ -13,7 +15,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.example.qarity</string>
+	<string>app.abudshisha.qarity</string>
 	<key>PROJECT_ID</key>
 	<string>abudshisha</string>
 	<key>STORAGE_BUCKET</key>
@@ -29,6 +31,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:339029236820:ios:336df0b29847ba54aba1c1</string>
+	<string>1:339029236820:ios:715993ff6914b32daba1c1</string>
 </dict>
 </plist>

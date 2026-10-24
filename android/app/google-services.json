@@ -39,10 +39,10 @@
               "client_type": 3
             },
             {
-              "client_id": "339029236820-emppvqhnc3limh261jbpl70fmajkk6j1.apps.googleusercontent.com",
+              "client_id": "339029236820-f9h7fd5fd6ob0557u9327lhhmfhqos0n.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.example.qarity"
+                "bundle_id": "app.abudshisha.qarity"
               }
             }
           ]

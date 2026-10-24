@@ -27,10 +27,11 @@ class DefaultFirebaseOptions {
       case TargetPlatform.iOS:
         return const FirebaseOptions(
           apiKey: 'AIzaSyB3jkKZNhv0Zv8HaaOVTVFTmfCjAt2N-GU',
-          appId: '1:339029236820:ios:336df0b29847ba54aba1c1',
+          appId: '1:339029236820:ios:715993ff6914b32daba1c1',
           messagingSenderId: '339029236820',
           projectId: 'abudshisha',
           storageBucket: 'abudshisha.firebasestorage.app',
+          iosBundleId: 'app.abudshisha.qarity',
         );
       case TargetPlatform.macOS:
         return const FirebaseOptions(
