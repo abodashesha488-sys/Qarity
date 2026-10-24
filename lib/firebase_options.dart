@@ -40,6 +40,16 @@ class DefaultFirebaseOptions {
           projectId: 'abudshisha',
           storageBucket: 'abudshisha.firebasestorage.app',
         );
+      case TargetPlatform.windows:
+        return const FirebaseOptions(
+          apiKey: 'AIzaSyBdb-hIYycWkXUXpHQCe1jxx0i0xvmjwy0',
+          appId: '1:339029236820:web:7c608e7d37490a86aba1c1',
+          messagingSenderId: '339029236820',
+          projectId: 'abudshisha',
+          authDomain: 'abudshisha.firebaseapp.com',
+          storageBucket: 'abudshisha.firebasestorage.app',
+          measurementId: 'G-Y0X60ZEBW9',
+        );
       default:
         throw UnsupportedError(
           'DefaultFirebaseOptions are not supported for this platform.',
