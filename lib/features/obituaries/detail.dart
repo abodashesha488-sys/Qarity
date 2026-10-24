@@ -104,8 +104,8 @@ class _ObituaryDetailScreenState extends State<ObituaryDetailScreen> {
       ownerId: owner,
       currentUserId: uid,
       itemName: obituary.name,
-      editLabel: 'تعديل النعوة',
-      deleteLabel: 'حذف النعوة',
+      editLabel: 'تعديل النعي',
+      deleteLabel: 'حذف النعي',
       onEdit: () => _openEdit(obituary),
       onDelete: () => _delete(obituary),
     );

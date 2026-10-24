@@ -137,6 +137,8 @@ void main() {
     final list = File('lib/features/obituaries/list.dart').readAsStringSync();
     final card =
         File('lib/widgets/obituary_share_card.dart').readAsStringSync();
+    final detail =
+        File('lib/features/obituaries/detail.dart').readAsStringSync();
 
     test('القائمة تفرز بالمقارنة الواحدة ولا تفرز على الخادم', () {
       expect(list, contains('list.sort(compareObituaryByDeathDate)'));
@@ -150,6 +152,20 @@ void main() {
       final around = card.substring(i, i + 260);
       expect(around, contains('BoxFit.scaleDown'));
       expect(around, contains('maxLines: 1'));
+    });
+
+    test('صفحة تفاصيل الوفاة: تسميات أزرار المالك تعديل النعي وحذف النعي', () {
+      expect(detail, contains("editLabel: 'تعديل النعي'"));
+      expect(detail, contains("deleteLabel: 'حذف النعي'"));
+      expect(detail, isNot(contains("editLabel: 'تعديل النعوة'")));
+      expect(detail, isNot(contains("deleteLabel: 'حذف النعوة'")));
+    });
+
+    test('صفحة سجل العزاء: خيارات التصفية تشمل هذه السنة وفترة محددة والأسبوع من السبت للجمعة', () {
+      expect(list, contains("'هذه السنة'"));
+      expect(list, contains("'فترة محددة'"));
+      expect(list, contains('daysSinceSaturday'));
+      expect(list, contains('showDateRangePicker'));
     });
   });
 }

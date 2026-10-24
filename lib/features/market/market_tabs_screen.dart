@@ -139,29 +139,92 @@ class _MarketTabsScreenState extends State<MarketTabsScreen>
         title: 'سوق القرية',
         onAdd: addAction,
         addTooltip: addLabel,
-        bottom: TabBar(
-          controller: _tabController,
-          onTap: (_) => setState(() {}),
-          dividerColor: Colors.transparent,
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          labelStyle: const TextStyle(fontWeight: FontWeight.w800),
-          tabs: const [
-            Tab(text: 'السوق'),
-            Tab(text: 'المحلات'),
-            Tab(text: 'مطلوب'),
-            Tab(text: 'تبرعات'),
-          ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: Container(
+            margin: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: TabBar(
+              controller: _tabController,
+              onTap: (_) => setState(() {}),
+              dividerColor: Colors.transparent,
+              indicatorSize: TabBarIndicatorSize.tab,
+              indicator: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(13),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.12),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+              ),
+              labelColor: Theme.of(context).colorScheme.primary,
+              unselectedLabelColor: Colors.white.withValues(alpha: 0.85),
+              labelStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12),
+              unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11.5),
+              tabs: const [
+                Tab(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.storefront_rounded, size: 15),
+                      SizedBox(width: 4),
+                      Text('السوق'),
+                    ],
+                  ),
+                ),
+                Tab(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.store_mall_directory_rounded, size: 15),
+                      SizedBox(width: 4),
+                      Text('المحلات'),
+                    ],
+                  ),
+                ),
+                Tab(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.search_rounded, size: 15),
+                      SizedBox(width: 4),
+                      Text('مطلوب'),
+                    ],
+                  ),
+                ),
+                Tab(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.volunteer_activism_rounded, size: 15),
+                      SizedBox(width: 4),
+                      Text('تبرعات'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
       body: TabBarView(
         controller: _tabController,
-        children: const [
-          _MarketTab(),
-          ShopsTab(),
-          _BuyRequestsTab(),
-          _DonationsTab(),
+        children: [
+          _MarketTab(onSelectTab: (idx) => _tabController.animateTo(idx)),
+          const ShopsTab(),
+          const _BuyRequestsTab(),
+          const _DonationsTab(),
         ],
       ),
     );

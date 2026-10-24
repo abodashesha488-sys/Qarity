@@ -45,8 +45,16 @@ class _ObituariesListScreenState extends State<ObituariesListScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _selectedFilter = 'الكل';
   String _searchQuery = '';
+  DateTimeRange? _customDateRange;
 
-  static const List<String> _filters = ['الكل', 'اليوم', 'هذا الأسبوع', 'هذا الشهر'];
+  static const List<String> _filters = [
+    'الكل',
+    'اليوم',
+    'هذا الأسبوع',
+    'هذا الشهر',
+    'هذه السنة',
+    'فترة محددة',
+  ];
 
   @override
   void initState() {
@@ -66,6 +74,42 @@ class _ObituariesListScreenState extends State<ObituariesListScreen> {
     if (!mounted) return;
     setState(() {});
   }
+
+  Future<void> _pickCustomDateRange() async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final initialRange = _customDateRange ??
+        DateTimeRange(
+          start: today.subtract(const Duration(days: 7)),
+          end: today,
+        );
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(now.year + 2),
+      initialDateRange: initialRange,
+      helpText: 'تحديد فترة العزاء',
+      cancelText: 'إلغاء',
+      confirmText: 'تطبيق',
+      saveText: 'تطبيق',
+      builder: (context, child) {
+        return Directionality(
+          textDirection: TextDirection.rtl,
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        _customDateRange = picked;
+        _selectedFilter = 'فترة محددة';
+      });
+    }
+  }
+
+  String _formatDateShort(DateTime d) =>
+      '${d.year}/${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}';
 
   Widget _buildObituariesContent(ThemeData theme, List<Obituary> obituaries) {
     return CustomScrollView(
@@ -103,15 +147,35 @@ class _ObituariesListScreenState extends State<ObituariesListScreen> {
       list = list.where((o) {
         final date = _parseDate(o.dateOfDeath);
         if (date == null) return false;
+        final dateDay = DateTime(date.year, date.month, date.day);
         switch (_selectedFilter) {
           case 'اليوم':
-            return date.year == today.year &&
-                date.month == today.month &&
-                date.day == today.day;
+            return dateDay.year == today.year &&
+                dateDay.month == today.month &&
+                dateDay.day == today.day;
           case 'هذا الأسبوع':
-            return date.isAfter(today.subtract(const Duration(days: 7)));
+            // الأسبوع يبدأ من يوم السبت وينتهي يوم الجمعة
+            final daysSinceSaturday = (today.weekday % 7 + 1) % 7;
+            final weekStart = today.subtract(Duration(days: daysSinceSaturday));
+            final weekEnd = weekStart.add(const Duration(days: 7));
+            return !dateDay.isBefore(weekStart) && dateDay.isBefore(weekEnd);
           case 'هذا الشهر':
-            return date.isAfter(today.subtract(const Duration(days: 30)));
+            return dateDay.year == today.year && dateDay.month == today.month;
+          case 'هذه السنة':
+            return dateDay.year == today.year;
+          case 'فترة محددة':
+            if (_customDateRange == null) return true;
+            final start = DateTime(
+              _customDateRange!.start.year,
+              _customDateRange!.start.month,
+              _customDateRange!.start.day,
+            );
+            final end = DateTime(
+              _customDateRange!.end.year,
+              _customDateRange!.end.month,
+              _customDateRange!.end.day,
+            );
+            return !dateDay.isBefore(start) && !dateDay.isAfter(end);
           default:
             return true;
         }
@@ -260,9 +324,30 @@ class _ObituariesListScreenState extends State<ObituariesListScreen> {
                 final filter = _filters[index];
                 final selected = filter == _selectedFilter;
                 return ChoiceChip(
-                  label: Text(filter),
+                  label: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(filter),
+                      if (filter == 'فترة محددة') ...[
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.date_range_rounded,
+                          size: 15,
+                          color: selected
+                              ? theme.colorScheme.onPrimary
+                              : theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ],
+                    ],
+                  ),
                   selected: selected,
-                  onSelected: (_) => setState(() => _selectedFilter = filter),
+                  onSelected: (_) {
+                    if (filter == 'فترة محددة') {
+                      _pickCustomDateRange();
+                    } else {
+                      setState(() => _selectedFilter = filter);
+                    }
+                  },
                   selectedColor: theme.colorScheme.primary,
                   backgroundColor: theme.colorScheme.surfaceContainerHighest
                       .withValues(alpha: 0.4),
@@ -279,6 +364,53 @@ class _ObituariesListScreenState extends State<ObituariesListScreen> {
               },
             ),
           ),
+          if (_selectedFilter == 'فترة محددة' && _customDateRange != null) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primaryContainer.withValues(alpha: 0.35),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.25),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.event_available_rounded,
+                    size: 16,
+                    color: theme.colorScheme.primary,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'الفترة: ${_formatDateShort(_customDateRange!.start)} إلى ${_formatDateShort(_customDateRange!.end)}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                  const Spacer(),
+                  InkWell(
+                    onTap: _pickCustomDateRange,
+                    borderRadius: BorderRadius.circular(6),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      child: Text(
+                        'تعديل الفترة',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

@@ -16,7 +16,8 @@ enum _MarketQuickFilter {
 }
 
 class _MarketTab extends StatefulWidget {
-  const _MarketTab();
+  const _MarketTab({this.onSelectTab});
+  final ValueChanged<int>? onSelectTab;
 
   @override
   State<_MarketTab> createState() => _MarketTabState();
@@ -27,6 +28,7 @@ class _MarketTabState extends State<_MarketTab> {
   final TextEditingController _search = TextEditingController();
   String _cat = 'الكل';
   _MarketQuickFilter _quickFilter = _MarketQuickFilter.all;
+  bool _isGridView = true;
 
   // تدفّق واحد ثابت طوال عمر الشاشة: إعادة إنشائه مع كل ضغطة كتابة
   // كانت تعيد الاشتراك وتُعيد تركيب شجرة النتائج فيفقد مربع البحث تركيزه.
@@ -133,10 +135,9 @@ class _MarketTabState extends State<_MarketTab> {
 
     final filteredProducts = _filterAndSortProducts(rawProducts);
 
-    final showHeroCarousel = _search.text.isEmpty &&
+    final isDefaultBrowse = _search.text.isEmpty &&
         _cat == 'الكل' &&
-        _quickFilter == _MarketQuickFilter.all &&
-        featuredDeals.isNotEmpty;
+        _quickFilter == _MarketQuickFilter.all;
 
     return CustomScrollView(
       slivers: [
@@ -185,13 +186,30 @@ class _MarketTabState extends State<_MarketTab> {
           ),
         ),
 
-        // 2. سلايدر البانر الترويجي الفاخر (Hero Deals Carousel)
-        if (showHeroCarousel)
+        // 2. سلايدر البانر الترويجي الفاخر أو بانر الترحيب التفاعلي
+        if (isDefaultBrowse)
           SliverToBoxAdapter(
-            child: _FeaturedDealsCarousel(products: featuredDeals),
+            child: featuredDeals.isNotEmpty
+                ? _FeaturedDealsCarousel(products: featuredDeals)
+                : _MarketWelcomeHeroBanner(
+                    onExploreShops: widget.onSelectTab != null
+                        ? () => widget.onSelectTab!(1)
+                        : null,
+                  ),
           ),
 
-        // 3. شريط الفلاتر السريعة (عروض، موثوقين، فرز أسعار)
+        // 3. مركز الأنشطة السريع لسوق القرية (Quick Activity Hub)
+        if (isDefaultBrowse)
+          SliverToBoxAdapter(
+            child: _MarketQuickHub(
+              onOffersTap: () => setState(() => _quickFilter = _MarketQuickFilter.offers),
+              onShopsTap: () => widget.onSelectTab?.call(1),
+              onBuyRequestsTap: () => widget.onSelectTab?.call(2),
+              onDonationsTap: () => widget.onSelectTab?.call(3),
+            ),
+          ),
+
+        // 4. شريط الفلاتر السريعة (عروض، موثوقين، فرز أسعار)
         SliverToBoxAdapter(
           child: SizedBox(
             height: 38,
@@ -248,7 +266,7 @@ class _MarketTabState extends State<_MarketTab> {
 
         const SliverToBoxAdapter(child: SizedBox(height: 10)),
 
-        // 4. شريط التصنيفات البصرية بالأيقونات العصرية
+        // 5. شريط التصنيفات البصرية بالأيقونات العصرية
         SliverToBoxAdapter(
           child: SizedBox(
             height: 42,
@@ -318,7 +336,7 @@ class _MarketTabState extends State<_MarketTab> {
           ),
         ),
 
-        // 5. شريط عدد المنتجات والتصفية
+        // 6. شريط عدد المنتجات والتصفية وأسلوب العرض
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(18, 14, 18, 6),
@@ -330,7 +348,7 @@ class _MarketTabState extends State<_MarketTab> {
                 ),
                 const SizedBox(width: 6),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                   decoration: BoxDecoration(
                     color: theme.colorScheme.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
@@ -346,29 +364,59 @@ class _MarketTabState extends State<_MarketTab> {
                 ),
                 const Spacer(),
                 if (_cat != 'الكل' || _quickFilter != _MarketQuickFilter.all || _search.text.isNotEmpty)
-                  GestureDetector(
-                    onTap: () {
-                      _search.clear();
-                      setState(() {
-                        _cat = 'الكل';
-                        _quickFilter = _MarketQuickFilter.all;
-                      });
-                    },
-                    child: Text(
-                      'إعادة تعيين الفلاتر',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: theme.colorScheme.error,
-                        fontWeight: FontWeight.w700,
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: GestureDetector(
+                      onTap: () {
+                        _search.clear();
+                        setState(() {
+                          _cat = 'الكل';
+                          _quickFilter = _MarketQuickFilter.all;
+                        });
+                      },
+                      child: Text(
+                        'إعادة ضبط',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: theme.colorScheme.error,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ),
+                Container(
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _ViewModeButton(
+                        icon: Icons.grid_view_rounded,
+                        isSelected: _isGridView,
+                        onTap: () => setState(() => _isGridView = true),
+                        tooltip: 'عرض الشبكة',
+                      ),
+                      _ViewModeButton(
+                        icon: Icons.view_agenda_rounded,
+                        isSelected: !_isGridView,
+                        onTap: () => setState(() => _isGridView = false),
+                        tooltip: 'عرض القائمة',
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
         ),
 
-        // 6. شبكة المنتجات
+        // 7. المنتجات (شبكة أو قائمة حسب اختيار المستخدم)
         if (filteredProducts.isEmpty)
           const SliverFillRemaining(
             hasScrollBody: false,
@@ -377,7 +425,7 @@ class _MarketTabState extends State<_MarketTab> {
               message: 'لا توجد منتجات مطابقة لخيارات البحث الحالية',
             ),
           )
-        else
+        else if (_isGridView)
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
             sliver: SliverGrid(
@@ -385,12 +433,22 @@ class _MarketTabState extends State<_MarketTab> {
                 crossAxisCount: 2,
                 mainAxisSpacing: 14,
                 crossAxisSpacing: 14,
-                childAspectRatio: 0.58,
+                childAspectRatio: 0.54,
               ),
               delegate: SliverChildBuilderDelegate(
                 (context, i) => _ModernProductCard(product: filteredProducts[i]),
                 childCount: filteredProducts.length,
               ),
+            ),
+          )
+        else
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+            sliver: SliverList.separated(
+              itemCount: filteredProducts.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, i) =>
+                  _ModernProductListCard(product: filteredProducts[i]),
             ),
           ),
       ],
@@ -865,13 +923,25 @@ class _ModernProductCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
 
-                  // اسم البائع ورتبته
-                  RoleNameText(
-                    name: product.sellerName,
-                    role: 'seller',
-                    sellerType: product.sellerType,
-                    style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700),
-                    iconSize: 11,
+                  // اسم البائع والتواصل السريع
+                  Row(
+                    children: [
+                      Expanded(
+                        child: RoleNameText(
+                          name: product.sellerName,
+                          role: 'seller',
+                          sellerType: product.sellerType,
+                          style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700),
+                          iconSize: 11,
+                        ),
+                      ),
+                      if (product.sellerPhone.trim().isNotEmpty) ...[
+                        _QuickContactActions(
+                          phone: product.sellerPhone,
+                          productName: product.name,
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),
@@ -1024,6 +1094,546 @@ class _MarketSkeletonView extends StatelessWidget {
         ),
       ],
     ).animate(onPlay: (c) => c.repeat(reverse: true)).shimmer(duration: 1200.ms);
+  }
+}
+
+// ═══════════════════ بطاقة المنتج بنمط القائمة العريضة ═══════════════════
+
+class _ModernProductListCard extends StatelessWidget {
+  const _ModernProductListCard({required this.product});
+  final MarketProduct product;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final price = product.effectivePrice;
+    final accent = RoleStyle.sellerNameColor(
+        RoleStyle.parseSellerType(product.sellerType));
+    final isOffer = product.hasActiveOffer;
+    final imgUrl = product.imageUrls.isNotEmpty
+        ? product.imageUrls.first
+        : product.imageUrl;
+
+    return Card(
+      elevation: accent != null ? 2 : 0.5,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          width: accent != null ? 1.5 : 1,
+          color: accent?.withValues(alpha: 0.75) ??
+              theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => Navigator.pushNamed(
+          context,
+          AppRoutes.marketProductDetail,
+          arguments: product,
+        ),
+        child: SizedBox(
+          height: 124,
+          child: Row(
+            children: [
+              // صورة المنتج مع الشارات
+              SizedBox(
+                width: 120,
+                height: double.infinity,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    _net(imgUrl, theme),
+                    if (isOffer)
+                      Positioned(
+                        top: 6,
+                        right: 6,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFD32F2F), Color(0xFFF57C00)],
+                            ),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            '-${product.discountPercent.round()}%',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                      )
+                    else if (product.isFeatured)
+                      Positioned(
+                        top: 6,
+                        right: 6,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFB8860B),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            '⭐ مميز',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ),
+                    Positioned(
+                      top: 4,
+                      left: 4,
+                      child: _QuickFavoriteButton(productId: product.id),
+                    ),
+                  ],
+                ),
+              ),
+
+              // تفاصيل المنتج
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // التصنيف والتقييم
+                      Row(
+                        children: [
+                          Icon(
+                            getProductCategoryIcon(product.category),
+                            size: 12,
+                            color: theme.colorScheme.primary,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              product.category,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                color: theme.colorScheme.primary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          if (product.rating > 0) ...[
+                            const Icon(Icons.star_rounded, size: 13, color: Color(0xFFFFB300)),
+                            const SizedBox(width: 2),
+                            Text(
+                              product.rating.toStringAsFixed(1),
+                              style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800),
+                            ),
+                          ],
+                        ],
+                      ),
+
+                      // اسم المنتج
+                      Text(
+                        product.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 13.5,
+                        ),
+                      ),
+
+                      // اسم البائع
+                      RoleNameText(
+                        name: product.sellerName,
+                        role: 'seller',
+                        sellerType: product.sellerType,
+                        style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700),
+                        iconSize: 12,
+                      ),
+
+                      // السعر وأزرار التواصل
+                      Row(
+                        children: [
+                          Text(
+                            '${price.toStringAsFixed(0)} ج.م',
+                            style: TextStyle(
+                              color: theme.colorScheme.primary,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 14.5,
+                            ),
+                          ),
+                          if (isOffer) ...[
+                            const SizedBox(width: 6),
+                            Text(
+                              '${product.price.toStringAsFixed(0)} ج.م',
+                              style: TextStyle(
+                                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                                fontSize: 11,
+                                decoration: TextDecoration.lineThrough,
+                              ),
+                            ),
+                          ],
+                          const Spacer(),
+                          if (product.sellerPhone.trim().isNotEmpty) ...[
+                            _QuickContactActions(
+                              phone: product.sellerPhone,
+                              productName: product.name,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ).animate(delay: (product.hashCode % 15 * 20).ms).fadeIn(duration: 250.ms);
+  }
+}
+
+// ═══════════════════ أزرار التواصل المباشر ═══════════════════
+
+class _QuickContactActions extends StatelessWidget {
+  const _QuickContactActions({required this.phone, required this.productName});
+  final String phone;
+  final String productName;
+
+  @override
+  Widget build(BuildContext context) {
+    final cleanPhone = phone.trim();
+    if (cleanPhone.isEmpty) return const SizedBox.shrink();
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // زر واتساب مباشر
+        Tooltip(
+          message: 'تواصل عبر واتساب',
+          child: InkWell(
+            onTap: () {
+              final waUrl = egyptianWhatsAppUrl(cleanPhone);
+              if (waUrl != null) {
+                final msg = Uri.encodeComponent(
+                    'السلام عليكم، بخصوص معروض: $productName على تطبيق قرية أبوديشيشة');
+                launchWhatsAppUrl('$waUrl?text=$msg');
+              }
+            },
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.all(5),
+              decoration: BoxDecoration(
+                color: const Color(0xFF25D366).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.chat_bubble_rounded, size: 13, color: Color(0xFF25D366)),
+            ),
+          ),
+        ),
+        const SizedBox(width: 4),
+        // زر اتصال هاتفي مباشر
+        Tooltip(
+          message: 'اتصال هاتفي',
+          child: InkWell(
+            onTap: () => launchPhoneCall(cleanPhone),
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.all(5),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(Icons.phone_rounded,
+                  size: 13, color: Theme.of(context).colorScheme.primary),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ═══════════════════ زر تبديل طريقة العرض (شبكة / قائمة) ═══════════════════
+
+class _ViewModeButton extends StatelessWidget {
+  const _ViewModeButton({
+    required this.icon,
+    required this.isSelected,
+    required this.onTap,
+    required this.tooltip,
+  });
+
+  final IconData icon;
+  final bool isSelected;
+  final VoidCallback onTap;
+  final String tooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+          decoration: BoxDecoration(
+            color: isSelected ? theme.colorScheme.primary : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            size: 17,
+            color: isSelected ? Colors.white : theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ═══════════════════ بانر الترحيب التفاعلي بالسوق ═══════════════════
+
+class _MarketWelcomeHeroBanner extends StatelessWidget {
+  const _MarketWelcomeHeroBanner({this.onExploreShops});
+  final VoidCallback? onExploreShops;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              theme.colorScheme.primary,
+              theme.colorScheme.primary.withValues(alpha: 0.84),
+              theme.colorScheme.secondary.withValues(alpha: 0.88),
+            ],
+            begin: Alignment.topRight,
+            end: Alignment.bottomLeft,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: theme.colorScheme.primary.withValues(alpha: 0.28),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.verified_rounded, size: 12, color: Colors.white),
+                        SizedBox(width: 4),
+                        Text(
+                          'سوق أبوديشيشة الرقمي',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'تسوق واطلب مباشرة من أهالي قريتك',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                      height: 1.3,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'منتجات طازجة، محلات وورش، وسلع محلية بكل أمان وثقة وبلا وسيط.',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.9),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: () => Navigator.pushNamed(context, AppRoutes.marketAdd),
+                        icon: const Icon(Icons.add_shopping_cart_rounded, size: 14),
+                        label: const Text('أضف منتجك مجاناً',
+                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w900)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: theme.colorScheme.primary,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                      if (onExploreShops != null) ...[
+                        const SizedBox(width: 8),
+                        TextButton(
+                          onPressed: onExploreShops,
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          ),
+                          child: const Text('المحلات 🏪',
+                              style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800)),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.storefront_rounded,
+                size: 42,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ═══════════════════ مركز أنشطة السوق السريع (Quick Hub) ═══════════════════
+
+class _MarketQuickHub extends StatelessWidget {
+  const _MarketQuickHub({
+    required this.onOffersTap,
+    required this.onShopsTap,
+    required this.onBuyRequestsTap,
+    required this.onDonationsTap,
+  });
+
+  final VoidCallback onOffersTap;
+  final VoidCallback onShopsTap;
+  final VoidCallback onBuyRequestsTap;
+  final VoidCallback onDonationsTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final items = [
+      (
+        'عروض خاصة',
+        Icons.local_fire_department_rounded,
+        const Color(0xFFE53935),
+        const Color(0xFFFFEBEE),
+        onOffersTap,
+      ),
+      (
+        'المحلات والورش',
+        Icons.store_rounded,
+        const Color(0xFF1E88E5),
+        const Color(0xFFE3F2FD),
+        onShopsTap,
+      ),
+      (
+        'سلع مطلوبة',
+        Icons.search_rounded,
+        const Color(0xFF8E24AA),
+        const Color(0xFFF3E5F5),
+        onBuyRequestsTap,
+      ),
+      (
+        'تبرعات القرية',
+        Icons.volunteer_activism_rounded,
+        const Color(0xFF2E7D32),
+        const Color(0xFFE8F5E9),
+        onDonationsTap,
+      ),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 2, 16, 10),
+      child: Row(
+        children: items.map((it) {
+          return Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 3),
+              child: Material(
+                color: theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(14),
+                child: InkWell(
+                  onTap: it.$5,
+                  borderRadius: BorderRadius.circular(14),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(7),
+                          decoration: BoxDecoration(
+                            color: it.$4,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(it.$2, size: 18, color: it.$3),
+                        ),
+                        const SizedBox(height: 5),
+                        Text(
+                          it.$1,
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
   }
 }
 
