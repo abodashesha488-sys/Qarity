@@ -314,14 +314,7 @@ class HomeContent extends StatefulWidget {
     return 'مساء الخير 🌙';
   }
 
-  static String _dateLabel() {
-    const days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
-    // تاريخ القرية نفسه — مشتق من توقيت إحداثيات الطقس وليس من جهاز المستخدم.
-    final n = WeatherService.villageNow();
-    final d = n.day.toString().padLeft(2, '0');
-    final m = n.month.toString().padLeft(2, '0');
-    return '${days[n.weekday % 7]} : $d-$m-${n.year}';
-  }
+
 
   @override
   State<HomeContent> createState() => _HomeContentState();
@@ -419,7 +412,7 @@ class _HomeContentState extends State<HomeContent> {
 
     return Column(
       children: [
-        _HeroHeader(dateLabel: HomeContent._dateLabel()),
+        const _HeroHeader(),
         if (prayerAlertBanner != null) prayerAlertBanner,
         if (greetingBanner != null) greetingBanner,
         const AlertWisdomBar(),
@@ -687,14 +680,13 @@ class _HomeContentState extends State<HomeContent> {
 const double kHeroBodyHeight = 58.0;
 
 class _HeroHeader extends StatelessWidget {
-  const _HeroHeader({required this.dateLabel});
-  final String dateLabel;
+  const _HeroHeader();
 
   Widget _pill({required Widget child, VoidCallback? onTap}) {
     final pillBox = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
       decoration: BoxDecoration(
-        color: const Color(0xE604392B),
+        color: AppColors.primaryDark.withValues(alpha: 0.90),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 0.9),
         boxShadow: const [
@@ -721,10 +713,10 @@ class _HeroHeader extends StatelessWidget {
     final pillBox = Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           colors: [
-            Color(0xF0033527),
-            Color(0xF0064C39),
+            AppColors.primaryDark.withValues(alpha: 0.95),
+            AppColors.primary.withValues(alpha: 0.95),
           ],
           begin: Alignment.topRight,
           end: Alignment.bottomLeft,
@@ -802,39 +794,40 @@ class _HeroHeader extends StatelessWidget {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          // طرف البحث وتحته الساعة
-                          Column(
+                          // زر التنبيهات فوق زر البحث (أخذ مكان زر الساعة قبل نقله للكارت)
+                          const Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const _HeaderSearchButton(),
-                              const SizedBox(height: 3.5),
-                              _pill(child: const _VillageClock()),
+                              NotificationBellButton(compact: true),
+                              SizedBox(height: 3.5),
+                              _HeaderSearchButton(),
                             ],
                           ),
-                          // طرف زر الإشعارات وتحته التاريخ
-                          Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const NotificationBellButton(compact: true),
-                              const SizedBox(height: 3.5),
-                              _pill(
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(Icons.event_rounded,
-                                        size: 11, color: Color(0xFFFFE082)),
-                                    const SizedBox(width: 4),
-                                    Text(dateLabel,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w700)),
-                                  ],
+                          // الطرف المقابل: شارة قرية أبوديشيشة المتناسقة مع هوية التطبيق
+                          _pill(
+                            onTap: () {
+                              HapticFeedback.lightImpact();
+                              showQurityLogoDialog(context);
+                            },
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Image(
+                                  image: AssetImage('assets/images/Qurity.png'),
+                                  width: 17,
+                                  height: 17,
                                 ),
-                              ),
-                            ],
+                                SizedBox(width: 5),
+                                Text(
+                                  'قرية أبوديشيشة',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
@@ -901,9 +894,9 @@ class _HeaderSearchButton extends StatelessWidget {
           Navigator.pushNamed(context, AppRoutes.globalSearch);
         },
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: BoxDecoration(
-            color: const Color(0xE604392B),
+            color: AppColors.primaryDark.withValues(alpha: 0.90),
             borderRadius: BorderRadius.circular(999),
             border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
             boxShadow: const [

@@ -3,16 +3,17 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../core/constants/wisdom_calendar.dart';
 import '../../models/village_alert.dart';
 import '../../services/alert_service.dart';
 import '../../services/alert_sound_service.dart';
 import '../../services/share_service.dart';
+import '../../services/weather_service.dart';
 
 /// الشريط الثابت أسفل هيدر الرئيسية:
 /// — تنبيه عاجل أحمر نابض عند تفعيله من لوحة الأدمن (يضغط لعرض النص كاملاً).
-/// — «حكمة اليوم» من تقويم القرية اليومي (365 حكمة بالتاريخ)، والضغط يفتح
-///   حوار اليوم مع شارات التصنيف/المناسبة وتصفّح أيام السنة ومشاركة.
+/// — «حكمة اليوم» من تقويم القرية اليومي (365 حكمة بالتاريخ)، متضمنة الساعة والتاريخ في سطرها الأول.
 class AlertWisdomBar extends StatefulWidget {
   const AlertWisdomBar({super.key});
 
@@ -25,12 +26,16 @@ class _AlertWisdomBarState extends State<AlertWisdomBar> {
   StreamSubscription<VillageAlert?>? _subscription;
   VillageAlert? _alert;
   Timer? _expiryTimer;
+  Timer? _clockTicker;
   String? _handledAlertStamp;
 
   @override
   void initState() {
     super.initState();
     _subscription = _service.watchLiveAlert().listen(_onAlertChanged);
+    _clockTicker = Timer.periodic(const Duration(seconds: 15), (_) {
+      if (mounted) setState(() {});
+    });
   }
 
   void _onAlertChanged(VillageAlert? alert) {
@@ -75,6 +80,7 @@ class _AlertWisdomBarState extends State<AlertWisdomBar> {
 
   @override
   void dispose() {
+    _clockTicker?.cancel();
     _expiryTimer?.cancel();
     _subscription?.cancel();
     super.dispose();
@@ -207,7 +213,28 @@ class _AlertWisdomBarState extends State<AlertWisdomBar> {
         ),
       ).animate().fadeIn(duration: 350.ms);
     }
+
+    final now = WeatherService.villageNow();
+    final h12 = now.hour % 12 == 0 ? 12 : now.hour % 12;
+    final period = now.hour < 12 ? 'ص' : 'م';
+    final timeStr =
+        '${h12.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} $period';
+
+    const days = [
+      'الأحد',
+      'الاثنين',
+      'الثلاثاء',
+      'الأربعاء',
+      'الخميس',
+      'الجمعة',
+      'السبت'
+    ];
+    final d = now.day.toString().padLeft(2, '0');
+    final m = now.month.toString().padLeft(2, '0');
+    final dateStr = '${days[now.weekday % 7]} $d-$m';
+
     final wisdom = WisdomCalendar.of(DateTime.now());
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
       child: Material(
@@ -218,10 +245,10 @@ class _AlertWisdomBarState extends State<AlertWisdomBar> {
           child: Container(
             constraints: const BoxConstraints(minHeight: 58),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
+              gradient: LinearGradient(
                 colors: [
-                  Color(0xFF04392B),
-                  Color(0xFF0A5C44),
+                  AppColors.primaryDark,
+                  AppColors.primary,
                 ],
                 begin: Alignment.centerRight,
                 end: Alignment.centerLeft,
@@ -233,7 +260,7 @@ class _AlertWisdomBarState extends State<AlertWisdomBar> {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF04392B).withValues(alpha: 0.35),
+                  color: AppColors.primary.withValues(alpha: 0.35),
                   blurRadius: 10,
                   offset: const Offset(0, 3),
                 ),
@@ -241,26 +268,99 @@ class _AlertWisdomBarState extends State<AlertWisdomBar> {
             ),
             child: Padding(
               padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.format_quote_rounded,
-                          size: 13,
-                          color: const Color(0xFFFFD54F).withValues(alpha: 0.9)),
-                      const SizedBox(width: 3),
-                      Text('حكمة اليوم',
-                          style: TextStyle(
-                              color: const Color(0xFFFFD54F).withValues(alpha: 0.95),
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w700)),
-                    ],
+                  // السطر الأول: ( الساعة - حكمة اليوم - التاريخ ) بتنسيق دقيق ومضبوط
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: SizedBox(
+                      width: MediaQuery.sizeOf(context).width - 56,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // 1) الساعة (مع أيقونة الساعة)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.14),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.28),
+                                width: 0.8,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.schedule_rounded,
+                                    size: 11, color: Color(0xFFFFD54F)),
+                                const SizedBox(width: 4),
+                                Text(
+                                  timeStr,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0.3,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          // 2) عنوان "حكمة اليوم" في المنتصف
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.format_quote_rounded,
+                                  size: 13,
+                                  color: const Color(0xFFFFD54F)
+                                      .withValues(alpha: 0.95)),
+                              const SizedBox(width: 3),
+                              const Text('حكمة اليوم',
+                                  style: TextStyle(
+                                      color: Color(0xFFFFD54F),
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w900)),
+                            ],
+                          ),
+                          // 3) التاريخ (مع أيقونة التقويم)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.14),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.28),
+                                width: 0.8,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.event_rounded,
+                                    size: 11, color: Color(0xFFFFD54F)),
+                                const SizedBox(width: 4),
+                                Text(
+                                  dateStr,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 4),
                   Text(wisdom.text,
                       textAlign: TextAlign.center,
                       maxLines: 2,

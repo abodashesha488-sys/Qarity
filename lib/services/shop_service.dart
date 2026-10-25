@@ -115,9 +115,12 @@ class ShopService {
         label: shop.name,
       );
 
-  /// حذف فوري لصاحب المحل: بياناته التابعة ثم صوره ثم وثيقته.
-  Future<void> deleteShop(String id) =>
-      OwnerContentService.remove(_firestore, 'shops', id);
+  /// حذف فوري لصاحب المحل: بياناته التابعة ثم صوره ثم وثيقته، ومسح كافة منتجاته.
+  Future<void> deleteShop(String id) async {
+    await OwnerContentService.remove(_firestore, 'shops', id);
+    await CacheService.invalidateProducts();
+    await CacheService.invalidateShops();
+  }
 
   /// تشغيل/إيقاف المحل من الإدارة.
   Future<void> setShopActive(String id, bool active) async {

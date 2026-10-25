@@ -987,6 +987,11 @@ class AdminService {
       }
     }
     _invalidateContentCache(collection);
+    if (collection == 'shops') {
+      _invalidateContentCache('market_products');
+      unawaited(CacheService.invalidateProducts());
+      unawaited(CacheService.invalidateShops());
+    }
     _emitPendingCountEvent(collection);
     try {
       await _logActivity(

@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../core/constants/app_colors.dart';
 import '../routes/app_routes.dart';
 import '../services/notification_inbox_service.dart';
 
@@ -76,7 +77,7 @@ class _NotificationBellButtonState extends State<NotificationBellButton> {
             child: Container(
               padding: const EdgeInsets.all(7.5),
               decoration: BoxDecoration(
-                color: const Color(0xE604392B),
+                color: AppColors.primaryDark.withValues(alpha: 0.90),
                 shape: BoxShape.circle,
                 border: Border.all(
                     color: Colors.white.withValues(alpha: 0.45), width: 1.1),

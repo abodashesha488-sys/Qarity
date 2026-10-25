@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -6,21 +7,29 @@ import '../../core/constants/app_colors.dart';
 import '../../core/utils/contact_links.dart';
 import '../../core/utils/launch_link.dart';
 import '../../models/data_models.dart';
+import '../../models/legal_models.dart';
+import '../../models/lost_item_model.dart';
+import '../../models/market_extra_models.dart';
 import '../../models/medical_models.dart';
 import '../../models/service_provider_model.dart';
+import '../../models/village_ad_model.dart';
 import '../../routes/app_routes.dart';
 import '../../services/cache_service.dart';
 import '../../services/medical_service.dart';
 import '../../services/service_provider_service.dart';
+import '../../services/shop_service.dart';
 
 enum SearchCategoryFilter {
   all('الكل', Icons.search_rounded),
-  phone('دليل الهاتف', Icons.contact_page_rounded),
-  medical('الصحة والأطباء', Icons.medical_services_rounded),
+  market('سوق القرية والمحلات', Icons.storefront_rounded),
   services('دليل الحرفيين', Icons.handyman_rounded),
-  agricultural('خدمات زراعية وعمال', Icons.agriculture_rounded),
-  market('سوق القرية', Icons.storefront_rounded),
-  news('الأخبار', Icons.newspaper_rounded);
+  agricultural('خدمات زراعية', Icons.agriculture_rounded),
+  medical('الصحة والأطباء', Icons.medical_services_rounded),
+  phone('دليل الهاتف', Icons.contact_page_rounded),
+  news('الأخبار والمناسبات', Icons.newspaper_rounded),
+  ads('إعلانات القرية', Icons.campaign_rounded),
+  legal('المحامين', Icons.gavel_rounded),
+  community('المندرة والمفقودات', Icons.forum_rounded);
 
   final String label;
   final IconData icon;
@@ -66,14 +75,24 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
   SearchCategoryFilter _selectedFilter = SearchCategoryFilter.all;
   bool _loading = true;
 
-  // قواعد البيانات المجمعة
+  // قواعد البيانات المجمعة من كافة أقسام التطبيق
   List<PhoneDirectoryEntry> _phoneEntries = [];
   List<ServiceProvider> _serviceProviders = [];
   List<MedicalCenterClinic> _centerClinics = [];
   List<VillageClinic> _villageClinics = [];
   List<Pharmacy> _pharmacies = [];
+  List<MedicalLab> _medicalLabs = [];
+  List<OpticalShop> _opticalShops = [];
   List<MarketProduct> _products = [];
+  List<Shop> _shops = [];
   List<NewsItem> _news = [];
+  List<Occasion> _occasions = [];
+  List<Obituary> _obituaries = [];
+  List<ForumPost> _forumPosts = [];
+  List<LostItem> _lostItems = [];
+  List<VillageAd> _villageAds = [];
+  List<Lawyer> _lawyers = [];
+  List<EmergencyContact> _emergencyContacts = [];
 
   List<GlobalSearchResultItem> _results = [];
 
@@ -90,6 +109,8 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
     'طوارئ',
     'تحاليل',
     'جرار زراعي',
+    'محامي',
+    'مفقود',
   ];
 
   @override
@@ -107,46 +128,177 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
 
   Future<void> _loadAllSearchSources() async {
     setState(() => _loading = true);
+    final fs = FirebaseFirestore.instance;
+
+    // 1. دليل الهاتف
     try {
       final phoneJson = await CacheService.getPhoneDirectory();
-      final productsJson = await CacheService.getProducts();
-      final newsJson = await CacheService.getNews();
-
-      if (phoneJson != null) {
+      if (phoneJson != null && phoneJson.isNotEmpty) {
         _phoneEntries = phoneJson
             .map((j) => PhoneDirectoryEntry.fromJson(j, j['id'] ?? ''))
             .toList();
+      } else {
+        final snap = await fs
+            .collection('phone_directory')
+            .where('isApproved', isEqualTo: true)
+            .get();
+        _phoneEntries = snap.docs
+            .map((d) => PhoneDirectoryEntry.fromJson(d.data(), d.id))
+            .toList();
       }
-      if (productsJson != null) {
+    } catch (_) {}
+
+    // 2. منتجات السوق
+    try {
+      final productsJson = await CacheService.getProducts();
+      if (productsJson != null && productsJson.isNotEmpty) {
         _products = productsJson
             .map((j) => MarketProduct.fromJson(j, j['id'] ?? ''))
             .toList();
+      } else {
+        final snap = await fs
+            .collection('market_products')
+            .where('isApproved', isEqualTo: true)
+            .get();
+        _products = snap.docs
+            .map((d) => MarketProduct.fromJson(d.data(), d.id))
+            .toList();
       }
-      if (newsJson != null) {
+    } catch (_) {}
+
+    // 3. محلات القرية
+    try {
+      _shops = await ShopService().getApprovedShops();
+    } catch (_) {}
+
+    // 4. الأخبار
+    try {
+      final newsJson = await CacheService.getNews();
+      if (newsJson != null && newsJson.isNotEmpty) {
         _news =
             newsJson.map((j) => NewsItem.fromJson(j, j['id'] ?? '')).toList();
+      } else {
+        final snap = await fs
+            .collection('news')
+            .where('isApproved', isEqualTo: true)
+            .get();
+        _news = snap.docs
+            .map((d) => NewsItem.fromJson(d.data(), d.id))
+            .toList();
       }
+    } catch (_) {}
 
-      // الأطباء والخدمات الطبية
-      try {
-        _centerClinics =
-            await MedicalCenterService().getClinicsStream().first;
-        _villageClinics =
-            await VillageClinicService().getApprovedStream().first;
-        _pharmacies = await PharmacyService().getApprovedStream().first;
-      } catch (_) {}
+    // 5. الأطباء والخدمات الطبية
+    try {
+      _centerClinics =
+          await MedicalCenterService().getClinicsStream().first;
+    } catch (_) {}
+    try {
+      _villageClinics =
+          await VillageClinicService().getApprovedStream().first;
+    } catch (_) {}
+    try {
+      _pharmacies = await PharmacyService().getApprovedStream().first;
+    } catch (_) {}
+    try {
+      _medicalLabs = await MedicalLabService().getApprovedStream().first;
+    } catch (_) {}
+    try {
+      _opticalShops = await OpticalShopService().getApprovedStream().first;
+    } catch (_) {}
 
-      // الحرفيون والخدمات
-      try {
-        final provSvc = ServiceProviderService();
-        final techs =
-            await provSvc.getApprovedByCategory(ServiceCategory.technicians).first;
-        final agris =
-            await provSvc.getApprovedByCategory(ServiceCategory.agricultural).first;
-        final edus =
-            await provSvc.getApprovedByCategory(ServiceCategory.educational).first;
-        _serviceProviders = [...techs, ...agris, ...edus];
-      } catch (_) {}
+    // 6. الحرفيون والخدمات (فنيين - زراعية - تعليمية)
+    try {
+      final provSvc = ServiceProviderService();
+      final techs =
+          await provSvc.getApprovedByCategory(ServiceCategory.technicians).first;
+      final agris =
+          await provSvc.getApprovedByCategory(ServiceCategory.agricultural).first;
+      final edus =
+          await provSvc.getApprovedByCategory(ServiceCategory.educational).first;
+      _serviceProviders = [...techs, ...agris, ...edus];
+    } catch (_) {}
+
+    // 7. المناسبات
+    try {
+      final snap = await fs
+          .collection('occasions')
+          .where('isApproved', isEqualTo: true)
+          .get();
+      _occasions = snap.docs
+          .map((d) => Occasion.fromJson(d.data(), d.id))
+          .toList();
+    } catch (_) {}
+
+    // 8. سجل العزاء
+    try {
+      final snap = await fs
+          .collection('obituaries')
+          .where('isApproved', isEqualTo: true)
+          .get();
+      _obituaries = snap.docs
+          .map((d) => Obituary.fromJson(d.data(), d.id))
+          .toList();
+    } catch (_) {}
+
+    // 9. مندرة القرية
+    try {
+      final postsJson = await CacheService.getForumPosts();
+      if (postsJson != null && postsJson.isNotEmpty) {
+        _forumPosts = postsJson
+            .map((j) => ForumPost.fromJson(j, j['id'] ?? ''))
+            .toList();
+      } else {
+        final snap = await fs
+            .collection('forum_posts')
+            .where('isApproved', isEqualTo: true)
+            .limit(30)
+            .get();
+        _forumPosts = snap.docs
+            .map((d) => ForumPost.fromJson(d.data(), d.id))
+            .toList();
+      }
+    } catch (_) {}
+
+    // 10. المفقودات
+    try {
+      final snap = await fs
+          .collection('lost_items')
+          .where('isApproved', isEqualTo: true)
+          .get();
+      _lostItems = snap.docs
+          .map((d) => LostItem.fromJson(d.data(), d.id))
+          .toList();
+    } catch (_) {}
+
+    // 11. إعلانات القرية
+    try {
+      final snap = await fs
+          .collection('village_ads')
+          .where('isApproved', isEqualTo: true)
+          .get();
+      _villageAds = snap.docs
+          .map((d) => VillageAd.fromJson(d.data(), d.id))
+          .toList();
+    } catch (_) {}
+
+    // 12. سجل المحامين
+    try {
+      final snap = await fs
+          .collection('lawyers')
+          .where('isApproved', isEqualTo: true)
+          .get();
+      _lawyers = snap.docs
+          .map((d) => Lawyer.fromJson(d.data(), d.id))
+          .toList();
+    } catch (_) {}
+
+    // 13. أرقام الطوارئ
+    try {
+      final snap = await fs.collection('emergency_contacts').get();
+      _emergencyContacts = snap.docs
+          .map((d) => EmergencyContact.fromJson(d.data(), d.id))
+          .toList();
     } catch (_) {}
 
     if (mounted) {
@@ -155,8 +307,28 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
     }
   }
 
+  static String _norm(String input) {
+    return input
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'[\u064B-\u065F\u0670]'), '')
+        .replaceAll(RegExp(r'[أإآ]'), 'ا')
+        .replaceAll('ة', 'ه')
+        .replaceAll('ى', 'ي');
+  }
+
+  static bool _matches(String? text, String query) {
+    if (text == null || text.isEmpty || query.isEmpty) return false;
+    final cleanText = _norm(text);
+    final cleanQuery = _norm(query);
+    if (cleanText.contains(cleanQuery)) return true;
+    final tokens = cleanQuery.split(RegExp(r'\s+')).where((t) => t.isNotEmpty);
+    if (tokens.isEmpty) return false;
+    return tokens.every((token) => cleanText.contains(token));
+  }
+
   void _performSearch(String query) {
-    final q = query.trim().toLowerCase();
+    final q = query.trim();
     if (q.isEmpty) {
       setState(() => _results = []);
       return;
@@ -168,12 +340,10 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
     if (_selectedFilter == SearchCategoryFilter.all ||
         _selectedFilter == SearchCategoryFilter.phone) {
       for (final e in _phoneEntries) {
-        final j = e.job ?? '';
-        final a = e.address ?? '';
-        if (e.name.toLowerCase().contains(q) ||
-            e.title.toLowerCase().contains(q) ||
-            j.toLowerCase().contains(q) ||
-            a.toLowerCase().contains(q) ||
+        if (_matches(e.name, q) ||
+            _matches(e.title, q) ||
+            _matches(e.job, q) ||
+            _matches(e.address, q) ||
             e.phone.contains(q)) {
           list.add(GlobalSearchResultItem(
             title: e.name,
@@ -186,15 +356,28 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
           ));
         }
       }
+      for (final ec in _emergencyContacts) {
+        if (_matches(ec.name, q) || ec.phone.contains(q)) {
+          list.add(GlobalSearchResultItem(
+            title: ec.name,
+            subtitle: 'طوارئ القرية · ${ec.phone}',
+            category: 'أرقام الطوارئ',
+            icon: Icons.emergency_rounded,
+            accentColor: const Color(0xFFD32F2F),
+            phone: ec.phone,
+            route: AppRoutes.emergencyContacts,
+          ));
+        }
+      }
     }
 
     // 2. الخدمات الطبية
     if (_selectedFilter == SearchCategoryFilter.all ||
         _selectedFilter == SearchCategoryFilter.medical) {
       for (final c in _centerClinics) {
-        if (c.name.toLowerCase().contains(q) ||
-            c.specialty.toLowerCase().contains(q) ||
-            c.doctorName.toLowerCase().contains(q)) {
+        if (_matches(c.name, q) ||
+            _matches(c.specialty, q) ||
+            _matches(c.doctorName, q)) {
           list.add(GlobalSearchResultItem(
             title: c.name,
             subtitle: 'المركز الطبي الخيري · ${c.specialty} ${c.doctorName}',
@@ -206,10 +389,11 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
         }
       }
       for (final vc in _villageClinics) {
-        if (vc.name.toLowerCase().contains(q) ||
-            vc.specialty.toLowerCase().contains(q) ||
-            vc.ownerName.toLowerCase().contains(q) ||
-            vc.address.toLowerCase().contains(q)) {
+        if (_matches(vc.name, q) ||
+            _matches(vc.specialty, q) ||
+            _matches(vc.ownerName, q) ||
+            _matches(vc.address, q) ||
+            vc.phone.contains(q)) {
           list.add(GlobalSearchResultItem(
             title: vc.name,
             subtitle: 'عيادة خاصة · ${vc.specialty} · ${vc.phone}',
@@ -223,8 +407,8 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
         }
       }
       for (final p in _pharmacies) {
-        if (p.name.toLowerCase().contains(q) ||
-            p.address.toLowerCase().contains(q) ||
+        if (_matches(p.name, q) ||
+            _matches(p.address, q) ||
             p.phone.contains(q)) {
           list.add(GlobalSearchResultItem(
             title: p.name,
@@ -238,6 +422,40 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
           ));
         }
       }
+      for (final l in _medicalLabs) {
+        if (_matches(l.name, q) ||
+            _matches(l.category, q) ||
+            _matches(l.address, q) ||
+            l.phone.contains(q)) {
+          list.add(GlobalSearchResultItem(
+            title: l.name,
+            subtitle: 'معمل تحاليل · ${l.category} · ${l.phone}',
+            category: 'معامل التحاليل',
+            icon: Icons.biotech_rounded,
+            accentColor: const Color(0xFF00838F),
+            phone: l.phone,
+            route: AppRoutes.medicalLabDetail,
+            routeArgs: l,
+          ));
+        }
+      }
+      for (final o in _opticalShops) {
+        if (_matches(o.name, q) ||
+            _matches(o.ownerName, q) ||
+            _matches(o.address, q) ||
+            o.phone.contains(q)) {
+          list.add(GlobalSearchResultItem(
+            title: o.name,
+            subtitle: 'محل نظارات · ${o.address} · ${o.phone}',
+            category: 'نظارات وبصريات',
+            icon: Icons.visibility_rounded,
+            accentColor: const Color(0xFF3949AB),
+            phone: o.phone,
+            route: AppRoutes.medicalOpticalDetail,
+            routeArgs: o,
+          ));
+        }
+      }
     }
 
     // 3. الحرفيون والفنيون
@@ -246,11 +464,12 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
       for (final s in _serviceProviders.where((p) =>
           p.category == ServiceCategory.technicians ||
           p.category == ServiceCategory.educational)) {
-        if (s.name.toLowerCase().contains(q) ||
-            s.specialty.toLowerCase().contains(q) ||
-            s.category.toLowerCase().contains(q) ||
-            s.address.toLowerCase().contains(q) ||
-            s.description.toLowerCase().contains(q)) {
+        if (_matches(s.name, q) ||
+            _matches(s.specialty, q) ||
+            _matches(s.category, q) ||
+            _matches(s.address, q) ||
+            _matches(s.description, q) ||
+            s.phone.contains(q)) {
           list.add(GlobalSearchResultItem(
             title: s.name,
             subtitle:
@@ -271,21 +490,22 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
         _selectedFilter == SearchCategoryFilter.agricultural) {
       for (final s in _serviceProviders
           .where((p) => p.category == ServiceCategory.agricultural)) {
-        if (s.name.toLowerCase().contains(q) ||
-            s.specialty.toLowerCase().contains(q) ||
-            s.address.toLowerCase().contains(q) ||
-            s.description.toLowerCase().contains(q) ||
-            (q.contains('عمال') ||
-                q.contains('معدات') ||
-                q.contains('تجهيز') ||
-                q.contains('زراع'))) {
+        if (_matches(s.name, q) ||
+            _matches(s.specialty, q) ||
+            _matches(s.address, q) ||
+            _matches(s.description, q) ||
+            s.phone.contains(q) ||
+            _matches(q, 'عمال') ||
+            _matches(q, 'معدات') ||
+            _matches(q, 'تجهيز') ||
+            _matches(q, 'زراع')) {
           list.add(GlobalSearchResultItem(
             title: s.name,
             subtitle:
                 '${s.displaySpecialty}${s.address.isNotEmpty ? ' · ${s.address}' : ''}${s.phone.isNotEmpty ? ' · ${s.phone}' : ''}',
             category: 'خدمات زراعية · عمال ومعدات',
             icon: Icons.agriculture_rounded,
-            accentColor: const Color(0xFFAD1457),
+            accentColor: const Color(0xFF2E7D32),
             phone: s.phone,
             route: AppRoutes.serviceProviderDetail,
             routeArgs: s,
@@ -294,19 +514,19 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
       }
     }
 
-    // 4. سوق القرية
+    // 5. سوق القرية والمحلات
     if (_selectedFilter == SearchCategoryFilter.all ||
         _selectedFilter == SearchCategoryFilter.market) {
       for (final p in _products) {
-        if (p.name.toLowerCase().contains(q) ||
-            p.description.toLowerCase().contains(q) ||
-            p.category.toLowerCase().contains(q) ||
-            p.sellerName.toLowerCase().contains(q)) {
+        if (_matches(p.name, q) ||
+            _matches(p.description, q) ||
+            _matches(p.category, q) ||
+            _matches(p.sellerName, q)) {
           list.add(GlobalSearchResultItem(
             title: p.name,
-            subtitle: '${p.price} ج.م · ${p.category}',
-            category: 'سوق القرية',
-            icon: Icons.storefront_rounded,
+            subtitle: '${p.price.toStringAsFixed(0)} ج.م · ${p.category} · ${p.sellerName}',
+            category: 'منتج في السوق',
+            icon: Icons.shopping_bag_rounded,
             accentColor: const Color(0xFF6A1B9A),
             phone: p.sellerPhone,
             route: AppRoutes.marketProductDetail,
@@ -314,15 +534,32 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
           ));
         }
       }
+      for (final s in _shops) {
+        if (_matches(s.name, q) ||
+            _matches(s.description, q) ||
+            _matches(s.category, q) ||
+            _matches(s.ownerName, q) ||
+            s.whatsapp.contains(q)) {
+          list.add(GlobalSearchResultItem(
+            title: s.name,
+            subtitle: 'محل تجاري · ${s.category} · ${s.ownerName}',
+            category: 'محلات القرية',
+            icon: Icons.storefront_rounded,
+            accentColor: const Color(0xFF8E24AA),
+            phone: s.whatsapp,
+            route: AppRoutes.marketTabs,
+          ));
+        }
+      }
     }
 
-    // 5. الأخبار
+    // 6. الأخبار والمناسبات
     if (_selectedFilter == SearchCategoryFilter.all ||
         _selectedFilter == SearchCategoryFilter.news) {
       for (final n in _news) {
-        if (n.title.toLowerCase().contains(q) ||
-            n.subtitle.toLowerCase().contains(q) ||
-            n.category.toLowerCase().contains(q)) {
+        if (_matches(n.title, q) ||
+            _matches(n.subtitle, q) ||
+            _matches(n.category, q)) {
           list.add(GlobalSearchResultItem(
             title: n.title,
             subtitle: n.category,
@@ -331,6 +568,118 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
             accentColor: const Color(0xFFC62828),
             route: AppRoutes.newsView,
             routeArgs: n,
+          ));
+        }
+      }
+      for (final o in _occasions) {
+        if (_matches(o.title, q) ||
+            _matches(o.description, q) ||
+            _matches(o.location, q)) {
+          list.add(GlobalSearchResultItem(
+            title: o.title,
+            subtitle: 'مناسبة · ${o.location}',
+            category: 'مناسبات القرية',
+            icon: Icons.celebration_rounded,
+            accentColor: const Color(0xFFF57F17),
+            route: AppRoutes.occasionsDetail,
+            routeArgs: o,
+          ));
+        }
+      }
+    }
+
+    // 7. إعلانات القرية
+    if (_selectedFilter == SearchCategoryFilter.all ||
+        _selectedFilter == SearchCategoryFilter.ads) {
+      for (final va in _villageAds) {
+        if (_matches(va.title, q) ||
+            _matches(va.description, q) ||
+            _matches(va.businessName, q) ||
+            _matches(va.userName, q) ||
+            va.phone.contains(q)) {
+          list.add(GlobalSearchResultItem(
+            title: va.title,
+            subtitle: 'إعلان مبوب · ${va.kindLabel} · ${va.businessName.isNotEmpty ? va.businessName : va.userName}',
+            category: 'إعلانات القرية',
+            icon: Icons.campaign_rounded,
+            accentColor: const Color(0xFFE65100),
+            phone: va.phone,
+            route: AppRoutes.villageAdDetail,
+            routeArgs: va,
+          ));
+        }
+      }
+    }
+
+    // 8. المحامين
+    if (_selectedFilter == SearchCategoryFilter.all ||
+        _selectedFilter == SearchCategoryFilter.legal) {
+      for (final law in _lawyers) {
+        if (_matches(law.name, q) ||
+            _matches(law.office, q) ||
+            _matches(law.specializationsLine, q) ||
+            _matches(law.bio, q) ||
+            law.phone.contains(q)) {
+          list.add(GlobalSearchResultItem(
+            title: law.name,
+            subtitle: 'محامٍ · ${law.specializationsLine.isNotEmpty ? law.specializationsLine : law.office}',
+            category: 'مستشار القرية',
+            icon: Icons.gavel_rounded,
+            accentColor: const Color(0xFF37474F),
+            phone: law.phone,
+            route: AppRoutes.lawyerDetail,
+            routeArgs: law,
+          ));
+        }
+      }
+    }
+
+    // 9. مندرة القرية والمفقودات وسجل العزاء
+    if (_selectedFilter == SearchCategoryFilter.all ||
+        _selectedFilter == SearchCategoryFilter.community) {
+      for (final fp in _forumPosts) {
+        if (_matches(fp.content, q) || _matches(fp.userName, q)) {
+          list.add(GlobalSearchResultItem(
+            title: fp.content.length > 50 ? '${fp.content.substring(0, 50)}...' : fp.content,
+            subtitle: 'منشور مندرة بواسطة ${fp.userName}',
+            category: 'مندرة القرية',
+            icon: Icons.forum_rounded,
+            accentColor: const Color(0xFF1565C0),
+            route: AppRoutes.forumPostDetail,
+            routeArgs: fp,
+          ));
+        }
+      }
+      for (final li in _lostItems) {
+        if (_matches(li.title, q) ||
+            _matches(li.description, q) ||
+            _matches(li.location, q) ||
+            li.phone.contains(q)) {
+          list.add(GlobalSearchResultItem(
+            title: li.title,
+            subtitle: '${li.typeLabel} · ${li.location}',
+            category: 'المفقودات',
+            icon: Icons.search_rounded,
+            accentColor: const Color(0xFF5E35B1),
+            phone: li.phone,
+            route: AppRoutes.lostItemDetail,
+            routeArgs: li,
+          ));
+        }
+      }
+      for (final ob in _obituaries) {
+        if (_matches(ob.name, q) ||
+            _matches(ob.description ?? '', q) ||
+            _matches(ob.burialLocation, q) ||
+            _matches(ob.funeralLocation, q)) {
+          list.add(GlobalSearchResultItem(
+            title: ob.name,
+            subtitle: 'سجل العزاء · ${ob.burialLocation.isNotEmpty ? ob.burialLocation : ob.funeralLocation}',
+            category: 'سجل العزاء',
+            icon: Icons.volunteer_activism_rounded,
+            accentColor: const Color(0xFF424242),
+            route: AppRoutes.obituariesDetail,
+            routeArgs: ob,
           ));
         }
       }

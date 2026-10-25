@@ -420,34 +420,22 @@ void main() {
       expect(list, contains('ListView'));
     });
 
-    test('هيدر الشاشة الرئيسية: الصندوق مُكبّر 40% والبيانات الثلاث بحجمها السابق',
+    test('هيدر الشاشة الرئيسية وكارت الحكمة: ترتيب الأزرار وانتقال الساعة والتاريخ للحكمة',
         () {
       final home = src('lib/features/home/home.dart');
-      final bell = src('lib/widgets/common_appbar_actions.dart');
-      // صندوق الهيدر وحده تكبّر (قيس بالأداة A/B: old=84.0 ⇒ new=117.5 = +39.9%).
-      // صورة الخلفية تملؤه تلقائيًا لأنها Positioned.fill.
+      final wisdom = src('lib/widgets/alert_wisdom_bar.dart');
+      // صندوق الهيدر بحجمه الأنيق ومواضع الحواف المنحنية
       expect(home, contains('bottomRight: Radius.circular(63)'));
       expect(home, contains('EdgeInsets.fromLTRB(26, 12, 26, 48)'));
       expect(home, contains('bottomLeft: Radius.circular(63)'));
-      // الجرس بنفس نسق كبسولات الهيدر الزمردية الأنيقة.
+      // الجرس فوق زر البحث في الهيدر
       expect(home, contains('NotificationBellButton(compact: true)'));
-      expect(bell, isNot(contains('compactSize')));
-      expect(bell, contains('const Color(0xE604392B)'));
-      // حبيبات التاريخ والساعة إلى مقاسها السابق.
-      expect(home, contains('fontSize: 10,'));
-      expect(home, contains('fontSize: 10.5'));
-      expect(home, contains('horizontal: 9, vertical: 3.5'));
-      // ── بموجة الهيدر: الوقت تحت البحث، التاريخ تحت الإشعارات، ومواقيت الصلاة متمركزة أسفل الهيدر ──
-      expect(home, contains('const double kHeroBodyHeight = 58.0;'));
-      expect(home, contains('height: kHeroBodyHeight'));
-      expect(home, contains("key: const ValueKey('header-clock-date-line')"));
-      // مواقيت الصلاة مكبرة بحبة مخصصة متمركزة
-      expect(home, contains('_prayerPill('));
-      expect(home, contains('const _VillageNextPrayerPill()'));
-      // الوقت تحت البحث والتاريخ تحت الإشعارات
       expect(home, contains('_HeaderSearchButton()'));
-      expect(home, contains('const _VillageClock()'));
-      expect(home, contains('NotificationBellButton(compact: true)'));
+      expect(home, contains('const _VillageNextPrayerPill()'));
+      // الساعة والتاريخ في كرت حكمة اليوم في نفس السطر (الساعة - حكمة اليوم - التاريخ)
+      expect(wisdom, contains('حكمة اليوم'));
+      expect(wisdom, contains('_clockTicker'));
+      expect(wisdom, contains('AppColors.primary'));
     });
   });
 }

@@ -1,9 +1,15 @@
+import 'dart:io';
+import 'dart:ui' as ui;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../core/utils/file_export.dart';
 import '../../widgets/qurity_app_bar.dart';
 
-/// 🎨 لوحة التلوين الحرة — رسم باللمس بألوان وسماكات متعددة مع تراجع ومسح.
+/// 🎨 لوحة التلوين الحرة — رسم باللمس بألوان وسماكات متعددة مع تراجع ومسح وحفظ في الاستوديو.
 class ColoringScreen extends StatefulWidget {
   const ColoringScreen({super.key});
 
@@ -33,10 +39,12 @@ class _ColoringScreenState extends State<ColoringScreen> {
   ];
   static const List<double> _sizes = [6, 14, 26];
 
+  final GlobalKey _canvasKey = GlobalKey();
   final List<_Stroke> _strokes = [];
   _Stroke? _current;
   Color _color = _palette[5];
   double _size = _sizes[1];
+  bool _isSaving = false;
 
   void _onPanStart(Offset p) {
     setState(() {
@@ -55,6 +63,105 @@ class _ColoringScreenState extends State<ColoringScreen> {
     });
   }
 
+  Future<void> _saveDrawing() async {
+    if (_strokes.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('اللوحة فارغة، ارسم شيئاً أولاً ليتم حفظه! 🎨',
+              style: GoogleFonts.tajawal(fontWeight: FontWeight.w700)),
+          backgroundColor: const Color(0xFFFB8C00),
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isSaving = true);
+    try {
+      final boundary = _canvasKey.currentContext?.findRenderObject()
+          as RenderRepaintBoundary?;
+      if (boundary == null) {
+        throw Exception('Canvas boundary not ready');
+      }
+
+      final image = await boundary.toImage(pixelRatio: 3.0);
+      final byteData =
+          await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) {
+        throw Exception('Failed to convert drawing to PNG');
+      }
+      final bytes = byteData.buffer.asUint8List();
+
+      final now = DateTime.now();
+      final stamp =
+          '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}${now.second.toString().padLeft(2, '0')}';
+      final fileName = 'رسمة_طفل_أبوديشيشة_$stamp.png';
+
+      bool savedDirectly = false;
+      if (!kIsWeb && Platform.isAndroid) {
+        try {
+          final picturesDir =
+              Directory('/storage/emulated/0/Pictures/Qarity');
+          if (!picturesDir.existsSync()) {
+            picturesDir.createSync(recursive: true);
+          }
+          final file = File('${picturesDir.path}/$fileName');
+          await file.writeAsBytes(bytes, flush: true);
+          savedDirectly = true;
+        } catch (_) {}
+      }
+
+      await exportFile(
+        fileName: fileName,
+        mimeType: 'image/png',
+        bytes: bytes,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.white),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    savedDirectly
+                        ? 'تم حفظ الرسمة في مجلد الصور واستوديو الهاتف بنجاح! 🎨🎉'
+                        : 'تم تصدير الرسمة وحفظها بنجاح! 🎨🎉',
+                    style: GoogleFonts.tajawal(
+                        fontWeight: FontWeight.w700, fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFF2E7D32),
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('تعذر حفظ الرسمة، يرجى المحاولة مرة أخرى',
+                style: GoogleFonts.tajawal(fontWeight: FontWeight.w700)),
+            backgroundColor: Colors.red.shade700,
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -62,6 +169,17 @@ class _ColoringScreenState extends State<ColoringScreen> {
       appBar: QurityAppBar(
         title: 'لوحة التلوين',
         actions: [
+          IconButton(
+            tooltip: 'حفظ الرسمة',
+            onPressed: _isSaving ? null : _saveDrawing,
+            icon: _isSaving
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white))
+                : const Icon(Icons.save_alt_rounded),
+          ),
           IconButton(
             tooltip: 'تراجع',
             onPressed: _strokes.isEmpty
@@ -116,15 +234,21 @@ class _ColoringScreenState extends State<ColoringScreen> {
                   border: Border.all(color: const Color(0xFFD7CCC8)),
                 ),
                 clipBehavior: Clip.antiAlias,
-                child: GestureDetector(
-                  key: const ValueKey('coloring-canvas'),
-                  onPanStart: (d) => _onPanStart(d.localPosition),
-                  onPanUpdate: (d) => _onPanUpdate(d.localPosition),
-                  onPanEnd: (_) => _onPanEnd(),
-                  child: CustomPaint(
-                    painter: _StrokePainter(
-                        strokes: _strokes, current: _current),
-                    size: Size.infinite,
+                child: RepaintBoundary(
+                  key: _canvasKey,
+                  child: ColoredBox(
+                    color: Colors.white,
+                    child: GestureDetector(
+                      key: const ValueKey('coloring-canvas'),
+                      onPanStart: (d) => _onPanStart(d.localPosition),
+                      onPanUpdate: (d) => _onPanUpdate(d.localPosition),
+                      onPanEnd: (_) => _onPanEnd(),
+                      child: CustomPaint(
+                        painter: _StrokePainter(
+                            strokes: _strokes, current: _current),
+                        size: Size.infinite,
+                      ),
+                    ),
                   ),
                 ),
               ),
