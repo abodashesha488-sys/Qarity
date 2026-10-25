@@ -136,6 +136,99 @@ class _KidsCertificateDialogState extends State<_KidsCertificateDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // ── لوحة إدخال وتعديل اسم الطفل بكل سهولة ووضوح ──
+            Container(
+              constraints: const BoxConstraints(maxWidth: 420),
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF232336) : Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: const Color(0xFFD4AF37),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.edit_note_rounded,
+                          color: Color(0xFFD4AF37), size: 22),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'اسم البطل / الطفل (يظهر في الشهادة):',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.tajawal(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: isDark ? Colors.white : const Color(0xFF3E2723),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _nameController,
+                    onChanged: (_) => setState(() {}),
+                    textInputAction: TextInputAction.done,
+                    style: GoogleFonts.tajawal(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      color: isDark ? Colors.amber : const Color(0xFFC2185B),
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'اكتب اسم الطفل هنا بكل سهولة...',
+                      filled: true,
+                      fillColor: isDark
+                          ? Colors.white.withValues(alpha: 0.05)
+                          : const Color(0xFFFFFDF5),
+                      prefixIcon: const Icon(Icons.child_care_rounded,
+                          color: Color(0xFFC2185B)),
+                      suffixIcon: _nameController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear_rounded, size: 20),
+                              tooltip: 'مسح',
+                              onPressed: () {
+                                _nameController.clear();
+                                setState(() {});
+                              },
+                            )
+                          : null,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFFD4AF37)),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                            color:
+                                const Color(0xFFD4AF37).withValues(alpha: 0.5)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(
+                            color: Color(0xFFC2185B), width: 2),
+                      ),
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
             // ── بطاقة الشهادة الذهبية المجهزة للتصوير والمشاركة ──
             RepaintBoundary(
               key: _boundaryKey,
@@ -265,10 +358,10 @@ class _KidsCertificateDialogState extends State<_KidsCertificateDialog> {
                             ),
                           ),
                           const SizedBox(height: 10),
-                          // حقل اسم الطفل: تفاعلي أثناء التعديل، ومطبوع بأناقة عند التوليد
+                          // اسم الطفل المطبوع في الشهادة بكل فخامة ووضوح
                           Container(
                             width: double.infinity,
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                             decoration: BoxDecoration(
                               color: isDark
                                   ? Colors.white.withValues(alpha: 0.08)
@@ -279,35 +372,15 @@ class _KidsCertificateDialogState extends State<_KidsCertificateDialog> {
                                 width: 1.5,
                               ),
                             ),
-                            child: _isGeneratingImage
-                                ? Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 4),
-                                    child: Text(
-                                      displayName,
-                                      textAlign: TextAlign.center,
-                                      style: GoogleFonts.amiri(
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.w900,
-                                        color: const Color(0xFFC2185B),
-                                      ),
-                                    ),
-                                  )
-                                : TextField(
-                                    controller: _nameController,
-                                    textAlign: TextAlign.center,
-                                    onChanged: (_) => setState(() {}),
-                                    style: GoogleFonts.amiri(
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.w900,
-                                      color: const Color(0xFFC2185B),
-                                    ),
-                                    decoration: const InputDecoration(
-                                      hintText: 'اكتب اسم الطفل هنا',
-                                      border: InputBorder.none,
-                                      isDense: true,
-                                      contentPadding: EdgeInsets.symmetric(vertical: 8),
-                                    ),
-                                  ),
+                            child: Text(
+                              displayName,
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.amiri(
+                                fontSize: 26,
+                                fontWeight: FontWeight.w900,
+                                color: const Color(0xFFC2185B),
+                              ),
+                            ),
                           ),
                           const SizedBox(height: 12),
                           Text(
@@ -344,7 +417,7 @@ class _KidsCertificateDialogState extends State<_KidsCertificateDialog> {
                             ),
                           ),
                           const SizedBox(height: 16),
-                          // الختم والتوقيع
+                          // ── الختم والتوقيع: شعار التطبيق بحجم واضح ومقروء ──
                           FittedBox(
                             fit: BoxFit.scaleDown,
                             child: Row(
@@ -370,25 +443,74 @@ class _KidsCertificateDialogState extends State<_KidsCertificateDialog> {
                                   ],
                                 ),
                                 const SizedBox(width: 24),
-                                // ختم التميز
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 10, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: const Color(0xFFD4AF37),
-                                      width: 1.5,
+                                // ── ختم الشهادة الرسمي: شعار التطبيق بحجم واضح ومقروء ──
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      children: [
+                                        Text(
+                                          'الختم الرسمي',
+                                          style: GoogleFonts.tajawal(
+                                            fontSize: 10.5,
+                                            fontWeight: FontWeight.w900,
+                                            color: const Color(0xFFB78103),
+                                          ),
+                                        ),
+                                        Text(
+                                          'تطبيق قرية أبوديشيشة',
+                                          style: GoogleFonts.tajawal(
+                                            fontSize: 9.5,
+                                            fontWeight: FontWeight.bold,
+                                            color: isDark ? Colors.white70 : const Color(0xFF3E2723),
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ),
-                                  child: Text(
-                                    'ختم التميز الرسمي ✨',
-                                    style: GoogleFonts.tajawal(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w900,
-                                      color: const Color(0xFFB78103),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      width: 66,
+                                      height: 66,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: Colors.white,
+                                        border: Border.all(
+                                          color: const Color(0xFFD4AF37),
+                                          width: 2.2,
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: const Color(0xFFD4AF37).withValues(alpha: 0.35),
+                                            blurRadius: 8,
+                                          ),
+                                        ],
+                                      ),
+                                      child: Stack(
+                                        alignment: Alignment.center,
+                                        children: [
+                                          Container(
+                                            margin: const EdgeInsets.all(2.5),
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                color: const Color(0xFFB78103).withValues(alpha: 0.5),
+                                              ),
+                                            ),
+                                          ),
+                                          Padding(
+                                            padding: const EdgeInsets.all(6),
+                                            child: Image.asset(
+                                              'assets/images/Qurity.png',
+                                              width: 48,
+                                              height: 48,
+                                              fit: BoxFit.contain,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ),
+                                  ],
                                 ),
                               ],
                             ),

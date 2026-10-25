@@ -24,13 +24,13 @@ class NumbersGameScreen extends StatefulWidget {
 
 const List<String> kArabicDigitWords = [
   'واحد',
-  'اثنان',
-  'ثلاثة',
+  'اتنين',
+  'تلاتة',
   'أربعة',
   'خمسة',
   'ستة',
   'سبعة',
-  'ثمانية',
+  'تمانية',
   'تسعة',
   'عشرة',
 ];
@@ -97,8 +97,8 @@ class _NumbersGameScreenState extends State<NumbersGameScreen> {
       _correct++;
       _streak++;
       HapticFeedback.mediumImpact();
-      unawaited(
-          ChildrenSpeech.speak(kArabicDigitWords[_current.count - 1]));
+      unawaited(ChildrenSpeech.speak(
+          'شاطر يا بطل! ${kArabicDigitWords[_current.count - 1]}'));
     } else {
       _streak = 0;
       HapticFeedback.vibrate();
@@ -317,7 +317,7 @@ class _NumbersGameScreenState extends State<NumbersGameScreen> {
                         child: IconButton(
                           tooltip: 'اسمع العدد',
                           onPressed: () => ChildrenSpeech.speak(
-                              kArabicDigitWords[round.count - 1]),
+                              'عِدّ معايا وشوف كام واحدة؟'),
                           icon: const Icon(Icons.volume_up_rounded,
                               color: Color(0xFF1E88E5), size: 30),
                         ),

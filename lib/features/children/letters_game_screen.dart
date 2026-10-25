@@ -69,8 +69,12 @@ class _LettersGameScreenState extends State<LettersGameScreen> {
       _score += 10 + _streak * 2;
       _correct++;
       _streak++;
-      HapticFeedback.mediumImpact();
-      unawaited(ChildrenSpeech.speak(_current.target.word));
+      final word = _current.target.letter == 'ط'
+          ? 'طَيَّارة'
+          : _current.target.letter == 'ك'
+              ? 'كُورة'
+              : _current.target.word;
+      unawaited(ChildrenSpeech.speak('شاطر يا بطل! كلمة $word'));
     } else {
       _streak = 0;
       HapticFeedback.vibrate();
@@ -294,8 +298,17 @@ class _LettersGameScreenState extends State<LettersGameScreen> {
                         end: 4,
                         child: IconButton(
                           tooltip: 'اسمع الكلمة',
-                          onPressed: () =>
-                              ChildrenSpeech.speak(q.target.word),
+                          onPressed: () {
+                            final word = q.target.letter == 'ط'
+                                ? 'طَيَّارة'
+                                : q.target.letter == 'ك'
+                                    ? 'كُورة'
+                                    : q.target.word;
+                            final letterName = q.target.letter == 'ز'
+                                ? 'الزين'
+                                : 'ال${q.target.name}';
+                            ChildrenSpeech.speak('فين حرف $letterName في كلمة $word؟');
+                          },
                           icon: const Icon(Icons.volume_up_rounded,
                               color: Color(0xFF1E88E5), size: 30),
                         ),

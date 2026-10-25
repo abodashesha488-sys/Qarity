@@ -23,8 +23,15 @@ class LearnLettersScreen extends StatefulWidget {
 
   static List<Color> paletteFor(int i) => _palettes[i % _palettes.length];
 
-  static String letterSpeechText(ArabicLetter letter) =>
-      'حرف ${letter.name} .. ${letter.word}';
+  static String letterSpeechText(ArabicLetter letter) {
+    final word = letter.letter == 'ط'
+        ? 'طَيَّارة'
+        : letter.letter == 'ك'
+            ? 'كُورة'
+            : letter.word;
+    final name = letter.letter == 'ز' ? 'الزين' : 'ال${letter.name}';
+    return 'حرف $name .. زي كلمة $word';
+  }
 
   static void showLetterCard(BuildContext context, ArabicLetter letter) async {
     final startIndex = kArabicLetters.indexOf(letter);
@@ -302,25 +309,37 @@ class _LetterDetailSheetState extends State<_LetterDetailSheet> {
                 label: 'مفرد',
                 form: letter.isolated,
                 color: colors[1],
-                onTap: () => ChildrenSpeech.speak('حرف ${letter.name} مفرد'),
+                onTap: () {
+                  final name = letter.letter == 'ز' ? 'الزين' : 'ال${letter.name}';
+                  ChildrenSpeech.speak('حرف $name لوحده');
+                },
               ),
               _FormChip(
                 label: 'بالبداية',
                 form: letter.initial,
                 color: colors[1],
-                onTap: () => ChildrenSpeech.speak('حرف ${letter.name} في بداية الكلمة'),
+                onTap: () {
+                  final name = letter.letter == 'ز' ? 'الزين' : 'ال${letter.name}';
+                  ChildrenSpeech.speak('حرف $name في أول الكلمة');
+                },
               ),
               _FormChip(
                 label: 'بالوسط',
                 form: letter.medial,
                 color: colors[1],
-                onTap: () => ChildrenSpeech.speak('حرف ${letter.name} في وسط الكلمة'),
+                onTap: () {
+                  final name = letter.letter == 'ز' ? 'الزين' : 'ال${letter.name}';
+                  ChildrenSpeech.speak('حرف $name في نص الكلمة');
+                },
               ),
               _FormChip(
                 label: 'بالنهاية',
                 form: letter.finalForm,
                 color: colors[1],
-                onTap: () => ChildrenSpeech.speak('حرف ${letter.name} في نهاية الكلمة'),
+                onTap: () {
+                  final name = letter.letter == 'ز' ? 'الزين' : 'ال${letter.name}';
+                  ChildrenSpeech.speak('حرف $name في آخر الكلمة');
+                },
               ),
             ],
           ),
@@ -331,7 +350,14 @@ class _LetterDetailSheetState extends State<_LetterDetailSheet> {
             color: Colors.transparent,
             child: InkWell(
               borderRadius: BorderRadius.circular(20),
-              onTap: () => ChildrenSpeech.speak(letter.word),
+              onTap: () {
+                final word = letter.letter == 'ط'
+                    ? 'طَيَّارة'
+                    : letter.letter == 'ك'
+                        ? 'كُورة'
+                        : letter.word;
+                ChildrenSpeech.speak('كلمة $word');
+              },
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                 decoration: BoxDecoration(
