@@ -29,6 +29,7 @@ const Map<String, int> kUserRoleRank = {
   'medical_admin': 2,
   'agricultural_admin': 3,
   'legal_admin': 4,
+  'heritage_admin': 4,
   'moderator': 5,
   'seller': 6,
 };

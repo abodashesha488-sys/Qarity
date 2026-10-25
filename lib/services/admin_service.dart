@@ -131,6 +131,21 @@ class AdminService {
     }
   }
 
+  /// هل هذا المستخدم «أدمن التراث» أو أي مدير (عام/مساعد)؟
+  /// مهمته: إدارة وتعديل وحذف كل محتوى وتاريخ ومعالم وفيديوهات وذكريات القرية.
+  Future<bool> isHeritageAdmin(String uid) async {
+    try {
+      final doc = await _firestore.collection('users').doc(uid).get();
+      final role = doc.data()?['role'] as String?;
+      return role == 'heritage_admin' ||
+          role == 'admin' ||
+          role == 'assistant_admin';
+    } catch (e) {
+      debugPrint('isHeritageAdmin error: $e');
+      return false;
+    }
+  }
+
   Future<int> getPendingCountFuture(String collection) =>
       _pendingCountOnce(collection);
 

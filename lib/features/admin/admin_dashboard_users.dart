@@ -48,6 +48,11 @@ class _UsersPageState extends State<_UsersPage> {
       Color(0xFF2E7D32),
       Icons.gavel_rounded
     ),
+    'heritage_admin': (
+      'أدمن التراث',
+      Color(0xFF8D6E63),
+      Icons.auto_stories_rounded
+    ),
     'assistant_admin': ('أدمن مساعد', Color(0xFF6A1B9A), Icons.shield_rounded),
     'admin': (
       'مدير عام',
@@ -64,6 +69,7 @@ class _UsersPageState extends State<_UsersPage> {
     ('medical_admin', 'مدير طبي'),
     ('agricultural_admin', 'مدير زراعي'),
     ('legal_admin', 'أدمن قانوني'),
+    ('heritage_admin', 'أدمن التراث'),
     ('assistant_admin', 'أدمن مساعد'),
     ('admin', 'مدراء'),
     ('disabled', 'معطّلون'),
@@ -1392,6 +1398,8 @@ class _UsersPageState extends State<_UsersPage> {
         return 'إدارة المركز الطبي الخيري فقط — لا يراجع بقية محتوى الخدمات الطبية';
       case 'legal_admin':
         return 'الرد على الاستشارات القانونية في مستشار القرية فقط';
+      case 'heritage_admin':
+        return 'إدارة وتعديل وحذف كل محتوى وتاريخ ومعالم وفيديوهات وذكريات القرية';
       case 'admin':
         return 'كل الصلاحيات + تعيين الأدوار';
       default:

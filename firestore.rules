@@ -56,6 +56,11 @@ service cloud.firestore {
         me().data.role in ['admin', 'assistant_admin', 'legal_admin'];
     }
 
+    function isHeritageAdmin() {
+      return accountActive() &&
+        me().data.role in ['admin', 'assistant_admin', 'heritage_admin'];
+    }
+
     function isOwner(userId) {
       return accountActive() && request.auth.uid == userId;
     }
@@ -704,92 +709,97 @@ service cloud.firestore {
     }
 
     // ───────────────────────── محتوى «تعرف على القرية» ─────────────────────────
-    // قراءة عامة للجميع؛ الإنشاء/التعديل/الحذف للأدمن فقط (لا مراجعة — الأدمن هو المؤلف).
+    // قراءة عامة للجميع؛ الإنشاء/التعديل/الحذف للمدير وأدمن التراث (heritage_admin).
+    match /village_info/{docId} {
+      allow list, get: if true;
+      allow write: if isHeritageAdmin();
+    }
+
     match /village_history/{docId} {
       allow list, get: if true;
-      allow write: if isAdmin();
+      allow write: if isHeritageAdmin();
     }
 
     match /village_figures/{docId} {
       allow list, get: if true;
-      allow write: if isAdmin();
+      allow write: if isHeritageAdmin();
     }
 
     match /village_archive_photos/{docId} {
       allow list, get: if true;
-      allow write: if isAdmin();
+      allow write: if isHeritageAdmin();
     }
 
     match /village_institutions/{docId} {
       allow list, get: if true;
-      allow write: if isAdmin();
+      allow write: if isHeritageAdmin();
     }
 
-    // ── أقسام المرجع الموسّع (كلها: قراءة عامة / كتابة للأدمن فقط) ──
+    // ── أقسام المرجع الموسّع (كلها: قراءة عامة / كتابة لأدمن التراث والإدارة) ──
     match /village_families/{docId} {
       allow list, get: if true;
-      allow write: if isAdmin();
+      allow write: if isHeritageAdmin();
     }
 
     match /village_notable_people/{docId} {
       allow list, get: if true;
-      allow write: if isAdmin();
+      allow write: if isHeritageAdmin();
     }
 
     match /village_memorial_people/{docId} {
       allow list, get: if true;
-      allow write: if isAdmin();
+      allow write: if isHeritageAdmin();
     }
 
     match /village_heritage/{docId} {
       allow list, get: if true;
-      allow write: if isAdmin();
+      allow write: if isHeritageAdmin();
     }
 
     match /village_landmarks/{docId} {
       allow list, get: if true;
-      allow write: if isAdmin();
+      allow write: if isHeritageAdmin();
     }
 
     match /village_before_after/{docId} {
       allow list, get: if true;
-      allow write: if isAdmin();
+      allow write: if isHeritageAdmin();
     }
 
     match /village_agriculture_history/{docId} {
       allow list, get: if true;
-      allow write: if isAdmin();
+      allow write: if isHeritageAdmin();
     }
 
     match /village_education_history/{docId} {
       allow list, get: if true;
-      allow write: if isAdmin();
+      allow write: if isHeritageAdmin();
     }
 
     match /village_development_timeline/{docId} {
       allow list, get: if true;
-      allow write: if isAdmin();
+      allow write: if isHeritageAdmin();
     }
 
     match /village_achievements/{docId} {
       allow list, get: if true;
-      allow write: if isAdmin();
+      allow write: if isHeritageAdmin();
     }
 
-    // الأرشيف الرقمي: عرض عام للمواد المعتمدة، والكتابة للأدمن فقط.
+    // الأرشيف الرقمي: عرض عام للمواد المعتمدة، والكتابة لأدمن التراث والإدارة.
     match /village_archive_items/{docId} {
       allow list, get: if true;
-      allow write: if isAdmin();
+      allow write: if isHeritageAdmin();
     }
 
-    // المساهمات المعتمدة فقط هي العامة؛ الإدارة تراها كاملة، وصاحب
+    // المساهمات المعتمدة فقط هي العامة؛ الإدارة وأدمن التراث يراها كاملة، وصاحب
     // المساهمة قيد المراجعة وحده يستطيع تعديلها دون حقن أي حقول حساسة.
     match /village_contributions/{docId} {
-      allow get: if isAdmin() || resource.data.approvalStatus == 'approved';
+      allow get: if isHeritageAdmin() || resource.data.approvalStatus == 'approved';
       // القواعد لا تفحص فلاتر الاستعلام (request.query.where غير موجود):
       // الشرط يُقيَّم لكل مستند قد يرجعه الاستعلام، فيُرفض أي list لا يقيّد
       // نفسه بالمعتمد فقط — وهو ما يفعله استعلام التطبيق العام أصلاً.
-      allow list: if isAdmin() || resource.data.approvalStatus == 'approved';
+      allow list: if isHeritageAdmin() || resource.data.approvalStatus == 'approved';
       allow create: if accountActive()
         && request.resource.data.userId == request.auth.uid
         && request.resource.data.approvalStatus == 'pending'
@@ -819,7 +829,7 @@ service cloud.firestore {
         && request.resource.data.createdAt is timestamp
         && request.resource.data.reviewedAt == null
         && request.resource.data.reviewedBy == null;
-      allow update: if isAdmin()
+      allow update: if isHeritageAdmin()
         || (accountActive()
             && resource.data.userId == request.auth.uid
             && resource.data.approvalStatus == 'pending'
@@ -847,7 +857,7 @@ service cloud.firestore {
             && request.resource.data.videoUrl.size() <= 2000
             && request.resource.data.audioUrl is string
             && request.resource.data.audioUrl.size() <= 2000);
-      allow delete: if isAdmin()
+      allow delete: if isHeritageAdmin()
         || (accountActive() && resource.data.userId == request.auth.uid
             && resource.data.approvalStatus == 'pending');
     }

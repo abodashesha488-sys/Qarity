@@ -85,6 +85,9 @@ class UserModel implements BaseModel {
   bool get isLegalAdmin =>
       role == 'legal_admin' || role == 'admin' || role == 'assistant_admin';
 
+  bool get isHeritageAdmin =>
+      role == 'heritage_admin' || role == 'admin' || role == 'assistant_admin';
+
   static const Map<String, String> _roleLabels = {
     'user': 'مستخدم',
     'seller': 'بائع',
@@ -93,6 +96,7 @@ class UserModel implements BaseModel {
     'medical_admin': 'مدير المركز الطبي',
     'agricultural_admin': 'مدير الخدمات الزراعية',
     'legal_admin': 'أدمن الاستشارات القانونية',
+    'heritage_admin': 'أدمن التراث',
     'admin': 'مدير عام',
   };
 

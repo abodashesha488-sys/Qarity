@@ -26,7 +26,7 @@ Future<bool> canManageVillageContent() async {
         user.email == AppConfig.bootstrapAdminEmail) {
       return true;
     }
-    final v = await AdminService().isAdminUser(user.uid);
+    final v = await AdminService().isHeritageAdmin(user.uid);
     return v;
   } catch (_) {
     return false;

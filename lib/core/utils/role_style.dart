@@ -21,6 +21,7 @@ class RoleStyle {
   static const Color adminGold = Color(0xFFB8860B);
   static const Color medicalTeal = Color(0xFF00897B);
   static const Color legalGreen = Color(0xFF2E7D32);
+  static const Color heritageBrown = Color(0xFF8D6E63);
   static const Color moderatorOrange = Color(0xFFEF6C00);
 
   static SellerType? parseSellerType(String? code) {
@@ -56,6 +57,8 @@ class RoleStyle {
         return medicalTeal;
       case 'legal_admin':
         return legalGreen;
+      case 'heritage_admin':
+        return heritageBrown;
       case 'moderator':
         return moderatorOrange;
       default:
@@ -72,6 +75,8 @@ class RoleStyle {
         return Icons.shield_rounded; // درع ذهبي (أدمن مساعد)
       case 'legal_admin':
         return Icons.gavel_rounded; // مطرقة العدالة (أدمن قانوني)
+      case 'heritage_admin':
+        return Icons.auto_stories_rounded; // كتاب التراث (أدمن التراث)
       case 'medical_admin':
       case 'moderator':
         return Icons.star_rounded; // نجمة
@@ -89,6 +94,8 @@ class RoleStyle {
         return medicalTeal;
       case 'legal_admin':
         return legalGreen;
+      case 'heritage_admin':
+        return heritageBrown;
       case 'moderator':
         return moderatorOrange;
       default:
