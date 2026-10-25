@@ -154,7 +154,13 @@ class ForumService {
     }
   }
 
-  Future<void> addComment(String postId, String userName, String text) async {
+  Future<void> addComment(
+    String postId,
+    String userName,
+    String text, {
+    String? parentId,
+    String? replyToUser,
+  }) async {
     final auth = FirebaseAuth.instance;
     final user = auth.currentUser;
     final userDoc = await _firestore.collection('users').doc(user?.uid).get();
@@ -164,12 +170,70 @@ class ForumService {
     final name = pname.isNotEmpty ? pname : (gname.isNotEmpty ? gname : userName);
     final mPhoto = (data['photoUrl'] as String? ?? '').trim();
     final photo = mPhoto.isNotEmpty ? mPhoto : (user?.photoURL ?? '');
-    await _firestore.collection('forum_posts').doc(postId).collection('comments').add({'userId': auth.currentUser?.uid ?? '', 'userName': name, 'userPhotoUrl': photo, 'text': text, 'createdAt': Timestamp.now()});
+    await _firestore.collection('forum_posts').doc(postId).collection('comments').add({
+      'userId': auth.currentUser?.uid ?? '',
+      'userName': name,
+      'userPhotoUrl': photo,
+      'text': text,
+      'likes': 0,
+      'likedBy': <String>[],
+      if (parentId != null && parentId.isNotEmpty) 'parentId': parentId,
+      if (replyToUser != null && replyToUser.isNotEmpty) 'replyToUser': replyToUser,
+      'createdAt': Timestamp.now(),
+    });
     await _firestore.collection('forum_posts').doc(postId).update({'comments': FieldValue.increment(1)});
   }
 
   Stream<QuerySnapshot> getCommentsStream(String postId) {
-    return _firestore.collection('forum_posts').doc(postId).collection('comments').orderBy('createdAt', descending: true).snapshots();
+    return _firestore
+        .collection('forum_posts')
+        .doc(postId)
+        .collection('comments')
+        .orderBy('createdAt', descending: false)
+        .snapshots();
+  }
+
+  /// تعديل نص التعليق (للصاحب أو الأدمن)
+  Future<void> editComment(String postId, String commentId, String newText) async {
+    if (postId.isEmpty || commentId.isEmpty || newText.trim().isEmpty) return;
+    await _firestore
+        .collection('forum_posts')
+        .doc(postId)
+        .collection('comments')
+        .doc(commentId)
+        .update({
+      'text': newText.trim(),
+      'updatedAt': Timestamp.now(),
+    });
+  }
+
+  /// التفاعل مع التعليق بالإعجاب أو إلغائه
+  Future<void> toggleCommentLike(
+      String postId, String commentId, String userId) async {
+    if (postId.isEmpty || commentId.isEmpty || userId.isEmpty) return;
+    final ref = _firestore
+        .collection('forum_posts')
+        .doc(postId)
+        .collection('comments')
+        .doc(commentId);
+    await _firestore.runTransaction((tx) async {
+      final snap = await tx.get(ref);
+      if (!snap.exists) return;
+      final data = snap.data() ?? <String, dynamic>{};
+      final likedBy = (data['likedBy'] as List?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          <String>[];
+      if (likedBy.contains(userId)) {
+        likedBy.remove(userId);
+      } else {
+        likedBy.add(userId);
+      }
+      tx.update(ref, {
+        'likedBy': likedBy,
+        'likes': likedBy.length,
+      });
+    });
   }
 
   /// يحذف تعليقاً (للأدمن/الأدمن المساعد أو صاحب التعليق) وينقص عدّاد

@@ -7,7 +7,6 @@ import '../../core/constants/app_colors.dart';
 import '../../core/utils/comment_style.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/utils/launch_link.dart';
-import '../../core/utils/relative_time.dart';
 import '../../core/utils/role_style.dart';
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
@@ -16,6 +15,8 @@ import '../../services/market_service.dart';
 import '../../services/moderation_service.dart';
 import '../../services/product_interaction_service.dart';
 import '../../services/share_service.dart';
+import '../../services/user_service.dart';
+import '../../widgets/facebook_comment_tile.dart';
 import '../../widgets/favorite_button.dart';
 import '../../widgets/full_fit_image.dart';
 import '../../widgets/image_gallery_wrap.dart';
@@ -47,11 +48,26 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   bool _loadingReviews = false;
   bool _loadingSimilar = false;
   bool _isSubscribedToStockAlert = false;
+  bool _isAdmin = false;
+  String? _replyToCommentId;
+  String? _replyToAuthorName;
 
   @override
   void initState() {
     super.initState();
+    _checkAdminStatus();
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadProduct());
+  }
+
+  Future<void> _checkAdminStatus() async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return;
+    try {
+      final user = await UserService().getUser(uid);
+      if (mounted && user != null) {
+        setState(() => _isAdmin = user.isAdmin);
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadProduct() async {
@@ -1214,9 +1230,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         productId: _product!.id,
         userName: user.displayName ?? 'مستخدم',
         text: text,
+        parentId: _replyToCommentId,
+        replyToUser: _replyToAuthorName,
       );
       if (!mounted) return;
       _commentController.clear();
+      if (_replyToCommentId != null) {
+        setState(() {
+          _replyToCommentId = null;
+          _replyToAuthorName = null;
+        });
+      }
       FocusScope.of(context).unfocus();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('تم إرسال تعليقك بنجاح')),
@@ -1258,6 +1282,35 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             ],
           ),
           const SizedBox(height: 14),
+          if (_replyToCommentId != null)
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primaryContainer.withValues(alpha: 0.35),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.reply_rounded, size: 16, color: theme.colorScheme.primary),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'الرد على ${_replyToAuthorName ?? "تعليق"}',
+                      style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  InkWell(
+                    onTap: () => setState(() {
+                      _replyToCommentId = null;
+                      _replyToAuthorName = null;
+                    }),
+                    child: const Icon(Icons.close_rounded, size: 16),
+                  ),
+                ],
+              ),
+            ),
           Row(
             children: [
               Expanded(
@@ -1327,67 +1380,64 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: comments.length,
-                separatorBuilder: (_, __) => const Divider(height: 14),
+                separatorBuilder: (_, __) => const SizedBox(height: 6),
                 itemBuilder: (context, index) {
                   final c = comments[index];
+                  final commentId = c['id'] as String? ?? '';
                   final name = c['userName'] as String? ?? 'مستخدم';
                   final text = c['text'] as String? ?? '';
                   final photo = c['userPhotoUrl'] as String?;
+                  final userId = c['userId'] as String? ?? '';
                   final ts = c['createdAt'];
                   DateTime? date;
                   if (ts is Timestamp) date = ts.toDate();
+                  final up = c['updatedAt'];
+                  DateTime? updatedDate;
+                  if (up is Timestamp) updatedDate = up.toDate();
+                  final likes = (c['likes'] as num?)?.toInt() ?? 0;
+                  final likedBy = (c['likedBy'] as List?)
+                          ?.map((e) => e.toString())
+                          .toList() ??
+                      <String>[];
+                  final parentId = c['parentId'] as String?;
+                  final replyToUser = c['replyToUser'] as String?;
 
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      CircleAvatar(
-                        radius: 16,
-                        backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.12),
-                        backgroundImage: (photo != null && photo.isNotEmpty)
-                            ? CachedNetworkImageProvider(photo)
-                            : null,
-                        child: (photo == null || photo.isEmpty)
-                            ? Icon(Icons.person, size: 18, color: theme.colorScheme.primary)
-                            : null,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  name,
-                                  style: const TextStyle(
-                                    fontSize: 12.5,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                                const Spacer(),
-                                if (date != null)
-                                  Text(
-                                    relativeTimeLabelAr(date),
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: theme.colorScheme.onSurfaceVariant,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              text,
-                              style: TextStyle(
-                                fontSize: 13,
-                                height: 1.5,
-                                color: theme.colorScheme.onSurface,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                  return FacebookCommentTile(
+                    avatarRadius: CommentStyle.avatarRadius,
+                    textStyle: CommentStyle.body(context),
+                    commentId: commentId,
+                    authorId: userId,
+                    authorName: name,
+                    authorPhotoUrl: photo ?? '',
+                    text: text,
+                    createdAt: date,
+                    updatedAt: updatedDate,
+                    likes: likes,
+                    likedBy: likedBy,
+                    parentId: parentId,
+                    replyToUser: replyToUser,
+                    currentUserId: _auth.currentUser?.uid ?? '',
+                    isAdmin: _isAdmin,
+                    onLike: () => _interactionService.toggleCommentLike(
+                      productId: _product!.id,
+                      commentId: commentId,
+                      userId: _auth.currentUser?.uid ?? '',
+                    ),
+                    onReply: () {
+                      setState(() {
+                        _replyToCommentId = commentId;
+                        _replyToAuthorName = name;
+                      });
+                    },
+                    onEdit: (newText) => _interactionService.editComment(
+                      productId: _product!.id,
+                      commentId: commentId,
+                      newText: newText,
+                    ),
+                    onDelete: () => _interactionService.deleteComment(
+                      productId: _product!.id,
+                      commentId: commentId,
+                    ),
                   );
                 },
               );

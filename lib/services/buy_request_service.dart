@@ -170,5 +170,14 @@ class BuyRequestService {
   Future<void> deleteComment(String requestId, String commentId) async {
     await _comments(requestId).doc(commentId).delete();
   }
+
+  Future<void> editComment(String requestId, String commentId, String newText) async {
+    final trimmed = newText.trim();
+    if (trimmed.isEmpty) return;
+    await _comments(requestId).doc(commentId).update({
+      'text': trimmed,
+      'updatedAt': Timestamp.now(),
+    });
+  }
 }
 

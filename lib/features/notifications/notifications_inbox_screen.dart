@@ -99,16 +99,17 @@ class _NotificationsInboxScreenState extends State<NotificationsInboxScreen> {
                     final color = switch (n.kind) {
                       'approve' => AppColors.success,
                       'reject' => Colors.orange,
+                      'alert' => AppColors.error,
+                      'broadcast' => const Color(0xFF1565C0),
                       _ => theme.colorScheme.primary,
                     };
                     final icon = switch (n.kind) {
                       'approve' => Icons.check_circle_rounded,
                       'reject' => Icons.warning_amber_rounded,
+                      'alert' => Icons.crisis_alert_rounded,
+                      'broadcast' => Icons.campaign_rounded,
                       _ => Icons.notifications_rounded,
                     };
-                    // الرمز حبرٌ فوق تظليل 0.12 من اللون نفسه، والبرتقالي 2.16
-                    // فوق البياض لا يجتاز حتى سقف الرسم 3.0 — فيُزحزح سطوعه وحده
-                    // مع بقاء اللون والتشبّع. بقية الفروع تمرّ فتبقى كما هي.
                     final iconInk =
                         AppColors.readableInk(color, theme.brightness,
                             minRatio: 3.0);
@@ -123,11 +124,10 @@ class _NotificationsInboxScreenState extends State<NotificationsInboxScreen> {
                       ),
                       child: ListTile(
                         onTap: () async {
-                          await _service.markRead(n.id);
+                          await _service.markRead(n.id, userId: _uid);
                           if (!context.mounted) return;
                           final target = n.route;
                           if (target == null || target.isEmpty) return;
-                          // صيغة التوجيه العميق: route|collection|itemId
                           final deep = NotificationDeepLink.decode(target);
                           if (deep != null) {
                             Navigator.pushNamed(
@@ -144,9 +144,34 @@ class _NotificationsInboxScreenState extends State<NotificationsInboxScreen> {
                               borderRadius: BorderRadius.circular(12)),
                           child: Icon(icon, color: iconInk),
                         ),
-                        title: Text(n.title,
-                            style: theme.textTheme.titleSmall
-                                ?.copyWith(fontWeight: FontWeight.w800)),
+                        title: Row(
+                          children: [
+                            Expanded(
+                              child: Text(n.title,
+                                  style: theme.textTheme.titleSmall
+                                      ?.copyWith(fontWeight: FontWeight.w800)),
+                            ),
+                            if (n.isBroadcast)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
+                                margin: const EdgeInsets.only(right: 6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF1565C0)
+                                      .withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                      color: const Color(0xFF1565C0)
+                                          .withValues(alpha: 0.3)),
+                                ),
+                                child: const Text('إذاعي عام',
+                                    style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF1565C0))),
+                              ),
+                          ],
+                        ),
                         subtitle: Text(n.body,
                             style: theme.textTheme.bodySmall?.copyWith(
                                 color: theme.colorScheme.onSurfaceVariant)),

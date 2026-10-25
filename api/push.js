@@ -322,6 +322,26 @@ export default async function handler(req, res) {
   try {
     const target = token ? { token: String(token) } : { topic };
     const id = await admin.messaging().send({...base, ...target});
+
+    // إذا كان الإشعار إذاعياً لجميع المستخدمين، نسجّله في صندوق إشعارات القرية
+    if (topic === 'all_users') {
+      try {
+        await admin.firestore().collection('notifications').add({
+          userId: 'all',
+          title: String(title),
+          body: String(text).slice(0, 400),
+          route: route ? String(route) : null,
+          kind: body.alert ? 'alert' : 'broadcast',
+          read: false,
+          readBy: [],
+          deletedBy: [],
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      } catch (inboxErr) {
+        console.error('Failed to log broadcast to notifications collection:', inboxErr);
+      }
+    }
+
     return res.status(200).json({ ok: true, id });
   } catch (e) {
     return res.status(500).json({ error: 'fcm_failed', message: e?.message || String(e) });

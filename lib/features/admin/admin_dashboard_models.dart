@@ -202,3 +202,18 @@ class _PageHeader extends StatelessWidget {
   }
 }
 
+/// ركيزة مجمّعة لأقسام المراجعة في لوحة التحكم — تجميع الأقسام الـ 27 إلى خمسة
+/// قطاعات كبرى يسهّل الوصول السريع والتركيز في الفرز.
+class _PillarInfo {
+  final String id;
+  final String label;
+  final IconData icon;
+  final Color color;
+
+  const _PillarInfo({
+    required this.id,
+    required this.label,
+    required this.icon,
+    required this.color,
+  });
+}

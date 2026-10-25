@@ -89,3 +89,5 @@ download/*.apk
 *.jks
 *.keystore
 key.properties
+PROJECT_VAULT_GUIDE.md
+*VAULT*.md

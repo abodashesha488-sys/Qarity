@@ -15,6 +15,7 @@ import '../../services/favorites_service.dart';
 import '../../services/news_service.dart';
 import '../../services/share_service.dart';
 import '../../services/user_service.dart';
+import '../../widgets/facebook_comment_tile.dart';
 import '../../widgets/favorite_button.dart';
 import '../../widgets/owner_actions.dart';
 import '../../widgets/qurity_app_bar.dart';
@@ -45,6 +46,8 @@ class _NewsViewScreenState extends State<NewsViewScreen> {
   bool _viewCounted = false;
   String _currentUserId = '';
   String _currentUserName = '';
+  String? _replyToCommentId;
+  String? _replyToAuthorName;
   // الأدمن العام أو الأدمن المساعد فقط يستطيع حذف التعليقات.
   bool _canModerate = false;
   // صورة محرر الخبر (من users/{authorId}) — تُقرأ وقت العرض.
@@ -148,8 +151,20 @@ class _NewsViewScreenState extends State<NewsViewScreen> {
     }
     setState(() => _isSendingComment = true);
     try {
-      await _newsService.addComment(item.id, _currentUserName, text);
+      await _newsService.addComment(
+        item.id,
+        _currentUserName,
+        text,
+        parentId: _replyToCommentId,
+        replyToUser: _replyToAuthorName,
+      );
       _commentController.clear();
+      if (_replyToCommentId != null) {
+        setState(() {
+          _replyToCommentId = null;
+          _replyToAuthorName = null;
+        });
+      }
     } catch (e) {
       if (mounted) AppHelpers.showSnackBar(context, 'تعذر إضافة التعليق', isError: true);
     } finally {
@@ -532,48 +547,51 @@ class _NewsViewScreenState extends State<NewsViewScreen> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: count,
-                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                separatorBuilder: (_, __) => const SizedBox(height: 6),
                 itemBuilder: (context, index) {
                   final doc = snapshot.data!.docs[index];
                   final data = doc.data() as Map<String, dynamic>? ?? <String, dynamic>{};
                   final photo = (data['userPhotoUrl'] as String? ?? '').trim();
                   final commentText = data['text'] as String? ?? '';
                   final commentAuthor = (data['userId'] as String? ?? '').trim();
-                  // صاحب التعليق يحذف تعليقه، والأدمن/الأدمن المساعد يحذفان أي تعليق.
-                  final canDelete = _canModerate ||
-                      (_currentUserId.isNotEmpty &&
-                          commentAuthor == _currentUserId);
-                  return InfoListCard(
-                    padding: const EdgeInsets.all(14),
-                    leading: CircleAvatar(
-                      radius: CommentStyle.avatarRadius,
-                      backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
-                      backgroundImage:
-                          photo.isNotEmpty ? CachedNetworkImageProvider(photo) : null,
-                      child: photo.isEmpty
-                          ? Icon(Icons.person_rounded, size: 20, color: theme.colorScheme.primary)
-                          : null,
-                    ),
-                    title: data['userName'] as String? ?? 'زائر',
-                    subtitleBuilder: (context) => [
-                      Text(
-                        data['userName'] as String? ?? 'زائر',
-                        style: CommentStyle.author(context),
-                      ),
-                      const SizedBox(height: 5),
-                      // نص التعليق: أسود بحجم واضح (تنسيق موحّد لكل التعليقات)
-                      Text(commentText, style: CommentStyle.body(context)),
-                    ],
-                    trailing: canDelete
-                        ? IconButton(
-                            key: ValueKey('news-comment-delete-${doc.id}'),
-                            tooltip: 'حذف التعليق',
-                            icon: Icon(Icons.delete_outline_rounded,
-                                size: 20, color: theme.colorScheme.error),
-                            onPressed: () =>
-                                _deleteComment(item, doc.id, commentText),
-                          )
-                        : null,
+                  final createdAt = (data['createdAt'] as Timestamp?)?.toDate();
+                  final updatedAt = (data['updatedAt'] as Timestamp?)?.toDate();
+                  final likes = (data['likes'] as num?)?.toInt() ?? 0;
+                  final likedBy = (data['likedBy'] as List?)
+                          ?.map((e) => e.toString())
+                          .toList() ??
+                      <String>[];
+                  final parentId = data['parentId'] as String?;
+                  final replyToUser = data['replyToUser'] as String?;
+
+                  return FacebookCommentTile(
+                    key: ValueKey('news-comment-delete-${doc.id}'),
+                    avatarRadius: CommentStyle.avatarRadius,
+                    textStyle: CommentStyle.body(context),
+                    commentId: doc.id,
+                    authorId: commentAuthor,
+                    authorName: data['userName'] as String? ?? 'زائر',
+                    authorPhotoUrl: photo,
+                    text: commentText,
+                    createdAt: createdAt,
+                    updatedAt: updatedAt,
+                    likes: likes,
+                    likedBy: likedBy,
+                    parentId: parentId,
+                    replyToUser: replyToUser,
+                    currentUserId: _currentUserId,
+                    isAdmin: _canModerate,
+                    onLike: () => _newsService.toggleCommentLike(
+                        item.id, doc.id, _currentUserId),
+                    onReply: () {
+                      setState(() {
+                        _replyToCommentId = doc.id;
+                        _replyToAuthorName = data['userName'] as String? ?? 'مستخدم';
+                      });
+                    },
+                    onEdit: (newText) =>
+                        _newsService.editComment(item.id, doc.id, newText),
+                    onDelete: () => _deleteComment(item, doc.id, commentText),
                   );
                 },
               ),
@@ -608,34 +626,68 @@ class _NewsViewScreenState extends State<NewsViewScreen> {
       padding: EdgeInsets.only(
         left: 12,
         right: 12,
-        top: 12,
+        top: 8,
         bottom: MediaQuery.of(context).viewInsets.bottom + 12,
       ),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4))),
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(
-            child: TextField(
-              controller: _commentController,
-              enabled: isLoggedIn && !_isSendingComment,
-              textInputAction: TextInputAction.send,
-              onSubmitted: (_) => _addComment(item),
-              decoration: InputDecoration(
-                hintText: isLoggedIn ? 'أضف تعليقاً...' : 'سجّل الدخول لإضافة تعليق',
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          if (_replyToCommentId != null)
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primaryContainer.withValues(alpha: 0.35),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.reply_rounded, size: 16, color: theme.colorScheme.primary),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'الرد على ${_replyToAuthorName ?? "تعليق"}',
+                      style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  InkWell(
+                    onTap: () => setState(() {
+                      _replyToCommentId = null;
+                      _replyToAuthorName = null;
+                    }),
+                    child: const Icon(Icons.close_rounded, size: 16),
+                  ),
+                ],
               ),
             ),
-          ),
-          const SizedBox(width: 8),
-          IconButton.filled(
-            onPressed: isLoggedIn && !_isSendingComment ? () => _addComment(item) : null,
-            icon: _isSendingComment
-                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(Icons.send_rounded, size: 20),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _commentController,
+                  enabled: isLoggedIn && !_isSendingComment,
+                  textInputAction: TextInputAction.send,
+                  onSubmitted: (_) => _addComment(item),
+                  decoration: InputDecoration(
+                    hintText: isLoggedIn ? 'أضف تعليقاً...' : 'سجّل الدخول لإضافة تعليق',
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton.filled(
+                onPressed: isLoggedIn && !_isSendingComment ? () => _addComment(item) : null,
+                icon: _isSendingComment
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.send_rounded, size: 20),
+              ),
+            ],
           ),
         ],
       ),

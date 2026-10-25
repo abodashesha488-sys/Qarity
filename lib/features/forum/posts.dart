@@ -15,6 +15,7 @@ import '../../services/forum_service.dart';
 import '../../services/moderation_service.dart';
 import '../../services/share_service.dart';
 import '../../services/user_service.dart';
+import '../../widgets/facebook_comment_tile.dart';
 import '../../widgets/offline_stream_builder.dart';
 import '../../widgets/qurity_app_bar.dart';
 
@@ -35,6 +36,7 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
   String _searchQuery = '';
   String _currentUserId = '';
   String _currentUserName = '';
+  bool _isAdmin = false;
   bool _isLoadingUser = true;
 
   static const String _latestFilter = 'الأحدث';
@@ -84,6 +86,7 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
       setState(() {
         _currentUserId = user.uid;
         _currentUserName = userModel?.name ?? user.displayName ?? 'مستخدم';
+        _isAdmin = userModel?.isAdmin ?? false;
         _isLoadingUser = false;
       });
     } catch (_) {
@@ -772,6 +775,8 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
         post: post,
         forumService: _forumService,
         currentUserName: _currentUserName,
+        currentUserId: _currentUserId,
+        canModerate: _isAdmin,
         canComment: _currentUserId.isNotEmpty,
       ),
     );
@@ -785,12 +790,16 @@ class CommentsSheet extends StatefulWidget {
     required this.post,
     required this.forumService,
     required this.currentUserName,
+    this.currentUserId = '',
+    this.canModerate = false,
     this.canComment = true,
   });
 
   final ForumPost post;
   final ForumService forumService;
   final String currentUserName;
+  final String currentUserId;
+  final bool canModerate;
   final bool canComment;
 
   @override
@@ -800,6 +809,8 @@ class CommentsSheet extends StatefulWidget {
 class _CommentsSheetState extends State<CommentsSheet> {
   final TextEditingController _commentController = TextEditingController();
   bool _isSending = false;
+  String? _replyToCommentId;
+  String? _replyToAuthorName;
 
   @override
   void dispose() {
@@ -812,8 +823,20 @@ class _CommentsSheetState extends State<CommentsSheet> {
     if (text.isEmpty || !widget.canComment) return;
     setState(() => _isSending = true);
     try {
-      await widget.forumService.addComment(widget.post.id, widget.currentUserName, text);
+      await widget.forumService.addComment(
+        widget.post.id,
+        widget.currentUserName,
+        text,
+        parentId: _replyToCommentId,
+        replyToUser: _replyToAuthorName,
+      );
       _commentController.clear();
+      if (_replyToCommentId != null) {
+        setState(() {
+          _replyToCommentId = null;
+          _replyToAuthorName = null;
+        });
+      }
     } catch (e) {
       if (mounted) AppHelpers.showSnackBar(context, 'تعذر إضافة التعليق', isError: true);
     } finally {
@@ -853,7 +876,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
           ),
           Divider(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4), height: 1),
           SizedBox(
-            height: 320,
+            height: 340,
             child: StreamBuilder<QuerySnapshot>(
               stream: widget.forumService.getCommentsStream(widget.post.id),
               builder: (context, snapshot) {
@@ -876,34 +899,52 @@ class _CommentsSheetState extends State<CommentsSheet> {
                   );
                 }
                 return ListView.separated(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   itemCount: comments.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  separatorBuilder: (_, __) => const SizedBox(height: 6),
                   itemBuilder: (context, index) {
-                    final data = comments[index].data() as Map<String, dynamic>? ?? <String, dynamic>{};
+                    final doc = comments[index];
+                    final data = doc.data() as Map<String, dynamic>? ?? <String, dynamic>{};
                     final photo = (data['userPhotoUrl'] as String? ?? '').trim();
-                    return InfoListCard(
-                      padding: const EdgeInsets.all(14),
-                      leading: CircleAvatar(
-                        radius: CommentStyle.avatarRadius,
-                        backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
-                        backgroundImage: photo.isNotEmpty ? CachedNetworkImageProvider(photo) : null,
-                        child: photo.isEmpty
-                            ? Icon(Icons.person_rounded, size: 20, color: theme.colorScheme.primary)
-                            : null,
-                      ),
-                      title: data['userName'] as String? ?? 'مستخدم',
-                      subtitleBuilder: (context) => [
-                        Text(
-                          data['userName'] as String? ?? 'مستخدم',
-                          style: CommentStyle.author(context),
-                        ),
-                        const SizedBox(height: 5),
-                        Text(
-                          data['text'] as String? ?? '',
-                          style: CommentStyle.body(context),
-                        ),
-                      ],
+                    final commentText = data['text'] as String? ?? '';
+                    final commentAuthor = (data['userId'] as String? ?? '').trim();
+                    final createdAt = (data['createdAt'] as Timestamp?)?.toDate();
+                    final updatedAt = (data['updatedAt'] as Timestamp?)?.toDate();
+                    final likes = (data['likes'] as num?)?.toInt() ?? 0;
+                    final likedBy = (data['likedBy'] as List?)
+                            ?.map((e) => e.toString())
+                            .toList() ??
+                        <String>[];
+                    final parentId = data['parentId'] as String?;
+                    final replyToUser = data['replyToUser'] as String?;
+
+                    return FacebookCommentTile(
+                      avatarRadius: CommentStyle.avatarRadius,
+                      textStyle: CommentStyle.body(context),
+                      commentId: doc.id,
+                      authorId: commentAuthor,
+                      authorName: data['userName'] as String? ?? 'زائر',
+                      authorPhotoUrl: photo,
+                      text: commentText,
+                      createdAt: createdAt,
+                      updatedAt: updatedAt,
+                      likes: likes,
+                      likedBy: likedBy,
+                      parentId: parentId,
+                      replyToUser: replyToUser,
+                      currentUserId: widget.currentUserId,
+                      isAdmin: widget.canModerate,
+                      onLike: () => widget.forumService.toggleCommentLike(
+                          widget.post.id, doc.id, widget.currentUserId),
+                      onReply: () {
+                        setState(() {
+                          _replyToCommentId = doc.id;
+                          _replyToAuthorName = data['userName'] as String? ?? 'مستخدم';
+                        });
+                      },
+                      onEdit: (newText) =>
+                          widget.forumService.editComment(widget.post.id, doc.id, newText),
+                      onDelete: () => widget.forumService.deleteComment(widget.post.id, doc.id),
                     );
                   },
                 );
@@ -917,36 +958,70 @@ class _CommentsSheetState extends State<CommentsSheet> {
               top: 12,
               bottom: MediaQuery.of(context).viewInsets.bottom + 16,
             ),
-            child: Row(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Expanded(
-                  child: TextField(
-                    controller: _commentController,
-                    enabled: widget.canComment && !_isSending,
-                    textInputAction: TextInputAction.send,
-                    onSubmitted: (_) => _addComment(),
-                    decoration: InputDecoration(
-                      hintText: widget.canComment ? 'أضف تعليقاً...' : 'سجّل الدخول لإضافة تعليق',
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      filled: true,
-                      fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                      enabledBorder:
-                          OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.4), width: 1.5),
-                      ),
+                if (_replyToCommentId != null)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primaryContainer.withValues(alpha: 0.35),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.reply_rounded, size: 16, color: theme.colorScheme.primary),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'الرد على ${_replyToAuthorName ?? "تعليق"}',
+                            style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        InkWell(
+                          onTap: () => setState(() {
+                            _replyToCommentId = null;
+                            _replyToAuthorName = null;
+                          }),
+                          child: const Icon(Icons.close_rounded, size: 16),
+                        ),
+                      ],
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                IconButton.filled(
-                  onPressed: widget.canComment && !_isSending ? _addComment : null,
-                  icon: _isSending
-                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Icon(Icons.send_rounded, size: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _commentController,
+                        enabled: widget.canComment && !_isSending,
+                        textInputAction: TextInputAction.send,
+                        onSubmitted: (_) => _addComment(),
+                        decoration: InputDecoration(
+                          hintText: widget.canComment ? 'أضف تعليقاً...' : 'سجّل الدخول لإضافة تعليق',
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          filled: true,
+                          fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                          enabledBorder:
+                              OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.4), width: 1.5),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    IconButton.filled(
+                      onPressed: widget.canComment && !_isSending ? _addComment : null,
+                      icon: _isSending
+                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                          : const Icon(Icons.send_rounded, size: 20),
+                    ),
+                  ],
                 ),
               ],
             ),

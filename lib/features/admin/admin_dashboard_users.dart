@@ -653,19 +653,24 @@ class _UsersPageState extends State<_UsersPage> {
     for (final u in _visible) {
       final role = (u['role'] ?? 'user').toString();
       final opt = _roleOptions[role] ?? _roleOptions['user']!;
+      final photo = (u['photoUrl'] ?? u['profileImage'] ?? u['avatarUrl'] ?? '').toString();
       rows.add({
         'الرقم': u['_serial'] ?? '',
         'الاسم': u['name'] ?? '',
+        'رابط الصورة الشخصية': photo,
         'الدور': opt.$1,
         'نوع البائع': role == 'seller'
             ? _typeLabel((u['sellerType'] ?? '').toString())
             : '',
+        'النوع / الجنس': userGenderBadgeLabel(u),
         'الحالة': u['isActive'] == false ? 'معطّل' : 'مفعّل',
-        'تاريخ التسجيل': _formatDate(signupAt(u)) ?? '',
-        'آخر تسجيل دخول': _formatDate(lastLoginAt(u)) ?? '',
         'البريد الإلكتروني': u['email'] ?? '',
         'الهاتف': u['phone'] ?? '',
-        'المعرف': u['id'] ?? '',
+        'العنوان / الموقع': (u['location'] ?? u['address'] ?? '').toString(),
+        'النبذة': (u['bio'] ?? '').toString(),
+        'تاريخ التسجيل': _formatDate(signupAt(u)) ?? '',
+        'آخر تسجيل دخول': _formatDate(lastLoginAt(u)) ?? '',
+        'المعرف (UID)': u['id'] ?? '',
       });
     }
     return rows;
@@ -829,8 +834,9 @@ class _UsersPageState extends State<_UsersPage> {
               CircleAvatar(
                 radius: 22,
                 backgroundColor: opt.$2.withValues(alpha: 0.14),
-                backgroundImage:
-                    photoUrl.isNotEmpty ? NetworkImage(photoUrl) : null,
+                backgroundImage: photoUrl.isNotEmpty
+                    ? CachedNetworkImageProvider(photoUrl)
+                    : null,
                 child: photoUrl.isEmpty
                     ? Icon(opt.$3,
                         color: AppColors.readableInk(

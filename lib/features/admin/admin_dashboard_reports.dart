@@ -109,6 +109,18 @@ class _ReportsPageState extends State<_ReportsPage> {
                 _buildMedicalStatsSection(theme),
                 const SizedBox(height: 20),
 
+                // إحصائيات الخدمات والزراعة
+                _buildServicesAndAgricultureSection(theme),
+                const SizedBox(height: 20),
+
+                // إحصائيات الأمان والشؤون القانونية
+                _buildSafetyAndLegalSection(theme),
+                const SizedBox(height: 20),
+
+                // إحصائيات الدعاية والإشعارات والترقيات
+                _buildAdsAndBroadcastSection(theme),
+                const SizedBox(height: 20),
+
                 // أزرار التصدير
                 _buildExportButtons(theme),
                 const SizedBox(height: 24),
@@ -310,6 +322,95 @@ class _ReportsPageState extends State<_ReportsPage> {
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         crossAxisCount: 3,
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        mainAxisExtent: 96,
+        children: items.map((e) => _StatCard(item: e)).toList(),
+      ),
+    );
+  }
+
+  Widget _buildServicesAndAgricultureSection(ThemeData theme) {
+    final stats = _reportData['stats'] as Map<String, int>? ?? {};
+    final items = <_StatItem>[
+      _StatItem('دليل الحرفيين والخدمات', '${stats['service_providers'] ?? 0}',
+          Icons.handyman_rounded, Colors.orange),
+      _StatItem('الاستشارات الزراعية', '${stats['agriculture_consultations'] ?? 0}',
+          Icons.eco_rounded, Colors.green),
+      _StatItem('طلبات الخدمة', '${stats['service_requests'] ?? 0}',
+          Icons.assignment_rounded, Colors.teal),
+    ];
+
+    return _buildSection(
+      theme,
+      'إحصائيات الخدمات والزراعة',
+      Icons.agriculture_rounded,
+      Colors.green,
+      GridView.count(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        crossAxisCount: 3,
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        mainAxisExtent: 96,
+        children: items.map((e) => _StatCard(item: e)).toList(),
+      ),
+    );
+  }
+
+  Widget _buildSafetyAndLegalSection(ThemeData theme) {
+    final stats = _reportData['stats'] as Map<String, int>? ?? {};
+    final items = <_StatItem>[
+      _StatItem('أرقام الطوارئ', '${stats['emergency_contacts'] ?? 0}',
+          Icons.emergency_rounded, Colors.redAccent),
+      _StatItem('المفقودات', '${stats['lost_items'] ?? 0}',
+          Icons.search_rounded, const Color(0xFF5E35B1)),
+      _StatItem('سجل المحامين', '${stats['lawyers'] ?? 0}',
+          Icons.gavel_rounded, const Color(0xFF006064)),
+      _StatItem('الاستشارات القانونية', '${stats['legal_consultations'] ?? 0}',
+          Icons.help_center_rounded, const Color(0xFF00838F)),
+    ];
+
+    return _buildSection(
+      theme,
+      'إحصائيات الأمان والشؤون القانونية',
+      Icons.shield_rounded,
+      Colors.indigo,
+      GridView.count(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        crossAxisCount: 2,
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        mainAxisExtent: 96,
+        children: items.map((e) => _StatCard(item: e)).toList(),
+      ),
+    );
+  }
+
+  Widget _buildAdsAndBroadcastSection(ThemeData theme) {
+    final stats = _reportData['stats'] as Map<String, int>? ?? {};
+    final items = <_StatItem>[
+      _StatItem('إعلانات القرية', '${stats['village_ads'] ?? 0}',
+          Icons.campaign_rounded, const Color(0xFF311B92)),
+      _StatItem('الإعلانات الترويجية (Promos)', '${stats['promos'] ?? 0}',
+          Icons.featured_play_list_rounded, Colors.pinkAccent),
+      _StatItem('الإشعارات والإرسال', '${stats['notifications'] ?? 0}',
+          Icons.notifications_active_rounded, Colors.amber),
+      _StatItem('طلبات البائعين والترقية',
+          '${(stats['seller_requests'] ?? 0) + (stats['upgrade_requests'] ?? 0)}',
+          Icons.verified_user_rounded, Colors.deepOrange),
+    ];
+
+    return _buildSection(
+      theme,
+      'إحصائيات الدعاية والإشعارات والترقيات',
+      Icons.campaign_rounded,
+      const Color(0xFF311B92),
+      GridView.count(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        crossAxisCount: 2,
         mainAxisSpacing: 10,
         crossAxisSpacing: 10,
         mainAxisExtent: 96,
@@ -599,23 +700,30 @@ class _ReportsPageState extends State<_ReportsPage> {
       'occasions': 'المناسبات',
       'forum_posts': 'منشورات المنتدى',
       'shops': 'المحلات',
-      'service_providers': 'دليل الخدمات',
+      'service_providers': 'دليل الحرفيين والخدمات',
       'phone_directory': 'دليل الهاتف',
       'lost_items': 'المفقودات',
       'village_ads': 'إعلانات القرية',
       'lawyers': 'سجل المحامين',
       'legal_consultations': 'الاستشارات القانونية',
+      'agriculture_consultations': 'الاستشارات الزراعية',
       'village_clinics': 'عيادات القرية',
       'pharmacies': 'الصيدليات',
       'medical_labs': 'معامل التحاليل',
       'optical_shops': 'نظارات طبية',
       'blood_donors': 'المتبرعون بالدم',
       'blood_requests': 'طلبات الدم',
-      'medical_center_clinics': 'عيادات المركز',
-      'seller_requests': 'طلبات البائعية',
+      'medical_center_clinics': 'عيادات المركز الخيري',
+      'seller_requests': 'طلبات البائعين',
+      'upgrade_requests': 'طلبات الترقية',
       'service_requests': 'طلبات الخدمة',
       'buy_requests': 'الطلبات الشرائية',
       'donations': 'التبرعات',
+      'promos': 'الإعلانات الدعائية (Promos)',
+      'emergency_contacts': 'أرقام الطوارئ',
+      'notifications': 'الإشعارات والإرسال',
+      'village_info': 'معلومات القرية',
+      'activity_log': 'سجل النشاط',
     };
     return labels[key] ?? key;
   }

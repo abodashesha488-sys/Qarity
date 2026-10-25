@@ -1014,17 +1014,30 @@ class _QuickFavoriteButtonState extends State<_QuickFavoriteButton> {
       color: Colors.transparent,
       child: InkWell(
         onTap: _toggle,
-        borderRadius: BorderRadius.circular(16),
+        customBorder: const CircleBorder(),
         child: Container(
-          padding: const EdgeInsets.all(5),
+          padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.35),
+            color: Colors.white.withValues(alpha: 0.92),
             shape: BoxShape.circle,
+            border: Border.all(
+              color: _isLiked
+                  ? const Color(0xFFE53935).withValues(alpha: 0.45)
+                  : Colors.black12,
+              width: 1.1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.16),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Icon(
             _isLiked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-            size: 15,
-            color: _isLiked ? const Color(0xFFE53935) : Colors.white,
+            size: 17,
+            color: _isLiked ? const Color(0xFFE53935) : const Color(0xFF333333),
           ),
         ),
       ),

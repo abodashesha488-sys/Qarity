@@ -32,6 +32,7 @@ import '../../routes/app_routes.dart';
 import '../../services/admin_service.dart';
 import '../../services/alert_service.dart';
 import '../../services/image_upload_service.dart';
+import '../../services/notification_inbox_service.dart';
 import '../../services/promo_service.dart';
 import '../../services/remote_push_service.dart';
 import '../../widgets/edu_kind_mark.dart';
@@ -41,6 +42,7 @@ import '../../widgets/qurity_app_bar.dart';
 part 'admin_dashboard_alerts.dart';
 part 'admin_dashboard_broadcast.dart';
 part 'admin_dashboard_models.dart';
+part 'admin_dashboard_operations.dart';
 part 'admin_dashboard_overview.dart';
 part 'admin_dashboard_promos.dart';
 part 'admin_dashboard_reports.dart';
@@ -63,6 +65,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
 
   late TabController _tabController;
   int _reviewNav = 0;
+  int _selectedTool = 0;
 
   bool _isLoadingStats = true;
   Map<String, int> _stats = {};
@@ -195,7 +198,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 7, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(_onTabChanged);
     _loadStats();
     _loadPendingCounts();
@@ -399,55 +402,44 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             ),
             child: TabBar(
               controller: _tabController,
-              isScrollable: true,
-              tabAlignment: TabAlignment.start,
               indicatorColor: theme.colorScheme.primary,
               indicatorWeight: 3,
               labelColor: theme.colorScheme.primary,
               unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
               labelStyle: const TextStyle(
                 fontWeight: FontWeight.w800,
-                fontSize: 13,
+                fontSize: 12.5,
               ),
               unselectedLabelStyle: const TextStyle(
                 fontWeight: FontWeight.w600,
-                fontSize: 13,
+                fontSize: 12.5,
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              tabs: const [
-                Tab(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              tabs: [
+                const Tab(
                   icon: Icon(Icons.space_dashboard_rounded, size: 20),
                   text: 'نظرة عامة',
                   height: 50,
                 ),
                 Tab(
-                  icon: Icon(Icons.rule_folder_rounded, size: 20),
+                  icon: Badge.count(
+                    count: _totalPending,
+                    isLabelVisible: _totalPending > 0,
+                    backgroundColor: AppColors.warning,
+                    textColor: AppColors.onWarning,
+                    child: const Icon(Icons.rule_folder_rounded, size: 20),
+                  ),
                   text: 'المراجعة',
                   height: 50,
                 ),
-                Tab(
+                const Tab(
                   icon: Icon(Icons.group_rounded, size: 20),
                   text: 'المستخدمون',
                   height: 50,
                 ),
-                Tab(
-                  icon: Icon(Icons.assessment_rounded, size: 20),
-                  text: 'التقارير',
-                  height: 50,
-                ),
-                Tab(
-                  icon: Icon(Icons.campaign_rounded, size: 20),
-                  text: 'الإعلانات',
-                  height: 50,
-                ),
-                Tab(
-                  icon: Icon(Icons.warning_amber_rounded, size: 20),
-                  text: 'التنبيهات',
-                  height: 50,
-                ),
-                Tab(
-                  icon: Icon(Icons.send_rounded, size: 20),
-                  text: 'الإرسال',
+                const Tab(
+                  icon: Icon(Icons.hub_rounded, size: 20),
+                  text: 'مركز الأدوات',
                   height: 50,
                 ),
               ],
@@ -473,9 +465,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
               _reviewNav = 1 - _reviewNav;
             },
             onOpenUsers: () => _tabController.animateTo(2),
-            onOpenReports: () => _tabController.animateTo(3),
-            onOpenAlerts: () => _tabController.animateTo(5),
-            onOpenBroadcast: () => _tabController.animateTo(6),
+            onOpenReports: () {
+              setState(() => _selectedTool = 3);
+              _tabController.animateTo(3);
+            },
+            onOpenAlerts: () {
+              setState(() => _selectedTool = 1);
+              _tabController.animateTo(3);
+            },
+            onOpenBroadcast: () {
+              setState(() => _selectedTool = 0);
+              _tabController.animateTo(3);
+            },
           ),
           _ReviewPage(
             key: ValueKey('review_$_reviewNav'),
@@ -493,10 +494,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             currentUid: _auth.currentUser?.uid,
             onUpdated: _refreshStats,
           ),
-          const _ReportsPage(),
-          _PromosPage(currentUid: _auth.currentUser?.uid),
-          const _AlertsControlPage(),
-          _BroadcastPage(currentUid: _auth.currentUser?.uid),
+          _OperationsHubPage(
+            currentUid: _auth.currentUser?.uid,
+            initialTool: _selectedTool,
+            onToolChanged: (idx) => setState(() => _selectedTool = idx),
+          ),
         ],
       ),
     );

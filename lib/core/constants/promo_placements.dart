@@ -12,6 +12,7 @@ class PromoPlacement {
 }
 
 const List<PromoPlacement> kPromoPlacements = [
+  PromoPlacement('all_screens', 'كافة الشاشات (عام في كل مكان)', 'شامل'),
   PromoPlacement('home', 'الشاشة الرئيسية', 'عام'),
   PromoPlacement('news', 'أخبار القرية', 'عام'),
   PromoPlacement('market', 'سوق القرية', 'عام'),
@@ -22,13 +23,21 @@ const List<PromoPlacement> kPromoPlacements = [
   PromoPlacement('village_history', 'تعرف على القرية — التاريخ', 'التراث'),
   PromoPlacement('village_archive', 'تعرف على القرية — الأرشيف', 'التراث'),
   PromoPlacement('village_institutions', 'تعرف على القرية — المنشآت', 'التراث'),
-  // صفحات خدمية مستقلة (كل واحدة لها مسارها الخاص بعد إلغاء بوّابة
-  // «دليل الخدمات» الجامعة).
   PromoPlacement('svc_technicians', 'دليل الحرفيين', 'الأقسام الخدمية'),
   PromoPlacement('svc_agricultural', 'خدمات زراعية', 'الأقسام الخدمية'),
   PromoPlacement('svc_educational', 'خدمات تعليمية', 'الأقسام الخدمية'),
   PromoPlacement('phone_directory', 'دليل الهاتف', 'الأقسام الخدمية'),
   PromoPlacement('lost_items', 'المفقودات', 'الأقسام الخدمية'),
+  PromoPlacement('village_ads', 'إعلانات القرية', 'الأقسام الخدمية'),
+  PromoPlacement('legal', 'مستشار القرية', 'الأقسام الخدمية'),
+  PromoPlacement('emergency', 'أرقام الطوارئ', 'الأقسام الخدمية'),
+  PromoPlacement('weather', 'حالة الطقس', 'الأقسام الخدمية'),
+  PromoPlacement('farmer_services', 'خدمات المزارع — البوابة', 'خدمات المزارع'),
+  PromoPlacement('farmer_crops', 'خدمات المزارع — المحاصيل', 'خدمات المزارع'),
+  PromoPlacement('farmer_advisor', 'خدمات المزارع — المرشد', 'خدمات المزارع'),
+  PromoPlacement('agri_fertilizers', 'خدمات المزارع — الأسمدة', 'خدمات المزارع'),
+  PromoPlacement('agri_pesticides', 'خدمات المزارع — المبيدات', 'خدمات المزارع'),
+  PromoPlacement('agri_both', 'خدمات المزارع — الأسمدة والمبيدات', 'خدمات المزارع'),
   PromoPlacement('medical', 'المركز الطبي — الصفحة الرئيسية', 'المركز الطبي'),
   PromoPlacement('med_center', 'المركز الطبي — المركز الخيري', 'المركز الطبي'),
   PromoPlacement('med_blood', 'المركز الطبي — بنك الدم', 'المركز الطبي'),
@@ -37,11 +46,12 @@ const List<PromoPlacement> kPromoPlacements = [
   PromoPlacement('med_labs', 'المركز الطبي — معامل التحاليل', 'المركز الطبي'),
   PromoPlacement('med_optical', 'المركز الطبي — نظارات طبية', 'المركز الطبي'),
   PromoPlacement('med_supplies', 'المركز الطبي — مستلزمات طبية', 'المركز الطبي'),
-  PromoPlacement('village_ads', 'إعلانات القرية', 'الأقسام الخدمية'),
-  PromoPlacement('legal', 'مستشار القرية', 'الأقسام الخدمية'),
-  PromoPlacement('agri_fertilizers', 'خدمات المزارع — الأسمدة', 'خدمات المزارع'),
-  PromoPlacement('agri_pesticides', 'خدمات المزارع — المبيدات', 'خدمات المزارع'),
-  PromoPlacement('agri_both', 'خدمات المزارع — الأسمدة والمبيدات', 'خدمات المزارع'),
+  PromoPlacement('profile', 'الملف الشخصي', 'حسابي'),
+  PromoPlacement('favorites', 'قائمة المفضلة', 'حسابي'),
+  PromoPlacement('notifications', 'صندوق الإشعارات', 'حسابي'),
+  PromoPlacement('settings', 'إعدادات التطبيق', 'حسابي'),
+  PromoPlacement('children', 'عالم الطفل', 'عام'),
+  PromoPlacement('search', 'البحث الشامل', 'عام'),
 ];
 
 String promoPlacementLabel(String key) => kPromoPlacements
@@ -87,6 +97,28 @@ String promoKeyForRoute(String name, Object? args) {
       return 'village_ads';
     case AppRoutes.legalAdvisor:
       return 'legal';
+    case AppRoutes.emergencyContacts:
+      return 'emergency';
+    case AppRoutes.weather:
+      return 'weather';
+    case AppRoutes.farmerServices:
+      return 'farmer_services';
+    case AppRoutes.farmerCrops:
+      return 'farmer_crops';
+    case AppRoutes.farmerAdvisor:
+      return 'farmer_advisor';
+    case AppRoutes.profileMain:
+      return 'profile';
+    case AppRoutes.favorites:
+      return 'favorites';
+    case AppRoutes.notificationsInbox:
+      return 'notifications';
+    case AppRoutes.settingsIndex:
+      return 'settings';
+    case AppRoutes.children:
+      return 'children';
+    case AppRoutes.globalSearch:
+      return 'search';
     case AppRoutes.medical:
       return 'medical';
     case AppRoutes.medicalSection:

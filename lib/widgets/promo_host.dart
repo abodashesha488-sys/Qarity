@@ -65,7 +65,8 @@ class _PromoHostState extends State<PromoHost> {
     if (key.isEmpty) return const [];
     final now = DateTime.now();
     return _all.where((p) {
-      if (p.placement != key || !p.isVisibleAt(now)) return false;
+      final matchesScreen = p.placement == key || p.placement == 'all_screens';
+      if (!matchesScreen || !p.isVisibleAt(now)) return false;
       if (_sessionShown.contains(p.id)) return false;
       if (p.showOnce && _seenKeys.contains(p.seenKey)) return false;
       return true;
@@ -77,7 +78,8 @@ class _PromoHostState extends State<PromoHost> {
     if (_current != null) {
       final p = _current!;
       final key = PromoLocation.instance.currentKey;
-      final still = p.placement == key && p.isVisibleAt(DateTime.now());
+      final still = (p.placement == key || p.placement == 'all_screens') &&
+          p.isVisibleAt(DateTime.now());
       if (still) return;
       _hide();
     }

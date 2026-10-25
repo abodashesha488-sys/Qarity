@@ -257,6 +257,10 @@ class AdminService {
       'blood_requests',
       'blood_donors',
       'service_requests',
+      'promos',
+      'emergency_contacts',
+      'notifications',
+      'village_info',
       'activity_log',
     ];
     for (final collection in collections) {

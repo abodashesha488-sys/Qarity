@@ -86,7 +86,13 @@ class NewsService {
     return nowLiked;
   }
 
-  Future<void> addComment(String newsId, String userName, String text) async {
+  Future<void> addComment(
+    String newsId,
+    String userName,
+    String text, {
+    String? parentId,
+    String? replyToUser,
+  }) async {
     final user = _auth.currentUser;
     if (user != null) {
       final userDoc = await _firestore.collection('users').doc(user.uid).get();
@@ -103,6 +109,10 @@ class NewsService {
         'userName': name,
         'userPhotoUrl': photo ?? '',
         'text': text,
+        'likes': 0,
+        'likedBy': <String>[],
+        if (parentId != null && parentId.isNotEmpty) 'parentId': parentId,
+        if (replyToUser != null && replyToUser.isNotEmpty) 'replyToUser': replyToUser,
         'createdAt': Timestamp.now(),
       });
       await _firestore.collection('news').doc(newsId).update({'comments': FieldValue.increment(1)});
@@ -110,7 +120,55 @@ class NewsService {
   }
 
   Stream<QuerySnapshot> getCommentsStream(String newsId) {
-    return _firestore.collection('news').doc(newsId).collection('comments').orderBy('createdAt', descending: true).snapshots();
+    return _firestore
+        .collection('news')
+        .doc(newsId)
+        .collection('comments')
+        .orderBy('createdAt', descending: false)
+        .snapshots();
+  }
+
+  /// تعديل نص التعليق (للصاحب أو الأدمن)
+  Future<void> editComment(String newsId, String commentId, String newText) async {
+    if (newsId.isEmpty || commentId.isEmpty || newText.trim().isEmpty) return;
+    await _firestore
+        .collection('news')
+        .doc(newsId)
+        .collection('comments')
+        .doc(commentId)
+        .update({
+      'text': newText.trim(),
+      'updatedAt': Timestamp.now(),
+    });
+  }
+
+  /// التفاعل مع التعليق بالإعجاب أو إلغائه
+  Future<void> toggleCommentLike(
+      String newsId, String commentId, String userId) async {
+    if (newsId.isEmpty || commentId.isEmpty || userId.isEmpty) return;
+    final ref = _firestore
+        .collection('news')
+        .doc(newsId)
+        .collection('comments')
+        .doc(commentId);
+    await _firestore.runTransaction((tx) async {
+      final snap = await tx.get(ref);
+      if (!snap.exists) return;
+      final data = snap.data() ?? <String, dynamic>{};
+      final likedBy = (data['likedBy'] as List?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          <String>[];
+      if (likedBy.contains(userId)) {
+        likedBy.remove(userId);
+      } else {
+        likedBy.add(userId);
+      }
+      tx.update(ref, {
+        'likedBy': likedBy,
+        'likes': likedBy.length,
+      });
+    });
   }
 
   /// يحذف تعليقاً (للأدمن/الأدمن المساعد أو صاحب التعليق) وينقص عدّاد

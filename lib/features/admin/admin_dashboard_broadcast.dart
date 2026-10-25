@@ -67,15 +67,21 @@ class _BroadcastPageState extends State<_BroadcastPage> {
     }
 
     setState(() => _isSending = true);
-    // `broadcastToAllUsers` **لا ترمي أبدًا**: الحالة تُقرأ من الناتج، فلا حاجة
-    // إلى try/catch كان يصل إلى فرع «خطأ: $e» الميت بينما كل فشل صامت يُبلَّغ
-    // كنجاح.
     final result = await RemotePushService.broadcastToAllUsers(
       title: title,
       body: body,
       route: route.isEmpty ? null : route,
       alert: _sendAlert,
     );
+
+    // تسجيل نسخة في صندوق إشعارات القرية للوصول لجميع المستخدمين في التطبيق
+    await NotificationInboxService.instance.pushBroadcast(
+      title: title,
+      body: body,
+      route: route.isEmpty ? null : route,
+      isAlert: _sendAlert,
+    );
+
     if (!mounted) return;
     final messenger = ScaffoldMessenger.of(context)..clearSnackBars();
     if (result.isSent) {

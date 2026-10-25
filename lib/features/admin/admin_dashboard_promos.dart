@@ -671,18 +671,19 @@ class _PromoFormSheetState extends State<_PromoFormSheet> {
                 items: [
                   for (final group in {
                     for (final p in kPromoPlacements) p.group
-                  })
+                  }) ...[
                     DropdownMenuItem<String>(
                       enabled: false,
                       value: 'h_$group',
-                      child: Text('— $group —',
+                      child: Text('── $group ──',
                           style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w900,
                               color: theme.colorScheme.primary)),
                     ),
-                  for (final p in kPromoPlacements)
-                    DropdownMenuItem(value: p.key, child: Text(p.label)),
+                    for (final p in kPromoPlacements.where((x) => x.group == group))
+                      DropdownMenuItem(value: p.key, child: Text(p.label)),
+                  ],
                 ],
                 onChanged: (v) => setState(() => _placement =
                     (v == null || v.startsWith('h_')) ? _placement : v),

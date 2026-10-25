@@ -1,7 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// إشعارات شخصية داخل التطبيق (تعمل على كل المنصات حتى بدون FCM/web-push).
-/// تُكتب عند موافقة/رفض أدمن على محتوى مستخدم، ويقرؤها المستخدم من الجرس.
+/// إشعارات شخصية وإذاعية داخل التطبيق (تعمل على كل المنصات حتى بدون FCM/web-push).
+/// تُكتب عند موافقة/رفض أدمن على محتوى مستخدم، أو عند بث إشعار إذاعي للقرية كلها،
+/// ويقرؤها المستخدم من الجرس وتُحدَّث شارة غير المقروء لحظياً.
 class UserNotification {
   final String id;
   final String title;
@@ -9,7 +10,8 @@ class UserNotification {
   final String? route;
   final bool read;
   final DateTime createdAt;
-  final String? kind; // approve | reject | info
+  final String? kind; // approve | reject | info | broadcast | alert
+  final String? userId; // 'all' أو uid محدد
 
   const UserNotification({
     required this.id,
@@ -19,20 +21,42 @@ class UserNotification {
     required this.read,
     required this.createdAt,
     this.kind,
+    this.userId,
   });
 
-  factory UserNotification.fromJson(Map<String, dynamic> json, String id) {
+  bool get isBroadcast => userId == 'all';
+
+  factory UserNotification.fromJson(
+    Map<String, dynamic> json,
+    String id, {
+    String? currentUserId,
+  }) {
     final ts = json['createdAt'];
+    final docUserId = json['userId']?.toString();
+    final isBroad = docUserId == 'all';
+    final readByList = (json['readBy'] as List?)
+            ?.map((e) => e.toString())
+            .toList() ??
+        const <String>[];
+
+    final isRead = isBroad
+        ? (currentUserId != null && readByList.contains(currentUserId)) ||
+            json['read'] == true
+        : json['read'] == true;
+
     return UserNotification(
       id: id,
       title: (json['title'] ?? '').toString(),
       body: (json['body'] ?? '').toString(),
       route: json['route'] as String?,
-      read: json['read'] == true,
+      read: isRead,
       createdAt: ts is Timestamp
           ? ts.toDate()
-          : (ts is String ? DateTime.tryParse(ts) ?? DateTime.now() : DateTime.now()),
+          : (ts is String
+              ? DateTime.tryParse(ts) ?? DateTime.now()
+              : DateTime.now()),
       kind: json['kind'] as String?,
+      userId: docUserId,
     );
   }
 }
@@ -76,22 +100,52 @@ class NotificationInboxService {
     }
   }
 
+  /// بث إشعار إذاعي لجميع مستخدمي القرية يظهر في الجرس لكل الحسابات.
+  Future<void> pushBroadcast({
+    required String title,
+    required String body,
+    String? route,
+    bool isAlert = false,
+  }) async {
+    try {
+      await _col.add({
+        'userId': 'all',
+        'title': title,
+        'body': body,
+        'route': route,
+        'kind': isAlert ? 'alert' : 'broadcast',
+        'read': false,
+        'readBy': <String>[],
+        'deletedBy': <String>[],
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      // ignore: avoid_print
+      print('broadcast push failed: $e');
+    }
+  }
+
   Stream<List<UserNotification>> streamFor(String userId) {
     if (userId.isEmpty) return Stream.value(const []);
-    // آخر 50 إشعاراً فقط (orderBy+limit) — المجموعة تنمو بلا حدود وكان
-    // المستمع يحمّلها كلها عند كل فتح للجرس/الصندوق.
+    // نطلب الإشعارات الخاصة بالمستخدم والإشعارات العامة للقرية (userId in [userId, 'all'])
+    // بدون orderBy مركب لتجنب الحاجة لفهرس يدوي، ونفرز في الذاكرة.
     return _col
-        .where('userId', isEqualTo: userId)
-        .orderBy('createdAt', descending: true)
+        .where('userId', whereIn: [userId, 'all'])
         .limit(50)
         .snapshots()
         .map((s) {
-      final list = s.docs.map((d) {
+      final list = <UserNotification>[];
+      for (final d in s.docs) {
         var m = d.data();
-        // createdAt قد يكون null فور الكتابة قبل مزامنة الخادم
+        final deletedBy = (m['deletedBy'] as List?)
+                ?.map((e) => e.toString())
+                .toList() ??
+            const <String>[];
+        if (deletedBy.contains(userId)) continue;
+
         m = {...m, 'createdAt': m['createdAt'] ?? Timestamp.now()};
-        return UserNotification.fromJson(m, d.id);
-      }).toList();
+        list.add(UserNotification.fromJson(m, d.id, currentUserId: userId));
+      }
       list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       return list;
     });
@@ -99,20 +153,51 @@ class NotificationInboxService {
 
   Stream<int> unreadCount(String userId) {
     if (userId.isEmpty) return Stream.value(0);
-    // بثّ حي (لا يوجد count().snapshots() في الـSDK) لكن بسقف 100 مستند:
-    // الشارة تعرض «99+» أصلاً، فكان تحميل كل غير المقروء هدراً — خاصة أن
-    // الجرس يظهر في AppBar كل شاشة.
     return _col
-        .where('userId', isEqualTo: userId)
-        .where('read', isEqualTo: false)
+        .where('userId', whereIn: [userId, 'all'])
         .limit(100)
         .snapshots()
-        .map((s) => s.docs.length);
+        .map((s) {
+      int count = 0;
+      for (final d in s.docs) {
+        final data = d.data();
+        final deletedBy = (data['deletedBy'] as List?)
+                ?.map((e) => e.toString())
+                .toList() ??
+            const <String>[];
+        if (deletedBy.contains(userId)) continue;
+
+        final isBroad = data['userId'] == 'all';
+        if (isBroad) {
+          final readBy = (data['readBy'] as List?)
+                  ?.map((e) => e.toString())
+                  .toList() ??
+              const <String>[];
+          if (!readBy.contains(userId)) {
+            count++;
+          }
+        } else {
+          if (data['read'] != true) {
+            count++;
+          }
+        }
+      }
+      return count;
+    });
   }
 
-  Future<void> markRead(String id) async {
+  Future<void> markRead(String id, {String? userId}) async {
     try {
-      await _col.doc(id).update({'read': true});
+      final doc = await _col.doc(id).get();
+      if (!doc.exists) return;
+      final data = doc.data();
+      if (data?['userId'] == 'all' && userId != null && userId.isNotEmpty) {
+        await _col.doc(id).update({
+          'readBy': FieldValue.arrayUnion([userId]),
+        });
+      } else {
+        await _col.doc(id).update({'read': true});
+      }
     } catch (_) {}
   }
 
@@ -120,24 +205,56 @@ class NotificationInboxService {
     if (userId.isEmpty) return;
     try {
       final q = await _col
-          .where('userId', isEqualTo: userId)
-          .where('read', isEqualTo: false)
+          .where('userId', whereIn: [userId, 'all'])
+          .limit(100)
           .get();
       final batch = _firestore.batch();
       for (final d in q.docs) {
-        batch.update(d.reference, {'read': true});
+        final data = d.data();
+        if (data['userId'] == 'all') {
+          batch.update(d.reference, {
+            'readBy': FieldValue.arrayUnion([userId]),
+          });
+        } else if (data['read'] != true) {
+          batch.update(d.reference, {'read': true});
+        }
       }
       await batch.commit();
+    } catch (_) {}
+  }
+
+  Future<void> deleteNotification(String id, {String? userId}) async {
+    try {
+      final doc = await _col.doc(id).get();
+      if (!doc.exists) return;
+      final data = doc.data();
+      if (data?['userId'] == 'all' && userId != null && userId.isNotEmpty) {
+        await _col.doc(id).update({
+          'deletedBy': FieldValue.arrayUnion([userId]),
+        });
+      } else {
+        await _col.doc(id).delete();
+      }
     } catch (_) {}
   }
 
   Future<void> deleteAll(String userId) async {
     if (userId.isEmpty) return;
     try {
-      final q = await _col.where('userId', isEqualTo: userId).get();
+      final q = await _col
+          .where('userId', whereIn: [userId, 'all'])
+          .limit(100)
+          .get();
       final batch = _firestore.batch();
       for (final d in q.docs) {
-        batch.delete(d.reference);
+        final data = d.data();
+        if (data['userId'] == 'all') {
+          batch.update(d.reference, {
+            'deletedBy': FieldValue.arrayUnion([userId]),
+          });
+        } else {
+          batch.delete(d.reference);
+        }
       }
       await batch.commit();
     } catch (_) {}

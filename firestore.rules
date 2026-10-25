@@ -151,7 +151,10 @@ service cloud.firestore {
       match /comments/{commentId} {
         allow read: if true;
         allow create: if accountActive() && request.auth.uid == request.resource.data.userId;
-        allow update, delete: if isAdmin() || (accountActive() && request.auth.uid == resource.data.userId);
+        allow update: if isAdmin()
+                      || (accountActive() && request.auth.uid == resource.data.userId)
+                      || (accountActive() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy', 'likes']));
+        allow delete: if isAdmin() || (accountActive() && request.auth.uid == resource.data.userId);
       }
     }
 
@@ -177,7 +180,10 @@ service cloud.firestore {
       match /comments/{commentId} {
         allow read: if true;
         allow create: if accountActive() && request.auth.uid == request.resource.data.userId;
-        allow update, delete: if isAdmin() || (accountActive() && request.auth.uid == resource.data.userId);
+        allow update: if isAdmin()
+                      || (accountActive() && request.auth.uid == resource.data.userId)
+                      || (accountActive() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy', 'likes']));
+        allow delete: if isAdmin() || (accountActive() && request.auth.uid == resource.data.userId);
       }
     }
 
@@ -227,8 +233,10 @@ service cloud.firestore {
       match /comments/{commentId} {
         allow read: if true;
         allow create: if accountActive() && request.auth.uid == request.resource.data.userId;
-        // الحذف للأدمن أو الأدمن المساعد (الإشراف) أو صاحب التعليق نفسه.
-        allow update, delete: if isAdmin() || (accountActive() && request.auth.uid == resource.data.userId);
+        allow update: if isAdmin()
+                      || (accountActive() && request.auth.uid == resource.data.userId)
+                      || (accountActive() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy', 'likes']));
+        allow delete: if isAdmin() || (accountActive() && request.auth.uid == resource.data.userId);
       }
     }
 
@@ -345,14 +353,15 @@ service cloud.firestore {
 
     // ───────────────────────── الإشعارات ─────────────────────────
     match /notifications/{docId} {
-      // خاص بالكامل: لا يقرأ أو يعدّل أحد إشعاراتِ غيره.
-      allow get: if isSignedIn() && request.auth.uid == resource.data.userId;
-      allow list: if isSignedIn() && request.auth.uid == resource.data.userId;
-      // الأدمن يوصّل إشعارات للآخرين؛ المستخدم يسجّل إشعارات نفسه فقط.
+      // قراءة الإشعار الخاص بالمستخدم أو الإشعار الإذاعي العام للقرية (userId == 'all').
+      allow get: if isSignedIn() && (request.auth.uid == resource.data.userId || resource.data.userId == 'all');
+      allow list: if isSignedIn() && (request.auth.uid == resource.data.userId || resource.data.userId == 'all');
+      // الأدمن يوصّل إشعارات للآخرين وللجميع؛ المستخدم يسجّل إشعارات نفسه فقط.
       allow create: if isAdmin()
                     || (accountActive()
                         && request.auth.uid == request.resource.data.userId);
-      allow update: if accountActive() && request.auth.uid == resource.data.userId;
+      // تحديث حالة القراءة: للمستخدم على إشعاراته أو تحديث قائمة readBy للإشعارات العامة
+      allow update: if accountActive() && (request.auth.uid == resource.data.userId || resource.data.userId == 'all');
       allow delete: if isAdmin()
                     || (accountActive() && request.auth.uid == resource.data.userId);
     }
@@ -397,7 +406,10 @@ service cloud.firestore {
       match /comments/{commentId} {
         allow read: if true;
         allow create: if accountActive() && request.auth.uid == request.resource.data.userId;
-        allow update, delete: if isAdmin() || (accountActive() && request.auth.uid == resource.data.userId);
+        allow update: if isAdmin()
+                      || (accountActive() && request.auth.uid == resource.data.userId)
+                      || (accountActive() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy', 'likes']));
+        allow delete: if isAdmin() || (accountActive() && request.auth.uid == resource.data.userId);
       }
     }
 
@@ -556,7 +568,10 @@ service cloud.firestore {
       match /comments/{commentId} {
         allow read: if true;
         allow create: if accountActive() && request.auth.uid == request.resource.data.userId;
-        allow update, delete: if isAdmin() || (accountActive() && request.auth.uid == resource.data.userId);
+        allow update: if isAdmin()
+                      || (accountActive() && request.auth.uid == resource.data.userId)
+                      || (accountActive() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy', 'likes']));
+        allow delete: if isAdmin() || (accountActive() && request.auth.uid == resource.data.userId);
       }
     }
 

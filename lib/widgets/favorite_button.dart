@@ -101,56 +101,98 @@ class _FavoriteButtonState extends State<FavoriteButton>
       builder: (context, _, __) {
         final isFav = FavoritesService.instance
             .isFavorite(widget.item.targetId, widget.item.collection);
+        final isDark = theme.brightness == Brightness.dark;
 
         final icon = ScaleTransition(
           scale: _scaleAnimation,
           child: Icon(
             isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
             size: widget.size,
-            color: isFav ? widget.activeColor : defaultInactive,
+            color: isFav ? widget.activeColor : (widget.inactiveColor ?? (isDark ? Colors.white70 : const Color(0xFF424242))),
           ),
         );
 
         if (widget.showBadge) {
-          return InkWell(
-            onTap: _handleTap,
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: isFav
-                    ? widget.activeColor.withValues(alpha: 0.12)
-                    : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
+          return Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: _handleTap,
+              borderRadius: BorderRadius.circular(20),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                decoration: BoxDecoration(
                   color: isFav
-                      ? widget.activeColor.withValues(alpha: 0.3)
-                      : theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  icon,
-                  const SizedBox(width: 6),
-                  Text(
-                    isFav ? 'في المفضلة' : 'أضف للمفضلة',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      color: isFav ? widget.activeColor : defaultInactive,
-                    ),
+                      ? widget.activeColor.withValues(alpha: 0.14)
+                      : (isDark ? const Color(0xFF262626) : Colors.white),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: isFav
+                        ? widget.activeColor.withValues(alpha: 0.45)
+                        : (isDark ? Colors.white24 : Colors.black12),
+                    width: 1.2,
                   ),
-                ],
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    icon,
+                    const SizedBox(width: 7),
+                    Text(
+                      isFav ? 'في المفضلة' : 'أضف للمفضلة',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: isFav ? widget.activeColor : defaultInactive,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           );
         }
 
-        return IconButton(
-          tooltip: widget.tooltip ?? (isFav ? 'إزالة من المفضلة' : 'إضافة للمفضلة'),
-          icon: icon,
-          onPressed: _handleTap,
+        return Material(
+          color: Colors.transparent,
+          child: Tooltip(
+            message: widget.tooltip ?? (isFav ? 'إزالة من المفضلة' : 'إضافة للمفضلة'),
+            child: InkWell(
+              onTap: _handleTap,
+              customBorder: const CircleBorder(),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isFav
+                      ? widget.activeColor.withValues(alpha: 0.12)
+                      : (isDark ? const Color(0xFF262626) : Colors.white),
+                  border: Border.all(
+                    color: isFav
+                        ? widget.activeColor.withValues(alpha: 0.45)
+                        : (isDark ? Colors.white24 : Colors.black12),
+                    width: 1.2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.10),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: icon,
+              ),
+            ),
+          ),
         );
       },
     );

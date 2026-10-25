@@ -33,6 +33,139 @@ class _ReviewPageState extends State<_ReviewPage> with _ReviewBulkMixin {
   final _search = TextEditingController();
   String _sortBy = 'newest'; // newest, oldest, title
 
+  static const Map<String, String> _collectionPillars = {
+    kAllPending: 'all',
+    'upgrade_requests': 'all',
+
+    'market_products': 'market',
+    'tab_med_supplies': 'market',
+    'shops': 'market',
+    'buy_requests': 'market',
+    'donations': 'market',
+
+    'news': 'community',
+    'obituaries': 'community',
+    'occasions': 'community',
+    'forum_posts': 'community',
+    'lost_items': 'community',
+    'village_ads': 'community',
+
+    'medical_center_clinics': 'medical',
+    'village_clinics': 'medical',
+    'pharmacies': 'medical',
+    'medical_labs': 'medical',
+    'optical_shops': 'medical',
+    'blood_requests': 'medical',
+    'blood_donors': 'medical',
+
+    'tab_svc_technicians': 'services',
+    'tab_svc_agricultural': 'services',
+    'tab_svc_educational': 'services',
+    'lawyers': 'services',
+    'legal_consultations': 'services',
+    'agriculture_consultations': 'services',
+    'phone_directory': 'services',
+  };
+
+  static final List<_PillarInfo> _pillars = [
+    _PillarInfo(
+      id: 'all',
+      label: 'الرئيسية',
+      icon: Icons.auto_awesome_rounded,
+      color: AppColors.primary,
+    ),
+    const _PillarInfo(
+      id: 'market',
+      label: 'السوق',
+      icon: Icons.storefront_rounded,
+      color: Colors.deepPurple,
+    ),
+    const _PillarInfo(
+      id: 'community',
+      label: 'المجتمع',
+      icon: Icons.diversity_3_rounded,
+      color: Colors.blue,
+    ),
+    const _PillarInfo(
+      id: 'medical',
+      label: 'الصحة',
+      icon: Icons.medical_services_rounded,
+      color: Color(0xFF00897B),
+    ),
+    const _PillarInfo(
+      id: 'services',
+      label: 'الخدمات والدليل',
+      icon: Icons.handyman_rounded,
+      color: Color(0xFFEF6C00),
+    ),
+  ];
+
+  late String _selectedPillar;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedPillar = _collectionPillars[widget.selected] ?? 'all';
+  }
+
+  @override
+  void didUpdateWidget(covariant _ReviewPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.selected != oldWidget.selected) {
+      final p = _collectionPillars[widget.selected];
+      if (p != null && _selectedPillar != 'all_list') {
+        _selectedPillar = p;
+      }
+    }
+  }
+
+  int _pillarPending(String pillarId) {
+    if (pillarId == 'all') {
+      return (widget.pendingCounts[kAllPending] ?? _totalRealPending) +
+          (widget.pendingCounts['upgrade_requests'] ?? 0);
+    }
+    if (pillarId == 'all_list') return _totalRealPending;
+    var sum = 0;
+    for (final c in widget.cats) {
+      if (_collectionPillars[c.collection] == pillarId) {
+        sum += widget.pendingCounts[c.collection] ?? 0;
+      }
+    }
+    return sum;
+  }
+
+  List<_Cat> get _filteredCats {
+    if (_selectedPillar == 'all_list') return widget.cats;
+    final list = widget.cats.where((c) {
+      return _collectionPillars[c.collection] == _selectedPillar;
+    }).toList(growable: false);
+    return list.isNotEmpty ? list : widget.cats;
+  }
+
+  void _showAllCategoriesSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _AllCategoriesSheet(
+        cats: widget.cats,
+        selected: widget.selected,
+        pendingCounts: widget.pendingCounts,
+        totalRealPending: _totalRealPending,
+        pillars: _pillars,
+        collectionPillars: _collectionPillars,
+        onSelect: (catId) {
+          Navigator.pop(ctx);
+          final pillar = _collectionPillars[catId];
+          setState(() {
+            if (pillar != null) _selectedPillar = pillar;
+          });
+          widget.onSelect(catId);
+        },
+      ),
+    );
+  }
+
   // تثبيت الـStream لكل (مجموعة، وضع) — إعادة إنشائه مع كل ضغطة كتابة
   // كان يفكّ الاشتراك ويعيد تنزيل المجموعة كلها في كل حرف.
   Stream<List<Map<String, dynamic>>>? _itemsStream;
@@ -135,10 +268,146 @@ class _ReviewPageState extends State<_ReviewPage> with _ReviewBulkMixin {
           countLabel: 'معلّق',
         ),
 
-        // ── شريط الفئات المحسّن ─────────────────────────────────
+        // ── شريط المجموعات الكبرى والفئات ──────────────────────────
         Container(
-          height: 64,
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            border: Border(
+              bottom: BorderSide(
+                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.15),
+              ),
+            ),
+          ),
+          child: SizedBox(
+            height: 38,
+            child: Row(
+              children: [
+                // زر عرض كل الأقسام مع أيقونة شبكية
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: _showAllCategoriesSheet,
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.grid_view_rounded, size: 15, color: theme.colorScheme.primary),
+                          const SizedBox(width: 5),
+                          Text(
+                            'تصفح الكل (27)',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  width: 1,
+                  height: 22,
+                  color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+                ),
+                const SizedBox(width: 8),
+                // ركائز المجموعات
+                Expanded(
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _pillars.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 6),
+                    itemBuilder: (context, i) {
+                      final p = _pillars[i];
+                      final isSelected = _selectedPillar == p.id;
+                      final pending = _pillarPending(p.id);
+                      final ink = AppColors.readableInk(p.color, theme.brightness);
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _selectedPillar = p.id;
+                            final inPillar = widget.cats.where(
+                                (c) => _collectionPillars[c.collection] == p.id);
+                            if (!inPillar.any((c) => c.collection == widget.selected) &&
+                                inPillar.isNotEmpty) {
+                              widget.onSelect(inPillar.first.collection);
+                            }
+                          });
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? p.color.withValues(alpha: 0.16)
+                                : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: isSelected
+                                  ? p.color
+                                  : theme.colorScheme.outlineVariant.withValues(alpha: 0.2),
+                              width: isSelected ? 1.5 : 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(p.icon, size: 14, color: isSelected ? ink : theme.colorScheme.onSurfaceVariant),
+                              const SizedBox(width: 5),
+                              Text(
+                                p.label,
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                  color: isSelected ? ink : theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                              if (pending > 0) ...[
+                                const SizedBox(width: 5),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: isSelected ? p.color : AppColors.warning,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    '$pending',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w900,
+                                      color: isSelected ? Colors.white : AppColors.onWarning,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        // ── شريط الفئات المحسّن (المصفى حسب الركيزة) ───────────────
+        Container(
+          height: 56,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           decoration: BoxDecoration(
             color: theme.colorScheme.surface,
             border: Border(
@@ -155,10 +424,10 @@ class _ReviewPageState extends State<_ReviewPage> with _ReviewBulkMixin {
           ),
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            itemCount: widget.cats.length,
+            itemCount: _filteredCats.length,
             separatorBuilder: (_, __) => const SizedBox(width: 6),
             itemBuilder: (context, i) {
-              final c = widget.cats[i];
+              final c = _filteredCats[i];
               final sel = c.collection == widget.selected;
               final pending = c.isAllPending
                   ? _totalRealPending
@@ -1236,3 +1505,264 @@ class _ReviewCard extends StatelessWidget {
     );
   }
 }
+
+/// نافذة سفلية تتيح تصفح والبحث في كل الأقسام الـ 27 دفعة واحدة مصنفة حسب القطاعات
+class _AllCategoriesSheet extends StatefulWidget {
+  const _AllCategoriesSheet({
+    required this.cats,
+    required this.selected,
+    required this.pendingCounts,
+    required this.totalRealPending,
+    required this.pillars,
+    required this.collectionPillars,
+    required this.onSelect,
+  });
+
+  final List<_Cat> cats;
+  final String selected;
+  final Map<String, int> pendingCounts;
+  final int totalRealPending;
+  final List<_PillarInfo> pillars;
+  final Map<String, String> collectionPillars;
+  final ValueChanged<String> onSelect;
+
+  @override
+  State<_AllCategoriesSheet> createState() => _AllCategoriesSheetState();
+}
+
+class _AllCategoriesSheetState extends State<_AllCategoriesSheet> {
+  final TextEditingController _searchCtrl = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final size = MediaQuery.sizeOf(context);
+
+    return Container(
+      constraints: BoxConstraints(maxHeight: size.height * 0.85),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // مقبض السحب
+          Center(
+            child: Container(
+              margin: const EdgeInsets.only(top: 10, bottom: 8),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          // الترويسة
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(Icons.grid_view_rounded,
+                      color: theme.colorScheme.primary, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'دليل أقسام المراجعة (27 قسماً)',
+                        style: theme.textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w900),
+                      ),
+                      Text(
+                        'اختر القسم المطلوب للانتقال إليه مباشرة',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+          ),
+          // حقل البحث
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: TextField(
+              controller: _searchCtrl,
+              onChanged: (v) => setState(() => _query = v.trim().toLowerCase()),
+              decoration: InputDecoration(
+                hintText: 'ابحث عن قسم (مثل: صيدليات، محامين، عزاء...)',
+                hintStyle: TextStyle(
+                  fontSize: 13,
+                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                ),
+                prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                suffixIcon: _query.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear_rounded, size: 18),
+                        onPressed: () {
+                          _searchCtrl.clear();
+                          setState(() => _query = '');
+                        },
+                      )
+                    : null,
+                filled: true,
+                fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          // قائمة الأقسام مصنفة حسب الركائز
+          Flexible(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+              children: widget.pillars.map((pillar) {
+                final inPillar = widget.cats.where((c) {
+                  if (widget.collectionPillars[c.collection] != pillar.id) return false;
+                  if (_query.isEmpty) return true;
+                  return c.label.toLowerCase().contains(_query);
+                }).toList(growable: false);
+
+                if (inPillar.isEmpty) return const SizedBox.shrink();
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // عنوان الركيزة
+                      Row(
+                        children: [
+                          Icon(pillar.icon, size: 16, color: pillar.color),
+                          const SizedBox(width: 8),
+                          Text(
+                            pillar.label,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: pillar.color,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '(${inPillar.length})',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      // شبكة أقسام هذه الركيزة
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: inPillar.map((cat) {
+                          final isSelected = cat.collection == widget.selected;
+                          final pending = cat.isAllPending
+                              ? widget.totalRealPending
+                              : (widget.pendingCounts[cat.collection] ?? 0);
+                          final ink = AppColors.readableInk(cat.color, theme.brightness);
+
+                          return InkWell(
+                            onTap: () => widget.onSelect(cat.collection),
+                            borderRadius: BorderRadius.circular(12),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 7),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? cat.color.withValues(alpha: 0.18)
+                                    : theme.colorScheme.surfaceContainerHighest
+                                        .withValues(alpha: 0.35),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? cat.color
+                                      : cat.color.withValues(alpha: 0.25),
+                                  width: isSelected ? 1.8 : 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(cat.icon, size: 14, color: ink),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    cat.label,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: isSelected
+                                          ? FontWeight.w900
+                                          : FontWeight.w700,
+                                      color: isSelected
+                                          ? ink
+                                          : theme.colorScheme.onSurface,
+                                    ),
+                                  ),
+                                  if (pending > 0) ...[
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 6, vertical: 1),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.warning,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        '$pending',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w900,
+                                          color: AppColors.onWarning,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+

@@ -13,6 +13,7 @@ import '../../services/forum_service.dart';
 import '../../services/moderation_service.dart';
 import '../../services/share_service.dart';
 import '../../services/user_service.dart';
+import '../../widgets/facebook_comment_tile.dart';
 import '../../widgets/owner_actions.dart';
 import '../../widgets/qurity_app_bar.dart';
 import 'create_post.dart';
@@ -42,6 +43,8 @@ class _ForumPostDetailScreenState extends State<ForumPostDetailScreen> {
   bool _viewCounted = false;
   // حذف التعليق: الأدمن/الأدمن المساعد لأي تعليق، وصاحب التعليق لتعليقه.
   bool _canModerate = false;
+  String? _replyToCommentId;
+  String? _replyToAuthorName;
 
   @override
   void initState() {
@@ -120,8 +123,18 @@ class _ForumPostDetailScreenState extends State<ForumPostDetailScreen> {
     }
     setState(() => _isSendingComment = true);
     try {
-      await _forumService.addComment(post.id, _currentUserName, text);
+      await _forumService.addComment(
+        post.id,
+        _currentUserName,
+        text,
+        parentId: _replyToCommentId,
+        replyToUser: _replyToAuthorName,
+      );
       _commentController.clear();
+      setState(() {
+        _replyToCommentId = null;
+        _replyToAuthorName = null;
+      });
     } catch (e) {
       if (mounted) AppHelpers.showSnackBar(context, 'تعذر إضافة التعليق', isError: true);
     } finally {
@@ -484,47 +497,51 @@ class _ForumPostDetailScreenState extends State<ForumPostDetailScreen> {
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: comments.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 10),
+          separatorBuilder: (_, __) => const SizedBox(height: 6),
           itemBuilder: (context, index) {
             final doc = comments[index];
             final data = doc.data() as Map<String, dynamic>? ?? <String, dynamic>{};
             final photo = (data['userPhotoUrl'] as String? ?? '').trim();
             final commentText = data['text'] as String? ?? '';
             final commentAuthor = (data['userId'] as String? ?? '').trim();
-            // صاحب التعليق يحذف تعليقه، والأدمن/الأدمن المساعد يحذفان أي تعليق.
-            final canDelete = _canModerate ||
-                (_currentUserId.isNotEmpty && commentAuthor == _currentUserId);
-            return InfoListCard(
-              padding: const EdgeInsets.all(14),
-              leading: CircleAvatar(
-                radius: CommentStyle.avatarRadius,
-                backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
-                backgroundImage:
-                    photo.isNotEmpty ? CachedNetworkImageProvider(photo) : null,
-                child: photo.isEmpty
-                    ? Icon(Icons.person_rounded, size: 20, color: theme.colorScheme.primary)
-                    : null,
-              ),
-              title: data['userName'] as String? ?? 'زائر',
-              subtitleBuilder: (context) => [
-                Text(
-                  data['userName'] as String? ?? 'زائر',
-                  style: CommentStyle.author(context),
-                ),
-                const SizedBox(height: 5),
-                // نص التعليق: أسود بحجم واضح (تنسيق موحّد لكل التعليقات)
-                Text(commentText, style: CommentStyle.body(context)),
-              ],
-              trailing: canDelete
-                  ? IconButton(
-                      key: ValueKey('forum-comment-delete-${doc.id}'),
-                      tooltip: 'حذف التعليق',
-                      icon: Icon(Icons.delete_outline_rounded,
-                          size: 20, color: theme.colorScheme.error),
-                      onPressed: () =>
-                          _deleteComment(post, doc.id, commentText),
-                    )
-                  : null,
+            final createdAt = (data['createdAt'] as Timestamp?)?.toDate();
+            final updatedAt = (data['updatedAt'] as Timestamp?)?.toDate();
+            final likes = (data['likes'] as num?)?.toInt() ?? 0;
+            final likedBy = (data['likedBy'] as List?)
+                    ?.map((e) => e.toString())
+                    .toList() ??
+                <String>[];
+            final parentId = data['parentId'] as String?;
+            final replyToUser = data['replyToUser'] as String?;
+
+            return FacebookCommentTile(
+              key: ValueKey('forum-comment-delete-${doc.id}'),
+              avatarRadius: CommentStyle.avatarRadius,
+              textStyle: CommentStyle.body(context),
+              commentId: doc.id,
+              authorId: commentAuthor,
+              authorName: data['userName'] as String? ?? 'زائر',
+              authorPhotoUrl: photo,
+              text: commentText,
+              createdAt: createdAt,
+              updatedAt: updatedAt,
+              likes: likes,
+              likedBy: likedBy,
+              parentId: parentId,
+              replyToUser: replyToUser,
+              currentUserId: _currentUserId,
+              isAdmin: _canModerate,
+              onLike: () => _forumService.toggleCommentLike(
+                  post.id, doc.id, _currentUserId),
+              onReply: () {
+                setState(() {
+                  _replyToCommentId = doc.id;
+                  _replyToAuthorName = data['userName'] as String? ?? 'مستخدم';
+                });
+              },
+              onEdit: (newText) =>
+                  _forumService.editComment(post.id, doc.id, newText),
+              onDelete: () => _deleteComment(post, doc.id, commentText),
             );
           },
         );
@@ -538,34 +555,72 @@ class _ForumPostDetailScreenState extends State<ForumPostDetailScreen> {
       padding: EdgeInsets.only(
         left: 12,
         right: 12,
-        top: 12,
+        top: 8,
         bottom: MediaQuery.of(context).viewInsets.bottom + 12,
       ),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4))),
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(
-            child: TextField(
-              controller: _commentController,
-              enabled: canComment && !_isSendingComment,
-              textInputAction: TextInputAction.send,
-              onSubmitted: (_) => _addComment(post),
-              decoration: InputDecoration(
-                hintText: canComment ? 'أضف تعليقاً...' : 'سجّل الدخول لإضافة تعليق',
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          if (_replyToCommentId != null)
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primaryContainer.withValues(alpha: 0.35),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.reply_rounded, size: 16, color: theme.colorScheme.primary),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'الرد على ${_replyToAuthorName ?? 'التعليق'}',
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: theme.colorScheme.primary),
+                    ),
+                  ),
+                  InkWell(
+                    onTap: () => setState(() {
+                      _replyToCommentId = null;
+                      _replyToAuthorName = null;
+                    }),
+                    child: const Icon(Icons.close_rounded, size: 16),
+                  ),
+                ],
               ),
             ),
-          ),
-          const SizedBox(width: 8),
-          IconButton.filled(
-            onPressed: canComment && !_isSendingComment ? () => _addComment(post) : null,
-            icon: _isSendingComment
-                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(Icons.send_rounded, size: 20),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _commentController,
+                  enabled: canComment && !_isSendingComment,
+                  textInputAction: TextInputAction.send,
+                  onSubmitted: (_) => _addComment(post),
+                  decoration: InputDecoration(
+                    hintText: _replyToCommentId != null
+                        ? 'اكتب ردك هنا...'
+                        : (canComment ? 'أضف تعليقاً...' : 'سجّل الدخول لإضافة تعليق'),
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton.filled(
+                onPressed: canComment && !_isSendingComment ? () => _addComment(post) : null,
+                icon: _isSendingComment
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.send_rounded, size: 20),
+              ),
+            ],
           ),
         ],
       ),

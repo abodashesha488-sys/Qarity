@@ -51,7 +51,13 @@ class ProductInteractionService {
         .map((doc) => (doc.data()?['likes'] as num?)?.toInt() ?? 0);
   }
 
-  Future<void> addComment({required String productId, required String userName, required String text}) async {
+  Future<void> addComment({
+    required String productId,
+    required String userName,
+    required String text,
+    String? parentId,
+    String? replyToUser,
+  }) async {
     final auth = FirebaseAuth.instance;
     final user = auth.currentUser;
     final userDoc = await FirebaseFirestore.instance.collection('users').doc(user?.uid).get();
@@ -66,14 +72,90 @@ class ProductInteractionService {
       'userName': name,
       'userPhotoUrl': photo,
       'text': text,
+      'likes': 0,
+      'likedBy': <String>[],
+      if (parentId != null && parentId.isNotEmpty) 'parentId': parentId,
+      if (replyToUser != null && replyToUser.isNotEmpty) 'replyToUser': replyToUser,
       'createdAt': Timestamp.now(),
     });
     await _firestore.collection('market_products').doc(productId).update({'comments': FieldValue.increment(1)});
   }
 
   Stream<List<Map<String, dynamic>>> getCommentsStream(String productId) {
-    return _firestore.collection('market_products').doc(productId).collection('comments').orderBy('createdAt', descending: true).snapshots().map((snapshot) =>
-        snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList());
+    return _firestore
+        .collection('market_products')
+        .doc(productId)
+        .collection('comments')
+        .orderBy('createdAt', descending: false)
+        .snapshots()
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList());
+  }
+
+  /// تعديل نص التعليق (للصاحب أو الأدمن)
+  Future<void> editComment({
+    required String productId,
+    required String commentId,
+    required String newText,
+  }) async {
+    if (productId.isEmpty || commentId.isEmpty || newText.trim().isEmpty) return;
+    await _firestore
+        .collection('market_products')
+        .doc(productId)
+        .collection('comments')
+        .doc(commentId)
+        .update({
+      'text': newText.trim(),
+      'updatedAt': Timestamp.now(),
+    });
+  }
+
+  /// التفاعل مع التعليق بالإعجاب أو إلغائه
+  Future<void> toggleCommentLike({
+    required String productId,
+    required String commentId,
+    required String userId,
+  }) async {
+    if (productId.isEmpty || commentId.isEmpty || userId.isEmpty) return;
+    final ref = _firestore
+        .collection('market_products')
+        .doc(productId)
+        .collection('comments')
+        .doc(commentId);
+    await _firestore.runTransaction((tx) async {
+      final snap = await tx.get(ref);
+      if (!snap.exists) return;
+      final data = snap.data() ?? <String, dynamic>{};
+      final likedBy = (data['likedBy'] as List?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          <String>[];
+      if (likedBy.contains(userId)) {
+        likedBy.remove(userId);
+      } else {
+        likedBy.add(userId);
+      }
+      tx.update(ref, {
+        'likedBy': likedBy,
+        'likes': likedBy.length,
+      });
+    });
+  }
+
+  /// حذف تعليق وإنقاص عداد تعليقات المنتج
+  Future<void> deleteComment({
+    required String productId,
+    required String commentId,
+  }) async {
+    if (productId.isEmpty || commentId.isEmpty) return;
+    final productRef = _firestore.collection('market_products').doc(productId);
+    final commentRef = productRef.collection('comments').doc(commentId);
+    await _firestore.runTransaction((tx) async {
+      final snap = await tx.get(productRef);
+      final count = ((snap.data()?['comments'] as num?)?.toInt() ?? 0);
+      tx.delete(commentRef);
+      tx.update(productRef, {'comments': count > 0 ? count - 1 : 0});
+    });
   }
 
   Future<int> getCommentCount(String productId) async {
