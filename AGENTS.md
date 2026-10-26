@@ -7,7 +7,7 @@ Qarity is a comprehensive digital platform for village community services (قر�
 - **Errors:** 0
 - **Warnings:** 0 · **Info:** 0
 - **Status:** Compiles successfully · `flutter analyze`: No issues found!
-- **اختبارات:** آخر **مجموعة كاملة** موثّقة = **919/919 في كامل المشروع** (80 ملف اختبار) بنجاح 100% (`01:46 +919: All tests passed!`)؛ وقبلها = 900/900. **لا تُصدّر رقمًا لم تَجْرِه.**
+- **اختبارات:** آخر **مجموعة كاملة** موثّقة = **921/921 في كامل المشروع** (81 ملف اختبار) بنجاح 100% (`01:54 +921: All tests passed!`)؛ وقبلها = 919/919. **لا تُصدّر رقمًا لم تَجْرِه.**
 
 ## Firebase Configuration
 

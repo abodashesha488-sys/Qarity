@@ -416,6 +416,8 @@ class _AdminEditScreenState extends State<AdminEditScreen> {
     setState(() => _isSaving = true);
     try {
       final data = _editor.collect(_fields);
+      // حفظ التعديلات يعتمد البيان مباشرة لسهولة النشر دون حاجة لزر إضافي
+      data['isApproved'] = true;
       // المرآتان اللتان تقرأهما الواجهات القديمة والشرائح المثبّتة.
       syncImageMirrors(_fields, data);
       if (widget.collection == 'market_products') {
@@ -452,15 +454,152 @@ class _AdminEditScreenState extends State<AdminEditScreen> {
         backgroundColor: error ? AppColors.error : AppColors.primary));
   }
 
+  static String _sectionForField(DocFieldSpec f) {
+    if (f.key == 'relatives') return 'relatives';
+    if (f.kind == DocFieldKind.image ||
+        f.kind == DocFieldKind.images ||
+        f.key == 'cardBackground') {
+      return 'images';
+    }
+    if (f.kind == DocFieldKind.readOnly) return 'system';
+
+    final k = f.key.toLowerCase();
+    if (isDateFieldKey(f.key) || isTimeFieldKey(f.key) || k.contains('prayer')) {
+      return 'dates';
+    }
+    if (k.contains('phone') ||
+        k.contains('location') ||
+        k.contains('address') ||
+        k.contains('hospital') ||
+        k.contains('office') ||
+        k.contains('whatsapp')) {
+      return 'contact';
+    }
+    if (f.kind == DocFieldKind.boolean ||
+        k.contains('category') ||
+        k.contains('kind') ||
+        k.contains('type') ||
+        k.contains('status') ||
+        k.contains('price') ||
+        k.contains('offer') ||
+        k.contains('stock') ||
+        k.contains('budget') ||
+        k.contains('fees') ||
+        k.contains('urgency') ||
+        k.contains('bloodtype') ||
+        k.contains('gender') ||
+        k.contains('stage') ||
+        k.contains('subject') ||
+        k.contains('specialty') ||
+        k.contains('specialization') ||
+        k.contains('rating')) {
+      return 'options';
+    }
+    return 'basic';
+  }
+
+  String _collectionName(String c) {
+    switch (c) {
+      case 'news':
+        return 'الأخبار';
+      case 'market_products':
+        return 'سوق القرية';
+      case 'obituaries':
+        return 'الوفيات والتعازي';
+      case 'occasions':
+        return 'المناسبات';
+      case 'forum_posts':
+        return 'منتدى القرية';
+      case 'phone_directory':
+        return 'دليل الهواتف';
+      case 'village_clinics':
+        return 'عيادات القرية';
+      case 'pharmacies':
+        return 'الصيدليات';
+      case 'medical_labs':
+        return 'معامل التحاليل';
+      case 'optical_shops':
+        return 'محلات النظارات';
+      case 'medical_center_clinics':
+        return 'المركز الطبي الخيري';
+      case 'blood_requests':
+        return 'طلبات فصائل الدم';
+      case 'blood_donors':
+        return 'سجل المتبرعين';
+      case 'shops':
+        return 'المحلات والأنشطة';
+      case 'service_providers':
+        return 'دليل الحرف والخدمات';
+      case 'lost_items':
+        return 'المفقودات والمعثورات';
+      case 'village_ads':
+        return 'إعلانات القرية';
+      case 'lawyers':
+        return 'دليل المحامين';
+      case 'legal_consultations':
+        return 'الاستشارات القانونية';
+      case 'agriculture_consultations':
+        return 'الاستشارات الزراعية';
+      case 'service_requests':
+        return 'طلبات الخدمات';
+      case 'donations':
+        return 'التبرعات الخيرية';
+      case 'buy_requests':
+        return 'طلبات الشراء';
+      default:
+        return c;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final rows = <Widget>[
-      for (final f in _fields)
-        DocFieldRow(editor: _editor, spec: f, onChanged: () => setState(() {})),
-    ];
+    final theme = Theme.of(context);
+
+    // تصنيف الحقول في أقسام مطابقة لشاشات الإدخال
+    final basicFields = <DocFieldSpec>[];
+    final optionsFields = <DocFieldSpec>[];
+    final datesFields = <DocFieldSpec>[];
+    final imagesFields = <DocFieldSpec>[];
+    final contactFields = <DocFieldSpec>[];
+    final relativesFields = <DocFieldSpec>[];
+    final systemFields = <DocFieldSpec>[];
+
+    for (final f in _fields) {
+      switch (_sectionForField(f)) {
+        case 'basic':
+          basicFields.add(f);
+        case 'options':
+          optionsFields.add(f);
+        case 'dates':
+          datesFields.add(f);
+        case 'images':
+          imagesFields.add(f);
+        case 'contact':
+          contactFields.add(f);
+        case 'relatives':
+          relativesFields.add(f);
+        case 'system':
+          systemFields.add(f);
+      }
+    }
+
+    Widget buildFieldList(List<DocFieldSpec> list) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: list
+            .map((f) => DocFieldRow(
+                  editor: _editor,
+                  spec: f,
+                  collection: widget.collection,
+                  onChanged: () => setState(() {}),
+                ))
+            .toList(),
+      );
+    }
+
     return Scaffold(
       appBar: QurityAppBar(
-        title: 'تعديل',
+        title: 'تعديل ${_collectionName(widget.collection)}',
         actions: [
           TextButton.icon(
             key: const ValueKey('admin-edit-save'),
@@ -473,7 +612,98 @@ class _AdminEditScreenState extends State<AdminEditScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          ...rows,
+          // شريط إرشادي علوي يوضح اعتماد ونشر التعديل فوراً
+          Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: theme.colorScheme.primary.withValues(alpha: 0.25),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.verified_rounded,
+                    color: theme.colorScheme.primary, size: 24),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'تعديل ونشر فوري (${_collectionName(widget.collection)})',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          color: theme.colorScheme.primary,
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'عند الضغط على حفظ، يتم نشر واعتماد البيان فوراً دون الحاجة لإعادة الموافقة.',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          if (basicFields.isNotEmpty)
+            _SectionCard(
+              title: 'البيانات الأساسية والمحتوى',
+              icon: Icons.article_rounded,
+              child: buildFieldList(basicFields),
+            ),
+
+          if (optionsFields.isNotEmpty)
+            _SectionCard(
+              title: 'التصنيف والخيارات والأسعار',
+              icon: Icons.tune_rounded,
+              child: buildFieldList(optionsFields),
+            ),
+
+          if (datesFields.isNotEmpty)
+            _SectionCard(
+              title: 'المواعيد والتواريخ والصلوات',
+              icon: Icons.calendar_month_rounded,
+              child: buildFieldList(datesFields),
+            ),
+
+          if (contactFields.isNotEmpty)
+            _SectionCard(
+              title: 'معلومات التواصل والعناوين',
+              icon: Icons.contact_phone_rounded,
+              child: buildFieldList(contactFields),
+            ),
+
+          if (imagesFields.isNotEmpty)
+            _SectionCard(
+              title: 'الصور والوسائط والمرفقات',
+              icon: Icons.photo_library_rounded,
+              child: buildFieldList(imagesFields),
+            ),
+
+          if (relativesFields.isNotEmpty)
+            _SectionCard(
+              title: 'أقارب المتوفى ومجموعات القرابة',
+              icon: Icons.family_restroom_rounded,
+              child: buildFieldList(relativesFields),
+            ),
+
+          if (systemFields.isNotEmpty)
+            _SectionCard(
+              title: 'بيانات النظام والإدارة (للقراءة فقط)',
+              icon: Icons.admin_panel_settings_rounded,
+              child: buildFieldList(systemFields),
+            ),
+
           const SizedBox(height: 8),
           SizedBox(
             height: 52,
@@ -486,8 +716,11 @@ class _AdminEditScreenState extends State<AdminEditScreen> {
                       height: 20,
                       child: CircularProgressIndicator(
                           strokeWidth: 2, color: Colors.white))
-                  : const Icon(Icons.save_rounded, size: 20),
-              label: Text(_isSaving ? 'جاري الحفظ...' : 'حفظ التعديلات',
+                  : const Icon(Icons.check_circle_rounded, size: 20),
+              label: Text(
+                  _isSaving
+                      ? 'جاري الحفظ...'
+                      : 'حفظ التعديلات',
                   style: const TextStyle(
                       fontWeight: FontWeight.w800, fontSize: 15)),
               style: FilledButton.styleFrom(
@@ -498,7 +731,69 @@ class _AdminEditScreenState extends State<AdminEditScreen> {
               ),
             ),
           ),
+          const SizedBox(height: 20),
         ],
+      ),
+    );
+  }
+}
+
+class _SectionCard extends StatelessWidget {
+  const _SectionCard({
+    required this.title,
+    required this.icon,
+    required this.child,
+  });
+
+  final String title;
+  final IconData icon;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(icon, size: 18, color: primary),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14,
+                      color: primary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            child,
+          ],
+        ),
       ),
     );
   }

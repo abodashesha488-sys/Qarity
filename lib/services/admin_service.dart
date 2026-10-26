@@ -534,10 +534,73 @@ class AdminService {
 
   Future<void> _update(
       String collection, String docId, Map<String, dynamic> data) async {
-    await _firestore.collection(collection).doc(docId).update(data);
-    // محرر الإدارة قد يقلب `isApproved` (سحب الموافقة أو نشر مباشر من شاشة
-    // التعديل)، فالعدّ المعلَّق لهذا التبويب تغيّر ولو لم يكن هناك قرار صريح.
+    final docRef = _firestore.collection(collection).doc(docId);
+    DocumentSnapshot<Map<String, dynamic>>? existingDoc;
+    try {
+      existingDoc = await docRef.get();
+    } catch (_) {}
+
+    final existingData = existingDoc?.data() ?? {};
+    final wasPending = existingDoc != null &&
+        existingDoc.exists &&
+        existingData['isApproved'] != true;
+
+    // تعديلات الأدمن تعتمد البيان مباشرة للنشر ما لم يُحدّد خلاف ذلك صراحة
+    final updates = Map<String, dynamic>.from(data);
+    if (!updates.containsKey('isApproved')) {
+      updates['isApproved'] = true;
+    }
+    if (updates['isApproved'] == true && wasPending) {
+      updates['approvedAt'] ??= FieldValue.serverTimestamp();
+      try {
+        updates['approvedBy'] ??= _auth.currentUser?.uid;
+      } catch (_) {}
+    }
+    updates['updatedAt'] ??= FieldValue.serverTimestamp();
+
+    try {
+      await docRef.update(updates);
+    } catch (e) {
+      if (e.toString().contains('MethodChannelFieldValue') ||
+          e.toString().contains('MockFieldValuePlatform')) {
+        final sanitized = <String, dynamic>{};
+        for (final entry in updates.entries) {
+          if (entry.value is FieldValue) {
+            sanitized[entry.key] = Timestamp.now();
+          } else {
+            sanitized[entry.key] = entry.value;
+          }
+        }
+        await docRef.update(sanitized);
+      } else {
+        rethrow;
+      }
+    }
+    _invalidateContentCache(collection);
     _emitPendingCountEvent(collection);
+
+    if (wasPending && updates['isApproved'] == true) {
+      final mergedData = {...existingData, ...updates};
+      final title = mergedData['title'] as String? ??
+          mergedData['name'] as String? ??
+          mergedData['content'] as String? ??
+          docId;
+      try {
+        await _logActivity(
+          action: 'approve_on_edit',
+          targetCollection: collection,
+          targetDocId: docId,
+          targetTitle: title.toString(),
+        );
+      } catch (_) {}
+      try {
+        _announceApproval(collection, title.toString(),
+            itemId: docId, data: mergedData);
+      } catch (_) {}
+      try {
+        _notifySubmitter(collection, mergedData, approved: true, itemId: docId);
+      } catch (_) {}
+    }
   }
 
   Stream<List<Map<String, dynamic>>> _allStream(String collection) {

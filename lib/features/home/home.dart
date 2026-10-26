@@ -682,33 +682,6 @@ const double kHeroBodyHeight = 58.0;
 class _HeroHeader extends StatelessWidget {
   const _HeroHeader();
 
-  Widget _pill({required Widget child, VoidCallback? onTap}) {
-    final pillBox = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
-      decoration: BoxDecoration(
-        color: AppColors.primaryDark.withValues(alpha: 0.90),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 0.9),
-        boxShadow: const [
-          BoxShadow(
-              color: Color(0x40000000),
-              blurRadius: 8,
-              offset: Offset(0, 2))
-        ],
-      ),
-      child: child,
-    );
-    if (onTap == null) return pillBox;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(999),
-        onTap: onTap,
-        child: pillBox,
-      ),
-    );
-  }
-
   Widget _prayerPill({required Widget child, VoidCallback? onTap}) {
     final pillBox = Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
@@ -780,58 +753,21 @@ class _HeroHeader extends StatelessWidget {
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => const SizedBox.shrink()),
           ),
-          SafeArea(
+          const SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(26, 12, 26, 48),
+              padding: EdgeInsets.fromLTRB(26, 12, 26, 48),
               child: SizedBox(
                 height: kHeroBodyHeight,
-                child: Center(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: SizedBox(
-                      width: MediaQuery.sizeOf(context).width - 52,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          // زر التنبيهات فوق زر البحث (أخذ مكان زر الساعة قبل نقله للكارت)
-                          const Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              NotificationBellButton(compact: true),
-                              SizedBox(height: 3.5),
-                              _HeaderSearchButton(),
-                            ],
-                          ),
-                          // الطرف المقابل: شارة قرية أبوديشيشة المتناسقة مع هوية التطبيق
-                          _pill(
-                            onTap: () {
-                              HapticFeedback.lightImpact();
-                              showQurityLogoDialog(context);
-                            },
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Image(
-                                  image: AssetImage('assets/images/Qurity.png'),
-                                  width: 17,
-                                  height: 17,
-                                ),
-                                SizedBox(width: 5),
-                                Text(
-                                  'قرية أبوديشيشة',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10.5,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      NotificationBellButton(compact: true),
+                      SizedBox(height: 3.5),
+                      _HeaderSearchButton(),
+                    ],
                   ),
                 ),
               ),

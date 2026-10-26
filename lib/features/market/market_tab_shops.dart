@@ -245,7 +245,7 @@ class ShopsTab extends StatelessWidget {
           shop: s,
           theme: theme,
           onTap: () => Navigator.push(context,
-              MaterialPageRoute(builder: (_) => _ShopDetailScreen(shop: s))),
+              MaterialPageRoute(builder: (_) => ShopDetailScreen(shop: s))),
         ).animate(delay: (i * 40).ms).fadeIn().slideX(begin: 0.06);
       },
     );
@@ -370,15 +370,15 @@ class _ShopGridCard extends StatelessWidget {
   }
 }
 
-class _ShopDetailScreen extends StatefulWidget {
-  const _ShopDetailScreen({required this.shop});
+class ShopDetailScreen extends StatefulWidget {
+  const ShopDetailScreen({super.key, required this.shop});
   final Shop shop;
 
   @override
-  State<_ShopDetailScreen> createState() => _ShopDetailScreenState();
+  State<ShopDetailScreen> createState() => _ShopDetailScreenState();
 }
 
-class _ShopDetailScreenState extends State<_ShopDetailScreen> {
+class _ShopDetailScreenState extends State<ShopDetailScreen> {
   final ShopService _shopService = ShopService();
 
   Shop get shop => widget.shop;

@@ -223,7 +223,12 @@ class DocumentEditor {
   final Map<String, bool> booleans = {};
   final Map<String, List<String>> imageLists = {};
 
+  final Map<String, dynamic> customData = {};
+
   void seed(List<DocFieldSpec> specs, Map<String, dynamic> item) {
+    if (item.containsKey('relatives')) {
+      customData['relatives'] = item['relatives'];
+    }
     for (final f in specs) {
       final v = item[f.key];
       switch (f.kind) {
@@ -314,6 +319,115 @@ class DocumentEditor {
       c.dispose();
     }
     texts.clear();
+    customData.clear();
+  }
+}
+
+/// فحص ما إذا كان المفتاح يمثل حقلاً للتاريخ لفتح منتقي التاريخ.
+bool isDateFieldKey(String key) {
+  final k = key.toLowerCase();
+  return k == 'date' ||
+      k.endsWith('date') ||
+      k.endsWith('dateofdeath') ||
+      k.endsWith('funeraldate') ||
+      k.endsWith('startsat') ||
+      k.endsWith('endsat') ||
+      k.endsWith('featureduntil');
+}
+
+/// فحص ما إذا كان المفتاح يمثل حقلاً للوقت لفتح منتقي الوقت.
+bool isTimeFieldKey(String key) {
+  final k = key.toLowerCase();
+  return k == 'time' ||
+      k.endsWith('time') ||
+      k.endsWith('funeraltime') ||
+      k.endsWith('condolencetime') ||
+      k.endsWith('workinghours');
+}
+
+/// الخيارات الشائعة لكل حقل لعرضها كأزرار اختيار سريعة تحاكي شاشات الإدخال.
+List<String> fieldPresets(String key, {String collection = ''}) {
+  switch (key) {
+    case 'gender':
+      return const ['رجل', 'امرأة'];
+    case 'funeralPrayer':
+    case 'condolencePrayer':
+      return const [
+        'صلاة الظهر',
+        'صلاة العصر',
+        'صلاة المغرب',
+        'صلاة العشاء',
+        'صلاة الفجر',
+        'صلاة الجمعة',
+      ];
+    case 'cardBackground':
+      return const ['azaa1', 'azaa2', 'azaa3', 'azaa4', 'azaa5'];
+    case 'bloodType':
+      return const ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+    case 'urgency':
+      return const ['عاجل جداً', 'عاجل', 'عادي'];
+    case 'providerKind':
+      return const ['معلم', 'مدرسة', 'حرفي', 'مهندس', 'فني'];
+    case 'kind':
+      if (collection == 'village_ads') {
+        return const ['تجارية', 'خدمية', 'إنشائية', 'تعليمية', 'أخرى'];
+      }
+      return const [];
+    case 'status':
+      if (collection == 'service_requests') {
+        return const ['pending', 'in_progress', 'completed', 'cancelled'];
+      }
+      if (collection == 'donations') {
+        return const ['available', 'donated'];
+      }
+      if (collection == 'buy_requests') {
+        return const ['open', 'closed'];
+      }
+      if (collection == 'lost_items') {
+        return const ['مفقود', 'تم العثور عليه'];
+      }
+      return const [];
+    case 'category':
+      if (collection == 'news') {
+        return const ['أخبار القرية', 'عاجل', 'مناسبات', 'خدمات', 'عام'];
+      }
+      if (collection == 'market_products') {
+        return const [
+          'أجهزة',
+          'ملابس',
+          'أطعمة',
+          'أثاث',
+          'مواشي',
+          'سيارات',
+          'عقارات',
+          'أخرى'
+        ];
+      }
+      if (collection == 'legal_consultations') {
+        return const [
+          'أحوال شخصية',
+          'قضايا مدنية',
+          'قضايا جنائية',
+          'عقارات وتوثيق',
+          'عمالية',
+          'أخرى'
+        ];
+      }
+      if (collection == 'agriculture_consultations') {
+        return const [
+          'أمراض وآفات',
+          'تسميد وتغذية',
+          'ري ومياه',
+          'محاصيل حقلية',
+          'خضروات وفواكه',
+          'أخرى'
+        ];
+      }
+      return const [];
+    case 'adType':
+      return const ['standard', 'featured'];
+    default:
+      return const [];
   }
 }
 
@@ -321,12 +435,14 @@ class DocumentEditor {
 class DocFieldRow extends StatefulWidget {
   final DocumentEditor editor;
   final DocFieldSpec spec;
+  final String collection;
   final VoidCallback? onChanged;
 
   const DocFieldRow({
     super.key,
     required this.editor,
     required this.spec,
+    this.collection = '',
     this.onChanged,
   });
 
@@ -337,6 +453,44 @@ class DocFieldRow extends StatefulWidget {
 class _DocFieldRowState extends State<DocFieldRow> {
   DocumentEditor get editor => widget.editor;
   DocFieldSpec get spec => widget.spec;
+
+  Future<void> _pickDate(TextEditingController controller) async {
+    final now = DateTime.now();
+    DateTime? initial;
+    final current = controller.text.trim();
+    if (current.isNotEmpty) {
+      initial = DateTime.tryParse(current);
+    }
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial ?? now,
+      firstDate: DateTime(1950),
+      lastDate: DateTime(2100),
+    );
+    if (picked != null) {
+      final y = picked.year.toString().padLeft(4, '0');
+      final m = picked.month.toString().padLeft(2, '0');
+      final d = picked.day.toString().padLeft(2, '0');
+      controller.text = '$y-$m-$d';
+      setState(() {});
+      widget.onChanged?.call();
+    }
+  }
+
+  Future<void> _pickTime(TextEditingController controller) async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+    );
+    if (picked != null) {
+      final period = picked.period == DayPeriod.am ? 'ص' : 'م';
+      final hour = picked.hourOfPeriod == 0 ? 12 : picked.hourOfPeriod;
+      final minute = picked.minute.toString().padLeft(2, '0');
+      controller.text = '$hour:$minute $period';
+      setState(() {});
+      widget.onChanged?.call();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -355,6 +509,10 @@ class _DocFieldRowState extends State<DocFieldRow> {
       );
     }
     if (spec.kind == DocFieldKind.readOnly) {
+      // إذا كان الحقل هو أقارب العزاء، نوفّر محرر أقارب تفاعلي بالإضافة للمعاينة
+      if (spec.key == 'relatives' && spec.rawValue is List) {
+        return _buildRelativesInteractiveSection(theme);
+      }
       return Padding(
         padding: const EdgeInsets.only(bottom: 12),
         child: InputDecorator(
@@ -389,37 +547,274 @@ class _DocFieldRowState extends State<DocFieldRow> {
         },
       );
     }
+
+    final controller = editor.texts[spec.key];
+    final isDate = isDateFieldKey(spec.key);
+    final isTime = isTimeFieldKey(spec.key);
+    final presets = fieldPresets(spec.key, collection: widget.collection);
+
+    Widget? suffixIconWidget;
+    if (isDate) {
+      suffixIconWidget = IconButton(
+        icon: const Icon(Icons.calendar_month_rounded),
+        tooltip: 'اختيار تاريخ',
+        onPressed: controller != null ? () => _pickDate(controller) : null,
+      );
+    } else if (isTime) {
+      suffixIconWidget = IconButton(
+        icon: const Icon(Icons.access_time_rounded),
+        tooltip: 'اختيار وقت',
+        onPressed: controller != null ? () => _pickTime(controller) : null,
+      );
+    } else if (controller != null && controller.text.isNotEmpty) {
+      suffixIconWidget = IconButton(
+        icon: const Icon(Icons.clear_rounded, size: 18),
+        tooltip: 'تفريغ',
+        onPressed: () {
+          controller.clear();
+          setState(() {});
+          widget.onChanged?.call();
+        },
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
-      child: TextFormField(
-        key: ValueKey('doc-field-${spec.key}'),
-        controller: editor.texts[spec.key],
-        maxLines: (spec.kind == DocFieldKind.multiline ||
-                spec.kind == DocFieldKind.list)
-            ? 4
-            : 1,
-        keyboardType:
-            spec.kind == DocFieldKind.number ? TextInputType.number : null,
-        decoration: InputDecoration(
-          labelText: spec.label + (spec.required ? ' *' : ''),
-          helperText: spec.kind == DocFieldKind.list
-              ? 'افصل بين القيم بفاصلة'
-              : null,
-          alignLabelWithHint: true,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
-                  color:
-                      theme.colorScheme.outlineVariant.withValues(alpha: 0.5))),
-          focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.6))),
-          prefixIcon: Icon(icon, color: theme.colorScheme.primary),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextFormField(
+            key: ValueKey('doc-field-${spec.key}'),
+            controller: controller,
+            maxLines: (spec.kind == DocFieldKind.multiline ||
+                    spec.kind == DocFieldKind.list)
+                ? 4
+                : 1,
+            keyboardType:
+                spec.kind == DocFieldKind.number ? TextInputType.number : null,
+            decoration: InputDecoration(
+              labelText: spec.label + (spec.required ? ' *' : ''),
+              helperText: spec.kind == DocFieldKind.list
+                  ? 'افصل بين القيم بفاصلة'
+                  : null,
+              alignLabelWithHint: true,
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                      color: theme.colorScheme.outlineVariant
+                          .withValues(alpha: 0.5))),
+              focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                      color:
+                          theme.colorScheme.primary.withValues(alpha: 0.6))),
+              prefixIcon: Icon(icon, color: theme.colorScheme.primary),
+              suffixIcon: suffixIconWidget,
+            ),
+          ),
+          if (presets.isNotEmpty && controller != null) ...[
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: presets.map((preset) {
+                final isSelected = controller.text.trim() == preset;
+                return ChoiceChip(
+                  label: Text(preset, style: const TextStyle(fontSize: 12)),
+                  selected: isSelected,
+                  selectedColor:
+                      theme.colorScheme.primary.withValues(alpha: 0.18),
+                  onSelected: (selected) {
+                    if (selected) {
+                      controller.text = preset;
+                    } else if (isSelected) {
+                      controller.text = '';
+                    }
+                    setState(() {});
+                    widget.onChanged?.call();
+                  },
+                );
+              }).toList(),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRelativesInteractiveSection(ThemeData theme) {
+    final list = (editor.customData['relatives'] as List<dynamic>?) ??
+        (spec.rawValue as List<dynamic>?) ??
+        [];
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.people_outline_rounded,
+                  color: theme.colorScheme.primary, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'أقارب المتوفى (${list.length})',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w800, fontSize: 13),
+                ),
+              ),
+              TextButton.icon(
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text('إضافة قريب'),
+                onPressed: () => _showAddRelativeDialog(theme),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          if (list.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text('لا يوجد أقارب مضافون حالياً',
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: theme.colorScheme.onSurfaceVariant)),
+            )
+          else
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (int i = 0; i < list.length; i++)
+                  _buildRelativeChip(theme, list[i], i),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRelativeChip(ThemeData theme, dynamic item, int index) {
+    String label = '';
+    String name = '';
+    if (item is Map) {
+      name = item['name']?.toString() ?? '';
+      final custom = item['typeLabel']?.toString() ?? '';
+      final type = item['type']?.toString() ?? '';
+      label = custom.isNotEmpty ? custom : type;
+    } else {
+      name = item.toString();
+    }
+    return Chip(
+      label: Text(label.isNotEmpty ? '$label: $name' : name,
+          style: const TextStyle(fontSize: 12)),
+      deleteIcon: const Icon(Icons.close_rounded, size: 16),
+      onDeleted: () {
+        final current = List<dynamic>.from(
+            editor.customData['relatives'] as List<dynamic>? ??
+                (spec.rawValue as List<dynamic>?) ??
+                []);
+        if (index < current.length) {
+          current.removeAt(index);
+          setState(() {
+            editor.customData['relatives'] = current;
+          });
+          widget.onChanged?.call();
+        }
+      },
+    );
+  }
+
+  Future<void> _showAddRelativeDialog(ThemeData theme) async {
+    final nameCtrl = TextEditingController();
+    String selectedGroup = 'أبناؤه';
+    final groups = const [
+      'أبناؤه',
+      'بناته',
+      'أشقاؤه',
+      'شقيقاته',
+      'أحفاده',
+      'أعمامه',
+      'عماته',
+      'أخواله',
+      'خالاته',
+      'أصهاره',
+      'عائلات ومحبون',
+      'قرابة أخرى',
+    ];
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('إضافة قريب'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                initialValue: selectedGroup,
+                decoration: const InputDecoration(
+                    labelText: 'صلة القرابة', isDense: true),
+                items: groups
+                    .map((g) =>
+                        DropdownMenuItem(value: g, child: Text(g)))
+                    .toList(),
+                onChanged: (v) {
+                  if (v != null) setDialogState(() => selectedGroup = v);
+                },
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: nameCtrl,
+                autofocus: true,
+                decoration: const InputDecoration(
+                    labelText: 'اسم القريب', isDense: true),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('إلغاء'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final name = nameCtrl.text.trim();
+                if (name.isNotEmpty) {
+                  final current = List<dynamic>.from(
+                      editor.customData['relatives'] as List<dynamic>? ??
+                          (spec.rawValue as List<dynamic>?) ??
+                          []);
+                  current.add({
+                    'id':
+                        'rel_${DateTime.now().millisecondsSinceEpoch}_${current.length}',
+                    'name': name,
+                    'type': 'other',
+                    'typeLabel': selectedGroup,
+                    'order': current.length,
+                  });
+                  setState(() {
+                    editor.customData['relatives'] = current;
+                  });
+                  widget.onChanged?.call();
+                  Navigator.pop(ctx);
+                }
+              },
+              child: const Text('إضافة'),
+            ),
+          ],
         ),
       ),
     );
+    nameCtrl.dispose();
   }
 
   static String _readable(dynamic v, ThemeData theme, {String key = ''}) {

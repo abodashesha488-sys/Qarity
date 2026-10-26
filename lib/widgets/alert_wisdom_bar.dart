@@ -231,7 +231,8 @@ class _AlertWisdomBarState extends State<AlertWisdomBar> {
     ];
     final d = now.day.toString().padLeft(2, '0');
     final m = now.month.toString().padLeft(2, '0');
-    final dateStr = '${days[now.weekday % 7]} $d-$m';
+    final y = now.year.toString();
+    final dateStr = '${days[now.weekday % 7]} $d-$m-$y';
 
     final wisdom = WisdomCalendar.of(DateTime.now());
 
