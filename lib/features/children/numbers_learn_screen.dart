@@ -92,8 +92,8 @@ class LearnNumbersScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  width: 96,
-                  height: 96,
+                  width: 112,
+                  height: 112,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                         colors: colors, begin: Alignment.topLeft),
@@ -108,13 +108,13 @@ class LearnNumbersScreen extends StatelessWidget {
                   child: Center(
                     child: Text(kNumberDigits[index],
                         style: GoogleFonts.tajawal(
-                            fontSize: index == 9 ? 34 : 48,
+                            fontSize: index == 9 ? 40 : 54,
                             fontWeight: FontWeight.w900,
                             color: Colors.white)),
                   ),
                 ),
                 const SizedBox(width: 16),
-                _NumberImage(index: index, size: 96, radius: 24),
+                _NumberImage(index: index, size: 112, radius: 26),
               ],
             ),
             const SizedBox(height: 10),
@@ -305,8 +305,8 @@ class _NumberTile extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _NumberImage(index: index, size: 62, radius: 18),
-              const SizedBox(height: 8),
+              _NumberImage(index: index, size: 68, radius: 20),
+              const SizedBox(height: 6),
               Text(kNumberDigits[index],
                   style: GoogleFonts.tajawal(
                       fontSize: index == 9 ? 24 : 30,

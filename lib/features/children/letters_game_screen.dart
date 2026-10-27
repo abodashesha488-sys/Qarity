@@ -281,8 +281,32 @@ class _LettersGameScreenState extends State<LettersGameScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text(q.target.emoji,
-                                style: const TextStyle(fontSize: 84)),
+                            Container(
+                              width: 105,
+                              height: 105,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFF3E0),
+                                borderRadius: BorderRadius.circular(22),
+                                border: Border.all(
+                                    color: Colors.orange.shade200, width: 2),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.08),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              clipBehavior: Clip.antiAlias,
+                              child: Image.asset(
+                                q.target.image,
+                                fit: BoxFit.contain,
+                                errorBuilder: (context, error, stack) => Center(
+                                  child: Text(q.target.emoji,
+                                      style: const TextStyle(fontSize: 64)),
+                                ),
+                              ),
+                            ),
                             const SizedBox(height: 10),
                             Text('؟ـ${word.substring(1)}',
                                 textDirection: TextDirection.rtl,

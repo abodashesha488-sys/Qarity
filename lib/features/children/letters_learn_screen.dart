@@ -359,59 +359,95 @@ class _LetterDetailSheetState extends State<_LetterDetailSheet> {
                 ChildrenSpeech.speak('كلمة $word');
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                 decoration: BoxDecoration(
                   color: colors[0].withValues(alpha: 0.22),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: colors[1].withValues(alpha: 0.25)),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: colors[1].withValues(alpha: 0.3), width: 1.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: colors[1].withValues(alpha: 0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      width: 58,
-                      height: 58,
+                      width: 88,
+                      height: 88,
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(18),
                         border: Border.all(
                           color: colors[1].withValues(alpha: 0.35),
                           width: 2,
                         ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 6,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
                       ),
                       clipBehavior: Clip.antiAlias,
                       child: Image.asset(
                         letter.image,
-                        fit: BoxFit.cover,
+                        fit: BoxFit.contain,
                         errorBuilder: (context, error, stack) => Center(
-                          child: Text(letter.emoji, style: const TextStyle(fontSize: 32)),
+                          child: Text(letter.emoji, style: const TextStyle(fontSize: 44)),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 14),
-                    Text.rich(
-                      TextSpan(
+                    const SizedBox(width: 12),
+                    Flexible(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          TextSpan(
-                            text: letter.letter,
-                            style: GoogleFonts.amiri(
-                              fontSize: 32,
-                              fontWeight: FontWeight.w700,
-                              color: colors[1],
+                          Text.rich(
+                            TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: letter.letter,
+                                  style: GoogleFonts.amiri(
+                                    fontSize: 34,
+                                    fontWeight: FontWeight.w700,
+                                    color: colors[1],
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: letter.word.substring(1),
+                                  style: GoogleFonts.amiri(
+                                    fontSize: 30,
+                                    color: const Color(0xFF4E342E),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          TextSpan(
-                            text: letter.word.substring(1),
-                            style: GoogleFonts.amiri(
-                              fontSize: 28,
-                              color: const Color(0xFF4E342E),
-                            ),
+                          const SizedBox(height: 2),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.volume_up_rounded, color: colors[1], size: 18),
+                              const SizedBox(width: 4),
+                              Text(
+                                'اسمع الكلمة',
+                                style: GoogleFonts.tajawal(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                  color: colors[1],
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    Icon(Icons.volume_down_rounded, color: colors[1], size: 20),
                   ],
                 ),
               ),
