@@ -20,6 +20,7 @@ class RoleStyle {
   static const Color premiumRed = Color(0xFFD32F2F);
   static const Color adminGold = Color(0xFFB8860B);
   static const Color medicalTeal = Color(0xFF00897B);
+  static const Color agriculturalGreen = Color(0xFF558B2F);
   static const Color legalGreen = Color(0xFF2E7D32);
   static const Color heritageBrown = Color(0xFF8D6E63);
   static const Color moderatorOrange = Color(0xFFEF6C00);
@@ -55,6 +56,8 @@ class RoleStyle {
         return adminGold;
       case 'medical_admin':
         return medicalTeal;
+      case 'agricultural_admin':
+        return agriculturalGreen;
       case 'legal_admin':
         return legalGreen;
       case 'heritage_admin':
@@ -73,6 +76,8 @@ class RoleStyle {
         return Icons.workspace_premium_rounded; // تاج ذهبي
       case 'assistant_admin':
         return Icons.shield_rounded; // درع ذهبي (أدمن مساعد)
+      case 'agricultural_admin':
+        return Icons.agriculture_rounded; // جرار زراعي (أدمن زراعي)
       case 'legal_admin':
         return Icons.gavel_rounded; // مطرقة العدالة (أدمن قانوني)
       case 'heritage_admin':
@@ -92,6 +97,8 @@ class RoleStyle {
         return gold;
       case 'medical_admin':
         return medicalTeal;
+      case 'agricultural_admin':
+        return agriculturalGreen;
       case 'legal_admin':
         return legalGreen;
       case 'heritage_admin':

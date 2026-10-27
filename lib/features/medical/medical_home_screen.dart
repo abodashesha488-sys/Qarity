@@ -56,23 +56,43 @@ class MedicalHomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
       appBar: const QurityAppBar(
           title: 'الخدمات الطبية'),
-      // البلاطات ومرتِّب الشبكة وحشوه ومساراتها كما كانت — التعديل الوحيد هنا هو
-      // حجم الأيقونة نفسها: تُرسم عند 70% من بلاطتها (تصغير 30%) وسط البلاطة على
-      // أرضيتها، فلا يُقصّ أي سجل وتبقى الشاشة كما هي.
-      body: LayoutBuilder(builder: (context, box) {
-        const vPadding = 16.0 + 28.0;
-        const spacing = 16.0;
-        final extent = ((box.maxHeight - vPadding - 3 * spacing) / 4)
-            .clamp(88.0, 240.0);
-        final tileWidth = (box.maxWidth - 32.0 - spacing) / 2;
+      body: LayoutBuilder(builder: (context, constraints) {
+        const spacing = 14.0;
+        const hPadding = 16.0;
+        const childAspectRatio = 0.89;
+        final cardWidth = (constraints.maxWidth - (hPadding * 2) - spacing) / 2;
+
         return CustomScrollView(
           physics: const BouncingScrollPhysics(),
           slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.health_and_safety_rounded,
+                      color: theme.colorScheme.primary,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'الرعاية الصحية لأهالي القرية',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              padding: const EdgeInsets.fromLTRB(hPadding, 6, hPadding, 0),
               sliver: SliverGrid(
                 delegate: SliverChildBuilderDelegate(
                   (context, index) => _MedicalSectionTile(
@@ -82,24 +102,27 @@ class MedicalHomeScreen extends StatelessWidget {
                   ),
                   childCount: 6,
                 ),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: spacing,
-                    crossAxisSpacing: spacing,
-                    mainAxisExtent: extent),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: spacing,
+                  crossAxisSpacing: spacing,
+                  childAspectRatio: childAspectRatio,
+                ),
               ),
             ),
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, spacing, 16, 28),
+              padding: const EdgeInsets.fromLTRB(hPadding, spacing, hPadding, 24),
               sliver: SliverToBoxAdapter(
                 child: Center(
                   child: SizedBox(
-                    width: tileWidth,
-                    height: extent,
-                    child: _MedicalSectionTile(
-                      index: 6,
-                      label: _sections[6].$1,
-                      image: _sections[6].$2,
+                    width: cardWidth,
+                    child: AspectRatio(
+                      aspectRatio: childAspectRatio,
+                      child: _MedicalSectionTile(
+                        index: 6,
+                        label: _sections[6].$1,
+                        image: _sections[6].$2,
+                      ),
                     ),
                   ),
                 ),
@@ -121,53 +144,50 @@ class _MedicalSectionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const imgRadius = BorderRadius.all(Radius.circular(16));
-    return Center(
-      child: FractionallySizedBox(
-        widthFactor: 0.7,
-        heightFactor: 0.7,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: imgRadius,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.22),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
-                blurRadius: 4,
-                offset: const Offset(0, 1),
-              ),
-            ],
+    final theme = Theme.of(context);
+    const imgRadius = BorderRadius.all(Radius.circular(18));
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: imgRadius,
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.16),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
-          child: Material(
-            color: Colors.transparent,
-            borderRadius: imgRadius,
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              borderRadius: imgRadius,
-              onTap: () => Navigator.pushNamed(context, '/medical/section',
-                  arguments: index),
-              child: Image.asset(
-                image,
-                width: double.infinity,
-                height: double.infinity,
-                fit: BoxFit.cover,
-                // بلاطتان في السطر: العرض الفعلي ~172dp ⇒ ~520px عند DPR 3
-                cacheWidth: 520,
-                semanticLabel: label,
-                errorBuilder: (context, error, stackTrace) => Center(
-                  child: Text(label, textAlign: TextAlign.center),
-                ),
-              ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: imgRadius,
+          onTap: () => Navigator.pushNamed(context, '/medical/section',
+              arguments: index),
+          child: Image.asset(
+            image,
+            width: double.infinity,
+            height: double.infinity,
+            fit: BoxFit.cover,
+            cacheWidth: 520,
+            semanticLabel: label,
+            errorBuilder: (context, error, stackTrace) => Center(
+              child: Text(label, textAlign: TextAlign.center),
             ),
           ),
         ),
       ),
-    ).animate(delay: (index * 45).ms).fadeIn(duration: 350.ms).scale(
-          begin: const Offset(0.92, 0.92),
+    ).animate(delay: (index * 40).ms).fadeIn(duration: 350.ms).scale(
+          begin: const Offset(0.93, 0.93),
         );
   }
 }
@@ -1734,23 +1754,6 @@ class _OpticalTabState extends State<_OpticalTab> {
     }
   }
 
-  Future<void> _renew(OpticalShop shop) async {
-    final days = await showModalBottomSheet<int>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) =>
-          OpticalRenewSheet(shopName: shop.name, featured: shop.isFeaturedAd),
-    );
-    if (days == null || !mounted) return;
-    try {
-      await _service.setFeaturedWindow(shop.id, days);
-      widget.snackbar('تم تفعيل العرض المميز لمدة $days يومًا');
-      await _loadMine();
-    } catch (e) {
-      widget.snackbar('تعذّر التجديد — تحقق من الصلاحيات: $e');
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<List<OpticalShop>>(
@@ -1815,9 +1818,6 @@ class _OpticalTabState extends State<_OpticalTab> {
                                         child: _OpticalCard(
                                           shop: s,
                                           accent: widget.color,
-                                          // الإعلان يُختار من صفحة المحل بعد الإنشاء،
-                                          // فكل محل صاحبه يملك زر تفعيل العرض المميز.
-                                          onRenew: () => _renew(s),
                                         ),
                                       )),
                                 ],
@@ -1880,11 +1880,9 @@ class _OpticalGridCard extends StatelessWidget {
 }
 
 class _OpticalCard extends StatelessWidget {
-  const _OpticalCard(
-      {required this.shop, required this.accent, this.onRenew});
+  const _OpticalCard({required this.shop, required this.accent});
   final OpticalShop shop;
   final Color accent;
-  final VoidCallback? onRenew;
 
   @override
   Widget build(BuildContext context) {
@@ -1991,22 +1989,6 @@ class _OpticalCard extends StatelessWidget {
                     context, 'بانتظار موافقة الإدارة — يظهر في الدليل بعدها'),
               if (shop.isApproved && !visible)
                 _opticalStatusRow(context, 'انتهت مدة العرض المميز'),
-              if (onRenew != null)
-                Align(
-                  alignment: AlignmentDirectional.centerStart,
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: TextButton.icon(
-                      onPressed: onRenew,
-                      icon: const Icon(Icons.star_rounded, size: 18),
-                      label: Text(
-                          shop.isFeaturedAd
-                              ? 'تجديد العرض المميز'
-                              : 'تحويل الإعلان إلى عرض مميز',
-                          style: const TextStyle(fontWeight: FontWeight.w800)),
-                    ),
-                  ),
-                ),
             ],
           ),
         ),

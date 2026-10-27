@@ -24,6 +24,12 @@ class _UsersPageState extends State<_UsersPage> {
   /// «الرجال + البائعون» ضغطة من كل شريط بلا حالة مركّبة لكل احتمال.
   String _genderFilter = 'all'; // all, male, female
 
+  /// طي وتوسيع قسم الإحصائيات لتوفير أكبر مساحة لعرض المستخدمين
+  bool _statsExpanded = false;
+
+  /// طي وتوسيع شريط مرشحات النوع
+  bool _showGenderFilter = false;
+
   /// دور المستخدم الحالي من نفس سترة المستخدمين (يُحدّث في build).
   /// يحدد ما إذا كان حساب المدير العام محمياً من إجراءاته: الأدمن المساعد
   /// لا يستطيع حذف أو تنحية المدير العام (انظر _isProtectedGeneralAdmin).
@@ -224,46 +230,120 @@ class _UsersPageState extends State<_UsersPage> {
 
             // ── إحصائيات سريعة ──────────────────────────────────
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Column(
-                children: [
-                  Row(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              child: InkWell(
+                onTap: () => setState(() => _statsExpanded = !_statsExpanded),
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest
+                        .withValues(alpha: 0.35),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: theme.colorScheme.outlineVariant
+                          .withValues(alpha: 0.25),
+                    ),
+                  ),
+                  child: Row(
                     children: [
-                      _miniStat(theme, 'الكل', '${all.length}', Colors.teal),
-                      const SizedBox(width: 8),
-                      _miniStat(
-                          theme, 'البائعون', '$sellers', Colors.deepPurple),
-                      const SizedBox(width: 8),
-                      _miniStat(theme, 'المسؤولون', '$managers',
-                          const Color(0xFF1565C0)),
-                      const SizedBox(width: 8),
-                      _miniStat(theme, 'معطّل', '$disabled',
-                          disabled > 0 ? Colors.red : Colors.grey.shade400),
+                      Icon(
+                        Icons.bar_chart_rounded,
+                        size: 17,
+                        color: theme.colorScheme.primary,
+                      ),
+                      const SizedBox(width: 7),
+                      Text(
+                        'إحصائيات وتوزيع المستخدمين',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 1.5),
+                        decoration: BoxDecoration(
+                          color:
+                              theme.colorScheme.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '${all.length}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        _statsExpanded ? 'طي الإحصائيات' : 'عرض الإحصائيات (8)',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 3),
+                      Icon(
+                        _statsExpanded
+                            ? Icons.keyboard_arrow_up_rounded
+                            : Icons.keyboard_arrow_down_rounded,
+                        size: 18,
+                        color: theme.colorScheme.primary,
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  // عدّادات النوع مجمّعة على القائمة كاملة، ورابعة تقول كم صمد
-                  // أمام المرشّحات الحالية — فلا يُحسب صفرٌ على أنه «لا نساء في
-                  // القرية» بينما المرشّح هو الذي أخفاهن.
-                  Row(
-                    key: const Key('gender-counters'),
-                    children: [
-                      _miniStat(
-                          theme, 'الرجال', '$men', const Color(0xFF1565C0)),
-                      const SizedBox(width: 8),
-                      _miniStat(
-                          theme, 'النساء', '$women', const Color(0xFFAD1457)),
-                      const SizedBox(width: 8),
-                      _miniStat(theme, 'بلا نوع', '$noGender',
-                          noGender > 0 ? Colors.orange : Colors.grey.shade400),
-                      const SizedBox(width: 8),
-                      _miniStat(
-                          theme, 'الظاهر', '${filtered.length}', Colors.brown),
-                    ],
-                  ),
-                ],
+                ),
               ),
             ),
+            if (_statsExpanded)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 6),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        _miniStat(theme, 'الكل', '${all.length}', Colors.teal),
+                        const SizedBox(width: 8),
+                        _miniStat(
+                            theme, 'البائعون', '$sellers', Colors.deepPurple),
+                        const SizedBox(width: 8),
+                        _miniStat(theme, 'المسؤولون', '$managers',
+                            const Color(0xFF1565C0)),
+                        const SizedBox(width: 8),
+                        _miniStat(theme, 'معطّل', '$disabled',
+                            disabled > 0 ? Colors.red : Colors.grey.shade400),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    // عدّادات النوع مجمّعة على القائمة كاملة، ورابعة تقول كم صمد
+                    // أمام المرشّحات الحالية — فلا يُحسب صفرٌ على أنه «لا نساء في
+                    // القرية» بينما المرشّح هو الذي أخفاهن.
+                    Row(
+                      key: const Key('gender-counters'),
+                      children: [
+                        _miniStat(
+                            theme, 'الرجال', '$men', const Color(0xFF1565C0)),
+                        const SizedBox(width: 8),
+                        _miniStat(
+                            theme, 'النساء', '$women', const Color(0xFFAD1457)),
+                        const SizedBox(width: 8),
+                        _miniStat(theme, 'بلا نوع', '$noGender',
+                            noGender > 0 ? Colors.orange : Colors.grey.shade400),
+                        const SizedBox(width: 8),
+                        _miniStat(
+                            theme, 'الظاهر', '${filtered.length}', Colors.brown),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
 
             // ── شريط الأدوات ────────────────────────────────────
             Container(
@@ -499,37 +579,146 @@ class _UsersPageState extends State<_UsersPage> {
                           ),
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  // شريط النوع مستقل عن قائمة الأدوار: الضغطة هنا تضيّق داخل
-                  // مجموعة الدور المختارة، وقائمة الدور تضيّق داخل النوع.
-                  Wrap(
-                    key: const Key('gender-filter-row'),
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      for (final g in _genderChips)
-                        ChoiceChip(
-                          key: Key('gender-filter-${g.$1}'),
-                          label: Text(g.$2),
-                          selected: _genderFilter == g.$1,
-                          avatar: Icon(
-                            g.$1 == 'all'
-                                ? Icons.filter_alt_rounded
-                                : g.$1 == kGenderGroupMale
-                                    ? Icons.male_rounded
-                                    : Icons.female_rounded,
-                            size: 18,
-                            color: _genderFilter == g.$1
-                                ? theme.colorScheme.onSecondaryContainer
-                                : theme.colorScheme.onSurfaceVariant,
+                      // زر تصفية النوع (قابل للطي)
+                      Tooltip(
+                        message: 'تصفية النوع (رجال/نساء)',
+                        child: InkWell(
+                          onTap: () => setState(() =>
+                              _showGenderFilter = !_showGenderFilter),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: _genderFilter != 'all'
+                                  ? theme.colorScheme.primary
+                                      .withValues(alpha: 0.1)
+                                  : null,
+                              border: Border.all(
+                                color: _genderFilter != 'all'
+                                    ? theme.colorScheme.primary
+                                    : theme.colorScheme.outlineVariant,
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.wc_rounded,
+                                  size: 18,
+                                  color: _genderFilter != 'all'
+                                      ? theme.colorScheme.primary
+                                      : null,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  _genderFilter == 'all'
+                                      ? 'النوع'
+                                      : (_genderFilter == kGenderGroupMale
+                                          ? 'رجال'
+                                          : 'نساء'),
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 12,
+                                    color: _genderFilter != 'all'
+                                        ? theme.colorScheme.primary
+                                        : null,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Icon(
+                                  _showGenderFilter || _genderFilter != 'all'
+                                      ? Icons.keyboard_arrow_up_rounded
+                                      : Icons.arrow_drop_down_rounded,
+                                  size: 18,
+                                  color: _genderFilter != 'all'
+                                      ? theme.colorScheme.primary
+                                      : null,
+                                ),
+                              ],
+                            ),
                           ),
-                          onSelected: (_) =>
-                              setState(() => _genderFilter = g.$1),
+                        ),
+                      ),
+                      // زر مسح الفلاتر إذا كان أي فلتر نشطاً
+                      if (_filter != 'all' ||
+                          _genderFilter != 'all' ||
+                          q.isNotEmpty)
+                        Tooltip(
+                          message: 'إلغاء جميع الفلاتر والبحث',
+                          child: InkWell(
+                            onTap: () {
+                              setState(() {
+                                _filter = 'all';
+                                _genderFilter = 'all';
+                                _search.clear();
+                              });
+                            },
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: AppColors.error.withValues(alpha: 0.1),
+                                border: Border.all(
+                                  color:
+                                      AppColors.error.withValues(alpha: 0.4),
+                                ),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.filter_alt_off_rounded,
+                                      size: 16, color: AppColors.error),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'مسح التصفية',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 12,
+                                      color: AppColors.error,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         ),
                     ],
                   ),
+                  if (_showGenderFilter || _genderFilter != 'all') ...[
+                    const SizedBox(height: 10),
+                    // شريط النوع مستقل عن قائمة الأدوار: الضغطة هنا تضيّق داخل
+                    // مجموعة الدور المختارة، وقائمة الدور تضيّق داخل النوع.
+                    Wrap(
+                      key: const Key('gender-filter-row'),
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final g in _genderChips)
+                          ChoiceChip(
+                            key: Key('gender-filter-${g.$1}'),
+                            label: Text(g.$2),
+                            selected: _genderFilter == g.$1,
+                            avatar: Icon(
+                              g.$1 == 'all'
+                                  ? Icons.filter_alt_rounded
+                                  : g.$1 == kGenderGroupMale
+                                      ? Icons.male_rounded
+                                      : Icons.female_rounded,
+                              size: 18,
+                              color: _genderFilter == g.$1
+                                  ? theme.colorScheme.onSecondaryContainer
+                                  : theme.colorScheme.onSurfaceVariant,
+                            ),
+                            onSelected: (_) =>
+                                setState(() => _genderFilter = g.$1),
+                          ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),

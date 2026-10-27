@@ -3,8 +3,8 @@ part of 'market_tabs_screen.dart';
 // ═══════════════════ Tab 1: السوق المطور بالمعايير العالمية ═══════════════════
 
 enum _MarketQuickFilter {
-  all('الكل', Icons.grid_view_rounded),
-  offers('🔥 أقوى العروض', Icons.local_fire_department_rounded),
+  all('الافتراضي', Icons.sort_rounded),
+  offers('🔥 العروض فقط', Icons.local_fire_department_rounded),
   trusted('⭐ بائعون موثوقون', Icons.verified_rounded),
   priceAsc('🏷️ الأقل سعراً', Icons.arrow_downward_rounded),
   priceDesc('💎 الأعلى سعراً', Icons.arrow_upward_rounded),
@@ -42,7 +42,7 @@ class _MarketTabState extends State<_MarketTab> {
   // تلقائيًا — بلا إعادة اشتراك وبلا قراءة جديدة.
   Timer? _offerTicker;
 
-  static const _cats = ['الكل', ...kProductCategories];
+  static const _cats = ['الكل', '🔥 العروض', ...kProductCategories];
 
   @override
   void initState() {
@@ -73,7 +73,11 @@ class _MarketTabState extends State<_MarketTab> {
     }
 
     if (_cat != 'الكل') {
-      products = products.where((p) => p.category == _cat).toList();
+      if (_cat == '🔥 العروض') {
+        products = products.where((p) => p.hasActiveOffer).toList();
+      } else {
+        products = products.where((p) => p.category == _cat).toList();
+      }
     }
 
     switch (_quickFilter) {
@@ -141,7 +145,7 @@ class _MarketTabState extends State<_MarketTab> {
 
     return CustomScrollView(
       slivers: [
-        // 1. شريط البحث العصري بنمط المتاجر العالمية
+        // 1. شريط البحث العصري بنمط المتاجر العالمية بحدود واضحة ومحددة
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
@@ -152,7 +156,7 @@ class _MarketTabState extends State<_MarketTab> {
               decoration: InputDecoration(
                 hintText: 'ابحث عن منتج، سلعة، أو بائع في القرية...',
                 hintStyle: TextStyle(
-                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.65),
                   fontSize: 13,
                 ),
                 prefixIcon: Icon(Icons.search_rounded, color: theme.colorScheme.primary),
@@ -168,18 +172,27 @@ class _MarketTabState extends State<_MarketTab> {
                     : null,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 filled: true,
-                fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.45),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3)),
+                  borderSide: BorderSide(
+                    color: theme.colorScheme.outline.withValues(alpha: 0.6),
+                    width: 1.2,
+                  ),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3)),
+                  borderSide: BorderSide(
+                    color: theme.colorScheme.outline.withValues(alpha: 0.6),
+                    width: 1.2,
+                  ),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.5),
+                  borderSide: BorderSide(
+                    color: theme.colorScheme.primary,
+                    width: 1.8,
+                  ),
                 ),
               ),
             ),
@@ -198,153 +211,108 @@ class _MarketTabState extends State<_MarketTab> {
                   ),
           ),
 
-        // 3. مركز الأنشطة السريع لسوق القرية (Quick Activity Hub)
-        if (isDefaultBrowse)
-          SliverToBoxAdapter(
-            child: _MarketQuickHub(
-              onOffersTap: () => setState(() => _quickFilter = _MarketQuickFilter.offers),
-              onShopsTap: () => widget.onSelectTab?.call(1),
-              onBuyRequestsTap: () => widget.onSelectTab?.call(2),
-              onDonationsTap: () => widget.onSelectTab?.call(3),
-            ),
-          ),
-
-        // 4. شريط الفلاتر السريعة (عروض، موثوقين، فرز أسعار)
-        SliverToBoxAdapter(
-          child: SizedBox(
-            height: 38,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: _MarketQuickFilter.values.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (context, i) {
-                final filter = _MarketQuickFilter.values[i];
-                final isSelected = filter == _quickFilter;
-                return InkWell(
-                  onTap: () => setState(() => _quickFilter = filter),
-                  borderRadius: BorderRadius.circular(12),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? theme.colorScheme.primary
-                          : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.45),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isSelected
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          filter.icon,
-                          size: 15,
-                          color: isSelected ? Colors.white : theme.colorScheme.primary,
-                        ),
-                        const SizedBox(width: 5),
-                        Text(
-                          filter.label,
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                            color: isSelected ? Colors.white : theme.colorScheme.onSurface,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ),
-
-        const SliverToBoxAdapter(child: SizedBox(height: 10)),
-
-        // 5. شريط التصنيفات البصرية بالأيقونات العصرية
-        SliverToBoxAdapter(
-          child: SizedBox(
-            height: 42,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: _cats.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (context, i) {
-                final cat = _cats[i];
-                final isSelected = cat == _cat;
-                final icon = getProductCategoryIcon(cat);
-                return InkWell(
-                  onTap: () => setState(() => _cat = cat),
-                  borderRadius: BorderRadius.circular(20),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? theme.colorScheme.primaryContainer
-                          : theme.colorScheme.surface,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: isSelected
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
-                        width: isSelected ? 1.5 : 1,
-                      ),
-                      boxShadow: isSelected
-                          ? [
-                              BoxShadow(
-                                color: theme.colorScheme.primary.withValues(alpha: 0.15),
-                                blurRadius: 6,
-                                offset: const Offset(0, 2),
-                              )
-                            ]
-                          : null,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          icon,
-                          size: 16,
-                          color: isSelected
-                              ? theme.colorScheme.onPrimaryContainer
-                              : theme.colorScheme.primary,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          cat,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isSelected
-                                ? theme.colorScheme.onPrimaryContainer
-                                : theme.colorScheme.onSurface,
-                            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ),
-
-        // 6. شريط عدد المنتجات والتصفية وأسلوب العرض
+        // 3. شريط التصنيفات البصرية النظيف بالأيقونات
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(18, 14, 18, 6),
+            padding: const EdgeInsets.only(top: 4, bottom: 6),
+            child: SizedBox(
+              height: 42,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: _cats.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (context, i) {
+                  final cat = _cats[i];
+                  final isSelected = cat == _cat;
+                  final isOfferCat = cat == '🔥 العروض';
+                  final icon = isOfferCat
+                      ? Icons.local_fire_department_rounded
+                      : getProductCategoryIcon(cat);
+
+                  final activeColor = isOfferCat
+                      ? const Color(0xFFE53935)
+                      : theme.colorScheme.primary;
+                  final activeContainer = isOfferCat
+                      ? const Color(0xFFFFEBEE)
+                      : theme.colorScheme.primaryContainer;
+                  final activeText = isOfferCat
+                      ? const Color(0xFFC62828)
+                      : theme.colorScheme.onPrimaryContainer;
+
+                  return InkWell(
+                    onTap: () => setState(() => _cat = cat),
+                    borderRadius: BorderRadius.circular(20),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? activeContainer
+                            : (isOfferCat
+                                ? const Color(0xFFFFF3E0).withValues(alpha: 0.6)
+                                : theme.colorScheme.surface),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: isSelected
+                              ? activeColor
+                              : (isOfferCat
+                                  ? const Color(0xFFFF9800).withValues(alpha: 0.5)
+                                  : theme.colorScheme.outline.withValues(alpha: 0.35)),
+                          width: isSelected ? 1.6 : 1,
+                        ),
+                        boxShadow: isSelected
+                            ? [
+                                BoxShadow(
+                                  color: activeColor.withValues(alpha: 0.2),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                )
+                              ]
+                            : null,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            icon,
+                            size: 16,
+                            color: isSelected
+                                ? activeText
+                                : (isOfferCat
+                                    ? const Color(0xFFE53935)
+                                    : theme.colorScheme.primary),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            cat,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isSelected
+                                  ? activeText
+                                  : theme.colorScheme.onSurface,
+                              fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+
+        // 4. سطر الترتيب والتصفية وعدد المنتجات ونمط العرض
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
             child: Row(
               children: [
                 Text(
                   _cat == 'الكل' ? 'جميع المنتجات' : _cat,
-                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14),
+                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13.5),
                 ),
                 const SizedBox(width: 6),
                 Container(
@@ -374,23 +342,118 @@ class _MarketTabState extends State<_MarketTab> {
                           _quickFilter = _MarketQuickFilter.all;
                         });
                       },
-                      child: Text(
-                        'إعادة ضبط',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: theme.colorScheme.error,
-                          fontWeight: FontWeight.w700,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.errorContainer.withValues(alpha: 0.4),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.close_rounded, size: 12, color: theme.colorScheme.error),
+                            const SizedBox(width: 2),
+                            Text(
+                              'إعادة ضبط',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: theme.colorScheme.error,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
                   ),
+                // زر الترتيب والتصفية المدمج
+                PopupMenuButton<_MarketQuickFilter>(
+                  initialValue: _quickFilter,
+                  onSelected: (filter) => setState(() => _quickFilter = filter),
+                  tooltip: 'ترتيب وتصفية المنتجات',
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Container(
+                    height: 32,
+                    padding: const EdgeInsets.symmetric(horizontal: 9),
+                    decoration: BoxDecoration(
+                      color: _quickFilter != _MarketQuickFilter.all
+                          ? theme.colorScheme.primaryContainer
+                          : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.45),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: _quickFilter != _MarketQuickFilter.all
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.outline.withValues(alpha: 0.35),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _quickFilter.icon,
+                          size: 14,
+                          color: _quickFilter != _MarketQuickFilter.all
+                              ? theme.colorScheme.onPrimaryContainer
+                              : theme.colorScheme.primary,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _quickFilter == _MarketQuickFilter.all ? 'الترتيب' : _quickFilter.label,
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                            color: _quickFilter != _MarketQuickFilter.all
+                                ? theme.colorScheme.onPrimaryContainer
+                                : theme.colorScheme.onSurface,
+                          ),
+                        ),
+                        const SizedBox(width: 2),
+                        Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          size: 16,
+                          color: _quickFilter != _MarketQuickFilter.all
+                              ? theme.colorScheme.onPrimaryContainer
+                              : theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ],
+                    ),
+                  ),
+                  itemBuilder: (context) => _MarketQuickFilter.values.map((f) {
+                    final isCur = f == _quickFilter;
+                    return PopupMenuItem<_MarketQuickFilter>(
+                      value: f,
+                      child: Row(
+                        children: [
+                          Icon(f.icon, size: 16, color: theme.colorScheme.primary),
+                          const SizedBox(width: 8),
+                          Text(
+                            f.label,
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: isCur ? FontWeight.w800 : FontWeight.w500,
+                              color: isCur ? theme.colorScheme.primary : null,
+                            ),
+                          ),
+                          if (isCur) ...[
+                            const Spacer(),
+                            Icon(Icons.check_rounded, size: 16, color: theme.colorScheme.primary),
+                          ],
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(width: 8),
+                // نمط العرض (شبكة / قائمة)
                 Container(
                   height: 32,
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                    color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.45),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+                      color: theme.colorScheme.outline.withValues(alpha: 0.35),
                     ),
                   ),
                   child: Row(
@@ -1540,111 +1603,6 @@ class _MarketWelcomeHeroBanner extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-// ═══════════════════ مركز أنشطة السوق السريع (Quick Hub) ═══════════════════
-
-class _MarketQuickHub extends StatelessWidget {
-  const _MarketQuickHub({
-    required this.onOffersTap,
-    required this.onShopsTap,
-    required this.onBuyRequestsTap,
-    required this.onDonationsTap,
-  });
-
-  final VoidCallback onOffersTap;
-  final VoidCallback onShopsTap;
-  final VoidCallback onBuyRequestsTap;
-  final VoidCallback onDonationsTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final items = [
-      (
-        'عروض خاصة',
-        Icons.local_fire_department_rounded,
-        const Color(0xFFE53935),
-        const Color(0xFFFFEBEE),
-        onOffersTap,
-      ),
-      (
-        'المحلات والورش',
-        Icons.store_rounded,
-        const Color(0xFF1E88E5),
-        const Color(0xFFE3F2FD),
-        onShopsTap,
-      ),
-      (
-        'سلع مطلوبة',
-        Icons.search_rounded,
-        const Color(0xFF8E24AA),
-        const Color(0xFFF3E5F5),
-        onBuyRequestsTap,
-      ),
-      (
-        'تبرعات القرية',
-        Icons.volunteer_activism_rounded,
-        const Color(0xFF2E7D32),
-        const Color(0xFFE8F5E9),
-        onDonationsTap,
-      ),
-    ];
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 2, 16, 10),
-      child: Row(
-        children: items.map((it) {
-          return Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 3),
-              child: Material(
-                color: theme.colorScheme.surface,
-                borderRadius: BorderRadius.circular(14),
-                child: InkWell(
-                  onTap: it.$5,
-                  borderRadius: BorderRadius.circular(14),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
-                      ),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(7),
-                          decoration: BoxDecoration(
-                            color: it.$4,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(it.$2, size: 18, color: it.$3),
-                        ),
-                        const SizedBox(height: 5),
-                        Text(
-                          it.$1,
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          );
-        }).toList(),
       ),
     );
   }

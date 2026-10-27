@@ -503,7 +503,10 @@ class _ShopDetailScreenState extends State<ShopDetailScreen> {
             .getShopProductsStream(ownerUid: shop.ownerUid, shopId: shop.id),
         builder: (context, snapshot) {
           final products = (snapshot.data ?? [])
-              .where((p) => p.isApproved && p.isInStock)
+              .where((p) =>
+                  p.isApproved &&
+                  p.isInStock &&
+                  p.category != kMedicalSuppliesCategory)
               .toList();
           return ListView(
             padding: const EdgeInsets.all(16),

@@ -19,6 +19,7 @@ const List<String> kProductCategories = [
   'إلكترونيات وهواتف',
   'أثاث ومفروشات',
   'ملابس وأحذية',
+  'استعدادات افراح ومناسبات',
   'مستلزمات زراعة وأعلاف',
   'سوق المستعمل',
   'ورش وصيانة',
@@ -55,6 +56,8 @@ IconData getProductCategoryIcon(String category) {
       return Icons.chair_rounded;
     case 'ملابس وأحذية':
       return Icons.checkroom_rounded;
+    case 'استعدادات افراح ومناسبات':
+      return Icons.celebration_rounded;
     case 'مستلزمات زراعة وأعلاف':
       return Icons.agriculture_rounded;
     case 'سوق المستعمل':

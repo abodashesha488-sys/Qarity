@@ -81,6 +81,140 @@ class AppThemeFamily {
   /// دوائر الاختيار في الإعدادات: الأساس thenaccent ثم التخضير ثم أرضية الصفحة
   /// — وهي أربع قيم من العائلة نفسها، فاللوّاح لا يكذب على المظهر المطبَّق.
   List<Color> get swatch => [primary, secondaryLight, mint, page];
+
+  /// صياغة ثيم مخصص متناسق بالكامل انطلاقًا من اختيار المستخدم للون الأساسي والتمييزي.
+  factory AppThemeFamily.fromUserPalette({
+    required String id,
+    required String title,
+    required Color primary,
+    Color? secondary,
+    Color? accent,
+    String? caption,
+  }) {
+    final sec = secondary ?? accent ?? Color.lerp(primary, Colors.white, 0.25)!;
+    final primaryDark = Color.lerp(primary, Colors.black, 0.45)!;
+    final primaryLight = Color.lerp(primary, Colors.white, 0.20)!;
+    final secondaryLight = Color.lerp(sec, Colors.white, 0.25)!;
+    final secondaryDark = Color.lerp(sec, Colors.black, 0.35)!;
+    final headerAccent = Color.lerp(sec, Colors.white, 0.75)!;
+    final mint = Color.lerp(primary, Colors.white, 0.88)!;
+    final sage = Color.lerp(primary, Colors.white, 0.94)!;
+    final page = Color.lerp(primary, const Color(0xFFFAFBFB), 0.96)!;
+    const surface = Color(0xFFFFFFFF);
+    final surfaceVariant = Color.lerp(primary, Colors.white, 0.90)!;
+    final textPrimary = Color.lerp(primary, Colors.black, 0.80)!;
+    final textSecondary = Color.lerp(primary, const Color(0xFF333333), 0.70)!;
+    final textTertiary = Color.lerp(primary, const Color(0xFF666666), 0.60)!;
+    final divider = Color.lerp(primary, Colors.white, 0.82)!;
+    final onWarning = Color.lerp(primary, Colors.black, 0.80)!;
+    final darkPrimary = Color.lerp(primary, Colors.black, 0.65)!;
+    final darkPrimaryContainer = Color.lerp(primary, Colors.black, 0.82)!;
+    final darkAccent = Color.lerp(sec, Colors.white, 0.35)!;
+    final darkPage = Color.lerp(primary, const Color(0xFF0D1117), 0.90)!;
+    final darkSurface = Color.lerp(primary, const Color(0xFF161B22), 0.85)!;
+    final darkInputFill = Color.lerp(primary, const Color(0xFF21262D), 0.80)!;
+    final darkHairline = Color.lerp(primary, const Color(0xFF30363D), 0.75)!;
+    const darkTextPrimary = Color(0xFFF0F6FC);
+    const darkTextSecondary = Color(0xFF8B949E);
+
+    return AppThemeFamily(
+      id: id,
+      title: title,
+      caption: caption ?? 'ثيم مخصص من تصميمك',
+      primary: primary,
+      primaryDark: primaryDark,
+      primaryLight: primaryLight,
+      secondary: sec,
+      secondaryLight: secondaryLight,
+      secondaryDark: secondaryDark,
+      headerAccent: headerAccent,
+      mint: mint,
+      sage: sage,
+      page: page,
+      surface: surface,
+      surfaceVariant: surfaceVariant,
+      textPrimary: textPrimary,
+      textSecondary: textSecondary,
+      textTertiary: textTertiary,
+      divider: divider,
+      onWarning: onWarning,
+      darkPrimary: darkPrimary,
+      darkPrimaryContainer: darkPrimaryContainer,
+      darkAccent: darkAccent,
+      darkPage: darkPage,
+      darkSurface: darkSurface,
+      darkInputFill: darkInputFill,
+      darkHairline: darkHairline,
+      darkTextPrimary: darkTextPrimary,
+      darkTextSecondary: darkTextSecondary,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'title': title,
+        'caption': caption,
+        'primary': primary.toARGB32(),
+        'primaryDark': primaryDark.toARGB32(),
+        'primaryLight': primaryLight.toARGB32(),
+        'secondary': secondary.toARGB32(),
+        'secondaryLight': secondaryLight.toARGB32(),
+        'secondaryDark': secondaryDark.toARGB32(),
+        'headerAccent': headerAccent.toARGB32(),
+        'mint': mint.toARGB32(),
+        'sage': sage.toARGB32(),
+        'page': page.toARGB32(),
+        'surface': surface.toARGB32(),
+        'surfaceVariant': surfaceVariant.toARGB32(),
+        'textPrimary': textPrimary.toARGB32(),
+        'textSecondary': textSecondary.toARGB32(),
+        'textTertiary': textTertiary.toARGB32(),
+        'divider': divider.toARGB32(),
+        'onWarning': onWarning.toARGB32(),
+        'darkPrimary': darkPrimary.toARGB32(),
+        'darkPrimaryContainer': darkPrimaryContainer.toARGB32(),
+        'darkAccent': darkAccent.toARGB32(),
+        'darkPage': darkPage.toARGB32(),
+        'darkSurface': darkSurface.toARGB32(),
+        'darkInputFill': darkInputFill.toARGB32(),
+        'darkHairline': darkHairline.toARGB32(),
+        'darkTextPrimary': darkTextPrimary.toARGB32(),
+        'darkTextSecondary': darkTextSecondary.toARGB32(),
+      };
+
+  factory AppThemeFamily.fromJson(Map<String, dynamic> json) {
+    return AppThemeFamily(
+      id: json['id'] as String,
+      title: json['title'] as String,
+      caption: (json['caption'] as String?) ?? 'ثيم مخصص',
+      primary: Color(json['primary'] as int),
+      primaryDark: Color(json['primaryDark'] as int),
+      primaryLight: Color(json['primaryLight'] as int),
+      secondary: Color(json['secondary'] as int),
+      secondaryLight: Color(json['secondaryLight'] as int),
+      secondaryDark: Color(json['secondaryDark'] as int),
+      headerAccent: Color(json['headerAccent'] as int),
+      mint: Color(json['mint'] as int),
+      sage: Color(json['sage'] as int),
+      page: Color(json['page'] as int),
+      surface: Color(json['surface'] as int),
+      surfaceVariant: Color(json['surfaceVariant'] as int),
+      textPrimary: Color(json['textPrimary'] as int),
+      textSecondary: Color(json['textSecondary'] as int),
+      textTertiary: Color(json['textTertiary'] as int),
+      divider: Color(json['divider'] as int),
+      onWarning: Color(json['onWarning'] as int),
+      darkPrimary: Color(json['darkPrimary'] as int),
+      darkPrimaryContainer: Color(json['darkPrimaryContainer'] as int),
+      darkAccent: Color(json['darkAccent'] as int),
+      darkPage: Color(json['darkPage'] as int),
+      darkSurface: Color(json['darkSurface'] as int),
+      darkInputFill: Color(json['darkInputFill'] as int),
+      darkHairline: Color(json['darkHairline'] as int),
+      darkTextPrimary: Color(json['darkTextPrimary'] as int),
+      darkTextSecondary: Color(json['darkTextSecondary'] as int),
+    );
+  }
 }
 
 /// مصدر الألوان الواحد في التطبيق.

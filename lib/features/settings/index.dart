@@ -43,6 +43,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         selected: f.id == _themeService.family.id,
                         onTap: () => _themeService.setFamily(f),
                       )),
+                  if (_themeService.customFamilies.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    _customThemesHeading(theme),
+                    ..._themeService.customFamilies.map((f) => _ThemeFamilyCard(
+                          family: f,
+                          selected: f.id == _themeService.family.id,
+                          onTap: () => _themeService.setFamily(f),
+                          onDelete: () => _confirmDeleteCustomTheme(context, f),
+                        )),
+                  ],
+                  const SizedBox(height: 8),
+                  _buildCreateThemeButton(theme, context),
                   const SizedBox(height: 6),
                   DecoratedBox(
                     decoration: BoxDecoration(
@@ -495,6 +507,104 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
+
+  Widget _customThemesHeading(ThemeData theme) {
+    final scheme = theme.colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: 10, bottom: 6),
+      child: Row(
+        children: [
+          Icon(Icons.palette_outlined, size: 16, color: scheme.onSurfaceVariant),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              'الثيمات المخصصة من تصميمك',
+              style: GoogleFonts.tajawal(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w800,
+                color: scheme.onSurface,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCreateThemeButton(ThemeData theme, BuildContext context) {
+    final primary = theme.colorScheme.primary;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          onPressed: () => _showCustomThemeBuilder(context),
+          icon: const Icon(Icons.palette_outlined, size: 18),
+          label: Text(
+            'تصميم ثيم جديد بألوانك الخاصة',
+            style: GoogleFonts.tajawal(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: primary,
+            side: BorderSide(color: primary.withValues(alpha: 0.35), width: 1.2),
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _confirmDeleteCustomTheme(BuildContext context, AppThemeFamily family) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          'حذف الثيم المخصص',
+          style: GoogleFonts.tajawal(fontWeight: FontWeight.w800, fontSize: 16),
+        ),
+        content: Text(
+          'هل تريد بالتأكيد حذف ثيم "${family.title}"؟',
+          style: GoogleFonts.tajawal(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              'إلغاء',
+              style: GoogleFonts.tajawal(fontWeight: FontWeight.w700),
+            ),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await _themeService.deleteCustomTheme(family.id);
+            },
+            child: Text(
+              'حذف',
+              style: GoogleFonts.tajawal(fontWeight: FontWeight.w800),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCustomThemeBuilder(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => const _CustomThemeBuilderSheet(),
+    );
+  }
 }
 
 /// بطاقة عائلة مظهر واحدة: دوائر ألوانها ثم اسمها ووصفها، ومارّة تحديد في
@@ -519,11 +629,13 @@ class _ThemeFamilyCard extends StatelessWidget {
     required this.family,
     required this.selected,
     required this.onTap,
+    this.onDelete,
   });
 
   final AppThemeFamily family;
   final bool selected;
   final VoidCallback onTap;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -587,7 +699,14 @@ class _ThemeFamilyCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
+              if (onDelete != null)
+                IconButton(
+                  icon: const Icon(Icons.delete_outline_rounded, size: 20),
+                  color: AppColors.error,
+                  tooltip: 'حذف الثيم المخصص',
+                  onPressed: onDelete,
+                ),
+              const SizedBox(width: 4),
               Icon(
                 selected ? Icons.check_circle_rounded : Icons.circle_outlined,
                 size: 22,
@@ -595,6 +714,422 @@ class _ThemeFamilyCard extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CustomThemeBuilderSheet extends StatefulWidget {
+  const _CustomThemeBuilderSheet();
+
+  @override
+  State<_CustomThemeBuilderSheet> createState() =>
+      _CustomThemeBuilderSheetState();
+}
+
+class _CustomThemeBuilderSheetState extends State<_CustomThemeBuilderSheet> {
+  final _nameController = TextEditingController(text: 'ثيمي الخاص');
+  Color _selectedPrimary = const Color(0xFF1B4D3E);
+  Color _selectedAccent = const Color(0xFF10B981);
+  bool _saving = false;
+
+  static const List<MapEntry<String, Color>> _primaryChoices = [
+    MapEntry('أخضر زمردي', Color(0xFF1B4D3E)),
+    MapEntry('أزرق كحلي', Color(0xFF0F172A)),
+    MapEntry('تراكوتا قرميدي', Color(0xFF9A3412)),
+    MapEntry('أرجواني ملكي', Color(0xFF4A148C)),
+    MapEntry('توت عنابي', Color(0xFF880E4F)),
+    MapEntry('كهرمان ذهبي', Color(0xFF78350F)),
+    MapEntry('فيروزي هادئ', Color(0xFF0F5147)),
+    MapEntry('نيلي عميق', Color(0xFF1E3A8A)),
+    MapEntry('غابة صنوبرية', Color(0xFF14532D)),
+    MapEntry('خوخي ليلي', Color(0xFF581C87)),
+    MapEntry('ياقوتي أحمر', Color(0xFF7F1D1D)),
+    MapEntry('برونزي صحراوي', Color(0xFF7C2D12)),
+    MapEntry('سيان قطبي', Color(0xFF164E63)),
+    MapEntry('بني قهوة', Color(0xFF431407)),
+    MapEntry('رمادي أردوازي', Color(0xFF334155)),
+    MapEntry('وردي داكن', Color(0xFF701A75)),
+  ];
+
+  static const List<MapEntry<String, Color>> _accentChoices = [
+    MapEntry('زمردي مشرق', Color(0xFF10B981)),
+    MapEntry('سماوي ناصع', Color(0xFF0EA5E9)),
+    MapEntry('كهرماني ذهبي', Color(0xFFF59E0B)),
+    MapEntry('وردي ياقوتي', Color(0xFFF43F5E)),
+    MapEntry('بنفسجي ناعم', Color(0xFF8B5CF6)),
+    MapEntry('برتقالي متوهج', Color(0xFFF97316)),
+    MapEntry('تركوازي بحري', Color(0xFF14B8A6)),
+    MapEntry('ليموني حيوي', Color(0xFF84CC16)),
+  ];
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveAndApply() async {
+    final name = _nameController.text.trim().isEmpty
+        ? 'ثيمي الخاص'
+        : _nameController.text.trim();
+    setState(() => _saving = true);
+    final customFamily = AppThemeFamily.fromUserPalette(
+      id: 'custom_${DateTime.now().millisecondsSinceEpoch}',
+      title: name,
+      caption: 'ثيم مخصص من تصميمك',
+      primary: _selectedPrimary,
+      accent: _selectedAccent,
+    );
+    await ThemeService().saveCustomTheme(customFamily);
+    if (!mounted) return;
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'تم حفظ وتطبيق ثيم "$name" بنجاح',
+          style: GoogleFonts.tajawal(fontWeight: FontWeight.w700),
+        ),
+        backgroundColor: AppColors.success,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
+    return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.9,
+      ),
+      padding: EdgeInsets.fromLTRB(20, 14, 20, 20 + bottomInset),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 20,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Center(
+              child: Container(
+                width: 44,
+                height: 4.5,
+                decoration: BoxDecoration(
+                  color: scheme.outlineVariant,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(9),
+                  decoration: BoxDecoration(
+                    color: _selectedPrimary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(Icons.palette_rounded,
+                      color: _selectedPrimary, size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'تصميم ثيم مخصص',
+                        style: GoogleFonts.tajawal(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      Text(
+                        'اختر الألوان الأساسية وثانويتك لتوليد مظهر متناسق',
+                        style: GoogleFonts.tajawal(
+                          fontSize: 12,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _nameController,
+              style: GoogleFonts.tajawal(fontWeight: FontWeight.w700),
+              decoration: InputDecoration(
+                labelText: 'اسم الثيم',
+                labelStyle: GoogleFonts.tajawal(fontSize: 13.5),
+                prefixIcon: const Icon(Icons.edit_rounded, size: 20),
+                filled: true,
+                fillColor:
+                    scheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(color: scheme.outline),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(color: scheme.outlineVariant),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(color: _selectedPrimary, width: 1.8),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'معاينة حية للمظهر',
+              style: GoogleFonts.tajawal(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: scheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: scheme.outlineVariant),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
+                    color: _selectedPrimary,
+                    child: Row(
+                      children: [
+                        const Icon(Icons.menu_rounded,
+                            color: Colors.white, size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            _nameController.text.trim().isEmpty
+                                ? 'قرية أبوديشيشة'
+                                : _nameController.text.trim(),
+                            style: GoogleFonts.tajawal(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 13.5,
+                            ),
+                          ),
+                        ),
+                        const Icon(Icons.search_rounded,
+                            color: Colors.white, size: 20),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    color: theme.brightness == Brightness.dark
+                        ? const Color(0xFF141922)
+                        : const Color(0xFFF8FAFC),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: _selectedPrimary.withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(Icons.nature_people_rounded,
+                              color: _selectedPrimary, size: 20),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'بطاقة تجريبية لمعاينة الألوان',
+                            style: GoogleFonts.tajawal(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: _selectedAccent,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            'زر تمييز',
+                            style: GoogleFonts.tajawal(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              'اللون الأساسي (للهيدر والبطاقات القيادية)',
+              style: GoogleFonts.tajawal(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: scheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _primaryChoices.map((entry) {
+                final isSelected = _selectedPrimary == entry.value;
+                return Tooltip(
+                  message: entry.key,
+                  child: InkWell(
+                    onTap: () => setState(() => _selectedPrimary = entry.value),
+                    borderRadius: BorderRadius.circular(20),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: entry.value,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isSelected ? Colors.white : scheme.outline,
+                          width: isSelected ? 2.5 : 1,
+                        ),
+                        boxShadow: isSelected
+                            ? [
+                                BoxShadow(
+                                  color: entry.value.withValues(alpha: 0.5),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: isSelected
+                          ? const Icon(Icons.check_rounded,
+                              color: Colors.white, size: 20)
+                          : null,
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              'اللون الثانوي (للأزرار المميزة والتمييز البصري)',
+              style: GoogleFonts.tajawal(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: scheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _accentChoices.map((entry) {
+                final isSelected = _selectedAccent == entry.value;
+                return Tooltip(
+                  message: entry.key,
+                  child: InkWell(
+                    onTap: () => setState(() => _selectedAccent = entry.value),
+                    borderRadius: BorderRadius.circular(20),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: entry.value,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isSelected ? Colors.white : scheme.outline,
+                          width: isSelected ? 2.5 : 1,
+                        ),
+                        boxShadow: isSelected
+                            ? [
+                                BoxShadow(
+                                  color: entry.value.withValues(alpha: 0.5),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: isSelected
+                          ? const Icon(Icons.check_rounded,
+                              color: Colors.white, size: 20)
+                          : null,
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _saving ? null : _saveAndApply,
+                icon: _saving
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.check_circle_rounded, size: 20),
+                label: Text(
+                  _saving ? 'جاري الحفظ...' : 'حفظ وتطبيق الثيم',
+                  style: GoogleFonts.tajawal(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                style: FilledButton.styleFrom(
+                  backgroundColor: _selectedPrimary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

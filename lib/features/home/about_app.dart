@@ -183,6 +183,11 @@ class _AboutScreenState extends State<AboutScreen> {
           const SizedBox(height: 10),
           _changelogCard(theme),
           const SizedBox(height: 22),
+          _sectionTitle(theme, 'فريق الإدارة ومجلس مسؤولي المنصة',
+              Icons.supervised_user_circle_rounded),
+          const SizedBox(height: 10),
+          _adminBoardCard(theme),
+          const SizedBox(height: 22),
           _sectionTitle(theme, 'روابط', Icons.link_rounded),
           const SizedBox(height: 10),
           _linkCard(theme,
@@ -596,6 +601,21 @@ class _AboutScreenState extends State<AboutScreen> {
   Widget _changelogCard(ThemeData theme) {
     final additions = <(IconData, String, Color)>[
       (
+        Icons.agriculture_rounded,
+        'بوابة «خدمات المزارع»: مواعيد الزراعة والري والمحاصيل والاستشارات الزراعية المخصصة.',
+        const Color(0xFF558B2F)
+      ),
+      (
+        Icons.storefront_rounded,
+        'سوق القرية: تصنيفات مرئية وعروض فورية، والمحلات ككرتين في السطر ومنتجات لكل محل.',
+        const Color(0xFFEF6C00)
+      ),
+      (
+        Icons.palette_rounded,
+        'تخصيص المظهر: ثيمات متناسقة مع إمكانية تصميم وحفظ ثيمك الخاص بألوانك المفضلة.',
+        const Color(0xFF7B1FA2)
+      ),
+      (
         Icons.campaign_rounded,
         'صفحة «إعلانات القرية»: إعلانات تجارية وخدمية وإنشائية بصفحة تفاصيل لكل إعلان.',
         const Color(0xFF311B92)
@@ -626,11 +646,6 @@ class _AboutScreenState extends State<AboutScreen> {
         const Color(0xFF1565C0)
       ),
       (
-        Icons.storefront_rounded,
-        'سوق القرية: المحلات ككرتين في السطر، وعروض تنتهي تلقائيًا، ومنتجات لكل محل.',
-        const Color(0xFFEF6C00)
-      ),
-      (
         Icons.child_care_rounded,
         'ركن الأطفال: تسعة أنشطة تعليمية — حروف وأرقام ووضوء وصلاة وقصص وأخلاق وتلوين.',
         const Color(0xFFF9A825)
@@ -650,21 +665,6 @@ class _AboutScreenState extends State<AboutScreen> {
         'زر «تحديث الآن» ينزّل التحديث ويثبّته فعليًا على الجهاز.',
         const Color(0xFF00897B)
       ),
-      (
-        Icons.dashboard_customize_rounded,
-        'لوحة التحكم: تبويبات مراجعة مصنّفة — المستلزمات الطبية وثلاث تبويبات لدليل الخدمات.',
-        const Color(0xFF5E35B1)
-      ),
-      (
-        Icons.view_quilt_rounded,
-        'هيدر موحّد لكل الصفحات، وزر إضافة أخضر في الأعلى، وشبكة رئيسية بستة عشر قسمًا.',
-        const Color(0xFF6A1B9A)
-      ),
-      (
-        Icons.wifi_off_rounded,
-        'العمل بلا اتصال: المحتوى محفوظ محليًا ويظهر فور عودة الشبكة.',
-        const Color(0xFF455A64)
-      ),
     ];
 
     return Container(
@@ -679,7 +679,7 @@ class _AboutScreenState extends State<AboutScreen> {
         children: [
           for (var i = 0; i < additions.length; i++) ...[
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 9),
+              padding: const EdgeInsets.symmetric(vertical: 8),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -698,9 +698,9 @@ class _AboutScreenState extends State<AboutScreen> {
                     child: Text(
                       additions[i].$2,
                       style: TextStyle(
-                          fontSize: 13.5,
+                          fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          height: 1.6,
+                          height: 1.5,
                           color: theme.colorScheme.onSurface),
                     ),
                   ),
@@ -713,6 +713,252 @@ class _AboutScreenState extends State<AboutScreen> {
                   thickness: 1,
                   color: theme.dividerColor.withValues(alpha: 0.35)),
           ],
+        ],
+      ),
+    );
+  }
+
+  void _showRoleDialog(BuildContext context, _AdminBoardRole role) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: role.color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(role.icon, color: role.color, size: 24),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(role.title,
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          color: role.color)),
+                  Text(role.badge,
+                      style: const TextStyle(
+                          fontSize: 12, fontWeight: FontWeight.w700)),
+                ],
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('نطاق الاختصاص:',
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: role.color)),
+            const SizedBox(height: 4),
+            Text(role.jurisdiction,
+                style: const TextStyle(fontSize: 13.5, height: 1.5)),
+            const SizedBox(height: 12),
+            Text('المهام والمسؤوليات:',
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: role.color)),
+            const SizedBox(height: 4),
+            Text(role.description,
+                style: const TextStyle(fontSize: 13, height: 1.55)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('إغلاق'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _adminBoardCard(ThemeData theme) {
+    const roles = <_AdminBoardRole>[
+      _AdminBoardRole(
+        title: 'المدير العام',
+        jurisdiction: 'الإشراف الشامل والسياسات العامة',
+        description:
+            'إدارة المنظومة الشاملة، تعيين ومراجعة صلاحيات الحسابات، والاعتماد النهائي للقرارات الاستراتيجية للمنصة.',
+        icon: Icons.workspace_premium_rounded,
+        color: Color(0xFF1565C0),
+        badge: 'القيادة العامة',
+      ),
+      _AdminBoardRole(
+        title: 'الأدمن المساعد',
+        jurisdiction: 'المراجعة اليومية ومساندة الإدارة',
+        description:
+            'مراجعة وتدقيق طلبات النشر اليومية (الأخبار، المناسبات، إعلانات القرية، والسوق) والتنسيق المستمر مع المدير العام.',
+        icon: Icons.shield_rounded,
+        color: Color(0xFF6A1B9A),
+        badge: 'مراجعة المحتوى',
+      ),
+      _AdminBoardRole(
+        title: 'مدير المركز الطبي',
+        jurisdiction: 'المركز الطبي الخيري والعيادات التخصصية',
+        description:
+            'إدارة وتنظيم مواعيد وعيادات المركز الطبي الخيري وتحديث التخصصات الطبية ومتابعة استفسارات أهالي القرية.',
+        icon: Icons.medical_services_rounded,
+        color: Color(0xFF00897B),
+        badge: 'الرعاية الصحية',
+      ),
+      _AdminBoardRole(
+        title: 'مدير الخدمات الزراعية',
+        jurisdiction: 'بوابة المزارع والإرشاد الزراعي',
+        description:
+            'الإشراف على بوابة المزارع، نشر التوجيهات الموسمية للمحاصيل والري، ومتابعة الاستشارات الزراعية ومستلزمات الإنتاج.',
+        icon: Icons.agriculture_rounded,
+        color: Color(0xFF558B2F),
+        badge: 'القطاع الزراعي',
+      ),
+      _AdminBoardRole(
+        title: 'أدمن الاستشارات القانونية',
+        jurisdiction: 'مستشار القرية والتوثيق القانوني',
+        description:
+            'إدارة سجل المحامين المعتمد بالقرية، توفير المراجع القضائية، والرد التخصصي المعتمد على استشارات المواطنين.',
+        icon: Icons.gavel_rounded,
+        color: Color(0xFF2E7D32),
+        badge: 'الاستشارات القانونية',
+      ),
+      _AdminBoardRole(
+        title: 'أدمن التراث والأرشيف',
+        jurisdiction: 'ذاكرة القرية وتاريخ العائلات والمعالم',
+        description:
+            'توثيق التاريخ العريق لأبوديشيشة، حفظ الوثائق القديمة والذكريات، وإبراز الشخصيات الرائدة ومعالم القرية التراثية.',
+        icon: Icons.auto_stories_rounded,
+        color: Color(0xFF8D6E63),
+        badge: 'التراث والذاكرة',
+      ),
+      _AdminBoardRole(
+        title: 'المشرف المجتمعي',
+        jurisdiction: 'حوارات مندرة القرية والتفاعل المجتمعي',
+        description:
+            'متابعة تفاعلات مندرة القرية، تعزيز الحوار البنّاء بين الأهالي، وصون قيم وتقاليد المجتمع الريفي الأصيل.',
+        icon: Icons.verified_user_rounded,
+        color: Colors.orange,
+        badge: 'إشراف المجتمع',
+      ),
+    ];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+        ),
+      ),
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Icon(Icons.diversity_3_rounded,
+                    color: theme.colorScheme.primary, size: 20),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'لوحة استعراض مديري ومسؤولي التخصصات بالمنصة',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: EdgeInsets.zero,
+            itemCount: roles.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+              mainAxisExtent: 68,
+            ),
+            itemBuilder: (context, index) {
+              final r = roles[index];
+              return InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () => _showRoleDialog(context, r),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: r.color.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: r.color.withValues(alpha: 0.25)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: r.color.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(r.icon, color: r.color, size: 18),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              r.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w900,
+                                color: r.color,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              r.badge,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
         ],
       ),
     );
@@ -867,4 +1113,22 @@ class _AppSection {
   final String title;
   final IconData icon;
   final Color color;
+}
+
+class _AdminBoardRole {
+  const _AdminBoardRole({
+    required this.title,
+    required this.jurisdiction,
+    required this.description,
+    required this.icon,
+    required this.color,
+    required this.badge,
+  });
+
+  final String title;
+  final String jurisdiction;
+  final String description;
+  final IconData icon;
+  final Color color;
+  final String badge;
 }

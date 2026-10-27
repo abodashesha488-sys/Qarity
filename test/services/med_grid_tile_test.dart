@@ -368,16 +368,13 @@ void main() {
       expect(s, contains('if (widget.index != 0 || !_isMedicalAdmin) return null;'));
     });
 
-    test('البوابة الطبية: بلاطتان في السطر، أربع صفوف محسوبة من المتاح', () {
+    test('البوابة الطبية: بلاطتان في السطر بنسبة أبعاد هندسية متناسقة', () {
       final s = src('lib/features/medical/medical_home_screen.dart');
       expect(s, contains('crossAxisCount: 2'));
       expect(s, contains('cacheWidth: 520'));
-      // الكثافة تُشتق من ارتفاع الجسم لا من نسبة مجمّدة: القسمة على أربعة.
       expect(s, contains('LayoutBuilder'));
-      expect(s, contains('(box.maxHeight - vPadding - 3 * spacing) / 4'));
-      expect(s, contains('mainAxisExtent: extent'));
-      expect(s, isNot(contains('childAspectRatio')),
-          reason: 'النسبة الثابتة تجعل عدد الصفوف يعتمد على العرض');
+      expect(s, contains('childAspectRatio: childAspectRatio'));
+      expect(s, contains('_MedicalSectionTile('));
       expect(
           RegExp(r"\('([^']+)', 'assets/images/[^']+'\)", multiLine: true)
               .allMatches(s)
@@ -385,18 +382,13 @@ void main() {
           7);
     });
 
-    test('بوابة خدمات المزارع: بلاطتان في السطر وأربع صفوف', () {
+    test('بوابة خدمات المزارع: بلاطتان في السطر بنسبة أبعاد هندسية متناسقة', () {
       final s = src('lib/features/services/farmer_services_screen.dart');
       expect(s, contains('crossAxisCount: 2'));
       expect(s, contains('LayoutBuilder'));
-      // يُطرح رأس «كل ما يحتاجه المزارع» لأنه يسكن نفس ارتفاع الجسم.
-      expect(s, contains('const titleBlock = 16.0 + 4.0 + 32.0;'));
-      expect(s,
-          contains('(box.maxHeight - titleBlock - vPadding - 3 * spacing) / 4'));
-      expect(s, contains('mainAxisExtent: extent'));
-      expect(s, isNot(contains('childAspectRatio')));
-      // البلاطات ومساراتها وصورها كما كانت — التنسيق وحده تغيّر.
+      expect(s, contains('childAspectRatio: childAspectRatio'));
       expect(s, contains('_ServiceTile('));
+      expect(s, contains('كل ما يحتاجه المزارع في مكان واحد'));
     });
 
     test('تبويب المحلات في سوق القرية: كرتان في السطر', () {
@@ -426,7 +418,7 @@ void main() {
       final wisdom = src('lib/widgets/alert_wisdom_bar.dart');
       // صندوق الهيدر بحجمه الأنيق ومواضع الحواف المنحنية
       expect(home, contains('bottomRight: Radius.circular(63)'));
-      expect(home, contains('EdgeInsets.fromLTRB(26, 12, 26, 48)'));
+      expect(home, contains('EdgeInsets.fromLTRB(26, 4, 26, 48)'));
       expect(home, contains('bottomLeft: Radius.circular(63)'));
       // الجرس فوق زر البحث في الهيدر
       expect(home, contains('NotificationBellButton(compact: true)'));

@@ -443,8 +443,9 @@ class MarketProduct implements BaseModel {
 
   /// هل يُعدّ هذا المنتج من معروضات محلٍّ بعينه؟ المرتبط بمحل لا يظهر في سواه
   /// ولو كان لنفس البائع — وإلا تكررت منتجاته في كل محلاته. والقديم بلا ربط
-  /// يبقى ملكًا لبائعه في كل محلاته كما كان قبل الربط.
+  /// يبقى ملكًا لبائعه في كل محلاته كما كان قبل الربط. المستلزمات الطبية لا تتبع أي محل.
   bool belongsToShop({required String ownerUid, required String shopId}) {
+    if (category == kMedicalSuppliesCategory) return false;
     final linked = this.shopId;
     if (linked != null && linked.isNotEmpty) return linked == shopId;
     return sellerId == ownerUid;

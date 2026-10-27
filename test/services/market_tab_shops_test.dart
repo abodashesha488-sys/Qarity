@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:qurity/core/constants/product_categories.dart';
 import 'package:qurity/models/data_models.dart';
 import 'package:qurity/services/content_cleanup_service.dart';
 import 'package:qurity/services/market_service.dart';
@@ -12,6 +13,7 @@ Map<String, dynamic> _doc({
   required String name,
   required String sellerId,
   String? shopId,
+  String category = 'عام',
   bool isApproved = true,
   int stock = 5,
 }) {
@@ -20,7 +22,7 @@ Map<String, dynamic> _doc({
     'description': 'وصف',
     'price': 10,
     'imageUrl': '',
-    'category': 'عام',
+    'category': category,
     'sellerName': 'بائع',
     'sellerPhone': '0100',
     'sellerId': sellerId,
@@ -62,6 +64,13 @@ void main() {
       expect(legacy.belongsToShop(ownerUid: 'u1', shopId: 's1'), isTrue);
       expect(legacy.belongsToShop(ownerUid: 'u1', shopId: 's2'), isTrue);
       expect(legacy.belongsToShop(ownerUid: 'u2', shopId: 's1'), isFalse);
+    });
+
+    test('المستلزمات الطبية لا تتبع أي محل أبدًا ولو كانت لنفس البائع', () {
+      final med = MarketProduct.fromJson(
+          _doc(name: 'كرسي متحرك', sellerId: 'u1', category: kMedicalSuppliesCategory),
+          'd3');
+      expect(med.belongsToShop(ownerUid: 'u1', shopId: 's1'), isFalse);
     });
   });
 

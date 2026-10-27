@@ -36,7 +36,6 @@ class _OpticalShopDetailScreenState extends State<OpticalShopDetailScreen> {
   final OpticalShopService _service = OpticalShopService();
   final MarketService _market = MarketService();
   Stream<List<MarketProduct>>? _productsStream;
-  bool _renewing = false;
 
   String? get _uid {
     try {
@@ -99,36 +98,6 @@ class _OpticalShopDetailScreenState extends State<OpticalShopDetailScreen> {
     if (id == null || id.isEmpty) return Stream<List<MarketProduct>>.value(const []);
     return _productsStream ??=
         _market.getShopProductsStream(ownerUid: id, shopId: shopId);
-  }
-
-  Future<void> _renew(OpticalShop shop) async {
-    final days = await showModalBottomSheet<int>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) =>
-          OpticalRenewSheet(shopName: shop.name, featured: shop.isFeaturedAd),
-    );
-    if (days == null || !mounted) return;
-    setState(() => _renewing = true);
-    try {
-      await _service.setFeaturedWindow(shop.id, days);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('تم تفعيل العرض المميز لمدة $days يومًا'),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ));
-      }
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('تعذّر التجديد — تحقق من الصلاحيات'),
-          behavior: SnackBarBehavior.floating,
-        ));
-      }
-    } finally {
-      if (mounted) setState(() => _renewing = false);
-    }
   }
 
   @override
@@ -245,7 +214,7 @@ class _OpticalShopDetailScreenState extends State<OpticalShopDetailScreen> {
                         const SizedBox(height: 14),
                         const _NoticeBanner(
                           text: 'انتهت مدة العرض المميز، لذلك اختفى المحل من '
-                              'دليل النظارات. يمكن لصاحبه تجديده ليعود ظاهرًا.',
+                              'دليل النظارات. يرجى مراجعة إدارة التطبيق لتجديد التمييز.',
                           accent: kOpticalGold,
                         ),
                       ],
@@ -356,28 +325,6 @@ class _OpticalShopDetailScreenState extends State<OpticalShopDetailScreen> {
                               style: TextStyle(fontWeight: FontWeight.w800)),
                         ),
                       if (isOwner) ...[
-                        const SizedBox(height: 12),
-                        OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 14),
-                              side: const BorderSide(color: kOpticalGold)),
-                          onPressed:
-                              _renewing ? null : () => _renew(shop),
-                          icon: _renewing
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                      strokeWidth: 2))
-                              : const Icon(Icons.star_rounded, color: kOpticalGold),
-                          label: Text(
-                              shop.isFeaturedAd
-                                  ? 'تجديد العرض المميز'
-                                  : 'تحويل الإعلان إلى عرض مميز',
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w800)),
-                        ),
                         const SizedBox(height: 12),
                         _ownerActions(shop),
                       ],

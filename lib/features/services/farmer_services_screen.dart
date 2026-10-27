@@ -45,37 +45,41 @@ class FarmerServicesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    // أربع صفوف في الشاشة الواحدة مثل بوابة الخدمات الطبية: ارتفاع البلاطة يُحسب
-    // من المتاح فعليًا لا من نسبة ثابتة. يُطرح رأس «كل ما يحتاجه المزارع في مكان
-    // واحد» (حشوه 16 أعلى و4 أسفل + سطر العنوان) لأن السلايفرز يتقاسم معه نفس
-    // الارتفاع. المرتِّب محسوب على أربعة صفوف سواء كانت البلاطات خمسًا أو ستًّا،
-    // فحذف بلاطة لا يغيّر هندسة الشبكة.
     return Scaffold(
       appBar: const QurityAppBar(title: 'خدمات المزارع'),
-      body: LayoutBuilder(builder: (context, box) {
-        const titleBlock = 16.0 + 4.0 + 32.0;
-        const vPadding = 12.0 + 28.0;
-        const spacing = 16.0;
-        final extent =
-            ((box.maxHeight - titleBlock - vPadding - 3 * spacing) / 4)
-                .clamp(88.0, 240.0)
-                .toDouble();
+      body: LayoutBuilder(builder: (context, constraints) {
+        const spacing = 14.0;
+        const hPadding = 16.0;
+        const childAspectRatio = 0.89;
+        final cardWidth = (constraints.maxWidth - (hPadding * 2) - spacing) / 2;
+
         return CustomScrollView(
+          physics: const BouncingScrollPhysics(),
           slivers: [
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-                child: Text(
-                  'كل ما يحتاجه المزارع في مكان واحد',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w900,
-                    color: theme.colorScheme.primary,
-                  ),
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.agriculture_rounded,
+                      color: theme.colorScheme.primary,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'كل ما يحتاجه المزارع في مكان واحد',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              padding: const EdgeInsets.fromLTRB(hPadding, 6, hPadding, 0),
               sliver: SliverGrid(
                 delegate: SliverChildBuilderDelegate(
                   (context, index) => _ServiceTile(
@@ -84,24 +88,26 @@ class FarmerServicesScreen extends StatelessWidget {
                   ),
                   childCount: 4,
                 ),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   mainAxisSpacing: spacing,
                   crossAxisSpacing: spacing,
-                  mainAxisExtent: extent,
+                  childAspectRatio: childAspectRatio,
                 ),
               ),
             ),
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, spacing, 16, 28),
+              padding: const EdgeInsets.fromLTRB(hPadding, spacing, hPadding, 24),
               sliver: SliverToBoxAdapter(
                 child: Center(
                   child: SizedBox(
-                    width: ((box.maxWidth - 32.0 - spacing) / 2),
-                    height: extent,
-                    child: _ServiceTile(
-                      service: _services[4],
-                      index: 4,
+                    width: cardWidth,
+                    child: AspectRatio(
+                      aspectRatio: childAspectRatio,
+                      child: _ServiceTile(
+                        service: _services[4],
+                        index: 4,
+                      ),
                     ),
                   ),
                 ),
@@ -122,52 +128,49 @@ class _ServiceTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const imgRadius = BorderRadius.all(Radius.circular(16));
-    return Center(
-      child: FractionallySizedBox(
-        widthFactor: 0.7,
-        heightFactor: 0.7,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: imgRadius,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.22),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
-                blurRadius: 4,
-                offset: const Offset(0, 1),
-              ),
-            ],
+    final theme = Theme.of(context);
+    const imgRadius = BorderRadius.all(Radius.circular(18));
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: imgRadius,
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.16),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
-          child: Material(
-            color: Colors.transparent,
-            borderRadius: imgRadius,
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              borderRadius: imgRadius,
-              onTap: () => Navigator.pushNamed(context, service.route),
-              child: Image.asset(
-                service.image,
-                width: double.infinity,
-                height: double.infinity,
-                fit: BoxFit.cover,
-                // بلاطتان في السطر: العرض الفعلي ~172dp ⇒ ~520px عند DPR 3
-                cacheWidth: 520,
-                semanticLabel: '${service.title}: ${service.description}',
-                errorBuilder: (context, error, stackTrace) => Center(
-                  child: Text(service.title, textAlign: TextAlign.center),
-                ),
-              ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: imgRadius,
+          onTap: () => Navigator.pushNamed(context, service.route),
+          child: Image.asset(
+            service.image,
+            width: double.infinity,
+            height: double.infinity,
+            fit: BoxFit.cover,
+            cacheWidth: 520,
+            semanticLabel: '${service.title}: ${service.description}',
+            errorBuilder: (context, error, stackTrace) => Center(
+              child: Text(service.title, textAlign: TextAlign.center),
             ),
           ),
         ),
       ),
-    ).animate(delay: (index * 45).ms).fadeIn(duration: 350.ms).scale(
-          begin: const Offset(0.92, 0.92),
+    ).animate(delay: (index * 40).ms).fadeIn(duration: 350.ms).scale(
+          begin: const Offset(0.93, 0.93),
         );
   }
 }

@@ -756,11 +756,11 @@ class _HeroHeader extends StatelessWidget {
           const SafeArea(
             bottom: false,
             child: Padding(
-              padding: EdgeInsets.fromLTRB(26, 12, 26, 48),
+              padding: EdgeInsets.fromLTRB(26, 4, 26, 48),
               child: SizedBox(
                 height: kHeroBodyHeight,
                 child: Align(
-                  alignment: Alignment.centerRight,
+                  alignment: Alignment.topRight,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -830,7 +830,7 @@ class _HeaderSearchButton extends StatelessWidget {
           Navigator.pushNamed(context, AppRoutes.globalSearch);
         },
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7.5),
           decoration: BoxDecoration(
             color: AppColors.primaryDark.withValues(alpha: 0.90),
             borderRadius: BorderRadius.circular(999),
@@ -846,13 +846,13 @@ class _HeaderSearchButton extends StatelessWidget {
           child: const Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.search_rounded, size: 14, color: Color(0xFFFFE082)),
+              Icon(Icons.search_rounded, size: 15, color: Color(0xFFFFE082)),
               SizedBox(width: 4),
               Text(
                 'بحث',
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: 10.5,
+                  fontSize: 11,
                   fontWeight: FontWeight.w800,
                 ),
               ),

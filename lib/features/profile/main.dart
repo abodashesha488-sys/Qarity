@@ -654,7 +654,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       'admin' => ('مدير عام', const Color(0xFF1565C0), Icons.admin_panel_settings_rounded),
       'assistant_admin' => ('أدمن مساعد', const Color(0xFF6A1B9A), Icons.shield_rounded),
       'medical_admin' => ('مدير المركز الطبي', const Color(0xFF00897B), Icons.medical_services_rounded),
+      'agricultural_admin' => ('مدير الخدمات الزراعية', const Color(0xFF558B2F), Icons.agriculture_rounded),
       'legal_admin' => ('أدمن الاستشارات القانونية', const Color(0xFF2E7D32), Icons.gavel_rounded),
+      'heritage_admin' => ('أدمن التراث', const Color(0xFF8D6E63), Icons.auto_stories_rounded),
       'moderator' => ('مشرف', Colors.orange, Icons.verified_user_rounded),
       'seller' => ('بائع', Colors.deepPurple, Icons.store_rounded),
       _ => ('مستخدم', Colors.teal, Icons.person_rounded),
@@ -836,11 +838,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _showUpgradeDialog(BuildContext context, ThemeData theme) async {
-    if (_user == null) return;
+    final user = _user;
+    if (user == null) return;
     final messenger = ScaffoldMessenger.of(context);
     final notesController = TextEditingController();
-    var isSellerCategory = true;
-    var selectedTarget = 'gold'; // default
+    final currentRole = user.role;
+    final currentSellerType = user.sellerType;
+    final isCurrentlyAdmin = [
+      'admin',
+      'assistant_admin',
+      'medical_admin',
+      'agricultural_admin',
+      'legal_admin',
+      'heritage_admin',
+      'moderator'
+    ].contains(currentRole);
+
+    var isSellerCategory = !isCurrentlyAdmin;
+    var selectedTarget = 'gold';
+
+    if (isCurrentlyAdmin) {
+      selectedTarget = (currentRole == 'admin') ? 'assistant_admin' : currentRole;
+    } else if (currentRole == 'seller') {
+      if (currentSellerType == SellerType.premiumSeller) {
+        selectedTarget = 'premium';
+      } else if (currentSellerType == SellerType.superSeller) {
+        selectedTarget = 'super_seller';
+      } else {
+        selectedTarget = 'gold';
+      }
+    } else {
+      selectedTarget = 'gold';
+    }
+
     var isSubmitting = false;
 
     final sellerOptions = [
@@ -895,6 +925,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         'متابعة والرد على الاستشارات القانونية في مستشار القرية',
         Icons.gavel_rounded,
         const Color(0xFF2E7D32),
+      ),
+      (
+        'heritage_admin',
+        'أدمن التراث والأرشيف',
+        'إدارة وتوثيق تاريخ القرية والذاكرة والشخصيات البارزة',
+        Icons.auto_stories_rounded,
+        const Color(0xFF8D6E63),
       ),
       (
         'moderator',
@@ -957,6 +994,52 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           color: theme.colorScheme.onSurfaceVariant),
                     ),
                     const SizedBox(height: 14),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerHighest
+                            .withValues(alpha: 0.45),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: theme.colorScheme.outlineVariant
+                              .withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info_outline_rounded,
+                              size: 18, color: theme.colorScheme.primary),
+                          const SizedBox(width: 8),
+                          Text(
+                            'حالتك الحالية:',
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: theme.colorScheme.onSurfaceVariant),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            user.roleLabel,
+                            style: TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w900,
+                                color: theme.colorScheme.primary),
+                          ),
+                          if (user.role == 'seller' &&
+                              user.sellerType != null) ...[
+                            const SizedBox(width: 4),
+                            Text(
+                              '(${user.sellerType == SellerType.premiumSeller ? 'مميز' : user.sellerType == SellerType.superSeller ? 'فائق' : 'ذهبي'})',
+                              style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: theme.colorScheme.primary),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
                     SegmentedButton<bool>(
                       segments: const [
                         ButtonSegment(
@@ -974,8 +1057,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       onSelectionChanged: (set) {
                         setSheet(() {
                           isSellerCategory = set.first;
-                          selectedTarget =
-                              isSellerCategory ? 'gold' : 'assistant_admin';
+                          if (isSellerCategory) {
+                            if (currentRole == 'seller') {
+                              if (currentSellerType ==
+                                  SellerType.premiumSeller) {
+                                selectedTarget = 'premium';
+                              } else if (currentSellerType ==
+                                  SellerType.superSeller) {
+                                selectedTarget = 'super_seller';
+                              } else {
+                                selectedTarget = 'gold';
+                              }
+                            } else {
+                              selectedTarget = 'gold';
+                            }
+                          } else {
+                            if (isCurrentlyAdmin) {
+                              selectedTarget = (currentRole == 'admin')
+                                  ? 'assistant_admin'
+                                  : currentRole;
+                            } else {
+                              selectedTarget = 'assistant_admin';
+                            }
+                          }
                         });
                       },
                     ),
@@ -989,23 +1093,75 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           for (final opt in options)
-                            RadioListTile<String>(
-                              value: opt.$1,
-                              dense: true,
-                              title: Text(opt.$2,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w800,
-                                      fontSize: 14)),
-                              subtitle: Text(opt.$3,
-                                  style: const TextStyle(fontSize: 11)),
-                              secondary: Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                  color: opt.$5.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Icon(opt.$4, color: opt.$5, size: 20),
-                              ),
+                            Builder(
+                              builder: (context) {
+                                final isCurrentItem = isSellerCategory
+                                    ? (currentRole == 'seller' &&
+                                        ((opt.$1 == 'premium' &&
+                                                currentSellerType ==
+                                                    SellerType.premiumSeller) ||
+                                            (opt.$1 == 'gold' &&
+                                                currentSellerType ==
+                                                    SellerType.goldSeller) ||
+                                            (opt.$1 == 'super_seller' &&
+                                                currentSellerType ==
+                                                    SellerType.superSeller)))
+                                    : (currentRole == opt.$1);
+
+                                return RadioListTile<String>(
+                                  value: opt.$1,
+                                  dense: true,
+                                  title: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          opt.$2,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ),
+                                      if (isCurrentItem) ...[
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 7, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color:
+                                                opt.$5.withValues(alpha: 0.16),
+                                            borderRadius:
+                                                BorderRadius.circular(6),
+                                            border: Border.all(
+                                                color: opt.$5
+                                                    .withValues(alpha: 0.4)),
+                                          ),
+                                          child: Text(
+                                            'حالتك الحالية',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w900,
+                                              color: opt.$5,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                  subtitle: Text(opt.$3,
+                                      style: const TextStyle(fontSize: 11)),
+                                  secondary: Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: opt.$5.withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child:
+                                        Icon(opt.$4, color: opt.$5, size: 20),
+                                  ),
+                                );
+                              },
                             ),
                         ],
                       ),
@@ -1150,6 +1306,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         'medical_admin' => const Color(0xFF00897B),
         'agricultural_admin' => const Color(0xFF558B2F),
         'legal_admin' => const Color(0xFF2E7D32),
+        'heritage_admin' => const Color(0xFF8D6E63),
         'moderator' => Colors.orange,
         _ => theme.colorScheme.primary,
       };

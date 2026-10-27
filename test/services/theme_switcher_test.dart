@@ -35,17 +35,27 @@ void main() {
     return AppTheme.darkTheme;
   }
 
-  group('عائلات الثيمات الثلاث', () {
+  group('عائلات الثيمات السبع', () {
     test('لكل عائلة معرّف وعنوان ووصف، ولا يتكرر معرّف', () {
-      expect(AppThemes.all, hasLength(3));
+      expect(AppThemes.all, hasLength(7));
       final ids = AppThemes.all.map((f) => f.id).toList();
-      expect(ids.toSet(), hasLength(3));
+      expect(ids.toSet(), hasLength(7));
       for (final f in AppThemes.all) {
         expect(f.id, isNotEmpty);
         expect(f.title, isNotEmpty);
         expect(f.caption, isNotEmpty);
       }
-      expect(ids, containsAll(['green_eco', 'modern_blue', 'warm_terracotta']));
+      expect(
+          ids,
+          containsAll([
+            'green_eco',
+            'modern_blue',
+            'warm_terracotta',
+            'royal_purple',
+            'ruby_berry',
+            'golden_amber',
+            'deep_teal',
+          ]));
     });
 
     test('الأخضر البيئي يحمل ألوان المستخدم الحرفية (فاتح + داكن زمردي مغاير)',

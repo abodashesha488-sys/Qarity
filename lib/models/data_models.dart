@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../core/constants/app_colors.dart';
+import '../core/constants/product_categories.dart';
 import '../core/utils/status_utils.dart';
 
 part 'data_models_content.dart';

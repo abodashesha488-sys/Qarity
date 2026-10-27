@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../core/constants/product_categories.dart';
 import '../models/data_models.dart';
 import 'cache_service.dart';
 import 'notification_inbox_service.dart';
@@ -252,7 +253,9 @@ class MarketService {
         .snapshots()
         .map((snapshot) => snapshot.docs
             .map((doc) => MarketProduct.fromJson(doc.data(), doc.id))
-            .where((p) => p.belongsToShop(ownerUid: ownerUid, shopId: shopId))
+            .where((p) =>
+                p.category != kMedicalSuppliesCategory &&
+                p.belongsToShop(ownerUid: ownerUid, shopId: shopId))
             .toList());
   }
 
