@@ -714,7 +714,7 @@ void main() {
     };
 
     Future<void> openEdit(WidgetTester tester, Map<String, dynamic> item,
-        {AdminService? service}) async {
+        {AdminService? service, bool useRawEditor = true}) async {
       await tester.pumpWidget(MaterialApp(
         home: Builder(
           builder: (context) => Scaffold(
@@ -728,6 +728,7 @@ void main() {
                               docId: 'p1',
                               item: item,
                               service: service,
+                              useRawEditor: useRawEditor,
                             ))),
                 child: const Text('افتح التعديل'),
               ),
@@ -880,6 +881,46 @@ void main() {
       expect(data.containsKey('subjects'), isFalse);
       expect(data.containsKey('stages'), isFalse);
       expect(data.containsKey('providerKind'), isFalse);
+    });
+
+    testWidgets('تعديل الأدمن بالنموذج الأساسي المخصص (الافتراضي) يعرض النموذج ويعتمد فوراً',
+        (tester) async {
+      bigScreen(tester);
+      final fake = FakeFirebaseFirestore();
+      await fake.collection('service_providers').doc('p1').set({
+        ...eduItem,
+        'isApproved': false,
+      });
+
+      await openEdit(
+        tester,
+        {
+          ...eduItem,
+          'isApproved': false,
+        },
+        service: AdminService.withFirestore(fake),
+        useRawEditor: false,
+      );
+
+      // يظهر نموذج ProviderFormSheet المخصص للخدمة بدلاً من محرر المستندات الخام
+      expect(find.byType(ProviderFormSheet), findsOneWidget);
+      expect(
+          find.text(
+              'تعديل ونشر فوري من لوحة التحكم: يتم تحديث البيانات ونشرها فوراً في التطبيق دون الحاجة للموافقة مجدداً.'),
+          findsOneWidget);
+      expect(find.text('تمييز السجل في الدليل (مميز)'), findsOneWidget);
+      expect(find.text('حفظ ونشر التعديلات فوراً'), findsOneWidget);
+
+      // حفظ التعديلات
+      await tester.ensureVisible(find.text('حفظ ونشر التعديلات فوراً'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('حفظ ونشر التعديلات فوراً'));
+      await tester.pumpAndSettle();
+
+      final updated =
+          (await fake.collection('service_providers').doc('p1').get()).data()!;
+      expect(updated['isApproved'], isTrue,
+          reason: 'تعديل الأدمن يعتمد وينشر فوراً دون الحاجة لإعادة الموافقة');
     });
   });
 

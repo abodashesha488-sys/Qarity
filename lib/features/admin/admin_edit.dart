@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/firebase_ts.dart';
 import '../../models/data_models.dart';
+import '../../models/service_provider_model.dart';
 import '../../services/admin_service.dart';
 import '../../widgets/document_field_editor.dart';
 import '../../widgets/qurity_app_bar.dart';
+import '../services/service_directory_screen.dart';
 
 /// شاشة تعديل الأدمن لأي عنصر — تُظهر **كل** حقول الوثيقة لا ما تعرفه القائمة
 /// فقط، وتُدير الصور (معاينة وحذف ورفع ولصق رابط) في مواضعها كلها.
@@ -14,13 +16,16 @@ class AdminEditScreen extends StatefulWidget {
   final String docId;
   final Map<String, dynamic> item;
   final AdminService? service;
+  final bool useRawEditor;
 
-  const AdminEditScreen(
-      {super.key,
-      required this.collection,
-      required this.docId,
-      required this.item,
-      this.service});
+  const AdminEditScreen({
+    super.key,
+    required this.collection,
+    required this.docId,
+    required this.item,
+    this.service,
+    this.useRawEditor = false,
+  });
 
   @override
   State<AdminEditScreen> createState() => _AdminEditScreenState();
@@ -30,6 +35,7 @@ class _AdminEditScreenState extends State<AdminEditScreen> {
   final DocumentEditor _editor = DocumentEditor();
   late final List<DocFieldSpec> _fields;
   bool _isSaving = false;
+  late bool _showRawEditor = widget.useRawEditor;
 
   @override
   void initState() {
@@ -597,10 +603,64 @@ class _AdminEditScreenState extends State<AdminEditScreen> {
       );
     }
 
+    final isServiceProvider = widget.collection == 'service_providers' ||
+        widget.collection.startsWith('tab_svc_');
+
+    if (isServiceProvider && !_showRawEditor) {
+      final provider = ServiceProvider.fromJson(widget.item, widget.docId);
+      final cat = provider.category.isNotEmpty
+          ? provider.category
+          : (widget.collection == 'tab_svc_agricultural'
+              ? ServiceCategory.agricultural
+              : (widget.collection == 'tab_svc_educational'
+                  ? ServiceCategory.educational
+                  : ServiceCategory.technicians));
+
+      return Scaffold(
+        appBar: QurityAppBar(
+          title: 'تعديل ${ServiceCategory.label(cat)}',
+          actions: [
+            IconButton(
+              tooltip: 'التبديل إلى محرر الحقول المتقدمة',
+              icon: const Icon(Icons.tune_rounded),
+              onPressed: () => setState(() => _showRawEditor = true),
+            ),
+          ],
+        ),
+        body: SafeArea(
+          child: ProviderFormSheet(
+            category: cat,
+            userId: provider.submittedBy ?? '',
+            userName: provider.submittedByName ?? '',
+            existing: provider,
+            isAdmin: true,
+            onSave: (updated) async {
+              final data = updated.toJson();
+              data['isApproved'] = true;
+              await (widget.service ?? AdminService()).updateItem(
+                'service_providers',
+                widget.docId,
+                data,
+              );
+              if (mounted) {
+                _toast('تم الحفظ بنجاح');
+              }
+            },
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: QurityAppBar(
         title: 'تعديل ${_collectionName(widget.collection)}',
         actions: [
+          if (isServiceProvider)
+            IconButton(
+              tooltip: 'التبديل إلى نموذج الخدمة الأساسي',
+              icon: const Icon(Icons.dashboard_customize_rounded),
+              onPressed: () => setState(() => _showRawEditor = false),
+            ),
           TextButton.icon(
             key: const ValueKey('admin-edit-save'),
             onPressed: _isSaving ? null : _save,

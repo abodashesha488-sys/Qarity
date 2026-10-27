@@ -9,6 +9,7 @@ import '../../core/utils/helpers.dart';
 import '../../core/utils/launch_link.dart';
 import '../../models/service_provider_model.dart';
 import '../../routes/app_routes.dart';
+import '../../services/admin_service.dart';
 import '../../services/favorites_service.dart';
 import '../../services/service_provider_service.dart';
 import '../../services/share_service.dart';
@@ -188,8 +189,8 @@ class _ServiceProviderDetailScreenState
     ));
   }
 
-  /// تعديل صاحب السجل: نفس ورقة الإضافة بـ`existing`، والحفظ يمرّ بـ`update`
-  /// الذي يفرض العودة إلى المراجعة ولا يمسّ النسبة.
+  /// تعديل صاحب السجل أو الأدمن: نفس ورقة الإضافة بـ`existing`.
+  /// إذا كان المعدّل أدمن تُحفظ وتُنشر التعديلات فوراً دون إعادة للمراجعة.
   Future<void> _openEdit(ServiceProvider provider) async {
     String authorName = '';
     try {
@@ -207,12 +208,20 @@ class _ServiceProviderDetailScreenState
         userId: _currentUid,
         userName: authorName.isEmpty ? (provider.submittedByName ?? '') : authorName,
         existing: provider,
+        isAdmin: _canModerate,
       ),
     );
     if (res == null) return;
     try {
-      await _service.update(res);
-      _snack('تم حفظ التعديلات — عاد السجل إلى المراجعة');
+      if (_canModerate) {
+        final data = res.toJson();
+        data['isApproved'] = true;
+        await AdminService().updateItem('service_providers', res.id, data);
+        _snack('تم حفظ التعديلات ونشرها فوراً في التطبيق');
+      } else {
+        await _service.update(res);
+        _snack('تم حفظ التعديلات — عاد السجل إلى المراجعة');
+      }
     } catch (e) {
       _snack('تعذّر حفظ التعديل — تحقّق من الصلاحيات أو من الاتصال', error: true);
     }
@@ -228,14 +237,14 @@ class _ServiceProviderDetailScreenState
     }
   }
 
-  /// صفا «تعديل/حذف» لصاحب السجل فقط — الإدارة تعدّل وتميّز من لوحة التحكم،
-  /// لأن قواعد البند ٨ تجيز تعديل المالك لسجله وحده.
+  /// صفا «تعديل/حذف» لصاحب السجل أو الإدارة المشرفة.
   Widget? _ownerActions(ServiceProvider provider) {
     final owner = provider.submittedBy ?? '';
-    if (_currentUid.isEmpty || _currentUid != owner) return null;
+    final isOwner = _currentUid.isNotEmpty && _currentUid == owner;
+    if (!isOwner && !_canModerate) return null;
     return OwnerActions(
       keyTag: 'provider-detail',
-      ownerId: owner,
+      ownerId: owner.isNotEmpty ? owner : _currentUid,
       currentUserId: _currentUid,
       itemName: provider.name,
       editLabel: 'تعديل السجل',

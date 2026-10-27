@@ -1877,14 +1877,17 @@ class _EmptyCategory extends StatelessWidget {
 /// نموذج إضافة بيان إلى دليل الخدمات (عام لثلاث فئات، وبحقول تعليمية
 /// متعددة الاختيار للفئة التعليمية).
 class ProviderFormSheet extends StatefulWidget {
-  const ProviderFormSheet(
-      {super.key,
-      required this.category,
-      required this.userId,
-      required this.userName,
-      this.existing,
-      this.uploader,
-      this.bytesSource});
+  const ProviderFormSheet({
+    super.key,
+    required this.category,
+    required this.userId,
+    required this.userName,
+    this.existing,
+    this.uploader,
+    this.bytesSource,
+    this.isAdmin = false,
+    this.onSave,
+  });
   final String category;
   final String userId;
   final String userName;
@@ -1898,11 +1901,22 @@ class ProviderFormSheet extends StatefulWidget {
   final ImageUploadService? uploader;
   final ImageBytesSource? bytesSource;
 
+  /// تعديل الإدارة من لوحة التحكم — يعتمد البيان فوراً ويتيح ضبط التمييز
+  final bool isAdmin;
+
+  /// دالة الحفظ المخصصة (تُستخدم في شاشة تعديل الإدارة لحفظ ونشر التعديل فوراً)
+  final Future<void> Function(ServiceProvider provider)? onSave;
+
   @override
   State<ProviderFormSheet> createState() => _ProviderFormSheetState();
 }
 
 class _ProviderFormSheetState extends State<ProviderFormSheet> {
+  late String _category = (widget.existing?.category.trim().isNotEmpty ?? false)
+      ? widget.existing!.category.trim()
+      : widget.category;
+  late bool _isFeatured = widget.existing?.isFeatured ?? false;
+
   late final TextEditingController _nameC =
       TextEditingController(text: widget.existing?.name ?? '');
   late final TextEditingController _phoneC =
@@ -1921,7 +1935,7 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
   /// القائمة الحالية، فإبدالها ببداية القائمة كان يغيّر حرفة حرفيٍّ قديم
   /// لمجرد أن تسميتها أُزيلت من `kTechnicianCrafts`.
   List<String> get _specialtyOptions {
-    final options = kSubcategoriesFor(widget.category);
+    final options = kSubcategoriesFor(_category);
     final saved = widget.existing?.specialty.trim() ?? '';
     if (saved.isEmpty || options.contains(saved)) return options;
     return [saved, ...options];
@@ -1930,7 +1944,7 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
   String get _initialSpecialty {
     final options = _specialtyOptions;
     final saved = widget.existing?.specialty.trim() ?? '';
-    return options.contains(saved) ? saved : options.first;
+    return options.contains(saved) ? saved : (options.isNotEmpty ? options.first : '');
   }
 
   // ── الخدمات التعليمية: صفة + اختيار متعدد ──
@@ -1950,7 +1964,7 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
 
   bool get _isEdit => widget.existing != null;
 
-  bool get _isEdu => widget.category == ServiceCategory.educational;
+  bool get _isEdu => _category == ServiceCategory.educational;
 
   /// تخصصات كتبها صاحب السجل بنفسه (تُقبل عدة قيم مفصولة بفواصل).
   List<String> get _customSubjects => _customSubjectC.text
@@ -1959,7 +1973,7 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
       .where((e) => e.isNotEmpty)
       .toList(growable: false);
 
-  Color get _accent => ServiceCategory.color(widget.category);
+  Color get _accent => ServiceCategory.color(_category);
 
   /// حبر التمييز في نموذج الإضافة: كل مواضعه هنا أيقونةٌ أو عنوانٌ أو حدٌّ فوق
   /// أرضية النموذج لا لوحةٌ مصمتة، فسطوعه يُرفع في الداكن ويبقى اللون نفسه
@@ -2065,42 +2079,50 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
     ];
     setState(() => _saving = true);
     final editing = widget.existing;
-    Navigator.pop(
-      context,
-      ServiceProvider(
-        // التعديل يعيد نفس السجل: المعرّف والتاريخ والنسبة وحالة الإدارة
-        // تُقرأ من السول كما هي، و`update` هو من يفرض العودة إلى المراجعة.
-        id: editing?.id ?? '',
-        category: widget.category,
-        specialty: _isEdu ? '' : _specialty,
-        name: name,
-        phone: phone,
-        address: _addressC.text.trim(),
-        description: _descC.text.trim(),
-        photoUrl: _photoUrl,
-        isApproved: editing?.isApproved ?? false,
-        isFeatured: editing?.isFeatured ?? false,
-        rating: editing?.rating ?? 0,
-        ratingCount: editing?.ratingCount ?? 0,
-        submittedBy: editing?.submittedBy ?? widget.userId,
-        submittedByName: editing?.submittedByName ?? widget.userName,
-        createdAt: editing?.createdAt,
-        providerKind: _kind,
-        eduTypes:
-            _isEdu ? kEduTypes.where(_eduTypes.contains).toList() : const [],
-        stages: _isEdu ? kEduStages.where(_stages.contains).toList() : const [],
-        subjects: _isEdu ? subjects : const [],
-        universityNote: wantsUniversity ? _universityC.text.trim() : '',
-        offersPrivateTutoring:
-            _isEdu && _kind == kEduKindTeacher && _privateTutoring,
-      ),
+    final resultProvider = ServiceProvider(
+      id: editing?.id ?? '',
+      category: _category,
+      specialty: _isEdu ? '' : _specialty,
+      name: name,
+      phone: phone,
+      address: _addressC.text.trim(),
+      description: _descC.text.trim(),
+      photoUrl: _photoUrl,
+      isApproved: widget.isAdmin ? true : (editing?.isApproved ?? false),
+      isFeatured: widget.isAdmin ? _isFeatured : (editing?.isFeatured ?? false),
+      rating: editing?.rating ?? 0,
+      ratingCount: editing?.ratingCount ?? 0,
+      submittedBy: editing?.submittedBy ?? widget.userId,
+      submittedByName: editing?.submittedByName ?? widget.userName,
+      createdAt: editing?.createdAt,
+      providerKind: _kind,
+      eduTypes:
+          _isEdu ? kEduTypes.where(_eduTypes.contains).toList() : const [],
+      stages: _isEdu ? kEduStages.where(_stages.contains).toList() : const [],
+      subjects: _isEdu ? subjects : const [],
+      universityNote: wantsUniversity ? _universityC.text.trim() : '',
+      offersPrivateTutoring:
+          _isEdu && _kind == kEduKindTeacher && _privateTutoring,
     );
+
+    if (widget.onSave != null) {
+      widget.onSave!(resultProvider).then((_) {
+        if (mounted) Navigator.pop(context, true);
+      }).catchError((e) {
+        if (mounted) {
+          setState(() => _saving = false);
+          _warn('تعذّر الحفظ: $e');
+        }
+      });
+    } else {
+      Navigator.pop(context, resultProvider);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isEdu = widget.category == ServiceCategory.educational;
+    final isEdu = _category == ServiceCategory.educational;
     // الحبر الأحمر للتنبيه: يبقى `#B71C1C` في الفاتح حرفيًا، وفي الداكن يُرفع
     // سطوعه (6.07 على البطاقة الداكنة) فالحقل والحد والنص والأيقونة لون واحد.
     final Color redInk = AppColors.inkOn(const Color(0xFFB71C1C), theme.brightness);
@@ -2114,22 +2136,23 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
           children: [
             Row(
               children: [
-                Icon(ServiceCategory.icon(widget.category),
+                Icon(ServiceCategory.icon(_category),
                     color: _accentInk, size: 22),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                       _isEdit
-                          ? 'تعديل ${ServiceCategory.label(widget.category)}'
-                          : 'إضافة إلى ${ServiceCategory.label(widget.category)}',
+                          ? 'تعديل ${ServiceCategory.label(_category)}'
+                          : 'إضافة إلى ${ServiceCategory.label(_category)}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                           fontWeight: FontWeight.w900, fontSize: 17)),
                 ),
-                IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close_rounded)),
+                if (!widget.isAdmin)
+                  IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close_rounded)),
               ],
             ),
             const SizedBox(height: 8),
@@ -2234,24 +2257,104 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
             _field(theme, _descC, 'نبذة عن الخدمة (اختياري)',
                 Icons.description_rounded,
                 maxLines: 3),
+            if (widget.isAdmin) ...[
+              _dropdown(
+                theme,
+                'القسم التابع له البيان',
+                const [
+                  ServiceCategory.technicians,
+                  ServiceCategory.educational,
+                  ServiceCategory.agricultural,
+                ],
+                _category,
+                Icons.folder_special_rounded,
+                (v) => setState(() {
+                  _category = v;
+                  _specialty = _specialtyOptions.isNotEmpty ? _specialtyOptions.first : '';
+                }),
+                labelBuilder: (v) => ServiceCategory.label(v),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: (_isFeatured
+                      ? const Color(0xFFFEF3C7)
+                      : theme.colorScheme.surface),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: _isFeatured
+                        ? const Color(0xFFB8860B)
+                        : theme.colorScheme.outlineVariant,
+                    width: _isFeatured ? 1.4 : 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.star_rounded,
+                        size: 22,
+                        color: _isFeatured
+                            ? const Color(0xFFB8860B)
+                            : theme.colorScheme.onSurfaceVariant),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('تمييز السجل في الدليل (مميز)',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w900, fontSize: 13.5)),
+                          Text(
+                              'يظهر السجل بإطار ذهبي وشارة مميز وفي مقدمة القائمة',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant)),
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      value: _isFeatured,
+                      activeThumbColor: const Color(0xFFB8860B),
+                      onChanged: (v) => setState(() => _isFeatured = v),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
             const SizedBox(height: 14),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: redInk.withValues(alpha: 0.07),
+                color: widget.isAdmin
+                    ? AppColors.primary.withValues(alpha: 0.08)
+                    : redInk.withValues(alpha: 0.07),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: redInk.withValues(alpha: 0.35)),
+                border: Border.all(
+                  color: widget.isAdmin
+                      ? AppColors.primary.withValues(alpha: 0.35)
+                      : redInk.withValues(alpha: 0.35),
+                ),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.warning_amber_rounded, size: 18, color: redInk),
+                  Icon(
+                    widget.isAdmin
+                        ? Icons.verified_rounded
+                        : Icons.warning_amber_rounded,
+                    size: 18,
+                    color: widget.isAdmin ? AppColors.primary : redInk,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'ستتم مراجعة الإضافة من الإدارة قبل نشرها في الدليل',
+                      widget.isAdmin
+                          ? 'تعديل ونشر فوري من لوحة التحكم: يتم تحديث البيانات ونشرها فوراً في التطبيق دون الحاجة للموافقة مجدداً.'
+                          : 'ستتم مراجعة الإضافة من الإدارة قبل نشرها في الدليل',
                       style: theme.textTheme.bodySmall?.copyWith(
-                          color: redInk, fontWeight: FontWeight.w700),
+                        color: widget.isAdmin ? AppColors.primary : redInk,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
                 ],
@@ -2260,17 +2363,22 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
             const SizedBox(height: 14),
             FilledButton.icon(
               style: FilledButton.styleFrom(
-                  backgroundColor: _accent,
+                  backgroundColor: widget.isAdmin ? AppColors.primary : _accent,
                   // لوحةُ الحفظ لونُ القسم الخام لا لون السمة، فالحبر يجب أن
                   // يُثبَّت بياضًا: في الداكن يرث `onPrimary` الأخضر الداكن ولا
                   // يُقرأ فوق اللون نفسه. في الفاتح البياض هو الموروث أصلًا.
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14)),
               onPressed: _saving ? null : _submit,
-              icon: Icon(_isEdit ? Icons.save_rounded : Icons.send_rounded,
+              icon: Icon(
+                  widget.isAdmin
+                      ? Icons.check_circle_rounded
+                      : (_isEdit ? Icons.save_rounded : Icons.send_rounded),
                   size: 18),
               label: Text(
-                  _isEdit ? 'حفظ التعديلات' : 'إرسال للمراجعة',
+                  widget.isAdmin
+                      ? 'حفظ ونشر التعديلات فوراً'
+                      : (_isEdit ? 'حفظ التعديلات' : 'إرسال للمراجعة'),
                   style: const TextStyle(fontWeight: FontWeight.w800)),
             ),
           ],
@@ -2580,7 +2688,8 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
   }
 
   Widget _dropdown(ThemeData theme, String label, List<String> values,
-      String current, IconData icon, void Function(String) onChanged) {
+      String current, IconData icon, void Function(String) onChanged,
+      {String Function(String)? labelBuilder}) {
     return DropdownButtonFormField<String>(
       initialValue: values.contains(current) ? current : values.first,
       isExpanded: true,
@@ -2593,7 +2702,8 @@ class _ProviderFormSheetState extends State<ProviderFormSheet> {
       items: values
           .map((v) => DropdownMenuItem(
               value: v,
-              child: Text(v, maxLines: 1, overflow: TextOverflow.ellipsis)))
+              child: Text(labelBuilder != null ? labelBuilder(v) : v,
+                  maxLines: 1, overflow: TextOverflow.ellipsis)))
           .toList(),
       onChanged: (v) => onChanged(v ?? current),
       menuMaxHeight: 340,
