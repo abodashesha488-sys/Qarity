@@ -756,7 +756,7 @@ class _HeroHeader extends StatelessWidget {
           const SafeArea(
             bottom: false,
             child: Padding(
-              padding: EdgeInsets.fromLTRB(20, 8, 20, 48),
+              padding: EdgeInsets.fromLTRB(26, 4, 26, 48),
               child: SizedBox(
                 height: kHeroBodyHeight,
                 child: Align(
@@ -764,9 +764,9 @@ class _HeroHeader extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      _HeaderSearchButton(),
-                      SizedBox(width: 8),
                       NotificationBellButton(compact: true),
+                      SizedBox(width: 8),
+                      _HeaderSearchButton(),
                     ],
                   ),
                 ),
