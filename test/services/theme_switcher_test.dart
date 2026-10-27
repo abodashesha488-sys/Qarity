@@ -233,6 +233,42 @@ void main() {
       expect(AppTheme.darkTheme.scaffoldBackgroundColor,
           AppThemes.warmTerracotta.darkPage);
     });
+
+    test('الثيم المخصص بالتخصيص الكامل: نوع الخط، خلفية الصفحات، الكروت، ولون الخط', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final custom = AppThemeFamily.fromFullCustomization(
+        id: 'custom_full_1',
+        title: 'ثيمي الخاص المتكامل',
+        fontFamily: 'Cairo',
+        primary: const Color(0xFF2C3E50),
+        secondary: const Color(0xFFE74C3C),
+        page: const Color(0xFFECF0F1),
+        surface: const Color(0xFFFFFFFF),
+        textPrimary: const Color(0xFF1A252F),
+      );
+
+      expect(custom.fontFamily, 'Cairo');
+      expect(custom.primary, const Color(0xFF2C3E50));
+      expect(custom.page, const Color(0xFFECF0F1));
+      expect(custom.surface, const Color(0xFFFFFFFF));
+      expect(custom.textPrimary, const Color(0xFF1A252F));
+
+      // تحقق من التسلسل JSON والاستعادة
+      final json = custom.toJson();
+      expect(json['fontFamily'], 'Cairo');
+      final restored = AppThemeFamily.fromJson(json);
+      expect(restored.fontFamily, 'Cairo');
+      expect(restored.primary, custom.primary);
+      expect(restored.page, custom.page);
+
+      // حفظ في ThemeService وتطبيقه
+      final service = ThemeService();
+      await service.saveCustomTheme(custom);
+      expect(service.family.id, 'custom_full_1');
+      expect(service.family.fontFamily, 'Cairo');
+      expect(AppColors.primary, const Color(0xFF2C3E50));
+      expect(AppColors.page, const Color(0xFFECF0F1));
+    });
   });
 
   group('عقد ThemeData لكل عائلة', () {

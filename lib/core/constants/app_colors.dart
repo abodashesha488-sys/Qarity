@@ -13,6 +13,7 @@ class AppThemeFamily {
     required this.id,
     required this.title,
     required this.caption,
+    this.fontFamily = 'Tajawal',
     required this.primary,
     required this.primaryDark,
     required this.primaryLight,
@@ -50,6 +51,9 @@ class AppThemeFamily {
 
   /// سطر واحد يسمّي درجة اللون لا أرقامها: المستخدم يقارن الانطباع لا الـhex.
   final String caption;
+
+  /// نوع الخط المعتمد لواجهات الثيم (الافتراضي Tajawal).
+  final String fontFamily;
 
   final Color primary;
   final Color primaryDark;
@@ -90,8 +94,36 @@ class AppThemeFamily {
     Color? secondary,
     Color? accent,
     String? caption,
+    String fontFamily = 'Tajawal',
   }) {
-    final sec = secondary ?? accent ?? Color.lerp(primary, Colors.white, 0.25)!;
+    return AppThemeFamily.fromFullCustomization(
+      id: id,
+      title: title,
+      caption: caption ?? 'ثيم مخصص من تصميمك',
+      fontFamily: fontFamily,
+      primary: primary,
+      secondary: secondary ?? accent,
+    );
+  }
+
+  /// صياغة ثيم مخصص يتيح للمستخدم تخصيص كل عنصر: الخط، لونه، الأساسي، الثانوي،
+  /// وخلفية الصفحات والكروت، مع استنباط باقي الدرجات تلقائيًا بتناسق بصري متكامل.
+  factory AppThemeFamily.fromFullCustomization({
+    required String id,
+    required String title,
+    String? caption,
+    String fontFamily = 'Tajawal',
+    required Color primary,
+    Color? secondary,
+    Color? page,
+    Color? surface,
+    Color? textPrimary,
+  }) {
+    final sec = secondary ?? Color.lerp(primary, Colors.white, 0.25)!;
+    final pg = page ?? Color.lerp(primary, const Color(0xFFFAFBFB), 0.96)!;
+    final surf = surface ?? const Color(0xFFFFFFFF);
+    final txt = textPrimary ?? Color.lerp(primary, Colors.black, 0.80)!;
+
     final primaryDark = Color.lerp(primary, Colors.black, 0.45)!;
     final primaryLight = Color.lerp(primary, Colors.white, 0.20)!;
     final secondaryLight = Color.lerp(sec, Colors.white, 0.25)!;
@@ -99,21 +131,19 @@ class AppThemeFamily {
     final headerAccent = Color.lerp(sec, Colors.white, 0.75)!;
     final mint = Color.lerp(primary, Colors.white, 0.88)!;
     final sage = Color.lerp(primary, Colors.white, 0.94)!;
-    final page = Color.lerp(primary, const Color(0xFFFAFBFB), 0.96)!;
-    const surface = Color(0xFFFFFFFF);
-    final surfaceVariant = Color.lerp(primary, Colors.white, 0.90)!;
-    final textPrimary = Color.lerp(primary, Colors.black, 0.80)!;
-    final textSecondary = Color.lerp(primary, const Color(0xFF333333), 0.70)!;
-    final textTertiary = Color.lerp(primary, const Color(0xFF666666), 0.60)!;
-    final divider = Color.lerp(primary, Colors.white, 0.82)!;
-    final onWarning = Color.lerp(primary, Colors.black, 0.80)!;
+    final surfaceVariant = Color.lerp(surf, primary, 0.08)!;
+    final textSecondary = Color.lerp(txt, Colors.black54, 0.45)!;
+    final textTertiary = Color.lerp(txt, Colors.black38, 0.65)!;
+    final divider = Color.lerp(surf, primary, 0.15)!;
+    final onWarning = txt;
+
     final darkPrimary = Color.lerp(primary, Colors.black, 0.65)!;
     final darkPrimaryContainer = Color.lerp(primary, Colors.black, 0.82)!;
     final darkAccent = Color.lerp(sec, Colors.white, 0.35)!;
-    final darkPage = Color.lerp(primary, const Color(0xFF0D1117), 0.90)!;
-    final darkSurface = Color.lerp(primary, const Color(0xFF161B22), 0.85)!;
-    final darkInputFill = Color.lerp(primary, const Color(0xFF21262D), 0.80)!;
-    final darkHairline = Color.lerp(primary, const Color(0xFF30363D), 0.75)!;
+    final darkPage = Color.lerp(pg, const Color(0xFF0D1117), 0.90)!;
+    final darkSurface = Color.lerp(surf, const Color(0xFF161B22), 0.88)!;
+    final darkInputFill = Color.lerp(darkSurface, Colors.white, 0.08)!;
+    final darkHairline = Color.lerp(darkSurface, Colors.white, 0.16)!;
     const darkTextPrimary = Color(0xFFF0F6FC);
     const darkTextSecondary = Color(0xFF8B949E);
 
@@ -121,6 +151,7 @@ class AppThemeFamily {
       id: id,
       title: title,
       caption: caption ?? 'ثيم مخصص من تصميمك',
+      fontFamily: fontFamily,
       primary: primary,
       primaryDark: primaryDark,
       primaryLight: primaryLight,
@@ -130,10 +161,10 @@ class AppThemeFamily {
       headerAccent: headerAccent,
       mint: mint,
       sage: sage,
-      page: page,
-      surface: surface,
+      page: pg,
+      surface: surf,
       surfaceVariant: surfaceVariant,
-      textPrimary: textPrimary,
+      textPrimary: txt,
       textSecondary: textSecondary,
       textTertiary: textTertiary,
       divider: divider,
@@ -154,6 +185,7 @@ class AppThemeFamily {
         'id': id,
         'title': title,
         'caption': caption,
+        'fontFamily': fontFamily,
         'primary': primary.toARGB32(),
         'primaryDark': primaryDark.toARGB32(),
         'primaryLight': primaryLight.toARGB32(),
@@ -187,6 +219,7 @@ class AppThemeFamily {
       id: json['id'] as String,
       title: json['title'] as String,
       caption: (json['caption'] as String?) ?? 'ثيم مخصص',
+      fontFamily: (json['fontFamily'] as String?) ?? 'Tajawal',
       primary: Color(json['primary'] as int),
       primaryDark: Color(json['primaryDark'] as int),
       primaryLight: Color(json['primaryLight'] as int),

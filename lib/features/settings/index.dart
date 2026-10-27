@@ -19,6 +19,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final ThemeService _themeService = ThemeService();
+  bool _appearanceExpanded = false;
 
   @override
   Widget build(BuildContext context) {
@@ -32,84 +33,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             children: [
               _buildHeroBanner(theme),
-              _buildSectionCard(
-                theme,
-                'المظهر',
-                Icons.palette_rounded,
-                [
-                  _familyHeading(theme),
-                  ...AppThemes.all.map((f) => _ThemeFamilyCard(
-                        family: f,
-                        selected: f.id == _themeService.family.id,
-                        onTap: () => _themeService.setFamily(f),
-                      )),
-                  if (_themeService.customFamilies.isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    _customThemesHeading(theme),
-                    ..._themeService.customFamilies.map((f) => _ThemeFamilyCard(
-                          family: f,
-                          selected: f.id == _themeService.family.id,
-                          onTap: () => _themeService.setFamily(f),
-                          onDelete: () => _confirmDeleteCustomTheme(context, f),
-                        )),
-                  ],
-                  const SizedBox(height: 8),
-                  _buildCreateThemeButton(theme, context),
-                  const SizedBox(height: 6),
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHighest
-                          .withValues(alpha: 0.35),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: theme.colorScheme.outlineVariant
-                            .withValues(alpha: 0.25),
-                      ),
-                    ),
-                    child: SwitchListTile(
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-                      title: Text(
-                        'الوضع الليلي',
-                        style: GoogleFonts.tajawal(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 14.5,
-                        ),
-                      ),
-                      subtitle: Text(
-                        'تفعيل المظهر الداكن المريح للعين',
-                        style: GoogleFonts.tajawal(
-                          fontSize: 12,
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      value: _themeService.isDarkMode,
-                      onChanged: (value) => _themeService.setDarkMode(value),
-                      secondary: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: (_themeService.isDarkMode
-                                  ? AppColors.purple
-                                  : AppColors.warning)
-                              .withValues(alpha: 0.16),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(
-                          _themeService.isDarkMode
-                              ? Icons.dark_mode_rounded
-                              : Icons.light_mode_rounded,
-                          color: AppColors.readableInk(
-                              _themeService.isDarkMode
-                                  ? AppColors.purple
-                                  : AppColors.warning,
-                              theme.brightness),
-                          size: 20,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              _buildAppearanceSection(theme, context),
               _buildSectionCard(
                 theme,
                 'التحديثات',
@@ -288,6 +212,222 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAppearanceSection(ThemeData theme, BuildContext context) {
+    final isDark = theme.brightness == Brightness.dark;
+    final currentFamily = _themeService.family;
+    final primary = theme.colorScheme.primary;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant
+              .withValues(alpha: isDark ? 0.30 : 0.40),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: theme.shadowColor.withValues(alpha: isDark ? 0.22 : 0.04),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => setState(() => _appearanceExpanded = !_appearanceExpanded),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: primary.withValues(alpha: isDark ? 0.16 : 0.10),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(Icons.palette_rounded, color: primary, size: 18),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                'المظهر',
+                                style: GoogleFonts.tajawal(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w900,
+                                  color: theme.colorScheme.onSurface,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 2.5),
+                                decoration: BoxDecoration(
+                                  color: primary.withValues(alpha: isDark ? 0.20 : 0.10),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  currentFamily.title,
+                                  style: GoogleFonts.tajawal(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: primary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (!_appearanceExpanded) ...[
+                            const SizedBox(height: 3),
+                            Row(
+                              children: [
+                                ...currentFamily.swatch.map(
+                                  (color) => Container(
+                                    margin: const EdgeInsetsDirectional.only(end: 4),
+                                    width: 10,
+                                    height: 10,
+                                    decoration: BoxDecoration(
+                                      color: color,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: theme.colorScheme.outlineVariant,
+                                        width: 0.8,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  _themeService.isDarkMode
+                                      ? 'الوضع الليلي مفعّل'
+                                      : 'الوضع الفاتح مفعّل',
+                                  style: GoogleFonts.tajawal(
+                                    fontSize: 11,
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      _appearanceExpanded
+                          ? Icons.keyboard_arrow_up_rounded
+                          : Icons.keyboard_arrow_down_rounded,
+                      color: theme.colorScheme.onSurfaceVariant,
+                      size: 24,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          AnimatedCrossFade(
+            firstChild: const SizedBox.shrink(),
+            secondChild: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Divider(height: 1, thickness: 0.8),
+                  const SizedBox(height: 10),
+                  _familyHeading(theme),
+                  ...AppThemes.all.map((f) => _ThemeFamilyCard(
+                        family: f,
+                        selected: f.id == _themeService.family.id,
+                        onTap: () => _themeService.setFamily(f),
+                      )),
+                  if (_themeService.customFamilies.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    _customThemesHeading(theme),
+                    ..._themeService.customFamilies.map((f) => _ThemeFamilyCard(
+                          family: f,
+                          selected: f.id == _themeService.family.id,
+                          onTap: () => _themeService.setFamily(f),
+                          onDelete: () => _confirmDeleteCustomTheme(context, f),
+                        )),
+                  ],
+                  const SizedBox(height: 8),
+                  _buildCreateThemeButton(theme, context),
+                  const SizedBox(height: 6),
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHighest
+                          .withValues(alpha: 0.35),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: theme.colorScheme.outlineVariant
+                            .withValues(alpha: 0.25),
+                      ),
+                    ),
+                    child: SwitchListTile(
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                      title: Text(
+                        'الوضع الليلي',
+                        style: GoogleFonts.tajawal(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 14.5,
+                        ),
+                      ),
+                      subtitle: Text(
+                        'تفعيل المظهر الداكن المريح للعين',
+                        style: GoogleFonts.tajawal(
+                          fontSize: 12,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      value: _themeService.isDarkMode,
+                      onChanged: (value) => _themeService.setDarkMode(value),
+                      secondary: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: (_themeService.isDarkMode
+                                  ? AppColors.purple
+                                  : AppColors.warning)
+                              .withValues(alpha: 0.16),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          _themeService.isDarkMode
+                              ? Icons.dark_mode_rounded
+                              : Icons.light_mode_rounded,
+                          color: AppColors.readableInk(
+                              _themeService.isDarkMode
+                                  ? AppColors.purple
+                                  : AppColors.warning,
+                              theme.brightness),
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            crossFadeState: _appearanceExpanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 250),
           ),
         ],
       ),
@@ -720,6 +860,312 @@ class _ThemeFamilyCard extends StatelessWidget {
   }
 }
 
+/// نافذة منبثقة لاختيار أي درجة لون من الطيف الكامل (16.7 مليون لون) مع درجات السطوع والتشبع وإدخال كود الـ Hex.
+class _FullColorPickerDialog extends StatefulWidget {
+  const _FullColorPickerDialog({
+    required this.initialColor,
+    required this.title,
+  });
+
+  final Color initialColor;
+  final String title;
+
+  @override
+  State<_FullColorPickerDialog> createState() => _FullColorPickerDialogState();
+}
+
+class _FullColorPickerDialogState extends State<_FullColorPickerDialog> {
+  late HSVColor _hsv;
+  late final TextEditingController _hexController;
+
+  static const List<Color> _quickPalette = [
+    Color(0xFF1B4D3E), Color(0xFF10B981), Color(0xFF059669), Color(0xFF14532D),
+    Color(0xFF0F172A), Color(0xFF1D4ED8), Color(0xFF0284C7), Color(0xFF0EA5E9),
+    Color(0xFF0F5147), Color(0xFF14B8A6), Color(0xFF4A148C), Color(0xFF8B5CF6),
+    Color(0xFF880E4F), Color(0xFFC2185B), Color(0xFFF43F5E), Color(0xFF9A3412),
+    Color(0xFFC2410C), Color(0xFFD97706), Color(0xFF78350F), Color(0xFFF59E0B),
+    Color(0xFFFFFFFF), Color(0xFFF8FAFC), Color(0xFFF4F6F4), Color(0xFF1E293B),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _hsv = HSVColor.fromColor(widget.initialColor);
+    final hex = widget.initialColor.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase();
+    _hexController = TextEditingController(text: hex);
+  }
+
+  @override
+  void dispose() {
+    _hexController.dispose();
+    super.dispose();
+  }
+
+  void _updateFromHsv(HSVColor hsv) {
+    setState(() {
+      _hsv = hsv;
+      final hex = _hsv.toColor().toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase();
+      _hexController.value = TextEditingValue(
+        text: hex,
+        selection: TextSelection.collapsed(offset: hex.length),
+      );
+    });
+  }
+
+  void _onHexChanged(String value) {
+    final clean = value.replaceAll('#', '').trim();
+    if (clean.length == 6) {
+      final parsed = int.tryParse('FF$clean', radix: 16);
+      if (parsed != null) {
+        setState(() {
+          _hsv = HSVColor.fromColor(Color(parsed));
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final curColor = _hsv.toColor();
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      backgroundColor: scheme.surface,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: curColor,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: curColor.withValues(alpha: 0.4),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        widget.title,
+                        style: GoogleFonts.tajawal(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: scheme.onSurface,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // معاينة اللون ومربع الـ Hex
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: curColor,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: curColor.withValues(alpha: 0.35),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'كود اللون المختار:',
+                        style: GoogleFonts.tajawal(
+                          color: curColor.computeLuminance() > 0.5 ? Colors.black87 : Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: (curColor.computeLuminance() > 0.5 ? Colors.black : Colors.white)
+                              .withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '#${_hexController.text}',
+                          style: GoogleFonts.tajawal(
+                            color: curColor.computeLuminance() > 0.5 ? Colors.black : Colors.white,
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // إدخال كود اللون مباشرة
+                TextField(
+                  controller: _hexController,
+                  onChanged: _onHexChanged,
+                  maxLength: 6,
+                  textCapitalization: TextCapitalization.characters,
+                  style: GoogleFonts.tajawal(fontWeight: FontWeight.w700),
+                  decoration: InputDecoration(
+                    labelText: 'كود اللون Hex (مثال: 1B4D3E)',
+                    prefixText: '# ',
+                    counterText: '',
+                    prefixIcon: const Icon(Icons.tag_rounded, size: 20),
+                    filled: true,
+                    fillColor: scheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                // شريط تدرج الألوان (طيف كامل 360 درجة)
+                Text(
+                  'درجة اللون (طيف كامل)',
+                  style: GoogleFonts.tajawal(fontSize: 12.5, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  height: 18,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    gradient: const LinearGradient(
+                      colors: [
+                        Color(0xFFFF0000), Color(0xFFFFFF00), Color(0xFF00FF00),
+                        Color(0xFF00FFFF), Color(0xFF0000FF), Color(0xFFFF00FF),
+                        Color(0xFFFF0000),
+                      ],
+                    ),
+                  ),
+                ),
+                Slider(
+                  value: _hsv.hue,
+                  max: 360,
+                  activeColor: curColor,
+                  onChanged: (v) => _updateFromHsv(_hsv.withHue(v)),
+                ),
+                // شريط التشبع
+                Text(
+                  'التشبع (نقاء اللون)',
+                  style: GoogleFonts.tajawal(fontSize: 12.5, fontWeight: FontWeight.w800),
+                ),
+                Slider(
+                  value: _hsv.saturation,
+                  activeColor: curColor,
+                  onChanged: (v) => _updateFromHsv(_hsv.withSaturation(v)),
+                ),
+                // شريط السطوع والإضاءة
+                Text(
+                  'السطوع (الدرجة الفاتحة والداكنة)',
+                  style: GoogleFonts.tajawal(fontSize: 12.5, fontWeight: FontWeight.w800),
+                ),
+                Slider(
+                  value: _hsv.value,
+                  activeColor: curColor,
+                  onChanged: (v) => _updateFromHsv(_hsv.withValue(v)),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'ألوان مختارة سريعة',
+                  style: GoogleFonts.tajawal(fontSize: 12.5, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _quickPalette.map((color) {
+                    final isSel = curColor.toARGB32() == color.toARGB32();
+                    return InkWell(
+                      onTap: () => _updateFromHsv(HSVColor.fromColor(color)),
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isSel ? scheme.primary : scheme.outline,
+                            width: isSel ? 2.5 : 1,
+                          ),
+                          boxShadow: isSel
+                              ? [BoxShadow(color: color.withValues(alpha: 0.5), blurRadius: 6)]
+                              : null,
+                        ),
+                        child: isSel
+                            ? Icon(
+                                Icons.check_rounded,
+                                size: 16,
+                                color: color.computeLuminance() > 0.5 ? Colors.black : Colors.white,
+                              )
+                            : null,
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(
+                        'إلغاء',
+                        style: GoogleFonts.tajawal(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton(
+                      onPressed: () => Navigator.pop(context, curColor),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: isDark ? scheme.primary : AppColors.primary,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                      ),
+                      child: Text(
+                        'اختيار هذا اللون',
+                        style: GoogleFonts.tajawal(fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// ورقة تصميم ثيم مخصص قابلة لتخصيص كل شيء: الخط، لونه، الأساسي، الثانوي،
+/// وخلفية الصفحات والكروت مع إتاحة جميع ألوان الطيف دون قيود.
 class _CustomThemeBuilderSheet extends StatefulWidget {
   const _CustomThemeBuilderSheet();
 
@@ -730,38 +1176,22 @@ class _CustomThemeBuilderSheet extends StatefulWidget {
 
 class _CustomThemeBuilderSheetState extends State<_CustomThemeBuilderSheet> {
   final _nameController = TextEditingController(text: 'ثيمي الخاص');
+  String _selectedFontFamily = 'Tajawal';
   Color _selectedPrimary = const Color(0xFF1B4D3E);
   Color _selectedAccent = const Color(0xFF10B981);
+  Color _selectedPageBackground = const Color(0xFFF4F6F4);
+  Color _selectedCardBackground = const Color(0xFFFFFFFF);
+  Color _selectedTextColor = const Color(0xFF102A22);
   bool _saving = false;
 
-  static const List<MapEntry<String, Color>> _primaryChoices = [
-    MapEntry('أخضر زمردي', Color(0xFF1B4D3E)),
-    MapEntry('أزرق كحلي', Color(0xFF0F172A)),
-    MapEntry('تراكوتا قرميدي', Color(0xFF9A3412)),
-    MapEntry('أرجواني ملكي', Color(0xFF4A148C)),
-    MapEntry('توت عنابي', Color(0xFF880E4F)),
-    MapEntry('كهرمان ذهبي', Color(0xFF78350F)),
-    MapEntry('فيروزي هادئ', Color(0xFF0F5147)),
-    MapEntry('نيلي عميق', Color(0xFF1E3A8A)),
-    MapEntry('غابة صنوبرية', Color(0xFF14532D)),
-    MapEntry('خوخي ليلي', Color(0xFF581C87)),
-    MapEntry('ياقوتي أحمر', Color(0xFF7F1D1D)),
-    MapEntry('برونزي صحراوي', Color(0xFF7C2D12)),
-    MapEntry('سيان قطبي', Color(0xFF164E63)),
-    MapEntry('بني قهوة', Color(0xFF431407)),
-    MapEntry('رمادي أردوازي', Color(0xFF334155)),
-    MapEntry('وردي داكن', Color(0xFF701A75)),
-  ];
-
-  static const List<MapEntry<String, Color>> _accentChoices = [
-    MapEntry('زمردي مشرق', Color(0xFF10B981)),
-    MapEntry('سماوي ناصع', Color(0xFF0EA5E9)),
-    MapEntry('كهرماني ذهبي', Color(0xFFF59E0B)),
-    MapEntry('وردي ياقوتي', Color(0xFFF43F5E)),
-    MapEntry('بنفسجي ناعم', Color(0xFF8B5CF6)),
-    MapEntry('برتقالي متوهج', Color(0xFFF97316)),
-    MapEntry('تركوازي بحري', Color(0xFF14B8A6)),
-    MapEntry('ليموني حيوي', Color(0xFF84CC16)),
+  static const List<MapEntry<String, String>> _availableFonts = [
+    MapEntry('Tajawal', 'تجوال (الافتراضي الأنيق)'),
+    MapEntry('Cairo', 'كايرو (عصري وحيوي)'),
+    MapEntry('Almarai', 'المراعي (هندسي متوازن)'),
+    MapEntry('Amiri', 'أميري (كلاسيكي تراثي)'),
+    MapEntry('El Messiri', 'المسيري (جذاب ناعم)'),
+    MapEntry('Readex Pro', 'ريدكس برو (تقني حديث)'),
+    MapEntry('Changa', 'تشانغا (عريض ومميز)'),
   ];
 
   @override
@@ -770,17 +1200,48 @@ class _CustomThemeBuilderSheetState extends State<_CustomThemeBuilderSheet> {
     super.dispose();
   }
 
+  Future<Color?> _pickColor(BuildContext context, Color current, String title) async {
+    return showDialog<Color>(
+      context: context,
+      builder: (ctx) => _FullColorPickerDialog(
+        initialColor: current,
+        title: title,
+      ),
+    );
+  }
+
+  TextStyle _previewFont({FontWeight? fontWeight, Color? color, double? fontSize}) {
+    try {
+      return GoogleFonts.getFont(
+        _selectedFontFamily,
+        fontWeight: fontWeight,
+        color: color,
+        fontSize: fontSize,
+      );
+    } catch (_) {
+      return GoogleFonts.tajawal(
+        fontWeight: fontWeight,
+        color: color,
+        fontSize: fontSize,
+      );
+    }
+  }
+
   Future<void> _saveAndApply() async {
     final name = _nameController.text.trim().isEmpty
         ? 'ثيمي الخاص'
         : _nameController.text.trim();
     setState(() => _saving = true);
-    final customFamily = AppThemeFamily.fromUserPalette(
+    final customFamily = AppThemeFamily.fromFullCustomization(
       id: 'custom_${DateTime.now().millisecondsSinceEpoch}',
       title: name,
       caption: 'ثيم مخصص من تصميمك',
+      fontFamily: _selectedFontFamily,
       primary: _selectedPrimary,
-      accent: _selectedAccent,
+      secondary: _selectedAccent,
+      page: _selectedPageBackground,
+      surface: _selectedCardBackground,
+      textPrimary: _selectedTextColor,
     );
     await ThemeService().saveCustomTheme(customFamily);
     if (!mounted) return;
@@ -788,7 +1249,7 @@ class _CustomThemeBuilderSheetState extends State<_CustomThemeBuilderSheet> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'تم حفظ وتطبيق ثيم "$name" بنجاح',
+          'تم حفظ وتطبيق ثيم "$name" بنجاح بكامل تخصيصاتك',
           style: GoogleFonts.tajawal(fontWeight: FontWeight.w700),
         ),
         backgroundColor: AppColors.success,
@@ -805,7 +1266,7 @@ class _CustomThemeBuilderSheetState extends State<_CustomThemeBuilderSheet> {
 
     return Container(
       constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.9,
+        maxHeight: MediaQuery.of(context).size.height * 0.92,
       ),
       padding: EdgeInsets.fromLTRB(20, 14, 20, 20 + bottomInset),
       decoration: BoxDecoration(
@@ -843,8 +1304,7 @@ class _CustomThemeBuilderSheetState extends State<_CustomThemeBuilderSheet> {
                     color: _selectedPrimary.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(Icons.palette_rounded,
-                      color: _selectedPrimary, size: 22),
+                  child: Icon(Icons.palette_rounded, color: _selectedPrimary, size: 22),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -852,14 +1312,14 @@ class _CustomThemeBuilderSheetState extends State<_CustomThemeBuilderSheet> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'تصميم ثيم مخصص',
+                        'تصميم وتخصيص ثيم كامل',
                         style: GoogleFonts.tajawal(
                           fontSize: 17,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
                       Text(
-                        'اختر الألوان الأساسية وثانويتك لتوليد مظهر متناسق',
+                        'خصّص نوع ولون الخط، والأساسي، والثانوي، وخلفيات الصفحات والكروت',
                         style: GoogleFonts.tajawal(
                           fontSize: 12,
                           color: scheme.onSurfaceVariant,
@@ -875,24 +1335,18 @@ class _CustomThemeBuilderSheetState extends State<_CustomThemeBuilderSheet> {
               ],
             ),
             const SizedBox(height: 16),
+            // اسم الثيم
             TextField(
               controller: _nameController,
+              onChanged: (_) => setState(() {}),
               style: GoogleFonts.tajawal(fontWeight: FontWeight.w700),
               decoration: InputDecoration(
                 labelText: 'اسم الثيم',
                 labelStyle: GoogleFonts.tajawal(fontSize: 13.5),
                 prefixIcon: const Icon(Icons.edit_rounded, size: 20),
                 filled: true,
-                fillColor:
-                    scheme.surfaceContainerHighest.withValues(alpha: 0.35),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide(color: scheme.outline),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide(color: scheme.outlineVariant),
-                ),
+                fillColor: scheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
                   borderSide: BorderSide(color: _selectedPrimary, width: 1.8),
@@ -900,8 +1354,9 @@ class _CustomThemeBuilderSheetState extends State<_CustomThemeBuilderSheet> {
               ),
             ),
             const SizedBox(height: 16),
+            // معاينة حية متكاملة
             Text(
-              'معاينة حية للمظهر',
+              'معاينة حية شاملة لكل التخصيصات',
               style: GoogleFonts.tajawal(
                 fontSize: 13,
                 fontWeight: FontWeight.w800,
@@ -911,97 +1366,110 @@ class _CustomThemeBuilderSheetState extends State<_CustomThemeBuilderSheet> {
             const SizedBox(height: 8),
             Container(
               decoration: BoxDecoration(
+                color: _selectedPageBackground,
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(color: scheme.outlineVariant),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
-                  ),
+                boxShadow: const [
+                  BoxShadow(color: Color(0x14000000), blurRadius: 10, offset: Offset(0, 3)),
                 ],
               ),
               clipBehavior: Clip.antiAlias,
               child: Column(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                     color: _selectedPrimary,
                     child: Row(
                       children: [
-                        const Icon(Icons.menu_rounded,
-                            color: Colors.white, size: 20),
+                        const Icon(Icons.menu_rounded, color: Colors.white, size: 20),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            _nameController.text.trim().isEmpty
-                                ? 'قرية أبوديشيشة'
-                                : _nameController.text.trim(),
-                            style: GoogleFonts.tajawal(
+                            _nameController.text.trim().isEmpty ? 'قرية أبوديشيشة' : _nameController.text.trim(),
+                            style: _previewFont(
                               color: Colors.white,
                               fontWeight: FontWeight.w800,
                               fontSize: 13.5,
                             ),
                           ),
                         ),
-                        const Icon(Icons.search_rounded,
-                            color: Colors.white, size: 20),
+                        const Icon(Icons.search_rounded, color: Colors.white, size: 20),
                       ],
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    color: theme.brightness == Brightness.dark
-                        ? const Color(0xFF141922)
-                        : const Color(0xFFF8FAFC),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: _selectedPrimary.withValues(alpha: 0.15),
-                            shape: BoxShape.circle,
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: _selectedCardBackground,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: _selectedPrimary.withValues(alpha: 0.15)),
+                        boxShadow: const [
+                          BoxShadow(color: Color(0x0F000000), blurRadius: 6, offset: Offset(0, 2)),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 38,
+                            height: 38,
+                            decoration: BoxDecoration(
+                              color: _selectedPrimary.withValues(alpha: 0.15),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(Icons.palette_rounded, color: _selectedPrimary, size: 20),
                           ),
-                          child: Icon(Icons.nature_people_rounded,
-                              color: _selectedPrimary, size: 20),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'بطاقة تجريبية لمعاينة الألوان',
-                            style: GoogleFonts.tajawal(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w700,
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'عنوان البطاقة بهذا الخط واللون',
+                                  style: _previewFont(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w800,
+                                    color: _selectedTextColor,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'خلفية الصفحة والكارت تظهر بتصميمك',
+                                  style: _previewFont(
+                                    fontSize: 11,
+                                    color: _selectedTextColor.withValues(alpha: 0.7),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: _selectedAccent,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            'زر تمييز',
-                            style: GoogleFonts.tajawal(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w800,
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: _selectedAccent,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              'زر تمييز',
+                              style: _previewFont(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 18),
+            // قسم اختيار نوع الخط
             Text(
-              'اللون الأساسي (للهيدر والبطاقات القيادية)',
+              'نوع الخط (Typography)',
               style: GoogleFonts.tajawal(
                 fontSize: 13,
                 fontWeight: FontWeight.w800,
@@ -1009,49 +1477,37 @@ class _CustomThemeBuilderSheetState extends State<_CustomThemeBuilderSheet> {
               ),
             ),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _primaryChoices.map((entry) {
-                final isSelected = _selectedPrimary == entry.value;
-                return Tooltip(
-                  message: entry.key,
-                  child: InkWell(
-                    onTap: () => setState(() => _selectedPrimary = entry.value),
-                    borderRadius: BorderRadius.circular(20),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: entry.value,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: isSelected ? Colors.white : scheme.outline,
-                          width: isSelected ? 2.5 : 1,
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: _availableFonts.map((entry) {
+                  final isSelected = _selectedFontFamily == entry.key;
+                  return Padding(
+                    padding: const EdgeInsetsDirectional.only(end: 8),
+                    child: ChoiceChip(
+                      selected: isSelected,
+                      onSelected: (_) => setState(() => _selectedFontFamily = entry.key),
+                      label: Text(
+                        entry.value,
+                        style: GoogleFonts.getFont(
+                          entry.key,
+                          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                          fontSize: 12.5,
+                          color: isSelected ? scheme.onPrimary : scheme.onSurface,
                         ),
-                        boxShadow: isSelected
-                            ? [
-                                BoxShadow(
-                                  color: entry.value.withValues(alpha: 0.5),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ]
-                            : null,
                       ),
-                      child: isSelected
-                          ? const Icon(Icons.check_rounded,
-                              color: Colors.white, size: 20)
-                          : null,
+                      selectedColor: _selectedPrimary,
+                      backgroundColor: scheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                  ),
-                );
-              }).toList(),
+                  );
+                }).toList(),
+              ),
             ),
             const SizedBox(height: 18),
+            // تخصيص الألوان الخمسة مع إتاحة الطيف الكامل
             Text(
-              'اللون الثانوي (للأزرار المميزة والتمييز البصري)',
+              'تخصيص الألوان (يتيح الطيف اللوني الكامل)',
               style: GoogleFonts.tajawal(
                 fontSize: 13,
                 fontWeight: FontWeight.w800,
@@ -1059,45 +1515,50 @@ class _CustomThemeBuilderSheetState extends State<_CustomThemeBuilderSheet> {
               ),
             ),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _accentChoices.map((entry) {
-                final isSelected = _selectedAccent == entry.value;
-                return Tooltip(
-                  message: entry.key,
-                  child: InkWell(
-                    onTap: () => setState(() => _selectedAccent = entry.value),
-                    borderRadius: BorderRadius.circular(20),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: entry.value,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: isSelected ? Colors.white : scheme.outline,
-                          width: isSelected ? 2.5 : 1,
-                        ),
-                        boxShadow: isSelected
-                            ? [
-                                BoxShadow(
-                                  color: entry.value.withValues(alpha: 0.5),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ]
-                            : null,
-                      ),
-                      child: isSelected
-                          ? const Icon(Icons.check_rounded,
-                              color: Colors.white, size: 20)
-                          : null,
-                    ),
-                  ),
-                );
-              }).toList(),
+            _buildColorTile(
+              title: 'اللون الأساسي',
+              subtitle: 'للهيدر، الأشرطة، والأزرار القيادية',
+              color: _selectedPrimary,
+              onTap: () async {
+                final c = await _pickColor(context, _selectedPrimary, 'اختيار اللون الأساسي');
+                if (c != null) setState(() => _selectedPrimary = c);
+              },
+            ),
+            _buildColorTile(
+              title: 'اللون الثانوي',
+              subtitle: 'لأزرار التمييز، الشارات، والأيقونات البارزة',
+              color: _selectedAccent,
+              onTap: () async {
+                final c = await _pickColor(context, _selectedAccent, 'اختيار اللون الثانوي');
+                if (c != null) setState(() => _selectedAccent = c);
+              },
+            ),
+            _buildColorTile(
+              title: 'خلفية الصفحات',
+              subtitle: 'أرضية التطبيق العامة والشاشات الرئيسية',
+              color: _selectedPageBackground,
+              onTap: () async {
+                final c = await _pickColor(context, _selectedPageBackground, 'اختيار خلفية الصفحات');
+                if (c != null) setState(() => _selectedPageBackground = c);
+              },
+            ),
+            _buildColorTile(
+              title: 'خلفية الكروت والبطاقات',
+              subtitle: 'أرضية الحاويات والبطاقات والعناصر التفاعلية',
+              color: _selectedCardBackground,
+              onTap: () async {
+                final c = await _pickColor(context, _selectedCardBackground, 'اختيار خلفية الكروت');
+                if (c != null) setState(() => _selectedCardBackground = c);
+              },
+            ),
+            _buildColorTile(
+              title: 'لون الخط والنصوص',
+              subtitle: 'لون النصوص والعناوين داخل التطبيق',
+              color: _selectedTextColor,
+              onTap: () async {
+                final c = await _pickColor(context, _selectedTextColor, 'اختيار لون الخط');
+                if (c != null) setState(() => _selectedTextColor = c);
+              },
             ),
             const SizedBox(height: 24),
             SizedBox(
@@ -1108,12 +1569,11 @@ class _CustomThemeBuilderSheetState extends State<_CustomThemeBuilderSheet> {
                     ? const SizedBox(
                         width: 18,
                         height: 18,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                       )
                     : const Icon(Icons.check_circle_rounded, size: 20),
                 label: Text(
-                  _saving ? 'جاري الحفظ...' : 'حفظ وتطبيق الثيم',
+                  _saving ? 'جاري الحفظ...' : 'حفظ وتطبيق الثيم المخصص',
                   style: GoogleFonts.tajawal(
                     fontSize: 15,
                     fontWeight: FontWeight.w800,
@@ -1123,13 +1583,88 @@ class _CustomThemeBuilderSheetState extends State<_CustomThemeBuilderSheet> {
                   backgroundColor: _selectedPrimary,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 ),
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildColorTile({
+    required String title,
+    required String subtitle,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    final hex = color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 1.5),
+                  boxShadow: [
+                    BoxShadow(color: color.withValues(alpha: 0.35), blurRadius: 6),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.tajawal(fontSize: 13.5, fontWeight: FontWeight.w800),
+                    ),
+                    Text(
+                      subtitle,
+                      style: GoogleFonts.tajawal(
+                        fontSize: 11,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+                ),
+                child: Text(
+                  '#$hex',
+                  style: GoogleFonts.tajawal(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              const Icon(Icons.colorize_rounded, size: 18),
+            ],
+          ),
         ),
       ),
     );

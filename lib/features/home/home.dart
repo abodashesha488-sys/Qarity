@@ -756,17 +756,17 @@ class _HeroHeader extends StatelessWidget {
           const SafeArea(
             bottom: false,
             child: Padding(
-              padding: EdgeInsets.fromLTRB(26, 4, 26, 48),
+              padding: EdgeInsets.fromLTRB(20, 8, 20, 48),
               child: SizedBox(
                 height: kHeroBodyHeight,
                 child: Align(
                   alignment: Alignment.topRight,
-                  child: Column(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      NotificationBellButton(compact: true),
-                      SizedBox(height: 3.5),
                       _HeaderSearchButton(),
+                      SizedBox(width: 8),
+                      NotificationBellButton(compact: true),
                     ],
                   ),
                 ),

@@ -399,6 +399,7 @@ class AppThemes {
         ),
       ),
       textTheme: _textTheme(
+        fontFamily: f.fontFamily,
         heading: f.primary,
         strong: f.textPrimary,
         normal: f.textSecondary,
@@ -427,7 +428,7 @@ class AppThemes {
         ),
         filled: true,
         fillColor: f.sage,
-        hintStyle: GoogleFonts.tajawal(color: f.textTertiary, fontSize: 14),
+        hintStyle: _fontStyle(f.fontFamily, color: f.textTertiary, fontSize: 14),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
     );
@@ -544,6 +545,7 @@ class AppThemes {
         ),
       ),
       textTheme: _textTheme(
+        fontFamily: f.fontFamily,
         heading: f.darkAccent,
         strong: f.darkTextPrimary,
         normal: f.darkTextSecondary,
@@ -572,7 +574,7 @@ class AppThemes {
         ),
         filled: true,
         fillColor: f.darkInputFill,
-        hintStyle: GoogleFonts.tajawal(
+        hintStyle: _fontStyle(f.fontFamily,
             color: f.darkTextSecondary, fontSize: 14),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
@@ -583,42 +585,54 @@ class AppThemes {
   /// والهامدة حبر العائلة الداكن/الفاتح — فلا تُترك ترويسة بيضاء على صفحة
   /// بيضاء حين تختار العائلة.
   static TextTheme _textTheme({
+    String fontFamily = 'Tajawal',
     required Color heading,
     required Color strong,
     required Color normal,
     required Color faint,
   }) {
+    TextStyle style({required FontWeight fontWeight, required Color color}) {
+      return _fontStyle(fontFamily, fontWeight: fontWeight, color: color);
+    }
+
     return TextTheme(
-      displayLarge: GoogleFonts.tajawal(
-          fontWeight: FontWeight.w800, color: heading),
-      displayMedium: GoogleFonts.tajawal(
-          fontWeight: FontWeight.w700, color: heading),
-      displaySmall: GoogleFonts.tajawal(
-          fontWeight: FontWeight.w600, color: heading),
-      headlineLarge: GoogleFonts.tajawal(
-          fontWeight: FontWeight.w700, color: heading),
-      headlineMedium: GoogleFonts.tajawal(
-          fontWeight: FontWeight.w600, color: heading),
-      headlineSmall: GoogleFonts.tajawal(
-          fontWeight: FontWeight.w500, color: heading),
-      titleLarge: GoogleFonts.tajawal(
-          fontWeight: FontWeight.w700, color: heading),
-      titleMedium: GoogleFonts.tajawal(
-          fontWeight: FontWeight.w600, color: strong),
-      titleSmall: GoogleFonts.tajawal(
-          fontWeight: FontWeight.w500, color: strong),
-      bodyLarge: GoogleFonts.tajawal(
-          fontWeight: FontWeight.w400, color: strong),
-      bodyMedium: GoogleFonts.tajawal(
-          fontWeight: FontWeight.w400, color: normal),
-      bodySmall: GoogleFonts.tajawal(
-          fontWeight: FontWeight.w400, color: faint),
-      labelLarge: GoogleFonts.tajawal(
-          fontWeight: FontWeight.w600, color: heading),
-      labelMedium: GoogleFonts.tajawal(
-          fontWeight: FontWeight.w500, color: normal),
-      labelSmall: GoogleFonts.tajawal(
-          fontWeight: FontWeight.w400, color: faint),
+      displayLarge: style(fontWeight: FontWeight.w800, color: heading),
+      displayMedium: style(fontWeight: FontWeight.w700, color: heading),
+      displaySmall: style(fontWeight: FontWeight.w600, color: heading),
+      headlineLarge: style(fontWeight: FontWeight.w700, color: heading),
+      headlineMedium: style(fontWeight: FontWeight.w600, color: heading),
+      headlineSmall: style(fontWeight: FontWeight.w500, color: heading),
+      titleLarge: style(fontWeight: FontWeight.w700, color: heading),
+      titleMedium: style(fontWeight: FontWeight.w600, color: strong),
+      titleSmall: style(fontWeight: FontWeight.w500, color: strong),
+      bodyLarge: style(fontWeight: FontWeight.w400, color: strong),
+      bodyMedium: style(fontWeight: FontWeight.w400, color: normal),
+      bodySmall: style(fontWeight: FontWeight.w400, color: faint),
+      labelLarge: style(fontWeight: FontWeight.w600, color: heading),
+      labelMedium: style(fontWeight: FontWeight.w500, color: normal),
+      labelSmall: style(fontWeight: FontWeight.w400, color: faint),
     );
+  }
+
+  static TextStyle _fontStyle(
+    String fontFamily, {
+    FontWeight? fontWeight,
+    Color? color,
+    double? fontSize,
+  }) {
+    try {
+      return GoogleFonts.getFont(
+        fontFamily,
+        fontWeight: fontWeight,
+        color: color,
+        fontSize: fontSize,
+      );
+    } catch (_) {
+      return GoogleFonts.tajawal(
+        fontWeight: fontWeight,
+        color: color,
+        fontSize: fontSize,
+      );
+    }
   }
 }
