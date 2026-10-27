@@ -63,7 +63,7 @@ class MedicalHomeScreen extends StatelessWidget {
       body: LayoutBuilder(builder: (context, constraints) {
         const spacing = 14.0;
         const hPadding = 16.0;
-        const childAspectRatio = 0.89;
+        const childAspectRatio = 1.22;
         final cardWidth = (constraints.maxWidth - (hPadding * 2) - spacing) / 2;
 
         return CustomScrollView(
@@ -145,23 +145,26 @@ class _MedicalSectionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final bgColor = isDark ? const Color(0xFF1B241E) : const Color(0xFFE9F3EA);
     const imgRadius = BorderRadius.all(Radius.circular(18));
     return Container(
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
+        color: bgColor,
         borderRadius: imgRadius,
         border: Border.all(
-          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
+          color: theme.colorScheme.outlineVariant.withValues(alpha: isDark ? 0.35 : 0.45),
+          width: 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.16),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
           ),
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 4,
+            color: Colors.black.withValues(alpha: isDark ? 0.08 : 0.03),
+            blurRadius: 3,
             offset: const Offset(0, 1),
           ),
         ],
@@ -173,15 +176,21 @@ class _MedicalSectionTile extends StatelessWidget {
           borderRadius: imgRadius,
           onTap: () => Navigator.pushNamed(context, '/medical/section',
               arguments: index),
-          child: Image.asset(
-            image,
-            width: double.infinity,
-            height: double.infinity,
-            fit: BoxFit.cover,
-            cacheWidth: 520,
-            semanticLabel: label,
-            errorBuilder: (context, error, stackTrace) => Center(
-              child: Text(label, textAlign: TextAlign.center),
+          child: Padding(
+            padding: const EdgeInsets.all(2.5),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(15.5),
+              child: Image.asset(
+                image,
+                width: double.infinity,
+                height: double.infinity,
+                fit: BoxFit.contain,
+                cacheWidth: 560,
+                semanticLabel: label,
+                errorBuilder: (context, error, stackTrace) => Center(
+                  child: Text(label, textAlign: TextAlign.center),
+                ),
+              ),
             ),
           ),
         ),
