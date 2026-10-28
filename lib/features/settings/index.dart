@@ -363,6 +363,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           family: f,
                           selected: f.id == _themeService.family.id,
                           onTap: () => _themeService.setFamily(f),
+                          onEdit: () => _showCustomThemeBuilder(context, initialFamily: f),
                           onDelete: () => _confirmDeleteCustomTheme(context, f),
                         )),
                   ],
@@ -737,12 +738,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showCustomThemeBuilder(BuildContext context) {
+  void _showCustomThemeBuilder(BuildContext context, {AppThemeFamily? initialFamily}) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => const _CustomThemeBuilderSheet(),
+      builder: (ctx) => _CustomThemeBuilderSheet(initialFamily: initialFamily),
     );
   }
 }
@@ -770,12 +771,14 @@ class _ThemeFamilyCard extends StatelessWidget {
     required this.selected,
     required this.onTap,
     this.onDelete,
+    this.onEdit,
   });
 
   final AppThemeFamily family;
   final bool selected;
   final VoidCallback onTap;
   final VoidCallback? onDelete;
+  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -839,6 +842,13 @@ class _ThemeFamilyCard extends StatelessWidget {
                   ],
                 ),
               ),
+              if (onEdit != null)
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined, size: 20),
+                  color: selected ? ink : scheme.primary,
+                  tooltip: 'تعديل الثيم المخصص',
+                  onPressed: onEdit,
+                ),
               if (onDelete != null)
                 IconButton(
                   icon: const Icon(Icons.delete_outline_rounded, size: 20),
@@ -1167,7 +1177,9 @@ class _FullColorPickerDialogState extends State<_FullColorPickerDialog> {
 /// ورقة تصميم ثيم مخصص قابلة لتخصيص كل شيء: الخط، لونه، الأساسي، الثانوي،
 /// وخلفية الصفحات والكروت مع إتاحة جميع ألوان الطيف دون قيود.
 class _CustomThemeBuilderSheet extends StatefulWidget {
-  const _CustomThemeBuilderSheet();
+  const _CustomThemeBuilderSheet({this.initialFamily});
+
+  final AppThemeFamily? initialFamily;
 
   @override
   State<_CustomThemeBuilderSheet> createState() =>
@@ -1175,24 +1187,50 @@ class _CustomThemeBuilderSheet extends StatefulWidget {
 }
 
 class _CustomThemeBuilderSheetState extends State<_CustomThemeBuilderSheet> {
-  final _nameController = TextEditingController(text: 'ثيمي الخاص');
-  String _selectedFontFamily = 'Tajawal';
-  Color _selectedPrimary = const Color(0xFF1B4D3E);
-  Color _selectedAccent = const Color(0xFF10B981);
-  Color _selectedPageBackground = const Color(0xFFF4F6F4);
-  Color _selectedCardBackground = const Color(0xFFFFFFFF);
-  Color _selectedTextColor = const Color(0xFF102A22);
+  late final TextEditingController _nameController;
+  late String _selectedFontFamily;
+  late Color _selectedPrimary;
+  late Color _selectedAccent;
+  late Color _selectedPageBackground;
+  late Color _selectedCardBackground;
+  late Color _selectedTextColor;
   bool _saving = false;
+  bool get _isEditing => widget.initialFamily != null;
 
   static const List<MapEntry<String, String>> _availableFonts = [
-    MapEntry('Tajawal', 'تجوال (الافتراضي الأنيق)'),
-    MapEntry('Cairo', 'كايرو (عصري وحيوي)'),
-    MapEntry('Almarai', 'المراعي (هندسي متوازن)'),
-    MapEntry('Amiri', 'أميري (كلاسيكي تراثي)'),
-    MapEntry('El Messiri', 'المسيري (جذاب ناعم)'),
-    MapEntry('Readex Pro', 'ريدكس برو (تقني حديث)'),
-    MapEntry('Changa', 'تشانغا (عريض ومميز)'),
+    MapEntry('Tajawal', 'تجوال — خط حديث متوازن وأنيق'),
+    MapEntry('Cairo', 'كايرو — خط هندسي عصري وواضح'),
+    MapEntry('Almarai', 'المراعي — تصميم هندسي نقي ورشيق'),
+    MapEntry('Amiri', 'أميري — خط نسخ كلاسيكي تراثي فخم'),
+    MapEntry('El Messiri', 'المسيري — خط ناعم ذو لمسات فنية'),
+    MapEntry('Readex Pro', 'ريدكس برو — خط تقني حديث ومرن'),
+    MapEntry('Changa', 'تشانغا — خط عريض ذو طابع بارز'),
+    MapEntry('Noto Sans Arabic', 'نوتو سانس — خط عالمي فائق الوضوح'),
+    MapEntry('Noto Kufi Arabic', 'نوتو كوفي — خط كوفي رسمي واحترافي'),
+    MapEntry('Alexandria', 'الإسكندرية — خط أنيق ومقروء بدقة'),
+    MapEntry('IBM Plex Sans Arabic', 'آي بي إم بلكس — خط تقني عصري راقٍ'),
+    MapEntry('Rubik', 'روبيك — حروف ناعمة وزوايا مستديرة'),
+    MapEntry('Lateef', 'لطيف — خط عربي انسيابي ورقيق'),
+    MapEntry('Scheherazade New', 'شهرزاد — خط نسخ عربي تراثي جميل'),
+    MapEntry('Aref Ruqaa', 'عارف رقعة — خط الرقعة الأصيل الفريد'),
+    MapEntry('Marhey', 'مرحي — خط عصري مرح ومبتكر'),
+    MapEntry('Kufam', 'كوفام — خط كوفي جذاب للشاشات'),
+    MapEntry('Reem Kufi', 'ريم كوفي — خط كوفي مستلهم من النقوش القديمة'),
+    MapEntry('Lalezar', 'لاليزار — خط عناوين عربي سميك ولافت'),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    final init = widget.initialFamily;
+    _nameController = TextEditingController(text: init?.title ?? 'ثيمي الخاص');
+    _selectedFontFamily = init?.fontFamily ?? 'Tajawal';
+    _selectedPrimary = init?.primary ?? const Color(0xFF1B4D3E);
+    _selectedAccent = init?.secondary ?? const Color(0xFF10B981);
+    _selectedPageBackground = init?.page ?? const Color(0xFFF4F6F4);
+    _selectedCardBackground = init?.surface ?? const Color(0xFFFFFFFF);
+    _selectedTextColor = init?.textPrimary ?? const Color(0xFF102A22);
+  }
 
   @override
   void dispose() {
@@ -1210,10 +1248,11 @@ class _CustomThemeBuilderSheetState extends State<_CustomThemeBuilderSheet> {
     );
   }
 
-  TextStyle _previewFont({FontWeight? fontWeight, Color? color, double? fontSize}) {
+  TextStyle _safeGoogleFont(String fontName,
+      {FontWeight? fontWeight, Color? color, double? fontSize}) {
     try {
       return GoogleFonts.getFont(
-        _selectedFontFamily,
+        fontName,
         fontWeight: fontWeight,
         color: color,
         fontSize: fontSize,
@@ -1227,13 +1266,22 @@ class _CustomThemeBuilderSheetState extends State<_CustomThemeBuilderSheet> {
     }
   }
 
+  TextStyle _previewFont(
+      {FontWeight? fontWeight, Color? color, double? fontSize}) {
+    return _safeGoogleFont(_selectedFontFamily,
+        fontWeight: fontWeight, color: color, fontSize: fontSize);
+  }
+
   Future<void> _saveAndApply() async {
     final name = _nameController.text.trim().isEmpty
-        ? 'ثيمي الخاص'
+        ? (widget.initialFamily?.title ?? 'ثيمي الخاص')
         : _nameController.text.trim();
     setState(() => _saving = true);
+    final isEditing = widget.initialFamily != null;
+    final id = widget.initialFamily?.id ??
+        'custom_${DateTime.now().millisecondsSinceEpoch}';
     final customFamily = AppThemeFamily.fromFullCustomization(
-      id: 'custom_${DateTime.now().millisecondsSinceEpoch}',
+      id: id,
       title: name,
       caption: 'ثيم مخصص من تصميمك',
       fontFamily: _selectedFontFamily,
@@ -1249,7 +1297,9 @@ class _CustomThemeBuilderSheetState extends State<_CustomThemeBuilderSheet> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'تم حفظ وتطبيق ثيم "$name" بنجاح بكامل تخصيصاتك',
+          isEditing
+              ? 'تم تعديل وتطبيق ثيم "$name" بنجاح'
+              : 'تم حفظ وتطبيق ثيم "$name" بنجاح بكامل تخصيصاتك',
           style: GoogleFonts.tajawal(fontWeight: FontWeight.w700),
         ),
         backgroundColor: AppColors.success,
@@ -1312,14 +1362,16 @@ class _CustomThemeBuilderSheetState extends State<_CustomThemeBuilderSheet> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'تصميم وتخصيص ثيم كامل',
+                        _isEditing ? 'تعديل الثيم المخصص' : 'تصميم وتخصيص ثيم كامل',
                         style: GoogleFonts.tajawal(
                           fontSize: 17,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
                       Text(
-                        'خصّص نوع ولون الخط، والأساسي، والثانوي، وخلفيات الصفحات والكروت',
+                        _isEditing
+                            ? 'عدّل الألوان والخط ونوع النصوص واحفظ التغييرات مباشرة'
+                            : 'خصّص نوع ولون الخط، والأساسي، والثانوي، وخلفيات الصفحات والكروت',
                         style: GoogleFonts.tajawal(
                           fontSize: 12,
                           color: scheme.onSurfaceVariant,
@@ -1467,41 +1519,143 @@ class _CustomThemeBuilderSheetState extends State<_CustomThemeBuilderSheet> {
               ),
             ),
             const SizedBox(height: 18),
-            // قسم اختيار نوع الخط
-            Text(
-              'نوع الخط (Typography)',
-              style: GoogleFonts.tajawal(
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-                color: scheme.onSurface,
-              ),
+            // قسم اختيار نوع الخط عبر قائمة منسدلة مع نماذج الخطوط
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'نوع الخط العربي (Typography)',
+                  style: GoogleFonts.tajawal(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w800,
+                    color: scheme.onSurface,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: _selectedPrimary.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '${_availableFonts.length} خطوط عربية',
+                    style: GoogleFonts.tajawal(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: _selectedPrimary,
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: _availableFonts.map((entry) {
-                  final isSelected = _selectedFontFamily == entry.key;
-                  return Padding(
-                    padding: const EdgeInsetsDirectional.only(end: 8),
-                    child: ChoiceChip(
-                      selected: isSelected,
-                      onSelected: (_) => setState(() => _selectedFontFamily = entry.key),
-                      label: Text(
-                        entry.value,
-                        style: GoogleFonts.getFont(
-                          entry.key,
-                          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                          fontSize: 12.5,
-                          color: isSelected ? scheme.onPrimary : scheme.onSurface,
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: scheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: scheme.outlineVariant.withValues(alpha: 0.4),
+                ),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButtonFormField<String>(
+                  initialValue: _selectedFontFamily,
+                  isExpanded: true,
+                  menuMaxHeight: 380,
+                  icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 22),
+                  dropdownColor: scheme.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  decoration: InputDecoration(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    border: InputBorder.none,
+                    prefixIcon: Icon(Icons.font_download_rounded, color: _selectedPrimary, size: 20),
+                  ),
+                  selectedItemBuilder: (BuildContext context) {
+                    return _availableFonts.map<Widget>((entry) {
+                      return Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: Row(
+                          children: [
+                            Text(
+                              entry.value.split(' — ').first,
+                              style: GoogleFonts.tajawal(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w800,
+                                color: scheme.onSurface,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '«أبجد هوز - تجربة الخط»',
+                              style: _safeGoogleFont(
+                                entry.key,
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w700,
+                                color: _selectedPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList();
+                  },
+                  items: _availableFonts.map((entry) {
+                    final isSelected = _selectedFontFamily == entry.key;
+                    return DropdownMenuItem<String>(
+                      value: entry.key,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        decoration: BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(
+                              color: scheme.outlineVariant.withValues(alpha: 0.25),
+                              width: 0.5,
+                            ),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    entry.value,
+                                    style: GoogleFonts.tajawal(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w800,
+                                      color: isSelected ? _selectedPrimary : scheme.onSurface,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    'نموذج الخط: أبجد هوز حطي كلمن • قرية أبودشيشة 123',
+                                    style: _safeGoogleFont(
+                                      entry.key,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: isSelected
+                                          ? _selectedPrimary
+                                          : scheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (isSelected)
+                              Icon(Icons.check_circle_rounded, color: _selectedPrimary, size: 18),
+                          ],
                         ),
                       ),
-                      selectedColor: _selectedPrimary,
-                      backgroundColor: scheme.surfaceContainerHighest.withValues(alpha: 0.35),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  );
-                }).toList(),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) {
+                      setState(() => _selectedFontFamily = val);
+                    }
+                  },
+                ),
               ),
             ),
             const SizedBox(height: 18),
@@ -1573,7 +1727,11 @@ class _CustomThemeBuilderSheetState extends State<_CustomThemeBuilderSheet> {
                       )
                     : const Icon(Icons.check_circle_rounded, size: 20),
                 label: Text(
-                  _saving ? 'جاري الحفظ...' : 'حفظ وتطبيق الثيم المخصص',
+                  _saving
+                      ? 'جاري الحفظ...'
+                      : (_isEditing
+                          ? 'حفظ التعديلات وتطبيق الثيم'
+                          : 'حفظ وتطبيق الثيم المخصص'),
                   style: GoogleFonts.tajawal(
                     fontSize: 15,
                     fontWeight: FontWeight.w800,

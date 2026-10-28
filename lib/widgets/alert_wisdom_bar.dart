@@ -8,12 +8,13 @@ import '../../core/constants/wisdom_calendar.dart';
 import '../../models/village_alert.dart';
 import '../../services/alert_service.dart';
 import '../../services/alert_sound_service.dart';
+import '../../services/hijri_calendar_service.dart';
 import '../../services/share_service.dart';
 import '../../services/weather_service.dart';
 
 /// الشريط الثابت أسفل هيدر الرئيسية:
 /// — تنبيه عاجل أحمر نابض عند تفعيله من لوحة الأدمن (يضغط لعرض النص كاملاً).
-/// — «حكمة اليوم» من تقويم القرية اليومي (365 حكمة بالتاريخ)، متضمنة الساعة والتاريخ في سطرها الأول.
+/// — «حكمة اليوم» من تقويم القرية اليومي (365 حكمة بالتاريخ)، متضمنة التاريخ الهجري والميلادي في سطرها الأول.
 class AlertWisdomBar extends StatefulWidget {
   const AlertWisdomBar({super.key});
 
@@ -27,13 +28,19 @@ class _AlertWisdomBarState extends State<AlertWisdomBar> {
   VillageAlert? _alert;
   Timer? _expiryTimer;
   Timer? _clockTicker;
+  VoidCallback? _hijriListener;
   String? _handledAlertStamp;
 
   @override
   void initState() {
     super.initState();
     _subscription = _service.watchLiveAlert().listen(_onAlertChanged);
-    _clockTicker = Timer.periodic(const Duration(seconds: 15), (_) {
+    HijriCalendarService.instance.fetchVerifiedHijriDate(DateTime.now());
+    _hijriListener = () {
+      if (mounted) setState(() {});
+    };
+    HijriCalendarService.instance.changeNotifier.addListener(_hijriListener!);
+    _clockTicker = Timer.periodic(const Duration(minutes: 1), (_) {
       if (mounted) setState(() {});
     });
   }
@@ -80,6 +87,10 @@ class _AlertWisdomBarState extends State<AlertWisdomBar> {
 
   @override
   void dispose() {
+    if (_hijriListener != null) {
+      HijriCalendarService.instance.changeNotifier
+          .removeListener(_hijriListener!);
+    }
     _clockTicker?.cancel();
     _expiryTimer?.cancel();
     _subscription?.cancel();
@@ -215,24 +226,27 @@ class _AlertWisdomBarState extends State<AlertWisdomBar> {
     }
 
     final now = WeatherService.villageNow();
-    final h12 = now.hour % 12 == 0 ? 12 : now.hour % 12;
-    final period = now.hour < 12 ? 'ص' : 'م';
-    final timeStr =
-        '${h12.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} $period';
 
-    const days = [
-      'الأحد',
-      'الاثنين',
-      'الثلاثاء',
-      'الأربعاء',
-      'الخميس',
-      'الجمعة',
-      'السبت'
+    // التاريخ الهجري الموثق من مصادر الرؤية المعتمدة بالتنسيق: 1 رمضان 1445 هـ
+    final hijriStr = HijriCalendarService.instance.formatFor(now);
+
+    // التاريخ الميلادي بنفس التنسيق: 28 أكتوبر 2026 م
+    const gregorianMonths = [
+      'يناير',
+      'فبراير',
+      'مارس',
+      'أبريل',
+      'مايو',
+      'يونيو',
+      'يوليو',
+      'أغسطس',
+      'سبتمبر',
+      'أكتوبر',
+      'نوفمبر',
+      'ديسمبر'
     ];
-    final d = now.day.toString().padLeft(2, '0');
-    final m = now.month.toString().padLeft(2, '0');
-    final y = now.year.toString();
-    final dateStr = '${days[now.weekday % 7]} $d-$m-$y';
+    final gregorianStr =
+        '${now.day} ${gregorianMonths[now.month - 1]} ${now.year} م';
 
     final wisdom = WisdomCalendar.of(DateTime.now());
 
@@ -274,87 +288,61 @@ class _AlertWisdomBarState extends State<AlertWisdomBar> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // السطر الأول: ( الساعة - حكمة اليوم - التاريخ ) بتنسيق دقيق ومضبوط
+                  // السطر الأول: ( تاريخ هجري - حكمة اليوم - تاريخ ميلادي ) بلا حدود وتعبئة لون
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     child: SizedBox(
                       width: MediaQuery.sizeOf(context).width - 56,
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          // 1) الساعة (مع أيقونة الساعة)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.14),
-                              borderRadius: BorderRadius.circular(999),
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.28),
-                                width: 0.8,
+                          // 1) التاريخ الهجري (على اليمين)
+                          Expanded(
+                            child: Align(
+                              alignment: AlignmentDirectional.centerStart,
+                              child: Text(
+                                hijriStr,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                             ),
+                          ),
+                          // 2) عنوان "حكمة اليوم" في المنتصف تماماً
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 6),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.schedule_rounded,
-                                    size: 11, color: Color(0xFFFFD54F)),
-                                const SizedBox(width: 4),
-                                Text(
-                                  timeStr,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 0.3,
-                                  ),
-                                ),
+                                Icon(Icons.format_quote_rounded,
+                                    size: 13,
+                                    color: Color(0xFFFFD54F)),
+                                SizedBox(width: 3),
+                                Text('حكمة اليوم',
+                                    style: TextStyle(
+                                        color: Color(0xFFFFD54F),
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w900)),
                               ],
                             ),
                           ),
-                          // 2) عنوان "حكمة اليوم" في المنتصف
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.format_quote_rounded,
-                                  size: 13,
-                                  color: const Color(0xFFFFD54F)
-                                      .withValues(alpha: 0.95)),
-                              const SizedBox(width: 3),
-                              const Text('حكمة اليوم',
-                                  style: TextStyle(
-                                      color: Color(0xFFFFD54F),
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w900)),
-                            ],
-                          ),
-                          // 3) التاريخ (مع أيقونة التقويم)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.14),
-                              borderRadius: BorderRadius.circular(999),
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.28),
-                                width: 0.8,
+                          // 3) التاريخ الميلادي (على اليسار)
+                          Expanded(
+                            child: Align(
+                              alignment: AlignmentDirectional.centerEnd,
+                              child: Text(
+                                gregorianStr,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.event_rounded,
-                                    size: 11, color: Color(0xFFFFD54F)),
-                                const SizedBox(width: 4),
-                                Text(
-                                  dateStr,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ],
                             ),
                           ),
                         ],

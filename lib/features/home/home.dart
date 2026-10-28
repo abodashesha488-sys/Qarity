@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -7,7 +6,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/utils/navigator_key.dart';
@@ -139,9 +137,7 @@ class _HomeIdentityBarState extends State<HomeIdentityBar> {
                 alpha: brightness == Brightness.dark ? 0.18 : 0.35)),
         boxShadow: const [
           BoxShadow(
-              color: Color(0x33000000),
-              blurRadius: 14,
-              offset: Offset(0, 4)),
+              color: Color(0x33000000), blurRadius: 14, offset: Offset(0, 4)),
         ],
       ),
       clipBehavior: Clip.antiAlias,
@@ -180,22 +176,23 @@ class _HomeIdentityBarState extends State<HomeIdentityBar> {
               ),
             ),
             const SizedBox(width: 8),
-            Builder(builder: (context) => Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _GlassIconButton(
-                        icon: Icons.settings_outlined,
-                        onTap: () => Navigator.pushNamed(
-                            context, AppRoutes.settingsIndex)),
-                    const SizedBox(width: 6),
-                    _GlassIconButton(
-                        icon: Icons.menu_rounded,
-                        onTap: () {
-                          HapticFeedback.lightImpact();
-                          Scaffold.of(context).openEndDrawer();
-                        }),
-                  ],
-                )),
+            Builder(
+                builder: (context) => Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _GlassIconButton(
+                            icon: Icons.settings_outlined,
+                            onTap: () => Navigator.pushNamed(
+                                context, AppRoutes.settingsIndex)),
+                        const SizedBox(width: 6),
+                        _GlassIconButton(
+                            icon: Icons.menu_rounded,
+                            onTap: () {
+                              HapticFeedback.lightImpact();
+                              Scaffold.of(context).openEndDrawer();
+                            }),
+                      ],
+                    )),
           ],
         ),
       ),
@@ -215,53 +212,85 @@ class HomeDrawer extends StatelessWidget {
           children: [
             DrawerHeader(
               decoration: BoxDecoration(gradient: AppColors.primaryGradient),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                InkWell(
-                  borderRadius: BorderRadius.circular(28),
-                  onTap: () => showQurityLogoDialog(context),
-                  child: const QurityLogo(size: 56),
-                ),
-                const SizedBox(height: 16),
-                const Text('قرية أبوديشيشة', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800)),
-                const SizedBox(height: 4),
-                Text('خدمات المجتمع والمحتوى المحلي', style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 13)),
-              ]),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    InkWell(
+                      borderRadius: BorderRadius.circular(28),
+                      onTap: () => showQurityLogoDialog(context),
+                      child: const QurityLogo(size: 56),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('قرية أبوديشيشة',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 4),
+                    Text('خدمات المجتمع والمحتوى المحلي',
+                        style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.85),
+                            fontSize: 13)),
+                  ]),
             ),
-            _buildDrawerItem(context, 'الرئيسية', Icons.home_rounded, AppRoutes.home),
-            _buildDrawerItem(context, 'البحث الشامل', Icons.search_rounded, AppRoutes.globalSearch),
-            _buildDrawerItem(context, 'تعرف على القرية', Icons.account_balance_rounded, AppRoutes.about,
-                leading: const QurityLogo(size: 28, withBorder: false, withShadow: false)),
-            _buildDrawerItem(context, 'أخبار القرية', Icons.newspaper_rounded, AppRoutes.newsList),
-            _buildDrawerItem(context, 'مندرة القرية', Icons.chat_bubble_rounded, AppRoutes.forumPosts),
-            _buildDrawerItem(context, 'سوق القرية', Icons.storefront_rounded, AppRoutes.marketProducts),
-            _buildDrawerItem(context, 'فنيين القرية', Icons.plumbing_rounded, AppRoutes.techniciansDirectory),
-            _buildDrawerItem(context, 'مستشار القرية', Icons.gavel_rounded, AppRoutes.legalAdvisor),
-            _buildDrawerItem(context, 'الخدمات الطبية', Icons.medical_services_rounded, AppRoutes.medical),
-            _buildDrawerItem(context, 'الخدمات التعليمية', Icons.school_rounded, AppRoutes.educationalServices),
-            _buildDrawerItem(context, 'خدمات المزارع', Icons.agriculture_rounded, AppRoutes.farmerServices),
-            _buildDrawerItem(context, 'إعلانات القرية', Icons.campaign_rounded, AppRoutes.villageAds),
-            _buildDrawerItem(context, 'المفقودات', Icons.search_rounded, AppRoutes.lostItems),
-            _buildDrawerItem(context, 'دليل الهاتف', Icons.contact_page_rounded, AppRoutes.phoneDirectory),
-            _buildDrawerItem(context, 'المناسبات', Icons.celebration_rounded, AppRoutes.occasionsList),
-            _buildDrawerItem(context, 'سجل العزاء', Icons.volunteer_activism_rounded, AppRoutes.obituariesList),
-            _buildDrawerItem(context, 'ركن الأطفال', Icons.child_care_rounded, AppRoutes.children),
-            _buildDrawerItem(context, 'الطوارئ', Icons.contact_phone_rounded, AppRoutes.emergencyContacts),
-            _buildDrawerItem(context, 'الملف الشخصي', Icons.person_rounded, AppRoutes.profileMain),
-            _buildDrawerItem(context, 'الإعدادات', Icons.settings_rounded, AppRoutes.settingsIndex),
-            _buildDrawerItem(context, 'عن التطبيق', Icons.info_rounded, AppRoutes.aboutApp),
+            _buildDrawerItem(
+                context, 'الرئيسية', Icons.home_rounded, AppRoutes.home),
+            _buildDrawerItem(context, 'البحث الشامل', Icons.search_rounded,
+                AppRoutes.globalSearch),
+            _buildDrawerItem(context, 'تعرف على القرية',
+                Icons.account_balance_rounded, AppRoutes.about,
+                leading: const QurityLogo(
+                    size: 28, withBorder: false, withShadow: false)),
+            _buildDrawerItem(context, 'أخبار القرية', Icons.newspaper_rounded,
+                AppRoutes.newsList),
+            _buildDrawerItem(context, 'مندرة القرية', Icons.chat_bubble_rounded,
+                AppRoutes.forumPosts),
+            _buildDrawerItem(context, 'سوق القرية', Icons.storefront_rounded,
+                AppRoutes.marketProducts),
+            _buildDrawerItem(context, 'فنيين القرية', Icons.plumbing_rounded,
+                AppRoutes.techniciansDirectory),
+            _buildDrawerItem(context, 'مستشار القرية', Icons.gavel_rounded,
+                AppRoutes.legalAdvisor),
+            _buildDrawerItem(context, 'الخدمات الطبية',
+                Icons.medical_services_rounded, AppRoutes.medical),
+            _buildDrawerItem(context, 'الخدمات التعليمية', Icons.school_rounded,
+                AppRoutes.educationalServices),
+            _buildDrawerItem(context, 'خدمات المزارع',
+                Icons.agriculture_rounded, AppRoutes.farmerServices),
+            _buildDrawerItem(context, 'إعلانات القرية', Icons.campaign_rounded,
+                AppRoutes.villageAds),
+            _buildDrawerItem(context, 'المفقودات', Icons.search_rounded,
+                AppRoutes.lostItems),
+            _buildDrawerItem(context, 'دليل الهاتف', Icons.contact_page_rounded,
+                AppRoutes.phoneDirectory),
+            _buildDrawerItem(context, 'المناسبات', Icons.celebration_rounded,
+                AppRoutes.occasionsList),
+            _buildDrawerItem(context, 'سجل العزاء',
+                Icons.volunteer_activism_rounded, AppRoutes.obituariesList),
+            _buildDrawerItem(context, 'ركن الأطفال', Icons.child_care_rounded,
+                AppRoutes.children),
+            _buildDrawerItem(context, 'الطوارئ', Icons.contact_phone_rounded,
+                AppRoutes.emergencyContacts),
+            _buildDrawerItem(context, 'الملف الشخصي', Icons.person_rounded,
+                AppRoutes.profileMain),
+            _buildDrawerItem(context, 'الإعدادات', Icons.settings_rounded,
+                AppRoutes.settingsIndex),
+            _buildDrawerItem(
+                context, 'عن التطبيق', Icons.info_rounded, AppRoutes.aboutApp),
             ListTile(
               leading: Icon(Icons.system_update_rounded,
                   color: Theme.of(context).colorScheme.primary),
               title: const Text('التحقق من التحديثات',
                   style: TextStyle(fontWeight: FontWeight.w600)),
-              shape:
-                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               onTap: () {
                 Navigator.pop(context);
                 _checkForUpdate();
               },
             ),
-            _buildDrawerItem(context, 'لوحة التحكم', Icons.admin_panel_settings_rounded, AppRoutes.admin),
+            _buildDrawerItem(context, 'لوحة التحكم',
+                Icons.admin_panel_settings_rounded, AppRoutes.admin),
           ],
         ),
       ),
@@ -281,7 +310,8 @@ class HomeDrawer extends StatelessWidget {
         if (!ctx.mounted) return;
         await UpdateFlow.install(ctx, info);
       case UpdateCheckStatus.checkFailed:
-        AppHelpers.showToast('تعذّر فحص التحديثات — تحقق من الاتصال وأعد المحاولة');
+        AppHelpers.showToast(
+            'تعذّر فحص التحديثات — تحقق من الاتصال وأعد المحاولة');
       case UpdateCheckStatus.notSupported:
         AppHelpers.showToast('التحديث هنا تلقائي عند فتح التطبيق');
       case UpdateCheckStatus.upToDate:
@@ -289,11 +319,12 @@ class HomeDrawer extends StatelessWidget {
     }
   }
 
-  Widget _buildDrawerItem(BuildContext context, String title, IconData icon,
-      String route, {Widget? leading}) {
+  Widget _buildDrawerItem(
+      BuildContext context, String title, IconData icon, String route,
+      {Widget? leading}) {
     return ListTile(
-      leading: leading ??
-          Icon(icon, color: Theme.of(context).colorScheme.primary),
+      leading:
+          leading ?? Icon(icon, color: Theme.of(context).colorScheme.primary),
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       onTap: () {
@@ -313,8 +344,6 @@ class HomeContent extends StatefulWidget {
     if (hour < 17) return 'نهارك سعيد 🌤️';
     return 'مساء الخير 🌙';
   }
-
-
 
   @override
   State<HomeContent> createState() => _HomeContentState();
@@ -340,15 +369,13 @@ class _HomeContentState extends State<HomeContent> {
   @override
   void initState() {
     super.initState();
-    _offerTicker =
-        Timer.periodic(const Duration(minutes: 1), (_) {
-          if (mounted) setState(() {});
-        });
+    _offerTicker = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (mounted) setState(() {});
+    });
     // فحص وقت الصلاة الفعلي كل ثانية لمن هو فاتح للتطبيق أثناء دخول الوقت
-    _prayerAlertTicker =
-        Timer.periodic(const Duration(seconds: 1), (_) {
-          if (mounted) setState(() {});
-        });
+    _prayerAlertTicker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkAndSendSeasonalGreeting();
     });
@@ -460,9 +487,9 @@ class _HomeContentState extends State<HomeContent> {
 
   Widget _buildLatestProducts(BuildContext context) {
     Widget list(List<MarketProduct> products) {
-      final latest = [...products]
-        ..sort((a, b) => (b.createdAt ?? DateTime(1970))
-            .compareTo(a.createdAt ?? DateTime(1970)));
+      final latest = [...products]..sort((a, b) =>
+          (b.createdAt ?? DateTime(1970))
+              .compareTo(a.createdAt ?? DateTime(1970)));
       final items = latest.take(8).toList();
       if (items.isEmpty) return const SizedBox(height: 170);
       return SizedBox(
@@ -496,9 +523,8 @@ class _HomeContentState extends State<HomeContent> {
   Widget _buildLiveNews(BuildContext context) {
     final theme = Theme.of(context);
     Widget list(List<NewsItem> news) {
-      final sorted = [...news]
-        ..sort((a, b) => (b.createdAt ?? DateTime(1970))
-            .compareTo(a.createdAt ?? DateTime(1970)));
+      final sorted = [...news]..sort((a, b) => (b.createdAt ?? DateTime(1970))
+          .compareTo(a.createdAt ?? DateTime(1970)));
       final latest = sorted.take(6).toList();
       if (latest.isEmpty) return const SizedBox(height: 150);
       return SizedBox(
@@ -509,8 +535,8 @@ class _HomeContentState extends State<HomeContent> {
           itemCount: latest.length,
           separatorBuilder: (_, __) => const SizedBox(width: 12),
           itemBuilder: (context, index) => GestureDetector(
-            onTap: () => Navigator.pushNamed(
-                context, AppRoutes.newsView, arguments: latest[index]),
+            onTap: () => Navigator.pushNamed(context, AppRoutes.newsView,
+                arguments: latest[index]),
             child: Container(
               width: 150,
               decoration: BoxDecoration(
@@ -525,16 +551,15 @@ class _HomeContentState extends State<HomeContent> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SizedBox(
-                      height: 58,
-                      width: double.infinity,
-                      child: CachedNetworkImage(
-                          imageUrl: latest[index].imageUrl,
-                          fit: BoxFit.cover,
-                          errorWidget: (_, __, ___) => ColoredBox(
-                              color: theme
-                                  .colorScheme.surfaceContainerHighest,
-                              child: const Icon(Icons.newspaper_rounded))),
-                    ),
+                    height: 58,
+                    width: double.infinity,
+                    child: CachedNetworkImage(
+                        imageUrl: latest[index].imageUrl,
+                        fit: BoxFit.cover,
+                        errorWidget: (_, __, ___) => ColoredBox(
+                            color: theme.colorScheme.surfaceContainerHighest,
+                            child: const Icon(Icons.newspaper_rounded))),
+                  ),
                   Padding(
                     padding: const EdgeInsets.all(9),
                     child: Column(
@@ -596,7 +621,8 @@ class _HomeContentState extends State<HomeContent> {
             final post = latest[index];
             return GestureDetector(
               onTap: () => Navigator.pushNamed(
-                  context, AppRoutes.forumPostDetail, arguments: post),
+                  context, AppRoutes.forumPostDetail,
+                  arguments: post),
               child: Container(
                 width: 152,
                 decoration: BoxDecoration(
@@ -619,8 +645,7 @@ class _HomeContentState extends State<HomeContent> {
                             ? CachedNetworkImage(
                                 imageUrl: post.imageUrl!,
                                 fit: BoxFit.cover,
-                                errorWidget: (_, __, ___) =>
-                                    _postIcon(theme))
+                                errorWidget: (_, __, ___) => _postIcon(theme))
                             : _postIcon(theme)),
                     Padding(
                       padding: const EdgeInsets.all(9),
@@ -731,13 +756,10 @@ class _HeroHeader extends StatelessWidget {
       width: double.infinity,
       decoration: const BoxDecoration(
         borderRadius: BorderRadius.only(
-            bottomLeft: Radius.circular(63),
-            bottomRight: Radius.circular(63)),
+            bottomLeft: Radius.circular(63), bottomRight: Radius.circular(63)),
         boxShadow: [
           BoxShadow(
-              color: Color(0x2E000000),
-              blurRadius: 18,
-              offset: Offset(0, 6)),
+              color: Color(0x2E000000), blurRadius: 18, offset: Offset(0, 6)),
         ],
       ),
       clipBehavior: Clip.antiAlias,
@@ -761,13 +783,20 @@ class _HeroHeader extends StatelessWidget {
                 height: kHeroBodyHeight,
                 child: Align(
                   alignment: Alignment.topRight,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      NotificationBellButton(compact: true),
-                      SizedBox(width: 8),
-                      _HeaderSearchButton(),
-                    ],
+                  child: OverflowBox(
+                    minHeight: 0,
+                    maxHeight: 120,
+                    minWidth: 0,
+                    maxWidth: 100,
+                    alignment: Alignment.topRight,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        NotificationBellButton(compact: true),
+                        SizedBox(height: 4),
+                        _HeaderSearchButton(),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -829,32 +858,21 @@ class _HeaderSearchButton extends StatelessWidget {
           HapticFeedback.lightImpact();
           Navigator.pushNamed(context, AppRoutes.globalSearch);
         },
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7.5),
-          decoration: BoxDecoration(
-            color: AppColors.primaryDark.withValues(alpha: 0.90),
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x40000000),
-                blurRadius: 8,
-                offset: Offset(0, 2),
+        child: const Padding(
+          padding: EdgeInsets.all(5),
+          child: Icon(
+            Icons.search_rounded,
+            size: 28,
+            color: Color(0xFFFFD700),
+            shadows: [
+              Shadow(
+                color: Color(0x99000000),
+                blurRadius: 4,
+                offset: Offset(0, 1),
               ),
-            ],
-          ),
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.search_rounded, size: 15, color: Color(0xFFFFE082)),
-              SizedBox(width: 4),
-              Text(
-                'بحث',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                ),
+              Shadow(
+                color: Color(0x66FFD700),
+                blurRadius: 6,
               ),
             ],
           ),
@@ -889,8 +907,7 @@ void showQurityLogoDialog(BuildContext context) {
           const SizedBox(height: 10),
           TextButton.icon(
             style: TextButton.styleFrom(
-                foregroundColor: Colors.white,
-                backgroundColor: Colors.white24),
+                foregroundColor: Colors.white, backgroundColor: Colors.white24),
             onPressed: () => Navigator.pop(ctx),
             icon: const Icon(Icons.close_rounded, size: 18),
             label: const Text('إغلاق'),
@@ -901,7 +918,6 @@ void showQurityLogoDialog(BuildContext context) {
   );
 }
 
-
 class _GlassIconButton extends StatelessWidget {
   const _GlassIconButton({required this.icon, required this.onTap});
   final IconData icon;
@@ -911,8 +927,8 @@ class _GlassIconButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: Colors.white.withValues(alpha: 0.16),
-      shape: CircleBorder(side: BorderSide(
-          color: Colors.white.withValues(alpha: 0.28))),
+      shape: CircleBorder(
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.28))),
       child: InkWell(
         customBorder: const CircleBorder(),
         onTap: onTap,
@@ -940,14 +956,10 @@ class _ProfileAvatarButton extends StatelessWidget {
         shape: BoxShape.circle,
         color: Colors.white.withValues(alpha: 0.18),
         border: Border.all(
-            color:
-                const Color(0xFFF1C40F).withValues(alpha: 0.85),
-            width: 2),
+            color: const Color(0xFFF1C40F).withValues(alpha: 0.85), width: 2),
         boxShadow: const [
           BoxShadow(
-              color: Color(0x33000000),
-              blurRadius: 6,
-              offset: Offset(0, 2)),
+              color: Color(0x33000000), blurRadius: 6, offset: Offset(0, 2)),
         ],
       ),
       child: Material(
@@ -968,10 +980,12 @@ class _ProfileAvatarButton extends StatelessWidget {
                     fit: BoxFit.cover,
                     placeholder: (_, __) => const Icon(
                         Icons.person_outline_rounded,
-                        color: Colors.white, size: 19),
+                        color: Colors.white,
+                        size: 19),
                     errorWidget: (_, __, ___) => const Icon(
                         Icons.person_outline_rounded,
-                        color: Colors.white, size: 19),
+                        color: Colors.white,
+                        size: 19),
                   ),
           ),
         ),
@@ -1020,8 +1034,8 @@ class _SectionHead extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(title,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w900)),
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w900)),
                 if (subtitle != null)
                   Text(subtitle!,
                       style: theme.textTheme.labelSmall?.copyWith(
@@ -1034,8 +1048,8 @@ class _SectionHead extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               onTap: () => Navigator.pushNamed(context, actionRoute!),
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 10, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 child: Row(
                   children: [
                     Text('عرض الكل',
@@ -1082,48 +1096,53 @@ class ModernServiceGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GridView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 10),
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: _services.length,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 3,
-          mainAxisSpacing: 14,
-          crossAxisSpacing: 14,
-          childAspectRatio: 0.95),
-      itemBuilder: (context, index) => _buildServiceCard(context, _services[index], index),
+          mainAxisSpacing: 8,
+          crossAxisSpacing: 8,
+          childAspectRatio: 0.88),
+      itemBuilder: (context, index) =>
+          _buildServiceCard(context, _services[index], index),
     );
   }
 
-  Widget _buildServiceCard(BuildContext context, _ServiceItem service, int index) {
-    final theme = Theme.of(context);
-    final radius = BorderRadius.circular(18);
-    return Container(
-      decoration: BoxDecoration(
+  Widget _buildServiceCard(
+      BuildContext context, _ServiceItem service, int index) {
+    final pngPath = service.image.replaceAll('.jpg', '.png');
+    final radius = BorderRadius.circular(16);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         borderRadius: radius,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.26),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Material(
-        color: theme.colorScheme.surface,
-        child: InkWell(
-          borderRadius: radius,
-          onTap: () => Navigator.pushNamed(context, service.route),
-          child: Image.asset(service.image,
+        onTap: () => Navigator.pushNamed(context, service.route),
+        child: Padding(
+          padding: const EdgeInsets.all(0),
+          child: Image.asset(
+            pngPath,
+            width: double.infinity,
+            height: double.infinity,
+            fit: BoxFit.contain,
+            cacheWidth: 320,
+            semanticLabel: service.title,
+            errorBuilder: (_, __, ___) => Image.asset(
+              service.image,
               width: double.infinity,
               height: double.infinity,
               fit: BoxFit.cover,
-              cacheWidth: 280,
-              semanticLabel: service.title),
+              cacheWidth: 320,
+              semanticLabel: service.title,
+            ),
+          ),
         ),
       ),
-    ).animate(delay: (index * 40).ms).fadeIn(duration: 400.ms).scale(begin: const Offset(0.92, 0.92));
+    )
+        .animate(delay: (index * 40).ms)
+        .fadeIn(duration: 400.ms)
+        .scale(begin: const Offset(0.92, 0.92));
   }
 }
 
@@ -1169,8 +1188,7 @@ class _VillageClockState extends State<_VillageClock> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(Icons.schedule_rounded,
-            size: 11, color: Color(0xFFFFE082)),
+        const Icon(Icons.schedule_rounded, size: 11, color: Color(0xFFFFE082)),
         const SizedBox(width: 4),
         Text(text,
             style: const TextStyle(
@@ -1230,8 +1248,8 @@ class _VillageNextPrayerPillState extends State<_VillageNextPrayerPill>
     final remainingText = VillagePrayerSchedule.formatRemainingTime(remaining);
 
     // عندما يقل الوقت المتبقي عن 5 دقائق، يصبح لونه أحمر ويومض
-    final isUrgent = remaining.inSeconds > 0 &&
-        remaining <= const Duration(minutes: 5);
+    final isUrgent =
+        remaining.inSeconds > 0 && remaining <= const Duration(minutes: 5);
 
     if (isUrgent) {
       if (!_blinkController.isAnimating) {
@@ -1312,7 +1330,8 @@ class _VillagePrayerAlertBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final isEid = prayer.name.startsWith('eid');
     final prayerTitle = isEid ? prayer.nameAr : 'صلاة «${prayer.nameAr}»';
-    final message = 'حان الآن موعد $prayerTitle حسب التوقيت الخاص بقرية أبودشيشة';
+    final message =
+        'حان الآن موعد $prayerTitle حسب التوقيت الخاص بقرية أبودشيشة';
 
     return Container(
       key: const ValueKey('home-prayer-alert-banner'),
@@ -1483,16 +1502,15 @@ class _ProductCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return GestureDetector(
-      onTap: () => Navigator.pushNamed(context,
-          AppRoutes.marketProductDetail, arguments: product),
+      onTap: () => Navigator.pushNamed(context, AppRoutes.marketProductDetail,
+          arguments: product),
       child: Container(
         width: 136,
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-              color: theme.colorScheme.outlineVariant
-                  .withValues(alpha: 0.35)),
+              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.35)),
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(
@@ -1519,8 +1537,7 @@ class _ProductCard extends StatelessWidget {
                           horizontal: 6, vertical: 2),
                       decoration: const BoxDecoration(
                           color: AppColors.error,
-                          borderRadius:
-                              BorderRadius.all(Radius.circular(7))),
+                          borderRadius: BorderRadius.all(Radius.circular(7))),
                       child: const Text('عرض',
                           style: TextStyle(
                               color: Colors.white,
@@ -1571,7 +1588,7 @@ class _ProductCard extends StatelessWidget {
         ),
       ),
     );
-}
+  }
 }
 
 class _HomeFooter extends StatelessWidget {

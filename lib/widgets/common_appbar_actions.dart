@@ -1,7 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-import '../core/constants/app_colors.dart';
 import '../routes/app_routes.dart';
 import '../services/notification_inbox_service.dart';
 
@@ -68,27 +67,14 @@ class _NotificationBellButtonState extends State<NotificationBellButton> {
             onPressed: open,
           );
         }
-        // النسخة المضغوطة (هيدر الرئيسية) — زر دائري مكبّر دون نص «الإشعارات»
+        // النسخة المضغوطة (هيدر الرئيسية) — رمز نقي بلا دائرة ولا لون
         return Material(
           color: Colors.transparent,
           child: InkWell(
             borderRadius: BorderRadius.circular(999),
             onTap: open,
-            child: Container(
-              padding: const EdgeInsets.all(7.5),
-              decoration: BoxDecoration(
-                color: AppColors.primaryDark.withValues(alpha: 0.90),
-                shape: BoxShape.circle,
-                border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.45), width: 1.1),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x40000000),
-                    blurRadius: 8,
-                    offset: Offset(0, 2),
-                  ),
-                ],
-              ),
+            child: Padding(
+              padding: const EdgeInsets.all(6),
               child: Badge(
                 isLabelVisible: unread > 0,
                 label: Text(
@@ -102,8 +88,19 @@ class _NotificationBellButtonState extends State<NotificationBellButton> {
                 backgroundColor: const Color(0xFFE53935),
                 child: const Icon(
                   Icons.notifications_none_rounded,
-                  size: 21,
-                  color: Color(0xFFFFE082),
+                  size: 24,
+                  color: Color(0xFFFFD700),
+                  shadows: [
+                    Shadow(
+                      color: Color(0x99000000),
+                      blurRadius: 4,
+                      offset: Offset(0, 1),
+                    ),
+                    Shadow(
+                      color: Color(0x66FFD700),
+                      blurRadius: 6,
+                    ),
+                  ],
                 ),
               ),
             ),

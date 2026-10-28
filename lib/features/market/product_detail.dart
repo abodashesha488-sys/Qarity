@@ -80,9 +80,15 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       await _loadAdditionalData();
       return;
     }
+    String? productId;
     if (args is String) {
+      productId = args;
+    } else if (args is Map) {
+      productId = args['id'] as String? ?? args['productId'] as String?;
+    }
+    if (productId != null && productId.isNotEmpty) {
       try {
-        final product = await _marketService.getProductById(args);
+        final product = await _marketService.getProductById(productId);
         if (!mounted) return;
         setState(() {
           _product = product;
@@ -768,6 +774,21 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     try {
       await _interactionService.toggleLike(
           productId: _product!.id, userId: user.uid);
+      final product = _product!;
+      final favItem = FavoriteItem(
+        id: 'product_${product.id}',
+        targetId: product.id,
+        collection: 'products',
+        title: product.name,
+        subtitle: '${product.effectivePrice.toStringAsFixed(0)} ج.م • ${product.sellerName}',
+        imageUrl: product.imageUrl.isNotEmpty
+            ? product.imageUrl
+            : (product.imageUrls.isNotEmpty ? product.imageUrls.first : ''),
+        route: AppRoutes.marketProductDetail,
+        arguments: {'id': product.id},
+        createdAt: DateTime.now(),
+      );
+      await FavoritesService.instance.toggleFavorite(favItem);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)

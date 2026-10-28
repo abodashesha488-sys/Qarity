@@ -1,6 +1,8 @@
 import 'dart:convert';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -107,44 +109,126 @@ class FavoriteItem {
 
 /// خدمة إدارة المفضلة المركزية في التطبيق
 class FavoritesService {
-  FavoritesService._();
+  FavoritesService._() {
+    _initAuthListener();
+  }
   static final FavoritesService instance = FavoritesService._();
 
   final ValueNotifier<List<FavoriteItem>> favoritesNotifier =
       ValueNotifier<List<FavoriteItem>>([]);
 
   bool _initialized = false;
+  String? _lastLoadedUid;
+
+  bool get _isFirebaseReady {
+    try {
+      return Firebase.apps.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  String? get _currentUid {
+    if (!_isFirebaseReady) return null;
+    try {
+      return FirebaseAuth.instance.currentUser?.uid;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void _initAuthListener() {
+    if (!_isFirebaseReady) return;
+    try {
+      FirebaseAuth.instance.authStateChanges().listen((user) {
+        final currentUid = user?.uid ?? 'guest';
+        if (_lastLoadedUid != currentUid) {
+          _lastLoadedUid = currentUid;
+          reload();
+        }
+      });
+    } catch (e) {
+      if (kDebugMode) debugPrint('Favorites auth listener error: $e');
+    }
+  }
 
   String get _storageKey {
-    final uid = FirebaseAuth.instance.currentUser?.uid ?? 'guest';
+    final uid = _currentUid ?? 'guest';
     return 'user_favorites_$uid';
   }
 
   /// تهيئة الخدمة وتحميل قائمة المفضلة المخزنة
   Future<void> init() async {
-    if (_initialized) return;
+    final currentUid = _currentUid ?? 'guest';
+    if (_initialized && _lastLoadedUid == currentUid) return;
+    _lastLoadedUid = currentUid;
     await reload();
     _initialized = true;
   }
 
-  /// إعادة قراءة المفضلة من التخزين المحلي
+  /// إعادة قراءة المفضلة من التخزين المحلي والمزامنة مع حساب المستخدم في فيربيز
   Future<void> reload() async {
+    List<FavoriteItem> localItems = [];
     try {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(_storageKey);
       if (raw != null && raw.isNotEmpty) {
         final decoded = jsonDecode(raw) as List<dynamic>;
-        final items = decoded
-            .map((e) => FavoriteItem.fromJson(e as Map<String, dynamic>))
+        localItems = decoded
+            .map((e) => FavoriteItem.fromJson(Map<String, dynamic>.from(e as Map)))
             .toList();
-        // الأحدث أولاً
-        items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-        favoritesNotifier.value = items;
+        localItems.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        favoritesNotifier.value = localItems;
       } else {
         favoritesNotifier.value = [];
       }
     } catch (e) {
-      if (kDebugMode) debugPrint('Favorites reload error: $e');
+      if (kDebugMode) debugPrint('Favorites local reload error: $e');
+    }
+
+    // مزامنة فورية مع سحابة حساب المستخدم إن كان مسجل دخول وفيربيز جاهز
+    final uid = _currentUid;
+    if (uid != null && uid.isNotEmpty && _isFirebaseReady) {
+      try {
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .get();
+        if (doc.exists && doc.data() != null) {
+          final data = doc.data()!;
+          if (data['favorites'] is List) {
+            final remoteRaw = data['favorites'] as List;
+            final remoteItems = remoteRaw
+                .map((e) => FavoriteItem.fromJson(Map<String, dynamic>.from(e as Map)))
+                .toList();
+
+            final map = <String, FavoriteItem>{};
+            for (final item in remoteItems) {
+              map['${item.collection}::${item.targetId}'] = item;
+            }
+            for (final item in localItems) {
+              map.putIfAbsent('${item.collection}::${item.targetId}', () => item);
+            }
+            final merged = map.values.toList();
+            merged.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+            favoritesNotifier.value = merged;
+
+            final prefs = await SharedPreferences.getInstance();
+            final rawMerged = jsonEncode(merged.map((e) => e.toJson()).toList());
+            await prefs.setString(_storageKey, rawMerged);
+
+            if (merged.length > remoteItems.length) {
+              await _syncToRemote(uid, merged);
+            }
+          } else if (localItems.isNotEmpty) {
+            await _syncToRemote(uid, localItems);
+          }
+        } else if (localItems.isNotEmpty) {
+          await _syncToRemote(uid, localItems);
+        }
+      } catch (e) {
+        if (kDebugMode) debugPrint('Favorites remote reload error: $e');
+      }
     }
   }
 
@@ -197,14 +281,33 @@ class FavoritesService {
     return all.where((it) => it.collection == collection).toList();
   }
 
-  /// حفظ القائمة في SharedPreferences
+  /// حفظ القائمة في SharedPreferences وسحابة حساب المستخدم في فيربيز
   Future<void> _persist(List<FavoriteItem> items) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final raw = jsonEncode(items.map((e) => e.toJson()).toList());
       await prefs.setString(_storageKey, raw);
     } catch (e) {
-      if (kDebugMode) debugPrint('Favorites persist error: $e');
+      if (kDebugMode) debugPrint('Favorites persist local error: $e');
+    }
+
+    final uid = _currentUid;
+    if (uid != null && uid.isNotEmpty) {
+      await _syncToRemote(uid, items);
+    }
+  }
+
+  /// مزامنة المفضلة مع وثيقة المستخدم في Firestore
+  Future<void> _syncToRemote(String uid, List<FavoriteItem> items) async {
+    if (!_isFirebaseReady) return;
+    try {
+      final jsonList = items.map((e) => e.toJson()).toList();
+      await FirebaseFirestore.instance.collection('users').doc(uid).set({
+        'favorites': jsonList,
+        'favoritesUpdatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      if (kDebugMode) debugPrint('Favorites sync to Firestore error: $e');
     }
   }
 
@@ -213,5 +316,9 @@ class FavoritesService {
     favoritesNotifier.value = [];
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_storageKey);
+    final uid = _currentUid;
+    if (uid != null && uid.isNotEmpty) {
+      await _syncToRemote(uid, []);
+    }
   }
 }

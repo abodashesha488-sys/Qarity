@@ -900,7 +900,7 @@ class _ModernProductCard extends StatelessWidget {
                   Positioned(
                     top: 5,
                     left: 5,
-                    child: _QuickFavoriteButton(productId: product.id),
+                    child: _QuickFavoriteButton(product: product),
                   ),
                 ],
               ),
@@ -1016,39 +1016,11 @@ class _ModernProductCard extends StatelessWidget {
   }
 }
 
-class _QuickFavoriteButton extends StatefulWidget {
-  const _QuickFavoriteButton({required this.productId});
-  final String productId;
+class _QuickFavoriteButton extends StatelessWidget {
+  const _QuickFavoriteButton({required this.product});
+  final MarketProduct product;
 
-  @override
-  State<_QuickFavoriteButton> createState() => _QuickFavoriteButtonState();
-}
-
-class _QuickFavoriteButtonState extends State<_QuickFavoriteButton> {
-  bool _isLiked = false;
-  final ProductInteractionService _interactionService = ProductInteractionService();
-  StreamSubscription<bool>? _sub;
-
-  @override
-  void initState() {
-    super.initState();
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid != null && uid.isNotEmpty) {
-      _sub = _interactionService
-          .hasUserLikedStream(productId: widget.productId, userId: uid)
-          .listen((liked) {
-        if (mounted) setState(() => _isLiked = liked);
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    _sub?.cancel();
-    super.dispose();
-  }
-
-  Future<void> _toggle() async {
+  Future<void> _toggle(BuildContext context) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1060,50 +1032,68 @@ class _QuickFavoriteButtonState extends State<_QuickFavoriteButton> {
       return;
     }
 
-    setState(() => _isLiked = !_isLiked);
+    final item = FavoriteItem(
+      id: 'product_${product.id}',
+      targetId: product.id,
+      collection: 'products',
+      title: product.name,
+      subtitle: '${product.effectivePrice.toStringAsFixed(0)} ج.م • ${product.sellerName}',
+      imageUrl: product.imageUrl.isNotEmpty
+          ? product.imageUrl
+          : (product.imageUrls.isNotEmpty ? product.imageUrls.first : ''),
+      route: AppRoutes.marketProductDetail,
+      arguments: {'id': product.id},
+      createdAt: DateTime.now(),
+    );
+
+    await FavoritesService.instance.toggleFavorite(item);
     try {
-      await _interactionService.toggleLike(
-        productId: widget.productId,
+      await ProductInteractionService().toggleLike(
+        productId: product.id,
         userId: user.uid,
       );
-    } catch (_) {
-      if (mounted) setState(() => _isLiked = !_isLiked);
-    }
+    } catch (_) {}
   }
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: _toggle,
-        customBorder: const CircleBorder(),
-        child: Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.92),
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: _isLiked
-                  ? const Color(0xFFE53935).withValues(alpha: 0.45)
-                  : Colors.black12,
-              width: 1.1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.16),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
+    return ValueListenableBuilder<List<FavoriteItem>>(
+      valueListenable: FavoritesService.instance.favoritesNotifier,
+      builder: (context, _, __) {
+        final isFav = FavoritesService.instance.isFavorite(product.id, 'products');
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => _toggle(context),
+            customBorder: const CircleBorder(),
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.92),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isFav
+                      ? const Color(0xFFE53935).withValues(alpha: 0.45)
+                      : Colors.black12,
+                  width: 1.1,
+                ),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x28000000),
+                    blurRadius: 6,
+                    offset: Offset(0, 2),
+                  ),
+                ],
               ),
-            ],
+              child: Icon(
+                isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                size: 17,
+                color: isFav ? const Color(0xFFE53935) : const Color(0xFF333333),
+              ),
+            ),
           ),
-          child: Icon(
-            _isLiked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-            size: 17,
-            color: _isLiked ? const Color(0xFFE53935) : const Color(0xFF333333),
-          ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -1265,7 +1255,7 @@ class _ModernProductListCard extends StatelessWidget {
                     Positioned(
                       top: 4,
                       left: 4,
-                      child: _QuickFavoriteButton(productId: product.id),
+                      child: _QuickFavoriteButton(product: product),
                     ),
                   ],
                 ),

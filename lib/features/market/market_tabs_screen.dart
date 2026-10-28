@@ -156,6 +156,8 @@ class _MarketTabsScreenState extends State<MarketTabsScreen>
               onTap: (_) => setState(() {}),
               dividerColor: Colors.transparent,
               indicatorSize: TabBarIndicatorSize.tab,
+              tabAlignment: TabAlignment.fill,
+              labelPadding: const EdgeInsets.symmetric(horizontal: 2),
               indicator: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(13),
@@ -173,47 +175,59 @@ class _MarketTabsScreenState extends State<MarketTabsScreen>
               unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11.5),
               tabs: const [
                 Tab(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.storefront_rounded, size: 15),
-                      SizedBox(width: 4),
-                      Text('السوق'),
-                    ],
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.storefront_rounded, size: 15),
+                        SizedBox(width: 3),
+                        Text('السوق'),
+                      ],
+                    ),
                   ),
                 ),
                 Tab(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.store_mall_directory_rounded, size: 15),
-                      SizedBox(width: 4),
-                      Text('المحلات'),
-                    ],
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.store_mall_directory_rounded, size: 15),
+                        SizedBox(width: 3),
+                        Text('المحلات'),
+                      ],
+                    ),
                   ),
                 ),
                 Tab(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.search_rounded, size: 15),
-                      SizedBox(width: 4),
-                      Text('مطلوب'),
-                    ],
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.search_rounded, size: 15),
+                        SizedBox(width: 3),
+                        Text('مطلوب'),
+                      ],
+                    ),
                   ),
                 ),
                 Tab(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.volunteer_activism_rounded, size: 15),
-                      SizedBox(width: 4),
-                      Text('تبرعات'),
-                    ],
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.volunteer_activism_rounded, size: 15),
+                        SizedBox(width: 3),
+                        Text('تبرعات'),
+                      ],
+                    ),
                   ),
                 ),
               ],
