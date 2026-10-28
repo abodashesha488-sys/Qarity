@@ -1,7 +1,7 @@
 {
-  "versionCode": 5,
-  "versionName": "1.0.5",
+  "versionCode": 6,
+  "versionName": "1.0.6",
   "apkUrl": "https://github.com/abodashesha488-sys/Qarity/releases/latest/download/Qarity.apk",
   "forceUpdate": false,
-  "releaseNotes": "تحديثات شاملة: تحسينات الهيدر وتخصيص المظهر وركن الأطفال وإصلاحات الاستقرار"
+  "releaseNotes": "تحديث وتكبير أيقونات الخدمات وتفريغ الخلفيات ثلاثية الأبعاد"
 }
