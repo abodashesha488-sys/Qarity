@@ -7,6 +7,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/product_categories.dart';
+import '../../core/utils/app_image_cache.dart';
 import '../../core/utils/contact_links.dart';
 import '../../core/utils/launch_link.dart';
 import '../../core/utils/role_style.dart';
@@ -557,8 +558,11 @@ Widget _net(String url, ThemeData theme) {
             color: theme.colorScheme.onSurfaceVariant));
   }
   return CachedNetworkImage(
-    imageUrl: url,
+    cacheManager: AppImageCache.instance,
+    imageUrl: ImageUploadService.optimizeUrl(url, width: 800),
     fit: BoxFit.cover,
+    maxWidthDiskCache: 900,
+    maxHeightDiskCache: 900,
     placeholder: (c, u) => ColoredBox(
         color: theme.colorScheme.surfaceContainerHighest,
         child: const Center(child: CircularProgressIndicator(strokeWidth: 2))),

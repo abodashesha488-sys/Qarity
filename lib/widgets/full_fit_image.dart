@@ -1,6 +1,9 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
+import '../core/utils/app_image_cache.dart';
+import '../services/image_upload_service.dart';
+
 /// صورة تُعرض **كاملة** في مساحة بعرض ثابت: الارتفاع يُحسب من نسبة الصورة
 /// الحقيقية (عرض ÷ ارتفاع) فتملأ الإطار بلا اقتصاص وبلا هوامش، بدل تربيع
 /// الإطار وقصّ أطراف الصورة.
@@ -67,7 +70,8 @@ class FullFitImage extends StatefulWidget {
       onResult(ratio);
     }
     try {
-      CachedNetworkImageProvider(url)
+      final optimized = ImageUploadService.optimizeUrl(url, width: 800);
+      CachedNetworkImageProvider(optimized, cacheManager: AppImageCache.instance)
           .resolve(ImageConfiguration.empty)
           .addListener(ImageStreamListener((info, _) {
         final h = info.image.height;
@@ -141,11 +145,17 @@ class _FullFitImageState extends State<FullFitImage> {
         child: widget.imageUrl.isEmpty || _failed
             ? widget.fallback
             : CachedNetworkImage(
-                imageUrl: widget.imageUrl,
+                cacheManager: AppImageCache.instance,
+                imageUrl: ImageUploadService.optimizeUrl(
+                  widget.imageUrl,
+                  width: (widget.width * 2.5).ceil(),
+                ),
                 width: widget.width,
                 height: height,
                 fit: widget.fit,
                 memCacheWidth: (widget.width * 3).ceil(),
+                maxWidthDiskCache: 1200,
+                maxHeightDiskCache: 1200,
                 placeholder: (_, __) => const SizedBox.shrink(),
                 errorWidget: (_, __, ___) {
                   if (!_failed) {

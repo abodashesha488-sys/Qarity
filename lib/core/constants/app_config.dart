@@ -1,5 +1,17 @@
 class AppConfig {
-  // مفتاح ImgBB يُقرأ حصريًا من dart-define عند البناء لحماية المفتاح في المستودع العام.
+  // إعدادات Cloudinary لرفع ومعالجة الصور السحابية فائقة السرعة.
+  // مثال: flutter build web --dart-define=CLOUDINARY_CLOUD_NAME=xxx --dart-define=CLOUDINARY_UPLOAD_PRESET=yyy
+  static const String cloudinaryCloudName = String.fromEnvironment(
+    'CLOUDINARY_CLOUD_NAME',
+    defaultValue: 'ygfhtwug',
+  );
+
+  static const String cloudinaryUploadPreset = String.fromEnvironment(
+    'CLOUDINARY_UPLOAD_PRESET',
+    defaultValue: 'eleraki',
+  );
+
+  // مفتاح ImgBB الاحتياطي يُقرأ من dart-define عند البناء.
   // مثال: flutter build web --dart-define=IMGBB_API_KEY=xxxxx
   static const String imgbbApiKey = String.fromEnvironment(
     'IMGBB_API_KEY',

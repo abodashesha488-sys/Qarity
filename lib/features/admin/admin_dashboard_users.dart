@@ -108,6 +108,9 @@ class _UsersPageState extends State<_UsersPage> {
             .compareTo((b['email'] ?? '').toString());
       case 'oldest':
         return _compareJoin(a, b, newestFirst: false);
+      case 'role':
+        // الترتيب بالرتبة فقط — compareUsersForList يتولى الفرز الأساسي
+        return 0;
       default:
         return _compareJoin(a, b, newestFirst: true);
     }
@@ -220,7 +223,7 @@ class _UsersPageState extends State<_UsersPage> {
         return Column(
           children: [
             // ── عنوان الصفحة الموحّد ─────────────────────────────
-            _PageHeader(
+                        _PageHeader(
               icon: Icons.people_rounded,
               title: 'إدارة المستخدمين',
               subtitle: '${all.length} مستخدم مسجل',
@@ -228,7 +231,114 @@ class _UsersPageState extends State<_UsersPage> {
               count: all.length,
             ),
 
-            // ── إحصائيات سريعة ──────────────────────────────────
+            // ── كارت الانتقال السريع للسجل الشامل لكامل المستخدمين ────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 6, 16, 2),
+              child: InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AllUsersDirectoryScreen(
+                        adminService: widget.adminService,
+                        currentUid: widget.currentUid,
+                        onUpdated: widget.onUpdated,
+                      ),
+                    ),
+                  );
+                },
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF6F4E37), Color(0xFF8D6E63)],
+                      begin: Alignment.centerRight,
+                      end: Alignment.centerLeft,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF6F4E37).withValues(alpha: 0.25),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(7),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.18),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.folder_shared_rounded,
+                          color: Colors.white,
+                          size: 19,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'سجل كامل المستخدمين الشامل',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 13,
+                              ),
+                            ),
+                            SizedBox(height: 1),
+                            Text(
+                              'عرض تفصيلي مع فرز حر حسب تاريخ التسجيل، الاسم، أو التصنيف',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 10.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 9, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'فتح السجل',
+                              style: TextStyle(
+                                color: Color(0xFF6F4E37),
+                                fontWeight: FontWeight.w900,
+                                fontSize: 11,
+                              ),
+                            ),
+                            SizedBox(width: 3),
+                            Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              size: 10,
+                              color: Color(0xFF6F4E37),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // ── إحصائيات سريعة ────────────────────────────────── ──────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
               child: InkWell(
@@ -476,6 +586,13 @@ class _UsersPageState extends State<_UsersPage> {
                                   Icon(Icons.email_rounded, size: 18),
                                   SizedBox(width: 8),
                                   Text('البريد أبجدياً')
+                                ])),
+                            PopupMenuItem(
+                                value: 'role',
+                                child: Row(children: [
+                                  Icon(Icons.shield_rounded, size: 18),
+                                  SizedBox(width: 8),
+                                  Text('التصنيف / الرتبة')
                                 ])),
                           ],
                           child: Container(
@@ -836,6 +953,8 @@ class _UsersPageState extends State<_UsersPage> {
         return 'الاسم';
       case 'email':
         return 'البريد';
+      case 'role':
+        return 'التصنيف';
       default:
         return 'الأحدث';
     }

@@ -7,7 +7,7 @@ Qarity is a comprehensive digital platform for village community services (قر�
 - **Errors:** 0
 - **Warnings:** 0 · **Info:** 0
 - **Status:** Compiles successfully · `flutter analyze`: No issues found!
-- **اختبارات:** آخر **مجموعة كاملة** موثّقة = **921/921 في كامل المشروع** (81 ملف اختبار) بنجاح 100% (`01:54 +921: All tests passed!`)؛ وقبلها = 919/919. **لا تُصدّر رقمًا لم تَجْرِه.**
+- **اختبارات:** آخر **مجموعة كاملة** موثّقة = **940/940 في كامل المشروع** (83 ملف اختبار) بنجاح 100% (`02:13 +940: All tests passed!`)؛ وقبلها = 937/937. **لا تُصدّر رقمًا لم تَجْرِه.**
 
 ## Firebase Configuration
 
@@ -31,13 +31,14 @@ For Google Sign-In to work on web:
 2. Add `abudshisha.web.app` to authorized domains
 3. Ensure the Firebase config matches `lib/firebase_options.dart`
 
-## ImgBB Image Upload (client-side)
-- Image upload/delete is done directly from the client via the ImgBB API in `lib/services/image_upload_service.dart`.
-- The API key is read from `AppConfig.imgbbApiKey` (`lib/core/constants/app_config.dart`).
-- **For production**, inject the key at build time so the real value never lives in the repo:
-  - `flutter build web --dart-define=IMGBB_API_KEY=<your_key>`
-  - The value in `app_config.dart` is only a **dev default**; override it for releases and rotate it in ImgBB if leaked.
-- Used by: add product, add news, medical submissions, and image deletion flows.
+## Image Upload & Optimization (Cloudinary primary, client-side)
+- Image upload and delivery optimization is handled by ImageUploadService (lib/services/image_upload_service.dart).
+- Uses **Cloudinary** unsigned upload preset (CLOUDINARY_CLOUD_NAME and CLOUDINARY_UPLOAD_PRESET in AppConfig), with legacy fallback to ImgBB (IMGBB_API_KEY).
+- Cloudinary URLs automatically inject on-the-fly delivery optimization (q_auto,f_auto and w_ widths) delivering high-speed, lightweight WebP/AVIF formats to clients.
+- **التخزين المحلي الدائم للصور (AppImageCache):** مدير كاش مركزي موحد (`lib/core/utils/app_image_cache.dart`) يحفظ الصور على قرص الهاتف لمدة 90 يوماً بسعة تصل إلى 2500 صورة محلية عبر `flutter_cache_manager`. يطبق أبعاد قرصية محددة (`maxWidthDiskCache`/`maxHeightDiskCache` = 1000..1200) مع تسليم الحجم الأنسب تلقائياً لتقليل استهلاك الذاكرة وتوفير باقة المستخدم وعرض الصور في 0ms دون إعادة طلبها.
+- Build injection:
+  - flutter build web --dart-define=CLOUDINARY_CLOUD_NAME=<cloud_name> --dart-define=CLOUDINARY_UPLOAD_PRESET=<preset>
+- Used by: add product, add news, forum, medical submissions, village ads, legal consultations, and profile photos.
 
 ## Local secrets and `.env`
 - `.env` is **not tracked** (removed from the index 2026-10-03) and `.gitignore` also covers `.env.*` / `*.env`.
@@ -237,8 +238,11 @@ lib/
 - `AdminScreenWrapper` checks the optional bootstrap email, then falls back to Firestore role check via `AdminService.isAdminUser()`.
 - `AdminService.isMedicalAdmin()` grants access to the Medical Center management when role is `medical_admin` or `admin`.
 
-### User & seller role management (admin dashboard → المستخدمون)- Search by name/email + role filter chips (الكل/مستخدمون/بائعون/مشرفون/مدير طبي/مدراء/معطّلون) + live counters.
-- **Ordering = role rank first** (`_roleRank`: admin → assistant_admin → medical_admin → agricultural_admin → moderator → seller → user), then the chosen sort (newest/oldest/name/email) inside each group. Registration/last-login dates come from `signupAt()`/`lastLoginAt()` (`joinDate`/`lastLogin` — the only keys that exist on `users` docs). Export (Excel/CSV/JSON) publishes **the currently visible list** through `exportFile()`.
+### User & seller role management (admin dashboard → المستخدمون)
+- Search by name/email + role filter chips (الكل/مستخدمون/بائعون/مشرفون/مدير طبي/مدراء/معطّلون) + live counters.
+- **بانر السجل الشامل للمستخدمين:** كارت بارز في أعلى التبويب ينقل مباشرة إلى `AllUsersDirectoryScreen` على المسار `AppRoutes.adminAllUsers` (`/admin/all-users`) المحمي بـ `AdminGuard`.
+- **سجل المستخدمين الشامل (`AllUsersDirectoryScreen`):** يعرض كامل قاعدة المستخدمين مع 6 خيارات ترتيب حر (تاريخ التسجيل الأحدث/الأقدم، الاسم أبجدياً أ-ي / ي-أ، التصنيف/الرتبة، آخر تسجيل دخول الأحدث)، تصفية مزدوجة بالدور والنوع (ذكر/أنثى/غير محدد)، بحث فوري، تبديل بين العرض المفصل والمدمج، اتصال هاتفي فوري، وإمكانية تصدير القائمة المعروضة حالياً (Excel/CSV/JSON).
+- **Ordering = role rank first** (`_roleRank`: admin → assistant_admin → medical_admin → agricultural_admin → moderator → seller → user), then the chosen sort (newest/oldest/name/email/role) inside each group. Registration/last-login dates come from `signupAt()`/`lastLoginAt()` (`joinDate`/`lastLogin` — the only keys that exist on `users` docs). Export (Excel/CSV/JSON) publishes **the currently visible list** through `exportFile()`.
 - Each account opens a management sheet: role (with per-role permission hints), seller type (image limits 1/3/5/10), enable/disable account (`setUserActive`), and delete.
 - Self-protection: the signed-in admin sees the role controls disabled for their own account.
 - `UserModel.roleLabel` exposes unified Arabic role labels; the profile header shows the role badge (+ seller type with image limit) and a panel shortcut for admin/medical_admin.

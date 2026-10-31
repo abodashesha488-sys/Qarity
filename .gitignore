@@ -71,6 +71,8 @@ test_review.txt
 # Firebase service account keys (NEVER commit)
 *firebase-adminsdk*.json
 serviceAccount*.json
+tools/migrated_images_cache.json
+tools/migration_errors.log
 
 # Android build caches
 android/.kotlin/
@@ -91,3 +93,6 @@ download/*.apk
 key.properties
 PROJECT_VAULT_GUIDE.md
 *VAULT*.md
+
+# Node modules
+node_modules/

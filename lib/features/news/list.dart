@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:shimmer/shimmer.dart';
 
+import '../../core/utils/app_image_cache.dart';
 import '../../core/utils/relative_time.dart';
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
 import '../../services/cache_service.dart';
+import '../../services/image_upload_service.dart';
 import '../../services/news_service.dart';
 import '../../widgets/common_appbar_actions.dart';
 import '../../widgets/header_action_buttons.dart';
@@ -447,10 +449,13 @@ class _NewsThumb extends StatelessWidget {
       );
     }
     return CachedNetworkImage(
-      imageUrl: url,
+      cacheManager: AppImageCache.instance,
+      imageUrl: ImageUploadService.optimizeUrl(url, width: 800),
       fit: BoxFit.cover,
       width: double.infinity,
       height: double.infinity,
+      maxWidthDiskCache: 1000,
+      maxHeightDiskCache: 1000,
       placeholder: (c, u) => ColoredBox(
         color: theme.colorScheme.surfaceContainerHighest,
         child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
