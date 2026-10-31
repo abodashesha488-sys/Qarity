@@ -16,21 +16,29 @@ class ImageUploadService {
 
     // 1. الأولوية لـ Cloudinary (سيرفرات فائقة السرعة مع ضغط تلقائي وتحويل WebP)
     if (cloudName.isNotEmpty && uploadPreset.isNotEmpty) {
-      final uploadUrl =
-          'https://api.cloudinary.com/v1_1/$cloudName/image/upload';
-      final request = http.MultipartRequest('POST', Uri.parse(uploadUrl));
-      request.fields['upload_preset'] = uploadPreset;
-      request.files.add(
-        http.MultipartFile.fromBytes('file', bytes, filename: 'upload.jpg'),
-      );
+      try {
+        final uploadUrl =
+            'https://api.cloudinary.com/v1_1/$cloudName/image/upload';
+        final request = http.MultipartRequest('POST', Uri.parse(uploadUrl));
+        request.fields['upload_preset'] = uploadPreset;
+        request.files.add(
+          http.MultipartFile.fromBytes('file', bytes, filename: 'upload.jpg'),
+        );
 
-      final response = await request.send().timeout(
-        const Duration(seconds: 60),
-        onTimeout: () => throw Exception(
-            'انتهت مهلة رفع الصورة — تحقق من الاتصال وأعد المحاولة'),
-      );
-      final responseBody = await response.stream.bytesToString();
-      return parseUploadResponse(response.statusCode, responseBody);
+        final response = await request.send().timeout(
+          const Duration(seconds: 40),
+          onTimeout: () => throw Exception(
+              'انتهت مهلة رفع الصورة — تحقق من الاتصال وأعد المحاولة'),
+        );
+        final responseBody = await response.stream.bytesToString();
+        return parseUploadResponse(response.statusCode, responseBody);
+      } catch (cloudinaryErr) {
+        // إذا كان ImgBB متاحاً، نلجأ إليه كاحتياطي مؤقت لضمان عدم توقف المستخدم
+        final imgbbKey = AppConfig.imgbbApiKey.trim();
+        if (imgbbKey.isEmpty) {
+          rethrow;
+        }
+      }
     }
 
     // 2. احتياطي: ImgBB في حال لم يُضبط Cloudinary
