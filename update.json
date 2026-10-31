@@ -1,7 +1,7 @@
 {
-  "versionCode": 6,
-  "versionName": "1.0.6",
+  "versionCode": 7,
+  "versionName": "1.0.7",
   "apkUrl": "https://github.com/abodashesha488-sys/Qarity/releases/latest/download/Qarity.apk",
   "forceUpdate": false,
-  "releaseNotes": "تحديث وتكبير أيقونات الخدمات وتفريغ الخلفيات ثلاثية الأبعاد"
+  "releaseNotes": "  التعديلات لقبول جوجل بلاي   "
 }
