@@ -1341,8 +1341,34 @@ class _ClinicsTabState extends State<_ClinicsTab> {
   final TextEditingController _search = TextEditingController();
   late final Stream<List<VillageClinic>> _stream = _service.getApprovedStream();
 
+  bool _filtersOpen = true; // مفتوحة افتراضياً لتوفير إمكانية البحث والتصفية الفورية
   String _selectedSpecialty = 'الكل';
   bool _onlyOpenNow = false;
+
+  int get _activeFilterCount =>
+      (_selectedSpecialty != 'الكل' ? 1 : 0) + (_onlyOpenNow ? 1 : 0);
+
+  List<String> get _filterSummaryParts {
+    final list = <String>[];
+    if (_search.text.trim().isNotEmpty) {
+      list.add('بحث: ${_search.text.trim()}');
+    }
+    if (_onlyOpenNow) {
+      list.add('مفتوحة الآن');
+    }
+    if (_selectedSpecialty != 'الكل') {
+      list.add(_selectedSpecialty);
+    }
+    return list;
+  }
+
+  void _clearAllFilters() {
+    setState(() {
+      _search.clear();
+      _selectedSpecialty = 'الكل';
+      _onlyOpenNow = false;
+    });
+  }
 
   @override
   void dispose() {
@@ -1370,105 +1396,361 @@ class _ClinicsTabState extends State<_ClinicsTab> {
     return items;
   }
 
-  Widget _buildSearchAndFilterBar(ThemeData theme) {
-    final specialties = <String>['الكل', ...kClinicSpecialties.where((s) => s != 'غير ذلك')];
+  Widget _searchField(ThemeData theme, Color color, Color accentInk) {
+    return TextField(
+      key: const Key('clinic-search-field'),
+      controller: _search,
+      onChanged: (_) => setState(() {}),
+      textInputAction: TextInputAction.search,
+      decoration: InputDecoration(
+        hintText: 'ابحث في العيادات: اسم، طبيب، تخصص، عنوان…',
+        prefixIcon: Icon(Icons.search_rounded, color: accentInk, size: 19),
+        suffixIcon: _search.text.isNotEmpty
+            ? IconButton(
+                tooltip: 'مسح',
+                icon: const Icon(Icons.clear_rounded, size: 17),
+                onPressed: () => setState(() => _search.clear()),
+              )
+            : null,
+        isDense: true,
+        filled: true,
+        fillColor: theme.colorScheme.surfaceContainerLowest,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: color.withValues(alpha: 0.35)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: color.withValues(alpha: 0.35)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: accentInk, width: 1.4),
+        ),
+      ),
+    );
+  }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // شريط البحث الموحد
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-          child: TextField(
-            key: const Key('clinic-search-field'),
-            controller: _search,
-            onChanged: (_) => setState(() {}),
-            decoration: InputDecoration(
-              hintText: 'ابحث عن عيادة، طبيب، تخصص، عنوان...',
-              isDense: true,
-              prefixIcon: const Icon(Icons.search_rounded, size: 20, color: Color(0xFF00897B)),
-              suffixIcon: _search.text.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear_rounded, size: 18),
-                      onPressed: () {
-                        _search.clear();
-                        setState(() {});
-                      },
-                    )
-                  : null,
-              filled: true,
-              fillColor: theme.colorScheme.surfaceContainerLowest,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide(color: const Color(0xFF00897B).withValues(alpha: 0.3)),
+  Future<void> _openSpecialtySheet(Color accent) async {
+    final specialties = <String>['الكل', ...kClinicSpecialties.where((s) => s != 'غير ذلك')];
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        String query = '';
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            final filtered = specialties
+                .where((s) => s.toLowerCase().contains(query.toLowerCase()))
+                .toList();
+            return SafeArea(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(ctx).viewInsets.bottom,
+                ),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(ctx).size.height * 0.65,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        margin: const EdgeInsets.symmetric(vertical: 10),
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.withValues(alpha: 0.4),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.local_hospital_rounded, size: 20, color: Color(0xFF00897B)),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'اختر التخصص الطبي',
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                            const Spacer(),
+                            if (_selectedSpecialty != 'الكل')
+                              TextButton(
+                                onPressed: () => Navigator.pop(ctx, 'الكل'),
+                                child: const Text('إعادة الضبط', style: TextStyle(fontSize: 12)),
+                              ),
+                          ],
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                        child: TextField(
+                          onChanged: (v) => setSheetState(() => query = v),
+                          decoration: InputDecoration(
+                            hintText: 'ابحث عن تخصص…',
+                            prefixIcon: const Icon(Icons.search_rounded, size: 18),
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                            filled: true,
+                            fillColor: Theme.of(ctx).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const Divider(height: 1),
+                      Flexible(
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: filtered.length,
+                          itemBuilder: (ctx, i) {
+                            final spec = filtered[i];
+                            final isSel = _selectedSpecialty == spec;
+                            return ListTile(
+                              dense: true,
+                              title: Text(
+                                spec,
+                                style: TextStyle(
+                                  fontWeight: isSel ? FontWeight.w900 : FontWeight.w600,
+                                  color: isSel ? const Color(0xFF00897B) : null,
+                                ),
+                              ),
+                              trailing: isSel
+                                  ? const Icon(Icons.check_circle_rounded, color: Color(0xFF00897B), size: 18)
+                                  : null,
+                              onTap: () => Navigator.pop(ctx, spec),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide(color: const Color(0xFF00897B).withValues(alpha: 0.3)),
+            );
+          },
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() => _selectedSpecialty = picked);
+    }
+  }
+
+  Widget _specialtyPill(ThemeData theme, Color color, Color accentInk) {
+    final active = _selectedSpecialty != 'الكل';
+    final idleInk = theme.brightness == Brightness.dark
+        ? theme.colorScheme.onSurfaceVariant
+        : const Color(0xFF5B4E45);
+
+    return InkWell(
+      key: const Key('filter-specialty'),
+      borderRadius: BorderRadius.circular(11),
+      onTap: () => _openSpecialtySheet(color),
+      child: Container(
+        height: 35,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          color: active
+              ? color.withValues(alpha: 0.12)
+              : theme.colorScheme.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(11),
+          border: Border.all(
+              color: active ? accentInk : color.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.local_hospital_rounded, size: 14, color: accentInk),
+            const SizedBox(width: 5),
+            Expanded(
+              child: Text(
+                active ? 'تخصص: $_selectedSpecialty' : 'التخصص: كل التخصصات',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: active ? FontWeight.w900 : FontWeight.w600,
+                  color: active ? accentInk : idleInk,
+                ),
               ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(color: Color(0xFF00897B), width: 1.5),
+            ),
+            Icon(Icons.expand_more_rounded, size: 15, color: idleInk),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _openNowPill(ThemeData theme, Color color, Color accentInk) {
+    final active = _onlyOpenNow;
+    const green = Color(0xFF27AE60);
+    return InkWell(
+      key: const Key('filter-open-now'),
+      borderRadius: BorderRadius.circular(11),
+      onTap: () => setState(() => _onlyOpenNow = !_onlyOpenNow),
+      child: Container(
+        height: 35,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          color: active
+              ? green.withValues(alpha: 0.15)
+              : theme.colorScheme.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(11),
+          border: Border.all(
+            color: active ? green : color.withValues(alpha: 0.3),
+            width: active ? 1.3 : 1.0,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              active ? Icons.check_circle_rounded : Icons.access_time_rounded,
+              size: 14,
+              color: active ? green : accentInk,
+            ),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                'مفتوحة الآن',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: active ? FontWeight.w900 : FontWeight.w600,
+                  color: active
+                      ? green
+                      : (theme.brightness == Brightness.dark
+                          ? theme.colorScheme.onSurfaceVariant
+                          : const Color(0xFF5B4E45)),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// كارت «بحث وتصفية» المطابق لتصميم دليل الحرفيين
+  Widget _filterCard(ThemeData theme) {
+    const color = Color(0xFF00897B);
+    final summary = _filterSummaryParts;
+    final Color accentInk = AppColors.inkOn(color, theme.brightness);
+    final Color clearInk =
+        AppColors.inkOn(const Color(0xFFB71C1C), theme.brightness);
+
+    return Material(
+      color: color.withValues(alpha: 0.06),
+      child: Column(
+        children: [
+          InkWell(
+            key: const Key('filters-toggle'),
+            onTap: () => setState(() => _filtersOpen = !_filtersOpen),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              child: Row(
+                children: [
+                  Icon(_filtersOpen ? Icons.tune_rounded : Icons.search_rounded,
+                      size: 17, color: accentInk),
+                  const SizedBox(width: 7),
+                  Text('بحث وتصفية',
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                          color: accentInk)),
+                  if (_activeFilterCount > 0) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      key: const Key('filters-count'),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: color,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text('$_activeFilterCount',
+                          style: const TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white)),
+                    ),
+                  ],
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Text(
+                        _filtersOpen || summary.isEmpty
+                            ? ''
+                            : summary.join(' · '),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                            color: theme.colorScheme.onSurfaceVariant),
+                      ),
+                    ),
+                  ),
+                  if (_activeFilterCount > 0 || _search.text.isNotEmpty)
+                    IconButton(
+                      key: const Key('filters-clear'),
+                      tooltip: 'مسح الكل',
+                      visualDensity: VisualDensity.compact,
+                      icon: Icon(Icons.layers_clear_rounded,
+                          size: 18, color: clearInk),
+                      onPressed: _clearAllFilters,
+                    ),
+                  AnimatedRotation(
+                    turns: _filtersOpen ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 180),
+                    child: Icon(Icons.expand_more_rounded,
+                        size: 18, color: accentInk),
+                  ),
+                ],
               ),
             ),
           ),
-        ),
-        // شريط التصنيف والتخصصات الأفقي
-        SizedBox(
-          height: 38,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            children: [
-              // زر التصفية: المفتوحة الآن
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 3),
-                child: FilterChip(
-                  avatar: _onlyOpenNow
-                      ? const Icon(Icons.check_circle_rounded, size: 15, color: Colors.white)
-                      : const Icon(Icons.access_time_rounded, size: 15, color: Color(0xFF2E7D32)),
-                  label: const Text('مفتوحة الآن'),
-                  selected: _onlyOpenNow,
-                  selectedColor: const Color(0xFF27AE60),
-                  labelStyle: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: _onlyOpenNow ? Colors.white : const Color(0xFF2E7D32),
-                  ),
-                  backgroundColor: const Color(0xFF2ECC71).withValues(alpha: 0.12),
-                  side: BorderSide(
-                    color: _onlyOpenNow ? Colors.transparent : const Color(0xFF2ECC71).withValues(alpha: 0.4),
-                  ),
-                  onSelected: (val) => setState(() => _onlyOpenNow = val),
-                ),
-              ),
-              ...specialties.map((spec) {
-                final selected = _selectedSpecialty == spec;
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 3),
-                  child: FilterChip(
-                    label: Text(spec),
-                    selected: selected,
-                    selectedColor: const Color(0xFF00897B),
-                    labelStyle: TextStyle(
-                      fontSize: 12,
-                      fontWeight: selected ? FontWeight.bold : FontWeight.w600,
-                      color: selected ? Colors.white : theme.colorScheme.onSurface,
+          AnimatedSize(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOutCubic,
+            alignment: Alignment.topCenter,
+            child: _filtersOpen
+                ? Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+                    child: Column(
+                      children: [
+                        _searchField(theme, color, accentInk),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              flex: 3,
+                              child: _specialtyPill(theme, color, accentInk),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              flex: 2,
+                              child: _openNowPill(theme, color, accentInk),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                    backgroundColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
-                    side: BorderSide(
-                      color: selected ? Colors.transparent : theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
-                    ),
-                    onSelected: (_) => setState(() => _selectedSpecialty = spec),
-                  ),
-                );
-              }),
-            ],
+                  )
+                : const SizedBox(width: double.infinity),
           ),
-        ),
-        const SizedBox(height: 6),
-      ],
+        ],
+      ),
     );
   }
 
@@ -1486,16 +1768,16 @@ class _ClinicsTabState extends State<_ClinicsTab> {
 
         return Column(
           children: [
-            _buildSearchAndFilterBar(theme),
+            _filterCard(theme),
             Expanded(
               child: items.isEmpty
                   ? const _MedEmpty(
                       icon: Icons.add_business_rounded,
                       message: 'لا توجد عيادات مطابقة للبحث أو التخصص المحدد')
                   : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(16, 6, 16, 110),
+                      padding: const EdgeInsets.fromLTRB(16, 10, 16, 110),
                       itemCount: items.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 10),
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
                       itemBuilder: (context, i) => _ClinicRowCard(clinic: items[i]),
                     ),
             ),
@@ -1698,8 +1980,9 @@ class _ClinicRowCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // السطر الأول: الاسم + شارة الوميض
+                    // السطر الأول: اسم العيادة بالكامل + شارة الوميض
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
                           child: Text(
@@ -1708,8 +1991,6 @@ class _ClinicRowCard extends StatelessWidget {
                               fontSize: 15.5,
                               fontWeight: FontWeight.bold,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         const SizedBox(width: 6),
@@ -1717,27 +1998,34 @@ class _ClinicRowCard extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 5),
-                    // السطر الثاني: الطبيب والتخصص
-                    Row(
-                      children: [
-                        if (clinic.ownerName.isNotEmpty) ...[
-                          Icon(Icons.person_rounded, size: 14, color: theme.colorScheme.primary),
-                          const SizedBox(width: 3),
-                          Flexible(
+                    // السطر الثاني: اسم الطبيب بالكامل
+                    if (clinic.ownerName.isNotEmpty) ...[
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Icon(Icons.person_rounded, size: 14, color: theme.colorScheme.primary),
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
                             child: Text(
-                              'د. ${clinic.ownerName}',
+                              clinic.ownerName.startsWith('د.') ? clinic.ownerName : 'د. ${clinic.ownerName}',
                               style: TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
                                 color: theme.colorScheme.onSurfaceVariant,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          const SizedBox(width: 8),
                         ],
-                        if (clinic.specialty.isNotEmpty)
+                      ),
+                      const SizedBox(height: 5),
+                    ],
+                    // السطر الثالث: التخصص الطبي
+                    if (clinic.specialty.isNotEmpty) ...[
+                      Row(
+                        children: [
                           Flexible(
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
@@ -1757,10 +2045,11 @@ class _ClinicRowCard extends StatelessWidget {
                               ),
                             ),
                           ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    // السطر الثالث: أيام العمل
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                    ],
+                    // السطر الرابع: أيام العمل
                     Row(
                       children: [
                         const Icon(Icons.calendar_today_rounded, size: 13, color: Colors.orange),
@@ -1779,7 +2068,7 @@ class _ClinicRowCard extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 4),
-                    // السطر الرابع: الفترات ومواعيد العمل
+                    // السطر الخامس: الفترات ومواعيد العمل بتنسيق 12س
                     Row(
                       children: [
                         const Icon(Icons.schedule_rounded, size: 13, color: Colors.blueGrey),

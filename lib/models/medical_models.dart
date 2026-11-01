@@ -334,16 +334,57 @@ class VillageClinic {
     return workDays.join(' • ');
   }
 
-  /// ملخص الفترات للعرض بالكارت
+  /// دالة مساعدة لتنسيق الوقت بنظام 12 ساعة مع إضافة (ص) أو (م)
+  static String formatTime12(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return '';
+
+    final hasAm = trimmed.contains('ص') || trimmed.toLowerCase().contains('am');
+    final hasPm = trimmed.contains('م') || trimmed.toLowerCase().contains('pm');
+
+    final numbers = RegExp(r'\d+').allMatches(trimmed).map((m) => int.parse(m.group(0)!)).toList();
+    if (numbers.isEmpty) return trimmed;
+
+    var hour = numbers[0];
+    final minute = numbers.length > 1 ? numbers[1] : 0;
+
+    String period;
+    if (hasAm) {
+      period = 'ص';
+      if (hour == 12) hour = 12;
+    } else if (hasPm) {
+      period = 'م';
+      if (hour > 12) hour -= 12;
+    } else {
+      if (hour >= 12 && hour < 24) {
+        period = 'م';
+        if (hour > 12) hour -= 12;
+      } else {
+        period = 'ص';
+        if (hour == 0 || hour == 24) hour = 12;
+      }
+    }
+
+    final minStr = minute > 0 ? ':${minute.toString().padLeft(2, '0')}' : ':00';
+    return '$hour$minStr $period';
+  }
+
+  /// أوقات الفترات بتنسيق 12 ساعة مع "ص" أو "م"
+  String get formattedMorningStart => formatTime12(morningStart);
+  String get formattedMorningEnd => formatTime12(morningEnd);
+  String get formattedEveningStart => formatTime12(eveningStart);
+  String get formattedEveningEnd => formatTime12(eveningEnd);
+
+  /// ملخص الفترات للعرض بالكارت وتفاصيل العيادة بتنسيق 12 ساعة (ص / م)
   String get shiftsSummary {
     final list = <String>[];
     if (hasMorningShift && morningStart.isNotEmpty && morningEnd.isNotEmpty) {
-      list.add('صباحاً: $morningStart - $morningEnd');
+      list.add('صباحاً: من ${formatTime12(morningStart)} إلى ${formatTime12(morningEnd)}');
     }
     if (hasEveningShift && eveningStart.isNotEmpty && eveningEnd.isNotEmpty) {
-      list.add('مساءً: $eveningStart - $eveningEnd');
+      list.add('مساءً: من ${formatTime12(eveningStart)} إلى ${formatTime12(eveningEnd)}');
     }
-    if (list.isNotEmpty) return list.join(' | ');
+    if (list.isNotEmpty) return list.join(' · ');
     if (workingHours.isNotEmpty) return workingHours;
     return 'حسب المواعيد المحددة';
   }

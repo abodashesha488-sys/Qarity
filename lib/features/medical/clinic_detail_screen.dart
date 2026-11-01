@@ -731,13 +731,13 @@ class _VillageClinicDetailScreenState extends State<VillageClinicDetailScreen> {
                           MedInfoRow(
                             icon: Icons.wb_sunny_rounded,
                             label: 'الفترة الصباحية',
-                            value: 'من ${clinic.morningStart} إلى ${clinic.morningEnd}',
+                            value: 'من ${clinic.formattedMorningStart} إلى ${clinic.formattedMorningEnd}',
                           ),
                         if (clinic.hasEveningShift && clinic.eveningStart.isNotEmpty)
                           MedInfoRow(
                             icon: Icons.nights_stay_rounded,
                             label: 'الفترة المسائية',
-                            value: 'من ${clinic.eveningStart} إلى ${clinic.eveningEnd}',
+                            value: 'من ${clinic.formattedEveningStart} إلى ${clinic.formattedEveningEnd}',
                           ),
                         if (!clinic.hasMorningShift && !clinic.hasEveningShift && clinic.workingHours.isNotEmpty)
                           MedInfoRow(
