@@ -12,6 +12,7 @@ import 'image_upload_service.dart';
 import 'notification_inbox_service.dart';
 import 'notification_service.dart';
 import 'remote_push_service.dart';
+import 'user_presence_service.dart';
 
 class AdminService {
   static final AdminService _instance = AdminService._internal();
@@ -292,7 +293,11 @@ class AdminService {
   Future<int> getActiveUsersCount() async {
     try {
       final snapshot = await _firestore.collection('users').count().get();
-      return snapshot.count ?? 0;
+      final c = snapshot.count ?? 0;
+      if (c > 0) {
+        unawaited(UserPresenceService.instance.syncTotalUsersFromAdmin());
+      }
+      return c;
     } catch (_) {
       return 0;
     }
@@ -1034,6 +1039,9 @@ class AdminService {
     await ContentCleanupService.cleanupForDeleted(
         _firestore, collection, docId);
     await _firestore.collection(collection).doc(docId).delete();
+    if (collection == 'users') {
+      unawaited(UserPresenceService.instance.decrementTotalUsers());
+    }
     if (collection == 'market_products') {
       final urls = <String>[
         ...((doc.data()?['imageUrls'] as List?)?.whereType<String>() ??

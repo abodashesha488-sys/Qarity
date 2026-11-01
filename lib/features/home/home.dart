@@ -20,6 +20,7 @@ import '../../services/notification_inbox_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/prayer_times_service.dart';
 import '../../services/update_service.dart';
+import '../../services/user_presence_service.dart';
 import '../../services/user_service.dart';
 import '../../services/weather_service.dart';
 import '../../widgets/alert_wisdom_bar.dart';
@@ -41,6 +42,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    unawaited(UserPresenceService.instance.initialize());
     // اشتراك بقنوات البث الجماعي عند كل فتح — مع احترام إيقاف المستخدم
     // لها من «إعدادات الإشعارات» (يُعاد الاشتراك فقط إن كانت مفعّلة).
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -781,23 +783,33 @@ class _HeroHeader extends StatelessWidget {
               padding: EdgeInsets.fromLTRB(26, 4, 26, 48),
               child: SizedBox(
                 height: kHeroBodyHeight,
-                child: Align(
-                  alignment: Alignment.topRight,
-                  child: OverflowBox(
-                    minHeight: 0,
-                    maxHeight: 120,
-                    minWidth: 0,
-                    maxWidth: 100,
-                    alignment: Alignment.topRight,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        NotificationBellButton(compact: true),
-                        SizedBox(height: 4),
-                        _HeaderSearchButton(),
-                      ],
+                child: Stack(
+                  children: [
+                    // الزران المتقابلان: رصد المتواجدين الآن 🟢 وإجمالي المسجلين 🔴
+                    Align(
+                      alignment: Alignment.topLeft,
+                      child: _HeaderStatsButtons(),
                     ),
-                  ),
+                    // زرّا الإشعارات والبحث في أقصى اليمين
+                    Align(
+                      alignment: Alignment.topRight,
+                      child: OverflowBox(
+                        minHeight: 0,
+                        maxHeight: 120,
+                        minWidth: 0,
+                        maxWidth: 100,
+                        alignment: Alignment.topRight,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            NotificationBellButton(compact: true),
+                            SizedBox(height: 4),
+                            _HeaderSearchButton(),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -1618,4 +1630,529 @@ class _HomeFooter extends StatelessWidget {
       ),
     );
   }
+}
+
+
+// ── مؤشرات الإحصائيات في الهيدر (المتواجدون حالياً 🟢 وإجمالي المسجلين 🔴) ──
+
+class _HeaderStatsButtons extends StatelessWidget {
+  const _HeaderStatsButtons();
+
+  @override
+  Widget build(BuildContext context) {
+    return const OverflowBox(
+      minHeight: 0,
+      maxHeight: 120,
+      minWidth: 0,
+      maxWidth: 160,
+      alignment: Alignment.topLeft,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _OnlineUsersHeaderButton(),
+          SizedBox(height: 4),
+          _TotalUsersHeaderButton(),
+        ],
+      ),
+    );
+  }
+}
+
+class _OnlineUsersHeaderButton extends StatelessWidget {
+  const _OnlineUsersHeaderButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<int>(
+      stream: UserPresenceService.instance.onlineUsersStream,
+      initialData: 1,
+      builder: (context, snapshot) {
+        final count = snapshot.data ?? 1;
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: () => _showOnlineUsersDetails(context, count),
+            child: Container(
+              height: 27,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.45),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: const Color(0xFF2ECC71).withValues(alpha: 0.6),
+                  width: 0.9,
+                ),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x38000000),
+                    blurRadius: 6,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const _PulsingDot(color: Color(0xFF00E676), size: 7.5),
+                  const SizedBox(width: 5),
+                  Text(
+                    '$count',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      height: 1.1,
+                    ),
+                  ),
+                  const SizedBox(width: 3.5),
+                  Text(
+                    'متصل',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.85),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                      height: 1.1,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _TotalUsersHeaderButton extends StatelessWidget {
+  const _TotalUsersHeaderButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<int>(
+      stream: UserPresenceService.instance.totalUsersStream,
+      initialData: 19,
+      builder: (context, snapshot) {
+        final count = snapshot.data ?? 19;
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: () => _showTotalUsersDetails(context, count),
+            child: Container(
+              height: 27,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.45),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: const Color(0xFFFF5252).withValues(alpha: 0.6),
+                  width: 0.9,
+                ),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x38000000),
+                    blurRadius: 6,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 7.5,
+                    height: 7.5,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFFF5252),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Color(0x99FF5252),
+                          blurRadius: 5,
+                          spreadRadius: 0.8,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
+                    '$count',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      height: 1.1,
+                    ),
+                  ),
+                  const SizedBox(width: 3.5),
+                  Text(
+                    'عضو',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.85),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                      height: 1.1,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _PulsingDot extends StatefulWidget {
+  const _PulsingDot({
+    required this.color,
+    this.size = 8.0,
+  });
+
+  final Color color;
+  final double size;
+
+  @override
+  State<_PulsingDot> createState() => _PulsingDotState();
+}
+
+class _PulsingDotState extends State<_PulsingDot>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat(reverse: true);
+    _scaleAnimation = Tween<double>(begin: 0.82, end: 1.22).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _scaleAnimation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _scaleAnimation.value,
+          child: Container(
+            width: widget.size,
+            height: widget.size,
+            decoration: BoxDecoration(
+              color: widget.color,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: widget.color.withValues(alpha: 0.75),
+                  blurRadius: 5 * _scaleAnimation.value,
+                  spreadRadius: 1 * _scaleAnimation.value,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+void _showOnlineUsersDetails(BuildContext context, int count) {
+  HapticFeedback.lightImpact();
+  showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    builder: (ctx) {
+      final theme = Theme.of(ctx);
+      final isDark = theme.brightness == Brightness.dark;
+      return Container(
+        padding: const EdgeInsets.fromLTRB(24, 18, 24, 28),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E222A) : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.25),
+              blurRadius: 20,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 44,
+              height: 4.5,
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white24 : Colors.black12,
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2ECC71).withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.sensors_rounded,
+                    color: Color(0xFF2ECC71),
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'المتواجدون الآن بالتطبيق',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      'رصد حيّ ولحظي للنشاط',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: isDark ? Colors.white60 : Colors.black54,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2ECC71).withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: const Color(0xFF2ECC71).withValues(alpha: 0.25),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const _PulsingDot(color: Color(0xFF00E676), size: 10),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'يوجد حالياً $count مستخدم يتصفحون تطبيق قرية أبوديشيشة في هذه اللحظة.',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'تتغير هذه القيمة تلقائياً وفورياً عند دخول أهالي القرية والزوار إلى التطبيق أو مغادرتهم.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12.5,
+                color: isDark ? Colors.white60 : Colors.black54,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text(
+                  'حسناً',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+void _showTotalUsersDetails(BuildContext context, int count) {
+  HapticFeedback.lightImpact();
+  showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    builder: (ctx) {
+      final theme = Theme.of(ctx);
+      final isDark = theme.brightness == Brightness.dark;
+      return Container(
+        padding: const EdgeInsets.fromLTRB(24, 18, 24, 28),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E222A) : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.25),
+              blurRadius: 20,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 44,
+              height: 4.5,
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white24 : Colors.black12,
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF5252).withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.groups_rounded,
+                    color: Color(0xFFFF5252),
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'أعضاء مجتمع القرية',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      'إجمالي الحسابات المسجلة بالتطبيق',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: isDark ? Colors.white60 : Colors.black54,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF5252).withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: const Color(0xFFFF5252).withValues(alpha: 0.25),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFFF5252),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Color(0x99FF5252),
+                          blurRadius: 6,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'سجل في المنصة حتى الآن $count عضواً من أهالي وشباب قرية أبوديشيشة.',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'يتجدد هذا الرقم تلقائياً ومباشرة مع تسجيل أي عضو جديد أو عند تحديث الحسابات.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12.5,
+                color: isDark ? Colors.white60 : Colors.black54,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text(
+                  'حسناً',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
 }

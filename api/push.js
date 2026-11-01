@@ -131,7 +131,7 @@ export default async function handler(req, res) {
       const apiSecret = process.env.CLOUDINARY_API_SECRET || 'OjJA1hedgYv_idsy5jGpFoD6V3s';
 
       const timestamp = Math.round(Date.now() / 1000);
-      const strToSign = public_id=&timestamp=;
+      const strToSign = `public_id=${publicId}&timestamp=${timestamp}${apiSecret}`;
       const signature = crypto.createHash('sha1').update(strToSign).digest('hex');
 
       const formData = new URLSearchParams();
@@ -141,7 +141,7 @@ export default async function handler(req, res) {
       formData.append('signature', signature);
 
       const destroyRes = await fetch(
-        https://api.cloudinary.com/v1_1//image/destroy,
+        `https://api.cloudinary.com/v1_1/${cloudName}/image/destroy`,
         {
           method: 'POST',
           body: formData,

@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../models/data_models.dart';
 import 'cache_service.dart';
+import 'user_presence_service.dart';
 
 class UserService {
   /// حقن اختياري للنمط المعتمد في المشروع (اختبارات بلا Firebase حقيقي).
@@ -150,6 +151,7 @@ class UserService {
       joinDate: user.metadata.creationTime ?? DateTime.now(),
     );
     await _firestore.collection('users').doc(user.uid).set(newUser.toJson()).timeout(const Duration(seconds: 10));
+    unawaited(UserPresenceService.instance.incrementTotalUsers());
   }
 
   Future<void> signOut() async => await _auth.signOut();
@@ -162,6 +164,7 @@ class UserService {
 
     try {
       await _firestore.collection('users').doc(uid).delete();
+      unawaited(UserPresenceService.instance.decrementTotalUsers());
     } catch (e) {
       debugPrint('Failed to delete user document: $e');
     }

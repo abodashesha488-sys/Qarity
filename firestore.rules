@@ -137,6 +137,19 @@ service cloud.firestore {
                     || (isOwner(userId) && resource.data.role != 'admin');
     }
 
+    // ───────────────────────── إحصائيات التطبيق وتواجد المستخدمين ─────────────────────────
+    match /app_stats/{statId} {
+      // إحصائيات عامة للقراءة للجميع (إجمالي المسجلين، عدادات عامة)
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    match /app_presence/{sessionId} {
+      // رصد التواجد اللحظي للمتصلين (أعضاء وزوار)
+      allow read: if true;
+      allow create, update, delete: if true;
+    }
+
     // ───────────────────────── الأخبار ─────────────────────────
     match /news/{docId} {
       allow list, get: if true;
