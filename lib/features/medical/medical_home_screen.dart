@@ -61,17 +61,23 @@ class MedicalHomeScreen extends StatelessWidget {
       appBar: const QurityAppBar(
           title: 'الخدمات الطبية'),
       body: LayoutBuilder(builder: (context, constraints) {
-        const spacing = 14.0;
-        const hPadding = 16.0;
-        const childAspectRatio = 0.89;
+        const spacing = 10.0;
+        const hPadding = 14.0;
         final cardWidth = (constraints.maxWidth - (hPadding * 2) - spacing) / 2;
+
+        // حساب النسبة بحيث تتسع الشاشة لـ 8 أيقونات (4 صفوف × 2 أعمدة) بالتساوي وبشكل مدمج
+        final availableGridHeight = constraints.maxHeight - 65;
+        final targetRowHeight = (availableGridHeight - (spacing * 3)) / 4;
+        final childAspectRatio = (targetRowHeight > 75 && targetRowHeight < 240)
+            ? (cardWidth / targetRowHeight).clamp(1.15, 1.36)
+            : 1.25;
 
         return CustomScrollView(
           physics: const BouncingScrollPhysics(),
           slivers: [
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
                 child: Row(
                   children: [
                     Icon(
@@ -80,11 +86,13 @@ class MedicalHomeScreen extends StatelessWidget {
                       size: 20,
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      'الرعاية الصحية لأهالي القرية',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        color: theme.colorScheme.primary,
+                    Expanded(
+                      child: Text(
+                        'الرعاية الصحية لأهالي القرية',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w900,
+                          color: theme.colorScheme.primary,
+                        ),
                       ),
                     ),
                   ],
@@ -92,17 +100,27 @@ class MedicalHomeScreen extends StatelessWidget {
               ),
             ),
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(hPadding, 6, hPadding, 0),
+              padding: const EdgeInsets.fromLTRB(hPadding, 4, hPadding, 16),
               sliver: SliverGrid(
                 delegate: SliverChildBuilderDelegate(
-                  (context, index) => _MedicalSectionTile(
-                    index: index,
-                    label: _sections[index].$1,
-                    image: _sections[index].$2,
-                  ),
-                  childCount: 6,
+                  (context, index) {
+                    if (index < _sections.length) {
+                      return _MedicalSectionTile(
+                        index: index,
+                        label: _sections[index].$1,
+                        image: _sections[index].$2,
+                      );
+                    }
+                    return const _MedicalComingSoonTile(
+                      index: 7,
+                      label: 'قريباً',
+                      subtitle: 'خدمة طبية جديدة',
+                      icon: Icons.medical_services_outlined,
+                    );
+                  },
+                  childCount: 8,
                 ),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   mainAxisSpacing: spacing,
                   crossAxisSpacing: spacing,
@@ -110,28 +128,133 @@ class MedicalHomeScreen extends StatelessWidget {
                 ),
               ),
             ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(hPadding, spacing, hPadding, 24),
-              sliver: SliverToBoxAdapter(
-                child: Center(
-                  child: SizedBox(
-                    width: cardWidth,
-                    child: AspectRatio(
-                      aspectRatio: childAspectRatio,
-                      child: _MedicalSectionTile(
-                        index: 6,
-                        label: _sections[6].$1,
-                        image: _sections[6].$2,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
           ],
         );
       }),
     );
+  }
+}
+
+class _MedicalComingSoonTile extends StatelessWidget {
+  const _MedicalComingSoonTile({
+    required this.index,
+    required this.label,
+    required this.subtitle,
+    required this.icon,
+  });
+
+  final int index;
+  final String label;
+  final String subtitle;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    const imgRadius = BorderRadius.all(Radius.circular(16));
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark
+            ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.25)
+            : theme.colorScheme.surface,
+        borderRadius: imgRadius,
+        border: Border.all(
+          color: theme.colorScheme.primary.withValues(alpha: 0.22),
+          width: 1.1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 3,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: imgRadius,
+          onTap: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Row(
+                  children: [
+                    Icon(Icons.health_and_safety_outlined,
+                        color: Colors.white, size: 20),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'هذه الخدمة الطبية قيد الإعداد وستتوفر قريباً لأهالي القرية إن شاء الله',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ],
+                ),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 22,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  label,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    color: theme.colorScheme.primary,
+                    fontSize: 13,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant
+                        .withValues(alpha: 0.7),
+                    fontSize: 10,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ).animate(delay: (index * 35).ms).fadeIn(duration: 300.ms).scale(
+          begin: const Offset(0.94, 0.94),
+        );
   }
 }
 
@@ -145,7 +268,7 @@ class _MedicalSectionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    const imgRadius = BorderRadius.all(Radius.circular(18));
+    const imgRadius = BorderRadius.all(Radius.circular(16));
     return Container(
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
