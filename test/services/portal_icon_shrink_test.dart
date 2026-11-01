@@ -84,17 +84,19 @@ void main() {
   });
 
   group('هندسة الشبكة: شبكة 2*4 متناسقة بـ 8 أيقونات', () {
-    test('الطبية: شبكة عمودين بـ 8 بطاقات متناسقة', () {
+    test('الطبية: شبكة عمودين بـ 8 بطاقات متناسقة بنسبة 0.89', () {
       final text = src(medicalPath);
       expect(count(text, 'body: LayoutBuilder(builder: (context, constraints) {'), 1);
+      expect(count(text, 'const childAspectRatio = 0.89;'), 1);
       expect(count(text, 'crossAxisCount: 2,'), 1);
       expect(count(text, 'childAspectRatio: childAspectRatio'), 1);
       expect(count(text, 'childCount: 8,'), 1);
     });
 
-    test('المزارع: شبكة عمودين بـ 8 بطاقات متناسقة', () {
+    test('المزارع: شبكة عمودين بـ 8 بطاقات متناسقة بنسبة 0.89', () {
       final text = src(farmerPath);
       expect(count(text, 'body: LayoutBuilder(builder: (context, constraints) {'), 1);
+      expect(count(text, 'const childAspectRatio = 0.89;'), 1);
       expect(count(text, 'crossAxisCount: 2,'), 1);
       expect(count(text, 'childAspectRatio: childAspectRatio'), 1);
       expect(count(text, 'childCount: 8,'), 1);

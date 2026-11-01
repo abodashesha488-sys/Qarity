@@ -49,15 +49,9 @@ class FarmerServicesScreen extends StatelessWidget {
       appBar: const QurityAppBar(title: 'خدمات المزارع'),
       body: LayoutBuilder(builder: (context, constraints) {
         const spacing = 10.0;
-        const hPadding = 14.0;
-        final cardWidth = (constraints.maxWidth - (hPadding * 2) - spacing) / 2;
-
-        // حساب النسبة بحيث تتسع الشاشة لـ 8 أيقونات (4 صفوف × 2 أعمدة) بالتساوي وبشكل مدمج
-        final availableGridHeight = constraints.maxHeight - 65;
-        final targetRowHeight = (availableGridHeight - (spacing * 3)) / 4;
-        final childAspectRatio = (targetRowHeight > 75 && targetRowHeight < 240)
-            ? (cardWidth / targetRowHeight).clamp(1.15, 1.36)
-            : 1.25;
+        const hPadding = 20.0;
+        // نسبة 0.89 تطابق أبعاد الصور الأصلية تماماً فتعرض كامل التفاصيل والكتابة دون أي اقتصاص
+        const childAspectRatio = 0.89;
 
         return CustomScrollView(
           physics: const BouncingScrollPhysics(),
@@ -111,7 +105,7 @@ class FarmerServicesScreen extends StatelessWidget {
                   },
                   childCount: 8,
                 ),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   mainAxisSpacing: spacing,
                   crossAxisSpacing: spacing,
