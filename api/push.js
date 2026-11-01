@@ -18,6 +18,7 @@
 //   { "topic": "village_news", "title": "📰 خبر جديد", "body": "...", "route": "/news" }
 
 import admin from 'firebase-admin';
+import crypto from 'node:crypto';
 
 const ALLOWED_ROLES = ['admin', 'assistant_admin'];
 
@@ -48,6 +49,18 @@ const PENDING_KINDS = {
   medical_center_clinics: { t: '🏥 عيادة مركزية جديدة بانتظار موافقتك', b: 'مدير المركز الطبي أضاف عيادة جديدة للمركز الخيري.' },
   village_contributions: { t: '🗄️ مساهمة جديدة في أرشيف القرية', b: 'أرسل أحد الأهالي مادة (صورة/وثيقة/تسجيل) لمرجع القرية بانتظار المراجعة.' },
 };
+
+function extractCloudinaryPublicId(url) {
+  if (!url || typeof url !== 'string') return null;
+  const uploadIdx = url.indexOf('/upload/');
+  if (uploadIdx === -1) return null;
+  const parts = url.substring(uploadIdx + 8).split('/');
+  const nonTransformParts = parts.filter((p) => !/^(?:[a-z]_[a-zA-Z0-9_,-]+|v\d+)$/.test(p));
+  if (!nonTransformParts.length) return null;
+  let full = nonTransformParts.join('/');
+  const dot = full.lastIndexOf('.');
+  return dot !== -1 ? full.substring(0, dot) : full;
+}
 
 let appReady = false;
 
@@ -99,6 +112,49 @@ export default async function handler(req, res) {
   }
 
   const body = req.body || {};
+
+  // ────────── وضع حذف صورة من Cloudinary ──────────
+  if (body.action === 'delete_image') {
+    const rawUrl = String(body.url || '');
+    if (!rawUrl || !rawUrl.includes('cloudinary.com')) {
+      return res.status(400).json({ error: 'invalid_image_url' });
+    }
+
+    const publicId = extractCloudinaryPublicId(rawUrl);
+    if (!publicId) {
+      return res.status(400).json({ error: 'cannot_extract_public_id' });
+    }
+
+    try {
+      const cloudName = process.env.CLOUDINARY_CLOUD_NAME || 'ygfhtwug';
+      const apiKey = process.env.CLOUDINARY_API_KEY || '686447129682517';
+      const apiSecret = process.env.CLOUDINARY_API_SECRET || 'OjJA1hedgYv_idsy5jGpFoD6V3s';
+
+      const timestamp = Math.round(Date.now() / 1000);
+      const strToSign = public_id=&timestamp=;
+      const signature = crypto.createHash('sha1').update(strToSign).digest('hex');
+
+      const formData = new URLSearchParams();
+      formData.append('public_id', publicId);
+      formData.append('api_key', apiKey);
+      formData.append('timestamp', timestamp.toString());
+      formData.append('signature', signature);
+
+      const destroyRes = await fetch(
+        https://api.cloudinary.com/v1_1//image/destroy,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      );
+
+      const result = await destroyRes.json();
+      return res.status(200).json({ success: true, result });
+    } catch (err) {
+      return res.status(500).json({ error: 'cloudinary_destroy_failed', message: err.message });
+    }
+  }
+
 
   // ────────── وضع إخطار الأدمن بطلب جديد يحتاج موافقة ──────────
   // مسموح لأي مستخدم مسجّل دخول (هذا وضع الإرسال من شاشات الإضافة).

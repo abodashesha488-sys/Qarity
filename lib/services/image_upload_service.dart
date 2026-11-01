@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 
 import '../core/constants/app_config.dart';
@@ -147,10 +148,39 @@ class ImageUploadService {
     }
   }
 
-  /// يحذف صورة (يدعم ImgBB القديم).
-  /// في Cloudinary Unsigned، يُدار الحذف بأمان عبر السيرفر أو لوحة التحكم لمنع تلاعب الكلاينت.
+  /// يحذف صورة (يدعم Cloudinary بأمان عبر سيرفر Vercel، و ImgBB كاحتياطي).
   Future<void> deleteImage(String imageUrl) async {
-    final deleteKey = extractDeleteKey(imageUrl);
+    final trimmed = imageUrl.trim();
+    if (trimmed.isEmpty) return;
+
+    // 1. حذف آمن من Cloudinary عبر سيرفر المشروع
+    if (trimmed.contains('cloudinary.com')) {
+      try {
+        final token = await FirebaseAuth.instance.currentUser?.getIdToken();
+        if (token != null) {
+          final endpoint = AppConfig.pushEndpoint.trim();
+          if (endpoint.isNotEmpty) {
+            await http
+                .post(
+                  Uri.parse(endpoint),
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer $token',
+                  },
+                  body: jsonEncode({
+                    'action': 'delete_image',
+                    'url': trimmed,
+                  }),
+                )
+                .timeout(const Duration(seconds: 8));
+          }
+        }
+      } catch (_) {}
+      return;
+    }
+
+    // 2. احتياطي: ImgBB القديم في حال وُجد مفتاح حذف
+    final deleteKey = extractDeleteKey(trimmed);
     final apiKey = AppConfig.imgbbApiKey.trim();
     if (deleteKey != null && deleteKey.isNotEmpty && apiKey.isNotEmpty) {
       try {

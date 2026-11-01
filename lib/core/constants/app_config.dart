@@ -42,6 +42,12 @@ class AppConfig {
   // علم لمرة واحدة يمنع حلقة إعادة التوجيه في OAuth على الـPWA المثبت (iOS).
   static const String googleRedirectFlagKey = 'google_redirect_attempted';
 
+  // مسار الـ Worker في Vercel لإشعارات البوش والعمليات السحابية الآمنة
+  static const String pushEndpoint = String.fromEnvironment(
+    'PUSH_ENDPOINT',
+    defaultValue: 'https://qarity.vercel.app/api/push',
+  );
+
   // موقع القرية (خط الطول/العرض) لعرض طقسها — قابل للتحديث من dart-define.
   static final double weatherLat = double.tryParse(
           const String.fromEnvironment('WEATHER_LAT', defaultValue: '31.299677')) ??

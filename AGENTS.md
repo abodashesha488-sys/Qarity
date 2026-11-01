@@ -69,6 +69,7 @@ push notifications go through a Vercel Serverless function instead.
 | *(default)* `topic`/`token` | admin / assistant_admin only | village-wide FCM fan-out or direct device message (approve/publish, alerts, broadcast) |
 | `admin_notify` | any signed-in user | tells admins a new submission awaits review; server-built text, 3-min rate limit per collection |
 | `user_notify` | any signed-in user | **forum like → the post owner's inbox + FCM**; server-validated (`403 not_liked` unless the sender is in `likedBy`, so no arbitrary targeting), 60s rate limit, writes `notifications/like_{itemId}_{likerUid}` via admin SDK (bypasses rules), re-badges on re-like instead of stacking |
+| `delete_image` | any signed-in user | **حذف آمن للصور من Cloudinary**؛ يتحقق من التوكن، يستخرج `public_id`، ويوقع طلب الحذف بـ `API Secret` على الخادم مباشرة دون كشف الأسرار في الكلاينت |
 
 ### One-time setup
 1. Create a **Service Account** key: Firebase Console → Project Settings → Service
