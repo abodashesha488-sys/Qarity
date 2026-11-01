@@ -239,6 +239,88 @@ class VillageClinicService {
 
   Future<void> delete(String clinicId) =>
       OwnerContentService.remove(_firestore, 'village_clinics', clinicId);
+
+  // ── التعليقات والردود على العيادة (Facebook-style) ──
+
+  Future<void> addComment(
+    String clinicId,
+    String text, {
+    String? parentId,
+    String? replyToUser,
+  }) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || text.trim().isEmpty) return;
+    String userName = user.displayName ?? 'مستخدم';
+    String userPhotoUrl = user.photoURL ?? '';
+
+    try {
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      if (userDoc.exists) {
+        final d = userDoc.data();
+        if (d != null) {
+          userName = (d['name'] as String?) ?? userName;
+          userPhotoUrl = (d['photoUrl'] as String?) ?? userPhotoUrl;
+        }
+      }
+    } catch (_) {}
+
+    await _col.doc(clinicId).collection('comments').add({
+      'text': text.trim(),
+      'userId': user.uid,
+      'userName': userName,
+      'userPhotoUrl': userPhotoUrl,
+      'likes': 0,
+      'likedBy': <String>[],
+      if (parentId != null && parentId.isNotEmpty) 'parentId': parentId,
+      if (replyToUser != null && replyToUser.isNotEmpty) 'replyToUser': replyToUser,
+      'createdAt': Timestamp.now(),
+    });
+  }
+
+  Stream<QuerySnapshot> getCommentsStream(String clinicId) {
+    return _col
+        .doc(clinicId)
+        .collection('comments')
+        .orderBy('createdAt', descending: false)
+        .snapshots();
+  }
+
+  Future<void> editComment(String clinicId, String commentId, String newText) async {
+    if (clinicId.isEmpty || commentId.isEmpty || newText.trim().isEmpty) return;
+    await _col.doc(clinicId).collection('comments').doc(commentId).update({
+      'text': newText.trim(),
+      'updatedAt': Timestamp.now(),
+    });
+  }
+
+  Future<void> toggleCommentLike(
+      String clinicId, String commentId, String userId) async {
+    if (clinicId.isEmpty || commentId.isEmpty || userId.isEmpty) return;
+    final ref = _col.doc(clinicId).collection('comments').doc(commentId);
+    await _firestore.runTransaction((tx) async {
+      final snap = await tx.get(ref);
+      if (!snap.exists) return;
+      final data = snap.data() ?? <String, dynamic>{};
+      final likedBy = (data['likedBy'] as List?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          <String>[];
+      if (likedBy.contains(userId)) {
+        likedBy.remove(userId);
+      } else {
+        likedBy.add(userId);
+      }
+      tx.update(ref, {
+        'likedBy': likedBy,
+        'likes': likedBy.length,
+      });
+    });
+  }
+
+  Future<void> deleteComment(String clinicId, String commentId) async {
+    if (clinicId.isEmpty || commentId.isEmpty) return;
+    await _col.doc(clinicId).collection('comments').doc(commentId).delete();
+  }
 }
 
 /// خدمة صيدليات القرية — مدخلات مستخدمين تحتاج موافقة الأدمن.

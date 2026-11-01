@@ -261,11 +261,13 @@ void main() {
       expect(first.left, isNot(second.left));
     }
 
-    testWidgets('عيادات القرية', (tester) async {
+    testWidgets('عيادات القرية: كارت واحد في كل سطر وبحث وتصنيف', (tester) async {
       final fs = FakeFirebaseFirestore();
       await seed(fs, 'village_clinics');
       await pumpSection(tester, 2, fs);
-      await expectTwoUp(tester);
+      expect(tester.takeException(), isNull);
+      expect(find.byType(ListView), findsWidgets);
+      expect(find.byKey(const Key('clinic-search-field')), findsOneWidget);
     });
 
     testWidgets('الوسوم لا تلتفّ: تخصص طويل يبقى سطرًا واحدًا مقصوصًا',
@@ -352,12 +354,13 @@ void main() {
   group('عقد المصدر: كرتان في السطر في كل ما طُلب', () {
     String src(String p) => File(p).readAsStringSync();
 
-    test('العيادات والصيدليات والمعامل والنظارات والمستلزمات: خمس شبكات بعمودين',
+    test('الصيدليات والمعامل والنظارات والمستلزمات: أربع شبكات بعمودين والعيادات كارت في سطر',
         () {
       final s = src('lib/features/medical/medical_home_screen.dart');
-      expect(RegExp('gridDelegate: kMedGridDelegate').allMatches(s).length, 5,
-          reason: 'عيادات + صيدليات + معامل + نظارات + مستلزمات طبية');
-      expect(RegExp('return MedGridTile\\(').allMatches(s).length, 5);
+      expect(RegExp('gridDelegate: kMedGridDelegate').allMatches(s).length, 4,
+          reason: 'صيدليات + معامل + نظارات + مستلزمات طبية');
+      expect(RegExp('return MedGridTile\\(').allMatches(s).length, 4);
+      expect(s, contains('_ClinicRowCard('));
       expect(s, isNot(contains('crossAxisCount: 3')),
           reason: 'لاعودة لشبكة العمود الثلاثة');
       // بطاقة المركز الخيري ومنسّقها بقيا كما هما (لم يُطلب تغييرهما).

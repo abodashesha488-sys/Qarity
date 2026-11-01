@@ -642,6 +642,15 @@ service cloud.firestore {
                         && !request.resource.data.diff(resource.data)
                              .affectedKeys().hasAny(['submittedByName']));
       allow delete: if isAdmin() || ownerDelete(resource.data.submittedBy);
+
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if accountActive() && request.auth.uid == request.resource.data.userId;
+        allow update: if isAdmin()
+                      || (accountActive() && request.auth.uid == resource.data.userId);
+        allow delete: if isAdmin()
+                      || (accountActive() && request.auth.uid == resource.data.userId);
+      }
     }
 
     // صيدليات القرية: نفس نهج العيادات.

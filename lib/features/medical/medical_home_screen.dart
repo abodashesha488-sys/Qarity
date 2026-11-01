@@ -1222,8 +1222,10 @@ class _ClinicsTabState extends State<_ClinicsTab> {
   late final VillageClinicService _service =
       widget.service ?? VillageClinicService();
   final TextEditingController _search = TextEditingController();
-  // تدفّق واحد مثبّت — إعادة بنائها كل ضغطة كانت تفقد مربع البحث التركيز.
   late final Stream<List<VillageClinic>> _stream = _service.getApprovedStream();
+
+  String _selectedSpecialty = 'الكل';
+  bool _onlyOpenNow = false;
 
   @override
   void dispose() {
@@ -1231,50 +1233,155 @@ class _ClinicsTabState extends State<_ClinicsTab> {
     super.dispose();
   }
 
+  List<VillageClinic> _filterClinics(List<VillageClinic> source) {
+    var items = List<VillageClinic>.of(source);
+    final q = _search.text.trim().toLowerCase();
+    if (q.isNotEmpty) {
+      items = items.where((c) =>
+          c.name.toLowerCase().contains(q) ||
+          c.specialty.toLowerCase().contains(q) ||
+          c.ownerName.toLowerCase().contains(q) ||
+          c.address.toLowerCase().contains(q) ||
+          c.phone.contains(q)).toList();
+    }
+    if (_onlyOpenNow) {
+      items = items.where((c) => c.isCurrentlyOpen).toList();
+    }
+    if (_selectedSpecialty != 'الكل') {
+      items = items.where((c) => c.specialty == _selectedSpecialty).toList();
+    }
+    return items;
+  }
+
+  Widget _buildSearchAndFilterBar(ThemeData theme) {
+    final specialties = <String>['الكل', ...kClinicSpecialties.where((s) => s != 'غير ذلك')];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // شريط البحث الموحد
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: TextField(
+            key: const Key('clinic-search-field'),
+            controller: _search,
+            onChanged: (_) => setState(() {}),
+            decoration: InputDecoration(
+              hintText: 'ابحث عن عيادة، طبيب، تخصص، عنوان...',
+              isDense: true,
+              prefixIcon: const Icon(Icons.search_rounded, size: 20, color: Color(0xFF00897B)),
+              suffixIcon: _search.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear_rounded, size: 18),
+                      onPressed: () {
+                        _search.clear();
+                        setState(() {});
+                      },
+                    )
+                  : null,
+              filled: true,
+              fillColor: theme.colorScheme.surfaceContainerLowest,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: const Color(0xFF00897B).withValues(alpha: 0.3)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: const Color(0xFF00897B).withValues(alpha: 0.3)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: Color(0xFF00897B), width: 1.5),
+              ),
+            ),
+          ),
+        ),
+        // شريط التصنيف والتخصصات الأفقي
+        SizedBox(
+          height: 38,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            children: [
+              // زر التصفية: المفتوحة الآن
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 3),
+                child: FilterChip(
+                  avatar: _onlyOpenNow
+                      ? const Icon(Icons.check_circle_rounded, size: 15, color: Colors.white)
+                      : const Icon(Icons.access_time_rounded, size: 15, color: Color(0xFF2E7D32)),
+                  label: const Text('مفتوحة الآن'),
+                  selected: _onlyOpenNow,
+                  selectedColor: const Color(0xFF27AE60),
+                  labelStyle: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: _onlyOpenNow ? Colors.white : const Color(0xFF2E7D32),
+                  ),
+                  backgroundColor: const Color(0xFF2ECC71).withValues(alpha: 0.12),
+                  side: BorderSide(
+                    color: _onlyOpenNow ? Colors.transparent : const Color(0xFF2ECC71).withValues(alpha: 0.4),
+                  ),
+                  onSelected: (val) => setState(() => _onlyOpenNow = val),
+                ),
+              ),
+              ...specialties.map((spec) {
+                final selected = _selectedSpecialty == spec;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 3),
+                  child: FilterChip(
+                    label: Text(spec),
+                    selected: selected,
+                    selectedColor: const Color(0xFF00897B),
+                    labelStyle: TextStyle(
+                      fontSize: 12,
+                      fontWeight: selected ? FontWeight.bold : FontWeight.w600,
+                      color: selected ? Colors.white : theme.colorScheme.onSurface,
+                    ),
+                    backgroundColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                    side: BorderSide(
+                      color: selected ? Colors.transparent : theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+                    ),
+                    onSelected: (_) => setState(() => _selectedSpecialty = spec),
+                  ),
+                );
+              }),
+            ],
+          ),
+        ),
+        const SizedBox(height: 6),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return StreamBuilder<List<VillageClinic>>(
       stream: _stream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-        var items = snapshot.data ?? [];
-        final q = _search.text.trim().toLowerCase();
-        if (q.isNotEmpty) {
-          items = items
-              .where((c) =>
-                  c.name.toLowerCase().contains(q) ||
-                  c.specialty.toLowerCase().contains(q) ||
-                  c.ownerName.toLowerCase().contains(q))
-              .toList();
-        }
+        final allItems = snapshot.data ?? [];
+        final items = _filterClinics(allItems);
+
         return Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              child: TextField(
-                controller: _search,
-                onChanged: (_) => setState(() {}),
-                decoration: const InputDecoration(
-                  hintText: 'ابحث عن عيادة أو تخصص...',
-                  isDense: true,
-                  prefixIcon: Icon(Icons.search_rounded, size: 20),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                ),
-              ),
-            ),
+            _buildSearchAndFilterBar(theme),
             Expanded(
               child: items.isEmpty
                   ? const _MedEmpty(
                       icon: Icons.add_business_rounded,
-                      message: 'لا توجد عيادات معتمدة بعد')
-                  : GridView.builder(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 110),
-                      gridDelegate: kMedGridDelegate,
+                      message: 'لا توجد عيادات مطابقة للبحث أو التخصص المحدد')
+                  : ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(16, 6, 16, 110),
                       itemCount: items.length,
-                      itemBuilder: (context, i) => _ClinicCard(clinic: items[i]),
-                    ),            ),
+                      separatorBuilder: (_, __) => const SizedBox(height: 10),
+                      itemBuilder: (context, i) => _ClinicRowCard(clinic: items[i]),
+                    ),
+            ),
           ],
         );
       },
@@ -1282,35 +1389,308 @@ class _ClinicsTabState extends State<_ClinicsTab> {
   }
 }
 
-class _ClinicCard extends StatelessWidget {
-  const _ClinicCard({required this.clinic});
+/// شارة تومض تبين أن العيادة مفتوحة الآن أثناء أوقات وفترات عملها
+class _ClinicBlinkingStatusBadge extends StatefulWidget {
+  const _ClinicBlinkingStatusBadge({required this.isCurrentlyOpen});
+  final bool isCurrentlyOpen;
+
+  @override
+  State<_ClinicBlinkingStatusBadge> createState() =>
+      _ClinicBlinkingStatusBadgeState();
+}
+
+class _ClinicBlinkingStatusBadgeState extends State<_ClinicBlinkingStatusBadge>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _opacity;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat(reverse: true);
+    _opacity = Tween<double>(begin: 0.35, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    if (!widget.isCurrentlyOpen) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.outline.withValues(alpha: 0.6),
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 5),
+            Text(
+              'مغلقة الآن',
+              style: TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return AnimatedBuilder(
+      animation: _opacity,
+      builder: (context, child) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+          decoration: BoxDecoration(
+            color: const Color(0xFF2ECC71).withValues(alpha: 0.14),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: const Color(0xFF2ECC71).withValues(alpha: 0.35 + 0.35 * _opacity.value),
+              width: 0.8,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF2ECC71).withValues(alpha: 0.25 * _opacity.value),
+                blurRadius: 4 * _opacity.value,
+                spreadRadius: 0.5 * _opacity.value,
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Opacity(
+                opacity: _opacity.value,
+                child: Container(
+                  width: 7,
+                  height: 7,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF00E676),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0xFF00E676),
+                        blurRadius: 4,
+                        spreadRadius: 1,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 5),
+              const Text(
+                'مفتوحة الآن',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF27AE60),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// كارت العيادة في سطر منفصل كامل العرض — منسق باحترافية مع الومضة اللحظية ومواعيد العمل
+class _ClinicRowCard extends StatelessWidget {
+  const _ClinicRowCard({required this.clinic});
   final VillageClinic clinic;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return MedGridTile(
-      title: clinic.name,
-      imageUrl: clinic.imageUrl,
-      icon: Icons.add_business_rounded,
-      accent: const Color(0xFF00897B),
-      onTap: () => Navigator.pushNamed(context, '/medical/clinic-detail',
-          arguments: clinic),
-      tags: [
-        if (clinic.specialty.isNotEmpty)
-          _Tag(clinic.specialty, const Color(0xFF00897B)),
-        if (clinic.ownerName.isNotEmpty)
-          _Tag('د. ${clinic.ownerName}', theme.colorScheme.onSurfaceVariant),
-        _Tag(
-            clinic.scheduleStatusLabel,
-            clinic.isDoctorOnDuty
-                ? const Color(0xFF2E7D32)
-                : theme.colorScheme.onSurfaceVariant),
-      ],
-      subtitle: [
-        if (clinic.workingHours.isNotEmpty) clinic.workingHours,
-        if (clinic.address.isNotEmpty) clinic.address,
-      ].join(' • '),
+    final isOpen = clinic.isCurrentlyOpen;
+
+    return Material(
+      color: theme.colorScheme.surface,
+      borderRadius: BorderRadius.circular(18),
+      elevation: 1.5,
+      shadowColor: Colors.black.withValues(alpha: 0.08),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: () => Navigator.pushNamed(
+          context,
+          '/medical/clinic-detail',
+          arguments: clinic,
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: isOpen
+                  ? const Color(0xFF2ECC71).withValues(alpha: 0.4)
+                  : theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
+              width: isOpen ? 1.2 : 0.8,
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // صورة العيادة
+              ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  width: 80,
+                  height: 80,
+                  color: const Color(0xFF00897B).withValues(alpha: 0.1),
+                  child: clinic.imageUrl.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: clinic.imageUrl,
+                          fit: BoxFit.cover,
+                          errorWidget: (_, __, ___) => const Icon(
+                            Icons.local_hospital_rounded,
+                            color: Color(0xFF00897B),
+                            size: 32,
+                          ),
+                        )
+                      : const Icon(
+                          Icons.local_hospital_rounded,
+                          color: Color(0xFF00897B),
+                          size: 32,
+                        ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // تفاصيل العيادة
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // السطر الأول: الاسم + شارة الوميض
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            clinic.name,
+                            style: const TextStyle(
+                              fontSize: 15.5,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        _ClinicBlinkingStatusBadge(isCurrentlyOpen: isOpen),
+                      ],
+                    ),
+                    const SizedBox(height: 5),
+                    // السطر الثاني: الطبيب والتخصص
+                    Row(
+                      children: [
+                        if (clinic.ownerName.isNotEmpty) ...[
+                          Icon(Icons.person_rounded, size: 14, color: theme.colorScheme.primary),
+                          const SizedBox(width: 3),
+                          Flexible(
+                            child: Text(
+                              'د. ${clinic.ownerName}',
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w600,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        if (clinic.specialty.isNotEmpty)
+                          Flexible(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF00897B).withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                clinic.specialty,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF00897B),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    // السطر الثالث: أيام العمل
+                    Row(
+                      children: [
+                        const Icon(Icons.calendar_today_rounded, size: 13, color: Colors.orange),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            clinic.workDaysSummary,
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    // السطر الرابع: الفترات ومواعيد العمل
+                    Row(
+                      children: [
+                        const Icon(Icons.schedule_rounded, size: 13, color: Colors.blueGrey),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            clinic.shiftsSummary,
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 4),
+              const Align(
+                child: Icon(Icons.chevron_left_rounded, size: 22, color: Colors.grey),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -2496,7 +2876,6 @@ class VillageClinicFormSheet extends StatefulWidget {
   final String userName;
   final String userId;
 
-  /// عيادة يملكها المستخدم الحالي — الورقة تحفظ فوقها بدل إنشاء جديدة.
   final VillageClinic? existing;
   @override
   State<VillageClinicFormSheet> createState() => _VillageClinicFormSheetState();
@@ -2517,11 +2896,42 @@ class _VillageClinicFormSheetState extends State<VillageClinicFormSheet> {
       List.of(widget.existing?.imageUrls ?? const <String>[]);
   late bool _isAvailableNow = widget.existing?.isAvailableNow ?? false;
 
+  // ── أيام العمل ──
+  static const List<String> _kWeekDays = [
+    'السبت',
+    'الأحد',
+    'الإثنين',
+    'الثلاثاء',
+    'الأربعاء',
+    'الخميس',
+    'الجمعة',
+  ];
+  late final List<String> _selectedDays = List.of(
+    widget.existing != null && widget.existing!.workDays.isNotEmpty
+        ? widget.existing!.workDays
+        : const ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'],
+  );
+
+  // ── الفترة الصباحية ──
+  late bool _hasMorningShift = widget.existing?.hasMorningShift ?? true;
+  late String _morningStart = widget.existing?.morningStart.isNotEmpty == true
+      ? widget.existing!.morningStart
+      : '09:00';
+  late String _morningEnd = widget.existing?.morningEnd.isNotEmpty == true
+      ? widget.existing!.morningEnd
+      : '13:00';
+
+  // ── الفترة المسائية ──
+  late bool _hasEveningShift = widget.existing?.hasEveningShift ?? true;
+  late String _eveningStart = widget.existing?.eveningStart.isNotEmpty == true
+      ? widget.existing!.eveningStart
+      : '17:00';
+  late String _eveningEnd = widget.existing?.eveningEnd.isNotEmpty == true
+      ? widget.existing!.eveningEnd
+      : '22:00';
+
   bool get _isEdit => widget.existing != null;
 
-  /// تخصص العيادة المحفوظ قد يكون كُتب يدويًا من لوحة الإدارة، فلو لم يكن في
-  /// القائمة لألقى `DropdownButtonFormField` «There should be exactly one item…»
-  /// ولأبدّل تخصص عيادة صاحبها عند أول حفظ تعديل.
   List<String> get _specialtyOptions {
     final saved = widget.existing?.specialty.trim() ?? '';
     if (saved.isEmpty || kClinicSpecialties.contains(saved)) {
@@ -2535,25 +2945,267 @@ class _VillageClinicFormSheetState extends State<VillageClinicFormSheet> {
           ? widget.existing!.specialty
           : 'غير ذلك';
 
+  Future<void> _pickTime({
+    required String current,
+    required void Function(String) onPicked,
+  }) async {
+    final parts = current.split(':');
+    final initial = TimeOfDay(
+      hour: parts.isNotEmpty ? (int.tryParse(parts[0]) ?? 9) : 9,
+      minute: parts.length > 1 ? (int.tryParse(parts[1]) ?? 0) : 0,
+    );
+    final res = await showTimePicker(
+      context: context,
+      initialTime: initial,
+      helpText: 'اختر وقت الفترة',
+      cancelText: 'إلغاء',
+      confirmText: 'تأكيد',
+    );
+    if (res != null) {
+      final h = res.hour.toString().padLeft(2, '0');
+      final m = res.minute.toString().padLeft(2, '0');
+      setState(() => onPicked('$h:$m'));
+    }
+  }
+
+  String _formatTimeDisplay(String hhmm) {
+    if (hhmm.isEmpty) return '';
+    final parts = hhmm.split(':');
+    if (parts.isEmpty) return hhmm;
+    final int hour = int.tryParse(parts[0]) ?? 0;
+    final int min = parts.length > 1 ? (int.tryParse(parts[1]) ?? 0) : 0;
+    final period = hour >= 12 ? 'م' : 'ص';
+    int h12 = hour % 12;
+    if (h12 == 0) h12 = 12;
+    final minStr = min > 0 ? ':${min.toString().padLeft(2, '0')}' : '';
+    return '$h12$minStr $period';
+  }
+
+  Widget _buildDaysSection(ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.calendar_month_rounded, size: 18, color: Color(0xFF00897B)),
+                  SizedBox(width: 6),
+                  Text(
+                    'أيام عمل العيادة',
+                    style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              TextButton(
+                style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                ),
+                onPressed: () {
+                  setState(() {
+                    if (_selectedDays.length == _kWeekDays.length) {
+                      _selectedDays.clear();
+                    } else {
+                      _selectedDays
+                        ..clear()
+                        ..addAll(_kWeekDays);
+                    }
+                  });
+                },
+                child: Text(
+                  _selectedDays.length == _kWeekDays.length ? 'مسح الكل' : 'تحديد كل الأيام',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: _kWeekDays.map((day) {
+              final isSel = _selectedDays.contains(day);
+              return FilterChip(
+                label: Text(day),
+                selected: isSel,
+                selectedColor: const Color(0xFF00897B),
+                labelStyle: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
+                  color: isSel ? Colors.white : theme.colorScheme.onSurface,
+                ),
+                onSelected: (val) {
+                  setState(() {
+                    if (val) {
+                      if (!_selectedDays.contains(day)) _selectedDays.add(day);
+                    } else {
+                      _selectedDays.remove(day);
+                    }
+                  });
+                },
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildShiftCard({
+    required ThemeData theme,
+    required String title,
+    required IconData icon,
+    required Color color,
+    required bool isEnabled,
+    required ValueChanged<bool> onToggle,
+    required String startTime,
+    required String endTime,
+    required ValueChanged<String> onStartPicked,
+    required ValueChanged<String> onEndPicked,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isEnabled
+            ? color.withValues(alpha: 0.05)
+            : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isEnabled
+              ? color.withValues(alpha: 0.35)
+              : theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+        ),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(icon, size: 18, color: isEnabled ? color : Colors.grey),
+                  const SizedBox(width: 6),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.bold,
+                      color: isEnabled ? color : theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+              Switch(
+                value: isEnabled,
+                onChanged: onToggle,
+                activeTrackColor: color,
+              ),
+            ],
+          ),
+          if (isEnabled) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(10),
+                    onTap: () => _pickTime(current: startTime, onPicked: onStartPicked),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surface,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: color.withValues(alpha: 0.3)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('من (بداية الفترة)', style: TextStyle(fontSize: 10.5, color: theme.colorScheme.onSurfaceVariant)),
+                          const SizedBox(height: 2),
+                          Text(
+                            _formatTimeDisplay(startTime),
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(10),
+                    onTap: () => _pickTime(current: endTime, onPicked: onEndPicked),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surface,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: color.withValues(alpha: 0.3)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('إلى (نهاية الفترة)', style: TextStyle(fontSize: 10.5, color: theme.colorScheme.onSurfaceVariant)),
+                          const SizedBox(height: 2),
+                          Text(
+                            _formatTimeDisplay(endTime),
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return _SheetScaffold(
       title: _isEdit ? 'تعديل العيادة' : 'إضافة عيادة',
       onSubmitted: () {
         if (_nameC.text.trim().isEmpty) return;
         final editing = widget.existing;
+
+        final shiftsText = <String>[];
+        if (_hasMorningShift) {
+          shiftsText.add('صباحاً: ${_formatTimeDisplay(_morningStart)} - ${_formatTimeDisplay(_morningEnd)}');
+        }
+        if (_hasEveningShift) {
+          shiftsText.add('مساءً: ${_formatTimeDisplay(_eveningStart)} - ${_formatTimeDisplay(_eveningEnd)}');
+        }
+        final compiledHours = shiftsText.isNotEmpty
+            ? shiftsText.join(' | ')
+            : _hoursC.text.trim();
+
         Navigator.pop(
           context,
           VillageClinic(
-            // التعديل يبقي النسب والموافقة كما هي: `OwnerContentService.edit`
-            // هو من يعيدها إلى طابور المراجعة، ولا يلمس `submittedBy`.
             id: editing?.id ?? '',
             name: _nameC.text.trim(),
             specialty: _specialty,
             ownerName: _ownerC.text.trim(),
             phone: _phoneC.text.trim(),
             address: _addressC.text.trim(),
-            workingHours: _hoursC.text.trim(),
+            workingHours: compiledHours,
             description: _descC.text.trim(),
             imageUrls: List.from(_images),
             isAvailableNow: _isAvailableNow,
@@ -2561,11 +3213,19 @@ class _VillageClinicFormSheetState extends State<VillageClinicFormSheet> {
             submittedBy: editing?.submittedBy ?? widget.userId,
             submittedByName: editing?.submittedByName ?? widget.userName,
             createdAt: editing?.createdAt,
+            workDays: List.from(_selectedDays),
+            hasMorningShift: _hasMorningShift,
+            morningStart: _morningStart,
+            morningEnd: _morningEnd,
+            hasEveningShift: _hasEveningShift,
+            eveningStart: _eveningStart,
+            eveningEnd: _eveningEnd,
           ),
         );
       },
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           MedicalImageField(
               maxImages: 3,
@@ -2593,15 +3253,48 @@ class _VillageClinicFormSheetState extends State<VillageClinicFormSheet> {
               type: TextInputType.phone),
           const SizedBox(height: 12),
           _field(_addressC, 'العنوان', Icons.location_on_rounded),
+          const SizedBox(height: 14),
+
+          // تحديد أيام العمل
+          _buildDaysSection(theme),
           const SizedBox(height: 12),
-          _field(_hoursC, 'مواعيد العمل', Icons.access_time_rounded),
+
+          // مواعيد العمل: الفترة الصباحية
+          _buildShiftCard(
+            theme: theme,
+            title: 'الفترة الصباحية',
+            icon: Icons.wb_sunny_rounded,
+            color: const Color(0xFFF39C12),
+            isEnabled: _hasMorningShift,
+            onToggle: (v) => setState(() => _hasMorningShift = v),
+            startTime: _morningStart,
+            endTime: _morningEnd,
+            onStartPicked: (t) => _morningStart = t,
+            onEndPicked: (t) => _morningEnd = t,
+          ),
+          const SizedBox(height: 10),
+
+          // مواعيد العمل: الفترة المسائية
+          _buildShiftCard(
+            theme: theme,
+            title: 'الفترة المسائية',
+            icon: Icons.nights_stay_rounded,
+            color: const Color(0xFF2980B9),
+            isEnabled: _hasEveningShift,
+            onToggle: (v) => setState(() => _hasEveningShift = v),
+            startTime: _eveningStart,
+            endTime: _eveningEnd,
+            onStartPicked: (t) => _eveningStart = t,
+            onEndPicked: (t) => _eveningEnd = t,
+          ),
           const SizedBox(height: 12),
-          _field(_descC, 'نبذة', Icons.description_rounded, maxLines: 3),
+
+          _field(_descC, 'نبذة وتفاصيل إضافية', Icons.description_rounded, maxLines: 3),
           const SizedBox(height: 8),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             title: const Text('الطبيب متواجد بالعيادة الآن'),
-            subtitle: const Text('تفعيل شارة التواجد الحي للمراجعين'),
+            subtitle: const Text('تفعيل شارة التواجد الحي المباشر للمراجعين'),
             value: _isAvailableNow,
             onChanged: (v) => setState(() => _isAvailableNow = v),
           ),

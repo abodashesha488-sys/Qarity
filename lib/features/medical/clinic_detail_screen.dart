@@ -1,14 +1,19 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/utils/comment_style.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/utils/launch_link.dart';
+import '../../core/widgets/shared_cards.dart';
 import '../../models/medical_models.dart';
+import '../../services/admin_service.dart';
 import '../../services/medical_service.dart';
 import '../../services/share_service.dart';
 import '../../widgets/common_appbar_actions.dart';
+import '../../widgets/facebook_comment_tile.dart';
 import '../../widgets/header_action_buttons.dart';
 import '../../widgets/image_gallery_wrap.dart';
 import '../../widgets/owner_actions.dart';
@@ -217,12 +222,14 @@ class _VillageClinicDetailScreenState extends State<VillageClinicDetailScreen> {
   static const _teal = Color(0xFF00897B);
   static const _tealDark = Color(0xFF00695C);
 
-  /// نسخة محفوظة بعد حفظ التعديل — الشاشة تعرض بالوسائط لا بتدفّق، فلو لم
-  /// تُستبدل لظلّت تعرض البيانات القديمة حتى يغلقها المستخدم ويعيد فتحها.
   VillageClinic? _saved;
-
-  /// مبني عند أول استخدام فقط: بلا جلسة اختبار لا يمس Firestore.
   late final VillageClinicService _service = VillageClinicService();
+
+  final TextEditingController _commentController = TextEditingController();
+  String? _replyToCommentId;
+  String? _replyToAuthorName;
+  bool _isPostingComment = false;
+  bool _canModerate = false;
 
   String get _currentUid {
     try {
@@ -230,6 +237,20 @@ class _VillageClinicDetailScreenState extends State<VillageClinicDetailScreen> {
     } catch (_) {
       return '';
     }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    if (_currentUid.isNotEmpty) { AdminService().isAdminUser(_currentUid).then((val) {
+      if (mounted) setState(() => _canModerate = val);
+    }); }
+  }
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    super.dispose();
   }
 
   Future<void> _openEdit(VillageClinic clinic) async {
@@ -281,6 +302,278 @@ class _VillageClinicDetailScreenState extends State<VillageClinicDetailScreen> {
     );
   }
 
+  Future<void> _addComment(VillageClinic clinic) async {
+    final text = _commentController.text.trim();
+    if (text.isEmpty || _isPostingComment) return;
+    setState(() => _isPostingComment = true);
+    try {
+      await _service.addComment(
+        clinic.id,
+        text,
+        parentId: _replyToCommentId,
+        replyToUser: _replyToAuthorName,
+      );
+      _commentController.clear();
+      setState(() {
+        _replyToCommentId = null;
+        _replyToAuthorName = null;
+      });
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تعذر إرسال التعليق')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isPostingComment = false);
+    }
+  }
+
+  Future<void> _deleteComment(
+      VillageClinic clinic, String commentId, String text) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('حذف التعليق'),
+        content: const Text('هل أنت متأكد من رغبتك في حذف هذا التعليق؟'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('إلغاء'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('حذف'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !mounted) return;
+    try {
+      await _service.deleteComment(clinic.id, commentId);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تعذر حذف التعليق')),
+        );
+      }
+    }
+  }
+
+  Widget _buildComments(ThemeData theme, VillageClinic clinic) {
+    if (clinic.id.isEmpty) return const SizedBox.shrink();
+
+    return MedSection(
+      title: 'التعليقات والتقييمات',
+      accent: _teal,
+      child: StreamBuilder<QuerySnapshot>(
+        stream: _service.getCommentsStream(clinic.id),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting &&
+              !snapshot.hasData) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 20),
+              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            );
+          }
+          final comments = snapshot.data?.docs ?? const [];
+          if (comments.isEmpty) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: EmptyContentState(
+                icon: Icons.chat_bubble_outline_rounded,
+                message: 'لا توجد تعليقات بعد — شاركنا رأيك أو استفسارك عن العيادة.',
+              ),
+            );
+          }
+          return ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: comments.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 6),
+            itemBuilder: (context, index) {
+              final doc = comments[index];
+              final data =
+                  doc.data() as Map<String, dynamic>? ?? <String, dynamic>{};
+              final photo = (data['userPhotoUrl'] as String? ?? '').trim();
+              final commentText = data['text'] as String? ?? '';
+              final commentAuthor = (data['userId'] as String? ?? '').trim();
+              final createdAt = (data['createdAt'] as Timestamp?)?.toDate();
+              final updatedAt = (data['updatedAt'] as Timestamp?)?.toDate();
+              final likes = (data['likes'] as num?)?.toInt() ?? 0;
+              final likedBy = (data['likedBy'] as List?)
+                      ?.map((e) => e.toString())
+                      .toList() ??
+                  <String>[];
+              final parentId = data['parentId'] as String?;
+              final replyToUser = data['replyToUser'] as String?;
+
+              return FacebookCommentTile(
+                key: ValueKey('clinic-comment-${doc.id}'),
+                avatarRadius: CommentStyle.avatarRadius,
+                textStyle: CommentStyle.body(context),
+                commentId: doc.id,
+                authorId: commentAuthor,
+                authorName: data['userName'] as String? ?? 'مستخدم',
+                authorPhotoUrl: photo,
+                text: commentText,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                likes: likes,
+                likedBy: likedBy,
+                parentId: parentId,
+                replyToUser: replyToUser,
+                currentUserId: _currentUid,
+                isAdmin: _canModerate,
+                onLike: () =>
+                    _service.toggleCommentLike(clinic.id, doc.id, _currentUid),
+                onReply: () {
+                  setState(() {
+                    _replyToCommentId = doc.id;
+                    _replyToAuthorName =
+                        data['userName'] as String? ?? 'مستخدم';
+                  });
+                },
+                onEdit: (newText) =>
+                    _service.editComment(clinic.id, doc.id, newText),
+                onDelete: () =>
+                    _deleteComment(clinic, doc.id, commentText),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildCommentBar(ThemeData theme, VillageClinic clinic) {
+    if (_currentUid.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        color: theme.colorScheme.surface,
+        child: const Text(
+          'سجل دخولك لتتمكن من إضافة تعليق أو استفسار',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 12.5, color: Colors.grey),
+        ),
+      );
+    }
+
+    return Container(
+      padding: EdgeInsets.only(
+        left: 12,
+        right: 12,
+        top: 8,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 12,
+      ),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        border: Border(
+          top: BorderSide(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+          ),
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x14000000),
+            blurRadius: 8,
+            offset: Offset(0, -2),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (_replyToCommentId != null)
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: _teal.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.reply_rounded, size: 16, color: _teal),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'الرد على ${_replyToAuthorName ?? 'التعليق'}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: _teal,
+                      ),
+                    ),
+                  ),
+                  InkWell(
+                    onTap: () => setState(() {
+                      _replyToCommentId = null;
+                      _replyToAuthorName = null;
+                    }),
+                    child: const Icon(Icons.close_rounded, size: 16, color: _teal),
+                  ),
+                ],
+              ),
+            ),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _commentController,
+                  textInputAction: TextInputAction.send,
+                  onSubmitted: (_) => _addComment(clinic),
+                  decoration: InputDecoration(
+                    hintText: _replyToCommentId != null
+                        ? 'اكتب ردك هنا...'
+                        : 'أضف تعليقاً أو استفساراً عن العيادة...',
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
+                    filled: true,
+                    fillColor: theme.colorScheme.surfaceContainerLowest,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      borderSide: BorderSide(
+                        color: _teal.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      borderSide: BorderSide(
+                        color: _teal.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      borderSide: const BorderSide(color: _teal, width: 1.5),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton.filled(
+                style: IconButton.styleFrom(backgroundColor: _teal),
+                icon: _isPostingComment
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.send_rounded, size: 18, color: Colors.white),
+                onPressed: _isPostingComment ? null : () => _addComment(clinic),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -288,8 +581,10 @@ class _VillageClinicDetailScreenState extends State<VillageClinicDetailScreen> {
         ModalRoute.of(context)!.settings.arguments as VillageClinic? ??
             const VillageClinic(id: '', name: '');
     final ownerRow = _ownerActions(clinic);
+    final isOpen = clinic.isCurrentlyOpen;
 
     return Scaffold(
+      bottomNavigationBar: _buildCommentBar(theme, clinic),
       body: CustomScrollView(
         slivers: [
           MedDetailHeader(
@@ -305,8 +600,9 @@ class _VillageClinicDetailScreenState extends State<VillageClinicDetailScreen> {
                     'التخصص: ${clinic.specialty}',
                   if (clinic.ownerName.isNotEmpty)
                     'الطبيب: ${clinic.ownerName}',
-                  if (clinic.workingHours.isNotEmpty)
-                    'المواعيد: ${clinic.workingHours}',
+                  'الحالة: ${isOpen ? "مفتوحة الآن" : "مغلقة الآن"}',
+                  'أيام العمل: ${clinic.workDaysSummary}',
+                  'المواعيد: ${clinic.shiftsSummary}',
                   if (clinic.address.isNotEmpty) 'العنوان: ${clinic.address}',
                   if (clinic.phone.isNotEmpty) 'هاتف: ${clinic.phone}',
                 ].join('\n')),
@@ -324,24 +620,73 @@ class _VillageClinicDetailScreenState extends State<VillageClinicDetailScreen> {
                             style: theme.textTheme.headlineSmall?.copyWith(
                                 fontWeight: FontWeight.w900)),
                       ),
-                      if (clinic.specialty.isNotEmpty)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 5),
-                          decoration: BoxDecoration(
-                              color: _teal.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                  color: _teal.withValues(alpha: 0.3))),
-                          child: Text(clinic.specialty,
-                              style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w800,
-                                  color: _teal)),
+                      const SizedBox(width: 8),
+                      // الشارة الحية اللحظية
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: isOpen
+                              ? const Color(0xFF2ECC71).withValues(alpha: 0.15)
+                              : theme.colorScheme.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isOpen
+                                ? const Color(0xFF2ECC71).withValues(alpha: 0.5)
+                                : theme.colorScheme.outlineVariant,
+                          ),
                         ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: isOpen
+                                    ? const Color(0xFF00E676)
+                                    : Colors.grey,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              isOpen ? 'مفتوحة الآن' : 'مغلقة الآن',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: isOpen
+                                    ? const Color(0xFF27AE60)
+                                    : theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
+                  const SizedBox(height: 8),
+                  if (clinic.specialty.isNotEmpty)
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 5),
+                        decoration: BoxDecoration(
+                            color: _teal.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                                color: _teal.withValues(alpha: 0.3))),
+                        child: Text(clinic.specialty,
+                            style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color: _teal)),
+                      ),
+                    ),
                   const SizedBox(height: 16),
+
+                  // ── بيانات العيادة الأساسية ──
                   MedSection(
                     title: 'بيانات العيادة',
                     accent: _teal,
@@ -349,8 +694,8 @@ class _VillageClinicDetailScreenState extends State<VillageClinicDetailScreen> {
                       children: [
                         MedInfoRow(
                             icon: Icons.fiber_manual_record_rounded,
-                            label: 'حالة التواجد',
-                            value: clinic.scheduleStatusLabel),
+                            label: 'حالة العيادة',
+                            value: isOpen ? 'مفتوحة الآن وتستقبل المراجعين' : 'مغلقة الآن'),
                         if (clinic.ownerName.isNotEmpty)
                           MedInfoRow(
                               icon: Icons.person_rounded,
@@ -361,11 +706,6 @@ class _VillageClinicDetailScreenState extends State<VillageClinicDetailScreen> {
                               icon: Icons.phone_rounded,
                               label: 'هاتف العيادة',
                               value: clinic.phone),
-                        if (clinic.workingHours.isNotEmpty)
-                          MedInfoRow(
-                              icon: Icons.access_time_rounded,
-                              label: 'مواعيد العمل',
-                              value: clinic.workingHours),
                         if (clinic.address.isNotEmpty)
                           MedInfoRow(
                               icon: Icons.location_on_rounded,
@@ -374,6 +714,41 @@ class _VillageClinicDetailScreenState extends State<VillageClinicDetailScreen> {
                       ],
                     ),
                   ),
+                  const SizedBox(height: 16),
+
+                  // ── مواعيد وأيام وفترات العمل التفصيلية ──
+                  MedSection(
+                    title: 'مواعيد وأيام العمل',
+                    accent: _teal,
+                    child: Column(
+                      children: [
+                        MedInfoRow(
+                          icon: Icons.calendar_today_rounded,
+                          label: 'أيام العمل',
+                          value: clinic.workDaysSummary,
+                        ),
+                        if (clinic.hasMorningShift && clinic.morningStart.isNotEmpty)
+                          MedInfoRow(
+                            icon: Icons.wb_sunny_rounded,
+                            label: 'الفترة الصباحية',
+                            value: 'من ${clinic.morningStart} إلى ${clinic.morningEnd}',
+                          ),
+                        if (clinic.hasEveningShift && clinic.eveningStart.isNotEmpty)
+                          MedInfoRow(
+                            icon: Icons.nights_stay_rounded,
+                            label: 'الفترة المسائية',
+                            value: 'من ${clinic.eveningStart} إلى ${clinic.eveningEnd}',
+                          ),
+                        if (!clinic.hasMorningShift && !clinic.hasEveningShift && clinic.workingHours.isNotEmpty)
+                          MedInfoRow(
+                            icon: Icons.access_time_rounded,
+                            label: 'المواعيد العامة',
+                            value: clinic.workingHours,
+                          ),
+                      ],
+                    ),
+                  ),
+
                   if (clinic.description.isNotEmpty) ...[
                     const SizedBox(height: 16),
                     MedSection(
@@ -392,7 +767,7 @@ class _VillageClinicDetailScreenState extends State<VillageClinicDetailScreen> {
                       child: ImageGalleryWrap(urls: clinic.imageUrls, tileWidth: 180),
                     ),
                   ],
-                  const SizedBox(height: 22),
+                  const SizedBox(height: 18),
                   if (clinic.phone.isNotEmpty)
                     FilledButton.icon(
                       style: FilledButton.styleFrom(
@@ -412,6 +787,10 @@ class _VillageClinicDetailScreenState extends State<VillageClinicDetailScreen> {
                     const SizedBox(height: 12),
                     ownerRow,
                   ],
+
+                  const SizedBox(height: 22),
+                  // قسم التعليقات والردود
+                  _buildComments(theme, clinic),
                 ],
               ),
             ),

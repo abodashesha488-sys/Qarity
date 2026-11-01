@@ -184,6 +184,15 @@ class VillageClinic {
   final String? submittedByName;
   final DateTime? createdAt;
 
+  // ── مواعيد وفترات وأيام العمل المحدثة ──
+  final List<String> workDays;
+  final bool hasMorningShift;
+  final String morningStart;
+  final String morningEnd;
+  final bool hasEveningShift;
+  final String eveningStart;
+  final String eveningEnd;
+
   const VillageClinic({
     required this.id,
     required this.name,
@@ -199,6 +208,13 @@ class VillageClinic {
     this.submittedBy,
     this.submittedByName,
     this.createdAt,
+    this.workDays = const [],
+    this.hasMorningShift = false,
+    this.morningStart = '',
+    this.morningEnd = '',
+    this.hasEveningShift = false,
+    this.eveningStart = '',
+    this.eveningEnd = '',
   });
 
   factory VillageClinic.fromJson(Map<String, dynamic> json, String docId) {
@@ -218,6 +234,14 @@ class VillageClinic {
       submittedBy: json['submittedBy'] as String?,
       submittedByName: json['submittedByName'] as String?,
       createdAt: tsToDateTime(json['createdAt']),
+      workDays:
+          (json['workDays'] as List<dynamic>?)?.cast<String>() ?? const [],
+      hasMorningShift: json['hasMorningShift'] as bool? ?? false,
+      morningStart: json['morningStart'] as String? ?? '',
+      morningEnd: json['morningEnd'] as String? ?? '',
+      hasEveningShift: json['hasEveningShift'] as bool? ?? false,
+      eveningStart: json['eveningStart'] as String? ?? '',
+      eveningEnd: json['eveningEnd'] as String? ?? '',
     );
   }
 
@@ -237,16 +261,129 @@ class VillageClinic {
         'createdAt': createdAt != null
             ? Timestamp.fromDate(createdAt!)
             : FieldValue.serverTimestamp(),
+        'workDays': workDays,
+        'hasMorningShift': hasMorningShift,
+        'morningStart': morningStart,
+        'morningEnd': morningEnd,
+        'hasEveningShift': hasEveningShift,
+        'eveningStart': eveningStart,
+        'eveningEnd': eveningEnd,
       };
 
   String get imageUrl => imageUrls.isNotEmpty ? imageUrls.first : '';
 
   String get scheduleStatusLabel {
+    if (isCurrentlyOpen) return 'مفتوحة الآن بالعيادة';
     if (isAvailableNow) return 'متواجد الآن بالعيادة';
     return workingHours.isNotEmpty ? 'مواعيد العمل: $workingHours' : 'حسب المواعيد';
   }
 
-  bool get isDoctorOnDuty => isAvailableNow;
+  bool get isDoctorOnDuty => isCurrentlyOpen || isAvailableNow;
+
+  /// فحص لحظي دقيق: هل العيادة مفتوحة في هذه الدقيقة بالذات؟
+  bool get isCurrentlyOpen {
+    final now = DateTime.now();
+
+    // 1. التحقق من يوم العمل
+    if (workDays.isNotEmpty) {
+      final todayArabic = _getArabicDayName(now.weekday);
+      if (!workDays.contains(todayArabic)) {
+        return false;
+      }
+    }
+
+    final currentMinutes = now.hour * 60 + now.minute;
+    bool inMorning = false;
+    bool inEvening = false;
+
+    if (hasMorningShift && morningStart.isNotEmpty && morningEnd.isNotEmpty) {
+      final start = _parseMinutes(morningStart);
+      final end = _parseMinutes(morningEnd);
+      if (start != null && end != null) {
+        if (start <= end) {
+          inMorning = currentMinutes >= start && currentMinutes <= end;
+        } else {
+          inMorning = currentMinutes >= start || currentMinutes <= end;
+        }
+      }
+    }
+
+    if (hasEveningShift && eveningStart.isNotEmpty && eveningEnd.isNotEmpty) {
+      final start = _parseMinutes(eveningStart);
+      final end = _parseMinutes(eveningEnd);
+      if (start != null && end != null) {
+        if (start <= end) {
+          inEvening = currentMinutes >= start && currentMinutes <= end;
+        } else {
+          inEvening = currentMinutes >= start || currentMinutes <= end;
+        }
+      }
+    }
+
+    if (hasMorningShift || hasEveningShift) {
+      return inMorning || inEvening;
+    }
+
+    return isAvailableNow;
+  }
+
+  /// ملخص أيام العمل للعرض بالكارت
+  String get workDaysSummary {
+    if (workDays.isEmpty) return 'طوال أيام الأسبوع';
+    if (workDays.length == 7) return 'يومياً طوال الأسبوع';
+    return workDays.join(' • ');
+  }
+
+  /// ملخص الفترات للعرض بالكارت
+  String get shiftsSummary {
+    final list = <String>[];
+    if (hasMorningShift && morningStart.isNotEmpty && morningEnd.isNotEmpty) {
+      list.add('صباحاً: $morningStart - $morningEnd');
+    }
+    if (hasEveningShift && eveningStart.isNotEmpty && eveningEnd.isNotEmpty) {
+      list.add('مساءً: $eveningStart - $eveningEnd');
+    }
+    if (list.isNotEmpty) return list.join(' | ');
+    if (workingHours.isNotEmpty) return workingHours;
+    return 'حسب المواعيد المحددة';
+  }
+
+  static String _getArabicDayName(int weekday) {
+    switch (weekday) {
+      case DateTime.saturday:
+        return 'السبت';
+      case DateTime.sunday:
+        return 'الأحد';
+      case DateTime.monday:
+        return 'الإثنين';
+      case DateTime.tuesday:
+        return 'الثلاثاء';
+      case DateTime.wednesday:
+        return 'الأربعاء';
+      case DateTime.thursday:
+        return 'الخميس';
+      case DateTime.friday:
+        return 'الجمعة';
+      default:
+        return '';
+    }
+  }
+
+  static int? _parseMinutes(String s) {
+    if (s.isEmpty) return null;
+    final clean = s.trim();
+    final isPm = clean.contains('م') || clean.toLowerCase().contains('pm');
+    final isAm = clean.contains('ص') || clean.toLowerCase().contains('am');
+    final digits = clean.replaceAll(RegExp(r'[^\d:]'), '');
+    final parts = digits.split(':');
+    if (parts.isEmpty) return null;
+    // ignore: prefer_final_locals
+    var hour = int.tryParse(parts[0]) ?? 0;
+    final int minute = parts.length > 1 ? (int.tryParse(parts[1]) ?? 0) : 0;
+    if (isPm && hour < 12) hour += 12;
+    if (isAm && hour == 12) hour = 0;
+    return hour * 60 + minute;
+  }
 }
 
 // ═══════════════════════ صيدلية بالقرية (مدخَل مستخدم + موافقة) ═══════════════════════
