@@ -25,5 +25,41 @@ void main() {
       service.didChangeAppLifecycleState(AppLifecycleState.paused);
       expect(service.isOnline, isFalse);
     });
+
+    test('OnlineUserInfo parses model data correctly with role and guest flags', () {
+      final user = OnlineUserInfo.fromMap('user_123', {
+        'userId': 'user_123',
+        'userName': 'أحمد إبراهيم',
+        'userPhoto': 'https://example.com/photo.jpg',
+        'userRole': 'admin',
+        'isGuest': false,
+        'platform': 'android',
+      });
+
+      expect(user.sessionId, equals('user_123'));
+      expect(user.userId, equals('user_123'));
+      expect(user.name, equals('أحمد إبراهيم'));
+      expect(user.photoUrl, equals('https://example.com/photo.jpg'));
+      expect(user.isAdmin, isTrue);
+      expect(user.roleLabel, equals('مدير عام'));
+      expect(user.isGuest, isFalse);
+
+      final guest = OnlineUserInfo.fromMap('guest_456', {
+        'isGuest': true,
+        'platform': 'ios',
+      });
+
+      expect(guest.name, equals('زائر للتطبيق'));
+      expect(guest.photoUrl, isNull);
+      expect(guest.isAdmin, isFalse);
+      expect(guest.roleLabel, equals('زائر'));
+      expect(guest.isGuest, isTrue);
+    });
+
+    test('onlineUsersListStream emits non-null stream without crashes', () async {
+      final service = UserPresenceService.instance;
+      final users = await service.onlineUsersListStream.first;
+      expect(users, isA<List<OnlineUserInfo>>());
+    });
   });
 }
