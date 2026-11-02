@@ -1090,34 +1090,20 @@ class ModernServiceGrid extends StatelessWidget {
   static const _services = [
     _ServiceItem('تعرف على القرية', AppRoutes.about, 'assets/images/About.jpg'),
     _ServiceItem('أخبار القرية', AppRoutes.newsList, 'assets/images/News.jpg'),
-    _ServiceItem(
-        'مندرة القرية', AppRoutes.forumPosts, 'assets/images/mandra.jpg'),
-    _ServiceItem(
-        'سوق القرية', AppRoutes.marketProducts, 'assets/images/Souq.jpg'),
-    _ServiceItem('فنيين القرية', AppRoutes.techniciansDirectory,
-        'assets/images/herafeen.jpg'),
-    _ServiceItem(
-        'مستشار القرية', AppRoutes.legalAdvisor, 'assets/images/low.jpg'),
-    _ServiceItem(
-        'الخدمات الطبية', AppRoutes.medical, 'assets/images/doctor.jpg'),
-    _ServiceItem('الخدمات التعليمية', AppRoutes.educationalServices,
-        'assets/images/tetcher.jpg'),
-    _ServiceItem(
-        'خدمات المزارع', AppRoutes.farmerServices, 'assets/images/farmer.jpg'),
-    _ServiceItem(
-        'إعلانات القرية', AppRoutes.villageAds, 'assets/images/ealan.jpg'),
-    _ServiceItem(
-        'المفقودات', AppRoutes.lostItems, 'assets/images/mafkodat2.jpg'),
-    _ServiceItem(
-        'دليل الهاتف', AppRoutes.phoneDirectory, 'assets/images/telphone.jpg'),
-    _ServiceItem(
-        'المناسبات', AppRoutes.occasionsList, 'assets/images/festefal.jpg'),
-    _ServiceItem(
-        'سجل العزاء', AppRoutes.obituariesList, 'assets/images/des.jpg'),
-    _ServiceItem(
-        'ركن الأطفال', AppRoutes.children, 'assets/images/childern.jpg'),
-    _ServiceItem(
-        'حول التطبيق', AppRoutes.aboutApp, 'assets/images/aboutapp.jpg'),
+    _ServiceItem('مندرة القرية', AppRoutes.forumPosts, 'assets/images/mandra.jpg'),
+    _ServiceItem('سوق القرية', AppRoutes.marketProducts, 'assets/images/Souq.jpg'),
+    _ServiceItem('فنيين القرية', AppRoutes.techniciansDirectory, 'assets/images/herafeen.jpg'),
+    _ServiceItem('مستشار القرية', AppRoutes.legalAdvisor, 'assets/images/low.jpg'),
+    _ServiceItem('الخدمات الطبية', AppRoutes.medical, 'assets/images/doctor.jpg'),
+    _ServiceItem('الخدمات التعليمية', AppRoutes.educationalServices, 'assets/images/tetcher.jpg'),
+    _ServiceItem('خدمات المزارع', AppRoutes.farmerServices, 'assets/images/farmer.jpg'),
+    _ServiceItem('إعلانات القرية', AppRoutes.villageAds, 'assets/images/ealan.jpg'),
+    _ServiceItem('المفقودات', AppRoutes.lostItems, 'assets/images/mafkodat2.jpg'),
+    _ServiceItem('دليل الهاتف', AppRoutes.phoneDirectory, 'assets/images/telphone.jpg'),
+    _ServiceItem('المناسبات', AppRoutes.occasionsList, 'assets/images/festefal.jpg'),
+    _ServiceItem('سجل العزاء', AppRoutes.obituariesList, 'assets/images/des.jpg'),
+    _ServiceItem('ركن الأطفال', AppRoutes.children, 'assets/images/childern.jpg'),
+    _ServiceItem('حول التطبيق', AppRoutes.aboutApp, 'assets/images/aboutapp.jpg'),
   ];
 
   @override
