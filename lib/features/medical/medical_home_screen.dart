@@ -1919,77 +1919,103 @@ class _ClinicRowCard extends StatelessWidget {
   const _ClinicRowCard({required this.clinic});
   final VillageClinic clinic;
 
+  static const double _kImageSide = 92.0;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isOpen = clinic.isCurrentlyOpen;
+    final doctorName = clinic.ownerName.trim().isNotEmpty
+        ? (clinic.ownerName.startsWith('د.')
+            ? clinic.ownerName
+            : 'د. ${clinic.ownerName}')
+        : '';
 
     return Material(
       color: theme.colorScheme.surface,
-      borderRadius: BorderRadius.circular(18),
-      elevation: 1.5,
-      shadowColor: Colors.black.withValues(alpha: 0.08),
+      borderRadius: BorderRadius.circular(16),
+      elevation: 1.0,
+      shadowColor: Colors.black.withValues(alpha: 0.06),
       child: InkWell(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         onTap: () => Navigator.pushNamed(
           context,
           '/medical/clinic-detail',
           arguments: clinic,
         ),
         child: Container(
-          padding: const EdgeInsets.all(12),
+          height: _kImageSide + 18,
+          padding: const EdgeInsets.all(9),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isOpen
-                  ? const Color(0xFF2ECC71).withValues(alpha: 0.4)
-                  : theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
+                  ? const Color(0xFF2ECC71).withValues(alpha: 0.45)
+                  : theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
               width: isOpen ? 1.2 : 0.8,
             ),
           ),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // صورة العيادة
+              // صورة العيادة: تطابق ارتفاع الكارت تماماً ولا يتعداها الكارت
               ClipRRect(
-                borderRadius: BorderRadius.circular(14),
-                child: Container(
-                  width: 80,
-                  height: 80,
-                  color: const Color(0xFF00897B).withValues(alpha: 0.1),
-                  child: clinic.imageUrl.isNotEmpty
-                      ? CachedNetworkImage(
-                          imageUrl: clinic.imageUrl,
-                          fit: BoxFit.cover,
-                          errorWidget: (_, __, ___) => const Icon(
-                            Icons.local_hospital_rounded,
-                            color: Color(0xFF00897B),
-                            size: 32,
+                borderRadius: BorderRadius.circular(12),
+                child: SizedBox(
+                  width: _kImageSide,
+                  height: _kImageSide,
+                  child: ColoredBox(
+                    color: const Color(0xFF00897B).withValues(alpha: 0.08),
+                    child: clinic.imageUrl.isNotEmpty
+                        ? CachedNetworkImage(
+                            imageUrl: clinic.imageUrl,
+                            fit: BoxFit.cover,
+                            placeholder: (_, __) => const Center(
+                              child: SizedBox(
+                                width: 22,
+                                height: 22,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            ),
+                            errorWidget: (_, __, ___) => const Center(
+                              child: Icon(
+                                Icons.local_hospital_rounded,
+                                color: Color(0xFF00897B),
+                                size: 32,
+                              ),
+                            ),
+                          )
+                        : const Center(
+                            child: Icon(
+                              Icons.local_hospital_rounded,
+                              color: Color(0xFF00897B),
+                              size: 32,
+                            ),
                           ),
-                        )
-                      : const Icon(
-                          Icons.local_hospital_rounded,
-                          color: Color(0xFF00897B),
-                          size: 32,
-                        ),
+                  ),
                 ),
               ),
-              const SizedBox(width: 12),
-              // تفاصيل العيادة
+              const SizedBox(width: 10),
+
+              // بيانات العيادة منسقة في 3 أسطر متناسقة ومختصرة
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // السطر الأول: اسم العيادة بالكامل + شارة الوميض
+                    // السطر الأول: اسم العيادة + شارة الحالة (مفتوحة تومض / مغلقة)
                     Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
                           child: Text(
                             clinic.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
-                              fontSize: 15.5,
+                              fontSize: 14.5,
                               fontWeight: FontWeight.bold,
+                              height: 1.2,
                             ),
                           ),
                         ),
@@ -1997,101 +2023,91 @@ class _ClinicRowCard extends StatelessWidget {
                         _ClinicBlinkingStatusBadge(isCurrentlyOpen: isOpen),
                       ],
                     ),
-                    const SizedBox(height: 5),
-                    // السطر الثاني: اسم الطبيب بالكامل
-                    if (clinic.ownerName.isNotEmpty) ...[
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(top: 2),
-                            child: Icon(Icons.person_rounded, size: 14, color: theme.colorScheme.primary),
+
+                    // السطر الثاني: اسم الطبيب + شارة التخصص في سطر واحد
+                    Row(
+                      children: [
+                        if (doctorName.isNotEmpty) ...[
+                          Icon(
+                            Icons.person_rounded,
+                            size: 13.5,
+                            color: theme.colorScheme.primary,
                           ),
-                          const SizedBox(width: 4),
-                          Expanded(
+                          const SizedBox(width: 3.5),
+                          Flexible(
                             child: Text(
-                              clinic.ownerName.startsWith('د.') ? clinic.ownerName : 'د. ${clinic.ownerName}',
+                              doctorName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                fontSize: 13,
+                                fontSize: 12.5,
                                 fontWeight: FontWeight.w700,
                                 color: theme.colorScheme.onSurfaceVariant,
                               ),
                             ),
                           ),
+                          const SizedBox(width: 6),
                         ],
-                      ),
-                      const SizedBox(height: 5),
-                    ],
-                    // السطر الثالث: التخصص الطبي
-                    if (clinic.specialty.isNotEmpty) ...[
-                      Row(
-                        children: [
+                        if (clinic.specialty.isNotEmpty)
                           Flexible(
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 1.5),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF00897B).withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(6),
+                                color: const Color(0xFF00897B)
+                                    .withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(5),
+                                border: Border.all(
+                                  color: const Color(0xFF00897B)
+                                      .withValues(alpha: 0.25),
+                                  width: 0.6,
+                                ),
                               ),
                               child: Text(
                                 clinic.specialty,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
-                                  fontSize: 11,
+                                  fontSize: 10.5,
                                   fontWeight: FontWeight.bold,
                                   color: Color(0xFF00897B),
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                    ],
-                    // السطر الرابع: أيام العمل
-                    Row(
-                      children: [
-                        const Icon(Icons.calendar_today_rounded, size: 13, color: Colors.orange),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            clinic.workDaysSummary,
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    // السطر الخامس: الفترات ومواعيد العمل بتنسيق 12س
+
+                    // السطر الثالث: ملخص المواعيد وأيام العمل باختصار
                     Row(
                       children: [
-                        const Icon(Icons.schedule_rounded, size: 13, color: Colors.blueGrey),
+                        const Icon(
+                          Icons.schedule_rounded,
+                          size: 13,
+                          color: Colors.orange,
+                        ),
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(
                             clinic.shiftsSummary,
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
                           ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.chevron_left_rounded,
+                          size: 18,
+                          color: Colors.grey.withValues(alpha: 0.7),
                         ),
                       ],
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(width: 4),
-              const Align(
-                child: Icon(Icons.chevron_left_rounded, size: 22, color: Colors.grey),
               ),
             ],
           ),
