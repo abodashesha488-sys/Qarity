@@ -798,14 +798,16 @@ class _HeroHeader extends StatelessWidget {
                         minWidth: 0,
                         maxWidth: 160,
                         alignment: Alignment.topRight,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            NotificationBellButton(compact: true),
-                            SizedBox(height: 4),
-                            _HeaderSearchButton(),
-                          ],
+                        child: IntrinsicWidth(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              NotificationBellButton(compact: true),
+                              SizedBox(height: 4),
+                              _HeaderSearchButton(),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -872,6 +874,7 @@ class _HeaderSearchButton extends StatelessWidget {
         },
         child: Container(
           height: 27,
+          alignment: Alignment.center,
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           decoration: BoxDecoration(
             color: Colors.black.withValues(alpha: 0.45),
@@ -890,6 +893,7 @@ class _HeaderSearchButton extends StatelessWidget {
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Icon(
                 Icons.search_rounded,

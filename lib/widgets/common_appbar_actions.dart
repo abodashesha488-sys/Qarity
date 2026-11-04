@@ -75,6 +75,7 @@ class _NotificationBellButtonState extends State<NotificationBellButton> {
             onTap: open,
             child: Container(
               height: 27,
+              alignment: Alignment.center,
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
                 color: Colors.black.withValues(alpha: 0.45),
@@ -93,6 +94,7 @@ class _NotificationBellButtonState extends State<NotificationBellButton> {
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Badge(
                     isLabelVisible: unread > 0,
