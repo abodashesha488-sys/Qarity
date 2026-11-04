@@ -1,9 +1,9 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
+import '../../core/utils/app_image_cache.dart';
 import '../../core/utils/comment_style.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/utils/role_style.dart';
@@ -421,7 +421,7 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
                         radius: 20,
                         backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
                         backgroundImage: post.userPhotoUrl.isNotEmpty
-                            ? CachedNetworkImageProvider(post.userPhotoUrl)
+                            ? AppImageCache.provider(post.userPhotoUrl)
                             : null,
                         child: post.userPhotoUrl.isEmpty
                             ? Icon(Icons.person_rounded, color: theme.colorScheme.primary, size: 22)
@@ -579,11 +579,10 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
                         ),
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: CachedNetworkImage(
-                        imageUrl: post.imageUrl!,
+                      child: AppImageCache.image(
+                        url: post.imageUrl!,
                         width: double.infinity,
                         height: 190,
-                        fit: BoxFit.cover,
                         placeholder: (context, url) => Container(
                           height: 190,
                           color: theme.colorScheme.surfaceContainerHighest,

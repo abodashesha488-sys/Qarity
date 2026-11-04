@@ -1,9 +1,9 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/utils/app_image_cache.dart';
 import '../../core/utils/comment_style.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/utils/launch_link.dart';
@@ -182,9 +182,8 @@ class MedDetailHeader extends StatelessWidget {
             child: SizedBox(
               height: 210,
               width: double.infinity,
-              child: CachedNetworkImage(
-                  imageUrl: imageUrl,
-                  fit: BoxFit.cover,
+              child: AppImageCache.image(
+                  url: imageUrl,
                   errorWidget: (_, __, ___) =>
                       _gradientFallback(context)),
             ),

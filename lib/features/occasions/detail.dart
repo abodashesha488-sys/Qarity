@@ -1,8 +1,9 @@
-import 'package:cached_network_image/cached_network_image.dart';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/utils/app_image_cache.dart';
 import '../../core/widgets/shared_cards.dart';
 import '../../models/data_models.dart';
 import '../../services/engagement_service.dart';
@@ -112,7 +113,8 @@ class _OccasionDetailScreenState extends State<OccasionDetailScreen> {
             IconButton(
               tooltip: 'مشاركة الدعوة',
               icon: const Icon(Icons.share_rounded),
-              onPressed: () => ShareService.shareOccasionAsImage(context, _occasion!),
+              onPressed: () =>
+                  ShareService.shareOccasionAsImage(context, _occasion!),
             ),
         ],
       ),
@@ -144,11 +146,13 @@ class _OccasionDetailScreenState extends State<OccasionDetailScreen> {
       future: future,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const _CenteredStateView(child: CircularProgressIndicator(strokeWidth: 2));
+          return const _CenteredStateView(
+              child: CircularProgressIndicator(strokeWidth: 2));
         }
         if (snapshot.hasError) {
           return _CenteredStateView(
-            child: _ErrorStateView(message: 'تعذر تحميل التفاصيل', onRetry: _refresh),
+            child: _ErrorStateView(
+                message: 'تعذر تحميل التفاصيل', onRetry: _refresh),
           );
         }
         final loaded = snapshot.data;
@@ -187,11 +191,14 @@ class _OccasionDetailContent extends StatelessWidget {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       children: [
-        _HeroImage(imageUrl: occasion.imageUrl, fallbackIcon: Icons.celebration_rounded),
+        _HeroImage(
+            imageUrl: occasion.imageUrl,
+            fallbackIcon: Icons.celebration_rounded),
         const SizedBox(height: 20),
         Text(
           occasion.title,
-          style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+          style: theme.textTheme.headlineSmall
+              ?.copyWith(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 12),
         _CountdownBanner(occasion: occasion),
@@ -215,15 +222,25 @@ class _OccasionDetailContent extends StatelessWidget {
             children: [
               Text(
                 'تفاصيل المناسبة',
-                style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+                style: theme.textTheme.titleSmall
+                    ?.copyWith(fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 12),
               if (occasion.date.isNotEmpty)
-                _InfoRow(icon: Icons.calendar_today_rounded, label: 'التاريخ', value: occasion.date),
+                _InfoRow(
+                    icon: Icons.calendar_today_rounded,
+                    label: 'التاريخ',
+                    value: occasion.date),
               if (occasion.location.isNotEmpty)
-                _InfoRow(icon: Icons.location_on_rounded, label: 'المكان', value: occasion.location),
+                _InfoRow(
+                    icon: Icons.location_on_rounded,
+                    label: 'المكان',
+                    value: occasion.location),
               if (organizer != null && organizer.isNotEmpty)
-                _InfoRow(icon: Icons.person_rounded, label: 'المنظم', value: organizer),
+                _InfoRow(
+                    icon: Icons.person_rounded,
+                    label: 'المنظم',
+                    value: organizer),
             ],
           ),
         ),
@@ -235,7 +252,8 @@ class _OccasionDetailContent extends StatelessWidget {
               children: [
                 Text(
                   'الوصف',
-                  style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+                  style: theme.textTheme.titleSmall
+                      ?.copyWith(fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 10),
                 Text(
@@ -260,7 +278,8 @@ class _OccasionDetailContent extends StatelessWidget {
 }
 
 class _AttendanceSection extends StatefulWidget {
-  const _AttendanceSection({required this.occasionId, required this.occasionTitle});
+  const _AttendanceSection(
+      {required this.occasionId, required this.occasionTitle});
 
   final String occasionId;
   final String occasionTitle;
@@ -289,7 +308,8 @@ class _AttendanceSectionState extends State<_AttendanceSection> {
     final name = (await UserService().resolveAuthor()).name;
     try {
       if (attending) {
-        await _engagement.cancelAttendance(occasionId: widget.occasionId, userId: user.uid);
+        await _engagement.cancelAttendance(
+            occasionId: widget.occasionId, userId: user.uid);
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -305,7 +325,9 @@ class _AttendanceSectionState extends State<_AttendanceSection> {
         );
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: const Text('تم تسجيل حضورك 🎉'), backgroundColor: AppColors.primary),
+          SnackBar(
+              content: const Text('تم تسجيل حضورك 🎉'),
+              backgroundColor: AppColors.primary),
         );
       }
     } catch (e) {
@@ -326,7 +348,8 @@ class _AttendanceSectionState extends State<_AttendanceSection> {
         title: const Text('تأكيد الحضور'),
         content: Text('هل تود حضور "${widget.occasionTitle}"؟'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
           FilledButton(
             onPressed: () {
               Navigator.pop(ctx);
@@ -371,7 +394,8 @@ class _AttendanceSectionState extends State<_AttendanceSection> {
                       dense: true,
                       leading: CircleAvatar(
                         radius: 14,
-                        backgroundColor: Theme.of(ctx).colorScheme.primaryContainer,
+                        backgroundColor:
+                            Theme.of(ctx).colorScheme.primaryContainer,
                         child: Text('${i + 1}',
                             style: const TextStyle(
                                 fontSize: 11, fontWeight: FontWeight.w800)),
@@ -389,7 +413,8 @@ class _AttendanceSectionState extends State<_AttendanceSection> {
                 child: SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+                    style:
+                        OutlinedButton.styleFrom(foregroundColor: Colors.red),
                     onPressed: () async {
                       Navigator.pop(ctx);
                       await _toggle(true);
@@ -420,7 +445,9 @@ class _AttendanceSectionState extends State<_AttendanceSection> {
           builder: (context, attSnap) {
             final attending = attSnap.data ?? false;
             return DetailActionButton(
-              icon: attending ? Icons.check_circle_rounded : Icons.event_available_rounded,
+              icon: attending
+                  ? Icons.check_circle_rounded
+                  : Icons.event_available_rounded,
               label: attending ? 'حاضر ✓ ($count)' : 'حضور ($count)',
               onPressed: attending ? _showAttendees : _confirm,
             );
@@ -462,7 +489,8 @@ class _CountdownBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final raw = occasion.date;
-    final date = raw.isEmpty ? null : DateTime.tryParse(raw.replaceAll('/', '-'));
+    final date =
+        raw.isEmpty ? null : DateTime.tryParse(raw.replaceAll('/', '-'));
     if (date == null) return const SizedBox.shrink();
     final diff = date.difference(DateTime.now());
     if (diff.isNegative) {
@@ -532,13 +560,15 @@ class _HeroImage extends StatelessWidget {
           ? fallback
           : ClipRRect(
               borderRadius: BorderRadius.circular(20),
-              child: CachedNetworkImage(
-                imageUrl: url,
-                fit: BoxFit.cover,
+              child: AppImageCache.image(
+                url: url,
+                
                 width: double.infinity,
                 placeholder: (context, url) => ColoredBox(
-                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
-                  child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                  color: theme.colorScheme.surfaceContainerHighest
+                      .withValues(alpha: 0.6),
+                  child: const Center(
+                      child: CircularProgressIndicator(strokeWidth: 2)),
                 ),
                 errorWidget: (context, url, error) => fallback,
               ),
@@ -548,7 +578,8 @@ class _HeroImage extends StatelessWidget {
 }
 
 class _MetaChip extends StatelessWidget {
-  const _MetaChip({required this.icon, required this.label, required this.color});
+  const _MetaChip(
+      {required this.icon, required this.label, required this.color});
 
   final IconData icon;
   final String label;
@@ -571,7 +602,8 @@ class _MetaChip extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             label,
-            style: theme.textTheme.bodySmall?.copyWith(color: color, fontWeight: FontWeight.w700),
+            style: theme.textTheme.bodySmall
+                ?.copyWith(color: color, fontWeight: FontWeight.w700),
           ),
         ],
       ),
@@ -580,7 +612,8 @@ class _MetaChip extends StatelessWidget {
 }
 
 class _InfoRow extends StatelessWidget {
-  const _InfoRow({required this.icon, required this.label, required this.value});
+  const _InfoRow(
+      {required this.icon, required this.label, required this.value});
 
   final IconData icon;
   final String label;
@@ -603,7 +636,9 @@ class _InfoRow extends StatelessWidget {
             child: Icon(icon, size: 16, color: theme.colorScheme.primary),
           ),
           const SizedBox(width: 12),
-          Text('$label: ', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700)),
+          Text('$label: ',
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(fontWeight: FontWeight.w700)),
           Expanded(child: Text(value, style: theme.textTheme.bodyMedium)),
         ],
       ),
@@ -651,14 +686,18 @@ class _ErrorStateView extends StatelessWidget {
             color: theme.colorScheme.errorContainer.withValues(alpha: 0.4),
             shape: BoxShape.circle,
           ),
-          child: Icon(Icons.wifi_off_rounded, size: 44, color: theme.colorScheme.error),
+          child: Icon(Icons.wifi_off_rounded,
+              size: 44, color: theme.colorScheme.error),
         ),
         const SizedBox(height: 20),
-        Text(message, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+        Text(message,
+            style: theme.textTheme.titleMedium
+                ?.copyWith(fontWeight: FontWeight.w700)),
         const SizedBox(height: 8),
         Text(
           'تحقق من اتصالك بالإنترنت ثم أعد المحاولة',
-          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+          style: theme.textTheme.bodySmall
+              ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 20),

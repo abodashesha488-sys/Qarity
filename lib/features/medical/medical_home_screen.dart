@@ -1,10 +1,10 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/product_categories.dart';
+import '../../core/utils/app_image_cache.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/utils/launch_link.dart';
 import '../../models/data_models.dart';
@@ -1967,10 +1967,9 @@ class _ClinicRowCard extends StatelessWidget {
                   child: ColoredBox(
                     color: const Color(0xFF00897B).withValues(alpha: 0.08),
                     child: clinic.imageUrl.isNotEmpty
-                        ? CachedNetworkImage(
-                            imageUrl: clinic.imageUrl,
-                            fit: BoxFit.cover,
-                            placeholder: (_, __) => const Center(
+                        ? AppImageCache.image(
+                            url: clinic.imageUrl,
+                                                        placeholder: (_, __) => const Center(
                               child: SizedBox(
                                 width: 22,
                                 height: 22,
@@ -2721,10 +2720,9 @@ class _OpticalCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(14)),
                     clipBehavior: Clip.antiAlias,
                     child: shop.imageUrl.isNotEmpty
-                        ? CachedNetworkImage(
-                            imageUrl: shop.imageUrl,
-                            fit: BoxFit.cover,
-                            errorWidget: (_, __, ___) => Icon(
+                        ? AppImageCache.image(
+                            url: shop.imageUrl,
+                                                        errorWidget: (_, __, ___) => Icon(
                                 Icons.remove_red_eye_rounded,
                                 color:
                                     AppColors.inkOn(accent, theme.brightness)),

@@ -1,7 +1,7 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/utils/app_image_cache.dart';
 import '../../core/utils/comment_style.dart';
 import '../../services/review_service.dart';
 import '../../widgets/qurity_app_bar.dart';
@@ -23,7 +23,8 @@ class _SellerReviewsScreenState extends State<SellerReviewsScreen> {
   void didChangeDependencies() {
     final args = ModalRoute.of(context)?.settings.arguments;
     if (args is Map<String, String>) {
-      _sellerId = args['name']?.isNotEmpty == true ? args['name'] : args['phone'];
+      _sellerId =
+          args['name']?.isNotEmpty == true ? args['name'] : args['phone'];
       _loadReviews();
     }
     super.didChangeDependencies();
@@ -48,7 +49,8 @@ class _SellerReviewsScreenState extends State<SellerReviewsScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final args = ModalRoute.of(context)?.settings.arguments;
-    final name = args is Map<String, String> ? (args['name'] ?? 'البائع') : 'البائع';
+    final name =
+        args is Map<String, String> ? (args['name'] ?? 'البائع') : 'البائع';
 
     return Scaffold(
       appBar: QurityAppBar(title: '$name — المراجعات'),
@@ -56,17 +58,24 @@ class _SellerReviewsScreenState extends State<SellerReviewsScreen> {
         onRefresh: _refresh,
         color: theme.colorScheme.primary,
         child: _isLoading
-            ? ListView(children: const [SizedBox(height: 120), Center(child: CircularProgressIndicator(strokeWidth: 2))])
+            ? ListView(children: const [
+                SizedBox(height: 120),
+                Center(child: CircularProgressIndicator(strokeWidth: 2))
+              ])
             : _reviews.isEmpty
                 ? ListView(
                     children: [
-                      SizedBox(height: MediaQuery.of(context).size.height * 0.3),
+                      SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.3),
                       Center(
                         child: Column(
                           children: [
-                            Icon(Icons.rate_review_outlined, size: 64, color: Colors.grey[400]),
+                            Icon(Icons.rate_review_outlined,
+                                size: 64, color: Colors.grey[400]),
                             const SizedBox(height: 16),
-                            Text('لا توجد مراجعات بعد', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                            Text('لا توجد مراجعات بعد',
+                                style: theme.textTheme.titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.w700)),
                           ],
                         ),
                       ),
@@ -76,7 +85,8 @@ class _SellerReviewsScreenState extends State<SellerReviewsScreen> {
                     padding: const EdgeInsets.all(16),
                     itemCount: _reviews.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) => _buildReviewCard(theme, _reviews[index]),
+                    itemBuilder: (context, index) =>
+                        _buildReviewCard(theme, _reviews[index]),
                   ),
       ),
     );
@@ -89,7 +99,8 @@ class _SellerReviewsScreenState extends State<SellerReviewsScreen> {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
+        side: BorderSide(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -103,10 +114,14 @@ class _SellerReviewsScreenState extends State<SellerReviewsScreen> {
                   children: [
                     CircleAvatar(
                       radius: CommentStyle.avatarRadius,
-                      backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
-                      backgroundImage: photo.isNotEmpty ? CachedNetworkImageProvider(photo) : null,
+                      backgroundColor: theme.colorScheme.primaryContainer
+                          .withValues(alpha: 0.5),
+                      backgroundImage: photo.isNotEmpty
+                          ? AppImageCache.provider(photo)
+                          : null,
                       child: photo.isEmpty
-                          ? Icon(Icons.person, size: 20, color: theme.colorScheme.primary)
+                          ? Icon(Icons.person,
+                              size: 20, color: theme.colorScheme.primary)
                           : null,
                     ),
                     const SizedBox(width: 10),
@@ -117,11 +132,15 @@ class _SellerReviewsScreenState extends State<SellerReviewsScreen> {
                   ],
                 ),
                 Row(
-                  children: List.generate(5, (i) => Icon(
-                    i < rating ? Icons.star_rounded : Icons.star_outline_rounded,
-                    color: Colors.amber,
-                    size: 16,
-                  )),
+                  children: List.generate(
+                      5,
+                      (i) => Icon(
+                            i < rating
+                                ? Icons.star_rounded
+                                : Icons.star_outline_rounded,
+                            color: Colors.amber,
+                            size: 16,
+                          )),
                 ),
               ],
             ),
@@ -151,7 +170,9 @@ class _SellerReviewsScreenState extends State<SellerReviewsScreen> {
       alignment: Alignment.centerRight,
       child: Padding(
         padding: const EdgeInsets.only(top: 8),
-        child: Text(dateText, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+        child: Text(dateText,
+            style: theme.textTheme.bodySmall
+                ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
       ),
     );
   }

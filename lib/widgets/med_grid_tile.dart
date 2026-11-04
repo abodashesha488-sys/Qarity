@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../core/constants/app_colors.dart';
+import '../core/utils/app_image_cache.dart';
 
 /// شبكة بطاقات الدليل — عمودان في كل سطر.
 ///
@@ -79,15 +80,18 @@ class MedGridTile extends StatelessWidget {
                   ColoredBox(color: accent.withValues(alpha: 0.10)),
                   if (imageUrl.isNotEmpty)
                     CachedNetworkImage(
+                      cacheManager: AppImageCache.instance,
+                      cacheKey: AppImageCache.canonicalKey(imageUrl),
                       imageUrl: imageUrl,
                       fit: BoxFit.cover,
                       memCacheWidth: 520,
                       placeholder: (_, __) => const SizedBox.shrink(),
-                      errorWidget: (_, __, ___) =>
-                          Icon(icon, color: AppColors.inkOn(accent, theme.brightness)),
+                      errorWidget: (_, __, ___) => Icon(icon,
+                          color: AppColors.inkOn(accent, theme.brightness)),
                     )
                   else
-                    Icon(icon, color: AppColors.inkOn(accent, theme.brightness)),
+                    Icon(icon,
+                        color: AppColors.inkOn(accent, theme.brightness)),
                 ],
               ),
             ),

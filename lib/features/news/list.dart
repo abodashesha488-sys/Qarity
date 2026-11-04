@@ -450,6 +450,7 @@ class _NewsThumb extends StatelessWidget {
     }
     return CachedNetworkImage(
       cacheManager: AppImageCache.instance,
+      cacheKey: AppImageCache.canonicalKey(url),
       imageUrl: ImageUploadService.optimizeUrl(url, width: 800),
       fit: BoxFit.cover,
       width: double.infinity,

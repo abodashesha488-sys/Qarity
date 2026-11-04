@@ -1,8 +1,9 @@
-import 'package:cached_network_image/cached_network_image.dart';
+
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/constants/app_colors.dart';
+import '../core/utils/app_image_cache.dart';
 
 /// 🎬 أداة مساعدة لاستخراج معرّف يوتيوب والصورة المصغّرة وتشغيل الفيديو داخل التطبيق
 class VillageVideoHelper {
@@ -119,9 +120,8 @@ class VillageVideoCard extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final ytThumb = VillageVideoHelper.getYoutubeThumbnail(videoUrl);
-    final finalThumb = customThumbnail.isNotEmpty
-        ? customThumbnail
-        : (ytThumb ?? '');
+    final finalThumb =
+        customThumbnail.isNotEmpty ? customThumbnail : (ytThumb ?? '');
 
     return Card(
       elevation: 2.5,
@@ -135,7 +135,8 @@ class VillageVideoCard extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => VillageVideoHelper.playInApp(context, videoUrl, title: title),
+        onTap: () =>
+            VillageVideoHelper.playInApp(context, videoUrl, title: title),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -147,9 +148,9 @@ class VillageVideoCard extends StatelessWidget {
                   height: 180,
                   width: double.infinity,
                   child: finalThumb.isNotEmpty
-                      ? CachedNetworkImage(
-                          imageUrl: finalThumb,
-                          fit: BoxFit.cover,
+                      ? AppImageCache.image(
+                          url: finalThumb,
+
                           placeholder: (_, __) => const ColoredBox(
                             color: Colors.black87,
                             child: Center(
@@ -203,7 +204,8 @@ class VillageVideoCard extends StatelessWidget {
                   top: 10,
                   right: 12,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                     decoration: BoxDecoration(
                       color: Colors.black.withValues(alpha: 0.75),
                       borderRadius: BorderRadius.circular(16),
@@ -212,7 +214,8 @@ class VillageVideoCard extends StatelessWidget {
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.videocam_rounded, size: 14, color: Colors.redAccent),
+                        Icon(Icons.videocam_rounded,
+                            size: 14, color: Colors.redAccent),
                         SizedBox(width: 5),
                         Text(
                           'فيديو من القرية',
@@ -231,7 +234,8 @@ class VillageVideoCard extends StatelessWidget {
                   bottom: 10,
                   left: 12,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: Colors.black.withValues(alpha: 0.7),
                       borderRadius: BorderRadius.circular(14),
@@ -239,7 +243,8 @@ class VillageVideoCard extends StatelessWidget {
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.touch_app_rounded, size: 13, color: Colors.amber),
+                        Icon(Icons.touch_app_rounded,
+                            size: 13, color: Colors.amber),
                         SizedBox(width: 4),
                         Text(
                           'اضغط للمشاهدة الآن',
@@ -282,7 +287,8 @@ class VillageVideoCard extends StatelessWidget {
                           ),
                         if (onDelete != null)
                           IconButton(
-                            icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                            icon: const Icon(Icons.delete_outline_rounded,
+                                size: 18),
                             color: Colors.redAccent,
                             tooltip: 'حذف',
                             onPressed: onDelete,
@@ -304,7 +310,8 @@ class VillageVideoCard extends StatelessWidget {
                   const SizedBox(height: 10),
                   Row(
                     children: [
-                      Icon(Icons.source_rounded, size: 14, color: AppColors.primary),
+                      Icon(Icons.source_rounded,
+                          size: 14, color: AppColors.primary),
                       const SizedBox(width: 5),
                       Text(
                         source,
@@ -316,16 +323,20 @@ class VillageVideoCard extends StatelessWidget {
                       ),
                       const Spacer(),
                       TextButton.icon(
-                        onPressed: () => VillageVideoHelper.playInApp(context, videoUrl, title: title),
+                        onPressed: () => VillageVideoHelper.playInApp(
+                            context, videoUrl,
+                            title: title),
                         style: TextButton.styleFrom(
                           foregroundColor: const Color(0xFFC62828),
                           padding: const EdgeInsets.symmetric(horizontal: 8),
                           visualDensity: VisualDensity.compact,
                         ),
-                        icon: const Icon(Icons.play_circle_fill_rounded, size: 16),
+                        icon: const Icon(Icons.play_circle_fill_rounded,
+                            size: 16),
                         label: const Text(
                           'تشغيل الفيديو',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+                          style: TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.w800),
                         ),
                       ),
                     ],

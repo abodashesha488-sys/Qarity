@@ -1182,7 +1182,7 @@ class _BuyRequestDetailPageState extends State<_BuyRequestDetailPage> {
                                               .withValues(alpha: 0.1),
                                           backgroundImage: c
                                                   .userPhotoUrl.isNotEmpty
-                                              ? CachedNetworkImageProvider(
+                                              ? AppImageCache.provider(
                                                   c.userPhotoUrl)
                                               : null,
                                           child: c.userPhotoUrl.isEmpty

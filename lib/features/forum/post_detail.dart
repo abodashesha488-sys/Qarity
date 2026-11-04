@@ -1,9 +1,9 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/utils/app_image_cache.dart';
 import '../../core/utils/comment_style.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/utils/role_style.dart';
@@ -331,7 +331,7 @@ class _ForumPostDetailScreenState extends State<ForumPostDetailScreen> {
                   radius: 26,
                   backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
                   backgroundImage:
-                      post.userPhotoUrl.isNotEmpty ? CachedNetworkImageProvider(post.userPhotoUrl) : null,
+                      post.userPhotoUrl.isNotEmpty ? AppImageCache.provider(post.userPhotoUrl) : null,
                   child: post.userPhotoUrl.isEmpty
                       ? Icon(Icons.person_rounded, color: theme.colorScheme.primary)
                       : null,
@@ -391,10 +391,9 @@ class _ForumPostDetailScreenState extends State<ForumPostDetailScreen> {
               const SizedBox(height: 14),
               ClipRRect(
                 borderRadius: BorderRadius.circular(14),
-                child: CachedNetworkImage(
-                  imageUrl: post.imageUrl!,
+                child: AppImageCache.image(
+                  url: post.imageUrl!,
                   width: double.infinity,
-                  fit: BoxFit.cover,
                   placeholder: (context, url) => Container(
                     height: 200,
                     color: theme.colorScheme.surfaceContainerHighest,

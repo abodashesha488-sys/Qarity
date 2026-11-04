@@ -1,7 +1,7 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
+import '../../core/utils/app_image_cache.dart';
 import '../../core/utils/obituary_card_assets.dart';
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
@@ -674,11 +674,10 @@ class _ObituaryThumb extends StatelessWidget {
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(14),
-      child: CachedNetworkImage(
-        imageUrl: url,
+      child: AppImageCache.image(
+        url: url,
         width: size,
         height: size,
-        fit: BoxFit.cover,
         memCacheWidth: (size * 3).ceil(),
         placeholder: (context, _) => imageFallback(),
         errorWidget: (context, _, __) => imageFallback(),

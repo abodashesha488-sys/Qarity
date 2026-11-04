@@ -1,11 +1,12 @@
 import 'dart:typed_data';
 
-import 'package:cached_network_image/cached_network_image.dart';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/utils/app_image_cache.dart';
 import '../../core/utils/role_style.dart';
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
@@ -64,7 +65,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadUserFromCache() async {
     try {
-      final cached = await CacheService.getUser(_userService.currentUserId ?? '');
+      final cached =
+          await CacheService.getUser(_userService.currentUserId ?? '');
       if (cached != null && mounted) {
         setState(() {
           _user = UserModel.fromJson(cached, _userService.currentUserId ?? '');
@@ -125,8 +127,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   ImageProvider? _avatarImage() {
     if (_profileBytes != null) return MemoryImage(_profileBytes!);
-    if (_uploadedImageUrl != null) return CachedNetworkImageProvider(_uploadedImageUrl!);
-    if (_user?.photoUrl?.isNotEmpty == true) return CachedNetworkImageProvider(_user!.photoUrl!);
+    if (_uploadedImageUrl != null)
+    { return AppImageCache.provider(_uploadedImageUrl!); }
+    if (_user?.photoUrl?.isNotEmpty == true)
+    { return AppImageCache.provider(_user!.photoUrl!); }
     return null;
   }
 
@@ -138,7 +142,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _pickProfileImage() async {
     final XFile? image = await _picker.pickImage(
-        source: ImageSource.gallery, maxWidth: 800, maxHeight: 800, imageQuality: 85);
+        source: ImageSource.gallery,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85);
     if (image == null) return;
     final bytes = await image.readAsBytes();
     if (!mounted) return;
@@ -195,7 +202,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-
   Future<void> _signOut() async {
     await _userService.signOut();
     if (mounted) {
@@ -221,7 +227,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: FilledButton.styleFrom(backgroundColor: AppColors.error),
-            child: const Text('تأكيد الحذف', style: TextStyle(color: Colors.white)),
+            child: const Text('تأكيد الحذف',
+                style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -257,14 +264,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('تم حذف الحساب بنجاح')),
         );
-        Navigator.pushNamedAndRemoveUntil(context, AppRoutes.login, (r) => false);
+        Navigator.pushNamedAndRemoveUntil(
+            context, AppRoutes.login, (r) => false);
       }
     } catch (e) {
       if (mounted) {
         Navigator.of(context, rootNavigator: true).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('تعذر حذف الحساب: $e. قد يتطلب الأمر إعادة تسجيل الدخول أولاً ثم المحاولة.'),
+            content: Text(
+                'تعذر حذف الحساب: $e. قد يتطلب الأمر إعادة تسجيل الدخول أولاً ثم المحاولة.'),
             backgroundColor: AppColors.error,
           ),
         );
@@ -299,8 +308,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.wifi_off_rounded,
-                    size: 60, color: Colors.grey[400]),
+                Icon(Icons.wifi_off_rounded, size: 60, color: Colors.grey[400]),
                 const SizedBox(height: 14),
                 Text('تعذّر تحميل الملف الشخصي',
                     style: theme.textTheme.titleMedium
@@ -346,13 +354,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: ElevatedButton.icon(
                 onPressed: _signOut,
                 icon: const Icon(Icons.logout, color: Colors.white),
-                label: const Text('تسجيل الخروج', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                label: const Text('تسجيل الخروج',
+                    style: TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold)),
                 style: ElevatedButton.styleFrom(
                   // أحمر الخروج الهادئ الموثّق مع بياض مثبّت (`Colors.red`
                   // الساطع يعطي 3.7 مع البياض لا 6.6).
                   backgroundColor: AppColors.error,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
               ),
             ),
@@ -362,14 +373,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
               width: double.infinity,
               child: OutlinedButton.icon(
                 onPressed: _confirmDeleteAccount,
-                icon: const Icon(Icons.delete_forever_rounded, color: AppColors.error),
+                icon: const Icon(Icons.delete_forever_rounded,
+                    color: AppColors.error),
                 label: const Text(
                   'حذف الحساب نهائياً',
-                  style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      color: AppColors.error, fontWeight: FontWeight.bold),
                 ),
                 style: OutlinedButton.styleFrom(
                   side: const BorderSide(color: AppColors.error),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
               ),
             ),
@@ -380,13 +394,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildProfileHeader(ThemeData theme) {
-    final isAdminRole = _user?.isAdmin == true || _user?.role == 'medical_admin';
+    final isAdminRole =
+        _user?.isAdmin == true || _user?.role == 'medical_admin';
     final isMedicalOnly = _user?.role == 'medical_admin';
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(22),
-        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
+        side: BorderSide(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
       ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
@@ -400,7 +416,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   backgroundColor: theme.colorScheme.primaryContainer,
                   backgroundImage: _avatarImage(),
                   child: _avatarImage() == null
-                      ? Icon(Icons.person, size: 46, color: theme.colorScheme.primary)
+                      ? Icon(Icons.person,
+                          size: 46, color: theme.colorScheme.primary)
                       : null,
                 ),
                 GestureDetector(
@@ -410,9 +427,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     decoration: BoxDecoration(
                       color: theme.colorScheme.primary,
                       shape: BoxShape.circle,
-                      border: Border.all(color: theme.colorScheme.surface, width: 2),
+                      border: Border.all(
+                          color: theme.colorScheme.surface, width: 2),
                     ),
-                    child: Icon(Icons.camera_alt, size: 16, color: theme.colorScheme.onPrimary),
+                    child: Icon(Icons.camera_alt,
+                        size: 16, color: theme.colorScheme.onPrimary),
                   ),
                 ),
               ],
@@ -422,12 +441,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               name: _user?.name.isNotEmpty == true ? _user!.name : 'المستخدم',
               role: _user?.role,
               sellerType: _user?.sellerType?.name,
-              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+              style: theme.textTheme.titleLarge
+                  ?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 4),
             Text(
               _user?.email ?? '',
-              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
             const SizedBox(height: 10),
             Wrap(
@@ -450,7 +471,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     style: TextStyle(fontWeight: FontWeight.w800)),
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 13),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
                 ),
               ),
             ),
@@ -470,7 +492,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: (isMedicalOnly ? const Color(0xFF00897B) : const Color(0xFF1565C0))
+                        color: (isMedicalOnly
+                                ? const Color(0xFF00897B)
+                                : const Color(0xFF1565C0))
                             .withValues(alpha: 0.35),
                         blurRadius: 12,
                         offset: const Offset(0, 4),
@@ -481,21 +505,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     color: Colors.transparent,
                     child: InkWell(
                       borderRadius: BorderRadius.circular(14),
-                      onTap: () => Navigator.pushNamed(
-                          context,
+                      onTap: () => Navigator.pushNamed(context,
                           isMedicalOnly ? AppRoutes.medical : AppRoutes.admin),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 13),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(isMedicalOnly
-                                ? Icons.medical_services_rounded
-                                : Icons.admin_panel_settings_rounded,
-                                color: Colors.white, size: 19),
+                            Icon(
+                                isMedicalOnly
+                                    ? Icons.medical_services_rounded
+                                    : Icons.admin_panel_settings_rounded,
+                                color: Colors.white,
+                                size: 19),
                             const SizedBox(width: 8),
                             Text(
-                              isMedicalOnly ? 'إدارة المركز الطبي' : 'لوحة تحكم القرية',
+                              isMedicalOnly
+                                  ? 'إدارة المركز الطبي'
+                                  : 'لوحة تحكم القرية',
                               style: const TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.w900,
@@ -634,8 +661,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           child: CircularProgressIndicator(
                               strokeWidth: 2, color: Colors.white))
                       : const Icon(Icons.save_rounded, size: 18),
-                  label: Text(
-                      _isSaving ? 'جاري الحفظ...' : 'حفظ التغييرات',
+                  label: Text(_isSaving ? 'جاري الحفظ...' : 'حفظ التغييرات',
                       style: const TextStyle(fontWeight: FontWeight.w800)),
                   style: FilledButton.styleFrom(
                       shape: RoundedRectangleBorder(
@@ -651,12 +677,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _roleBadge(ThemeData theme) {
     final (label, color, icon) = switch (_user?.role ?? 'user') {
-      'admin' => ('مدير عام', const Color(0xFF1565C0), Icons.admin_panel_settings_rounded),
-      'assistant_admin' => ('أدمن مساعد', const Color(0xFF6A1B9A), Icons.shield_rounded),
-      'medical_admin' => ('مدير المركز الطبي', const Color(0xFF00897B), Icons.medical_services_rounded),
-      'agricultural_admin' => ('مدير الخدمات الزراعية', const Color(0xFF558B2F), Icons.agriculture_rounded),
-      'legal_admin' => ('أدمن الاستشارات القانونية', const Color(0xFF2E7D32), Icons.gavel_rounded),
-      'heritage_admin' => ('أدمن التراث', const Color(0xFF8D6E63), Icons.auto_stories_rounded),
+      'admin' => (
+          'مدير عام',
+          const Color(0xFF1565C0),
+          Icons.admin_panel_settings_rounded
+        ),
+      'assistant_admin' => (
+          'أدمن مساعد',
+          const Color(0xFF6A1B9A),
+          Icons.shield_rounded
+        ),
+      'medical_admin' => (
+          'مدير المركز الطبي',
+          const Color(0xFF00897B),
+          Icons.medical_services_rounded
+        ),
+      'agricultural_admin' => (
+          'مدير الخدمات الزراعية',
+          const Color(0xFF558B2F),
+          Icons.agriculture_rounded
+        ),
+      'legal_admin' => (
+          'أدمن الاستشارات القانونية',
+          const Color(0xFF2E7D32),
+          Icons.gavel_rounded
+        ),
+      'heritage_admin' => (
+          'أدمن التراث',
+          const Color(0xFF8D6E63),
+          Icons.auto_stories_rounded
+        ),
       'moderator' => ('مشرف', Colors.orange, Icons.verified_user_rounded),
       'seller' => ('بائع', Colors.deepPurple, Icons.store_rounded),
       _ => ('مستخدم', Colors.teal, Icons.person_rounded),
@@ -701,9 +751,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(width: 5),
           Text('${t.label} • حتى ${t.maxImages} صور',
               style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  color: ink)),
+                  fontSize: 11, fontWeight: FontWeight.w800, color: ink)),
         ],
       ),
     );
@@ -762,7 +810,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 decoration: BoxDecoration(
                   color: Colors.amber.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.amber.withValues(alpha: 0.35)),
+                  border:
+                      Border.all(color: Colors.amber.withValues(alpha: 0.35)),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -858,7 +907,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     var selectedTarget = 'gold';
 
     if (isCurrentlyAdmin) {
-      selectedTarget = (currentRole == 'admin') ? 'assistant_admin' : currentRole;
+      selectedTarget =
+          (currentRole == 'admin') ? 'assistant_admin' : currentRole;
     } else if (currentRole == 'seller') {
       if (currentSellerType == SellerType.premiumSeller) {
         selectedTarget = 'premium';
@@ -995,7 +1045,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     const SizedBox(height: 14),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
                       margin: const EdgeInsets.only(bottom: 12),
                       decoration: BoxDecoration(
                         color: theme.colorScheme.surfaceContainerHighest
@@ -1198,9 +1249,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     'currentRole': _user!.role,
                                     'currentSellerType':
                                         _user!.sellerType?.name ?? 'regular',
-                                    'type': isSellerCategory
-                                        ? 'seller'
-                                        : 'admin',
+                                    'type':
+                                        isSellerCategory ? 'seller' : 'admin',
                                     'targetType': selectedTarget,
                                     'targetTitle': currentSelectedTitle,
                                     'notes': notesController.text.trim(),
@@ -1417,7 +1467,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
+        side: BorderSide(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -1428,24 +1479,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 Icon(Icons.inventory_2, color: theme.colorScheme.primary),
                 const SizedBox(width: 8),
-                Text('منتجاتي', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800, fontSize: 16)),
+                Text('منتجاتي',
+                    style: theme.textTheme.titleSmall
+                        ?.copyWith(fontWeight: FontWeight.w800, fontSize: 16)),
               ],
             ),
             const SizedBox(height: 12),
             StreamBuilder<List<MarketProduct>>(
               stream: _myProductsStream(_user!.id),
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+                if (snapshot.connectionState == ConnectionState.waiting &&
+                    !snapshot.hasData) {
+                  return const Center(
+                      child: CircularProgressIndicator(strokeWidth: 2));
                 }
                 if (snapshot.hasError) {
                   return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.error_outline_rounded, color: theme.colorScheme.error, size: 32),
+                        Icon(Icons.error_outline_rounded,
+                            color: theme.colorScheme.error, size: 32),
                         const SizedBox(height: 8),
-                        Text('خطأ في تحميل المنتجات', style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.error)),
+                        Text('خطأ في تحميل المنتجات',
+                            style: theme.textTheme.bodyMedium
+                                ?.copyWith(color: theme.colorScheme.error)),
                       ],
                     ),
                   );
@@ -1456,9 +1514,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.inventory, size: 48, color: theme.colorScheme.onSurfaceVariant),
+                        Icon(Icons.inventory,
+                            size: 48,
+                            color: theme.colorScheme.onSurfaceVariant),
                         const SizedBox(height: 8),
-                        Text('لا توجد منتجات بعد', style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                        Text('لا توجد منتجات بعد',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant)),
                       ],
                     ),
                   );
@@ -1471,7 +1533,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     itemBuilder: (context, index) {
                       final product = products[index];
                       return GestureDetector(
-                        onTap: () => Navigator.pushNamed(context, AppRoutes.marketProductDetail, arguments: product),
+                        onTap: () => Navigator.pushNamed(
+                            context, AppRoutes.marketProductDetail,
+                            arguments: product),
                         child: Container(
                           width: 110,
                           margin: const EdgeInsets.only(right: 12),
@@ -1480,20 +1544,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             children: [
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(12),
-                                child: CachedNetworkImage(
-                                  imageUrl: product.imageUrl,
+                                child: AppImageCache.image(
+                                  url: product.imageUrl,
                                   width: 100,
                                   height: 100,
-                                  fit: BoxFit.cover,
-                                  placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
-                                  errorWidget: (context, url, error) => const Icon(Icons.error),
+                                  
+                                  placeholder: (context, url) => const Center(
+                                      child: CircularProgressIndicator()),
+                                  errorWidget: (context, url, error) =>
+                                      const Icon(Icons.error),
                                 ),
                               ),
                               const SizedBox(height: 4),
                               Text(product.name,
-                                  style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                  style: theme.textTheme.bodySmall
+                                      ?.copyWith(fontWeight: FontWeight.bold),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis),
                               Text('${product.price.toStringAsFixed(0)} ج.م',
-                                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                      color:
+                                          theme.colorScheme.onSurfaceVariant)),
                             ],
                           ),
                         ),
@@ -1547,13 +1618,18 @@ class _SettingsTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                  Text(title,
+                      style: theme.textTheme.titleSmall
+                          ?.copyWith(fontWeight: FontWeight.w700)),
                   const SizedBox(height: 2),
-                  Text(subtitle, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                  Text(subtitle,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant)),
                 ],
               ),
             ),
-            Icon(Icons.keyboard_arrow_down_rounded, color: theme.colorScheme.onSurfaceVariant, size: 20),
+            Icon(Icons.keyboard_arrow_down_rounded,
+                color: theme.colorScheme.onSurfaceVariant, size: 20),
           ],
         ),
       ),

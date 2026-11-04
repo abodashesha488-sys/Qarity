@@ -1,10 +1,11 @@
-import 'package:cached_network_image/cached_network_image.dart';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/utils/app_image_cache.dart';
 import '../../core/utils/contact_links.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/utils/launch_link.dart';
@@ -80,8 +81,8 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
-      builder: (_) => LostItemFormSheet(
-          userId: user.uid, userName: identity.name),
+      builder: (_) =>
+          LostItemFormSheet(userId: user.uid, userName: identity.name),
     );
     if (ok == true) {
       _snack('تم إرسال الإعلان — يظهر للقرية بعد موافقة الإدارة');
@@ -107,7 +108,8 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
       onSelected: (_) => setState(() => _filter = value),
       avatar: Icon(icon,
           size: 16,
-          color: selected ? Colors.white : lostInk(Theme.of(context).brightness)),
+          color:
+              selected ? Colors.white : lostInk(Theme.of(context).brightness)),
       label: Text(label,
           style: TextStyle(
               fontWeight: FontWeight.w800,
@@ -145,7 +147,8 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
                             onPressed: _search.clear,
                           )
                         : null,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -173,8 +176,8 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
               builder: (context, snap) {
                 if (!snap.hasData) {
                   return Center(
-                      child:
-                          CircularProgressIndicator(color: lostInk(theme.brightness)));
+                      child: CircularProgressIndicator(
+                          color: lostInk(theme.brightness)));
                 }
                 final items = _apply(snap.data!);
                 if (items.isEmpty) {
@@ -184,8 +187,8 @@ class _LostItemsScreenState extends State<LostItemsScreen> {
                       children: [
                         Icon(Icons.wrong_location_rounded,
                             size: 54,
-                            color:
-                                lostInk(theme.brightness).withValues(alpha: 0.4)),
+                            color: lostInk(theme.brightness)
+                                .withValues(alpha: 0.4)),
                         const SizedBox(height: 10),
                         Text(
                           _query.isNotEmpty || _filter.isNotEmpty
@@ -269,16 +272,17 @@ class _LostItemCard extends StatelessWidget {
                       width: 62,
                       height: 62,
                       decoration: BoxDecoration(
-                        color: _typeColor.withValues(alpha: isDark ? 0.2 : 0.09),
+                        color:
+                            _typeColor.withValues(alpha: isDark ? 0.2 : 0.09),
                         borderRadius: BorderRadius.circular(15),
                         border: Border.all(
                           color: _typeColor.withValues(alpha: 0.18),
                         ),
                       ),
                       child: item.imageUrl.isNotEmpty
-                          ? CachedNetworkImage(
-                              imageUrl: item.imageUrl,
-                              fit: BoxFit.cover,
+                          ? AppImageCache.image(
+                              url: item.imageUrl,
+                              
                               errorWidget: (_, __, ___) => _thumb(theme),
                             )
                           : _thumb(theme),
@@ -388,16 +392,19 @@ class _LostItemCard extends StatelessWidget {
                     IconButton(
                       tooltip: 'اتصال فوري',
                       padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                      constraints:
+                          const BoxConstraints(minWidth: 36, minHeight: 36),
                       icon: Container(
                         padding: const EdgeInsets.all(7),
                         decoration: BoxDecoration(
-                          color: _typeColor.withValues(alpha: isDark ? 0.25 : 0.12),
+                          color: _typeColor.withValues(
+                              alpha: isDark ? 0.25 : 0.12),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(Icons.phone_in_talk_rounded,
                             size: 16,
-                            color: AppColors.inkOn(_typeColor, theme.brightness)),
+                            color:
+                                AppColors.inkOn(_typeColor, theme.brightness)),
                       ),
                       onPressed: () => launchPhoneCall(item.phone),
                     ),
@@ -407,7 +414,8 @@ class _LostItemCard extends StatelessWidget {
                       child: Icon(
                         Icons.chevron_left_rounded,
                         size: 20,
-                        color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                        color: theme.colorScheme.onSurfaceVariant
+                            .withValues(alpha: 0.5),
                       ),
                     ),
                   ],
@@ -423,9 +431,7 @@ class _LostItemCard extends StatelessWidget {
   Widget _thumb(ThemeData theme) => ColoredBox(
         color: _typeColor.withValues(alpha: 0.12),
         child: Icon(
-          item.isLostType
-              ? Icons.help_outline_rounded
-              : Icons.search_rounded,
+          item.isLostType ? Icons.help_outline_rounded : Icons.search_rounded,
           color: AppColors.inkOn(_typeColor, theme.brightness),
           size: 26,
         ),
@@ -540,9 +546,7 @@ class _LostItemDetailScreenState extends State<LostItemDetailScreen> {
     }
     final typeColor = item.isResolved
         ? Colors.blueGrey
-        : (item.isLostType
-            ? const Color(0xFFC62828)
-            : const Color(0xFF00897B));
+        : (item.isLostType ? const Color(0xFFC62828) : const Color(0xFF00897B));
     String? myUid;
     try {
       myUid = FirebaseAuth.instance.currentUser?.uid;
@@ -580,8 +584,7 @@ class _LostItemDetailScreenState extends State<LostItemDetailScreen> {
             decoration: BoxDecoration(
               color: typeColor.withValues(alpha: 0.07),
               borderRadius: BorderRadius.circular(18),
-              border:
-                  Border.all(color: typeColor.withValues(alpha: 0.35)),
+              border: Border.all(color: typeColor.withValues(alpha: 0.35)),
             ),
             child: Row(
               children: [
@@ -615,8 +618,8 @@ class _LostItemDetailScreenState extends State<LostItemDetailScreen> {
                           style: TextStyle(
                               fontSize: 11.5,
                               fontWeight: FontWeight.w700,
-                              color:
-                                  AppColors.inkOn(typeColor, theme.brightness))),
+                              color: AppColors.inkOn(
+                                  typeColor, theme.brightness))),
                     ],
                   ),
                 ),
@@ -627,11 +630,11 @@ class _LostItemDetailScreenState extends State<LostItemDetailScreen> {
             const SizedBox(height: 14),
             ClipRRect(
               borderRadius: BorderRadius.circular(18),
-              child: CachedNetworkImage(
-                  imageUrl: item.imageUrl,
+              child: AppImageCache.image(
+                  url: item.imageUrl,
                   height: 230,
                   width: double.infinity,
-                  fit: BoxFit.cover,
+                  
                   placeholder: (_, __) => SizedBox(
                       height: 230,
                       child: Center(
@@ -654,7 +657,8 @@ class _LostItemDetailScreenState extends State<LostItemDetailScreen> {
                 padding: const EdgeInsets.all(14),
                 child: Text(item.description,
                     style: const TextStyle(
-                        fontSize: 13.5, height: 1.7,
+                        fontSize: 13.5,
+                        height: 1.7,
                         fontWeight: FontWeight.w600)),
               ),
             ),
@@ -682,11 +686,11 @@ class _LostItemDetailScreenState extends State<LostItemDetailScreen> {
                 Expanded(
                   child: FilledButton.icon(
                     onPressed: item.phone.isEmpty
-                    ? null
-                    : () {
-                        final u = egyptianWhatsAppUrl(item.phone);
-                        if (u != null) _launch(u);
-                      },
+                        ? null
+                        : () {
+                            final u = egyptianWhatsAppUrl(item.phone);
+                            if (u != null) _launch(u);
+                          },
                     style: FilledButton.styleFrom(
                         backgroundColor: const Color(0xFF128C7E),
                         foregroundColor: Colors.white,
@@ -704,9 +708,7 @@ class _LostItemDetailScreenState extends State<LostItemDetailScreen> {
               onPressed: _busy ? null : _toggleResolved,
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.inkOn(
-                    item.isResolved
-                        ? Colors.blueGrey
-                        : const Color(0xFF00897B),
+                    item.isResolved ? Colors.blueGrey : const Color(0xFF00897B),
                     theme.brightness),
                 side: BorderSide(
                     color: item.isResolved
@@ -720,9 +722,10 @@ class _LostItemDetailScreenState extends State<LostItemDetailScreen> {
                       width: 16,
                       height: 16,
                       child: CircularProgressIndicator(strokeWidth: 2))
-                  : Icon(item.isResolved
-                      ? Icons.restart_alt_rounded
-                      : Icons.verified_rounded,
+                  : Icon(
+                      item.isResolved
+                          ? Icons.restart_alt_rounded
+                          : Icons.verified_rounded,
                       size: 18),
               label: Text(
                   item.isResolved
@@ -755,8 +758,7 @@ class _LostItemDetailScreenState extends State<LostItemDetailScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon,
-              size: 17, color: lostInk(Theme.of(context).brightness)),
+          Icon(icon, size: 17, color: lostInk(Theme.of(context).brightness)),
           const SizedBox(width: 9),
           SizedBox(
               width: 100,
@@ -879,7 +881,8 @@ class _LostItemFormSheetState extends State<LostItemFormSheet> {
       if (mounted) {
         setState(() => _saving = false);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(editing == null
+            content: Text(
+                editing == null
                     ? 'خطأ في الإرسال: $e'
                     : 'تعذّر حفظ التعديلات: $e',
                 style: const TextStyle(color: Colors.white)),
@@ -892,7 +895,9 @@ class _LostItemFormSheetState extends State<LostItemFormSheet> {
         hintText: hint,
         isDense: true,
         filled: true,
-        fillColor: Theme.of(context).colorScheme.surfaceContainerHighest
+        fillColor: Theme.of(context)
+            .colorScheme
+            .surfaceContainerHighest
             .withValues(alpha: 0.35),
         border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
@@ -925,15 +930,16 @@ class _LostItemFormSheetState extends State<LostItemFormSheet> {
                 ),
               ),
               const SizedBox(height: 14),
-              Text(_isEdit ? 'تعديل إعلان المفقودات' : 'إعلان جديد في المفقودات',
+              Text(
+                  _isEdit ? 'تعديل إعلان المفقودات' : 'إعلان جديد في المفقودات',
                   style: const TextStyle(
                       fontWeight: FontWeight.w900, fontSize: 16)),
               const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
-                    child: _typeButton('مفقود', 'lost',
-                        const Color(0xFFC62828), Icons.help_rounded),
+                    child: _typeButton('مفقود', 'lost', const Color(0xFFC62828),
+                        Icons.help_rounded),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -983,12 +989,13 @@ class _LostItemFormSheetState extends State<LostItemFormSheet> {
                 label: 'صورة الغرض (اختياري)',
                 fieldKey: 'imageUrl',
                 single: true,
-                urls: _imageUrl.isEmpty ? const <String>[] : <String>[_imageUrl],
+                urls:
+                    _imageUrl.isEmpty ? const <String>[] : <String>[_imageUrl],
                 uploader: widget.uploader,
                 bytesSource: widget.bytesSource,
                 onBusyChanged: (busy) => setState(() => _uploading = busy),
-                onChanged: (urls) => setState(
-                    () => _imageUrl = urls.isEmpty ? '' : urls.first),
+                onChanged: (urls) =>
+                    setState(() => _imageUrl = urls.isEmpty ? '' : urls.first),
               ),
               const SizedBox(height: 10),
               TextFormField(
@@ -1037,9 +1044,7 @@ class _LostItemFormSheetState extends State<LostItemFormSheet> {
           color: selected ? color : color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-              color: selected
-                  ? color
-                  : color.withValues(alpha: 0.4)),
+              color: selected ? color : color.withValues(alpha: 0.4)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -1056,7 +1061,8 @@ class _LostItemFormSheetState extends State<LostItemFormSheet> {
                     fontSize: 12.5,
                     color: selected
                         ? Colors.white
-                        : AppColors.inkOn(color, Theme.of(context).brightness))),
+                        : AppColors.inkOn(
+                            color, Theme.of(context).brightness))),
           ],
         ),
       ),

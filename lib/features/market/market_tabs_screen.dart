@@ -107,7 +107,8 @@ class _MarketTabsScreenState extends State<MarketTabsScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this, initialIndex: widget.initialIndex);
+    _tabController = TabController(
+        length: 4, vsync: this, initialIndex: widget.initialIndex);
     _loadSellerType();
   }
 
@@ -172,8 +173,10 @@ class _MarketTabsScreenState extends State<MarketTabsScreen>
               ),
               labelColor: Theme.of(context).colorScheme.primary,
               unselectedLabelColor: Colors.white.withValues(alpha: 0.85),
-              labelStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12),
-              unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11.5),
+              labelStyle:
+                  const TextStyle(fontWeight: FontWeight.w900, fontSize: 12),
+              unselectedLabelStyle:
+                  const TextStyle(fontWeight: FontWeight.w700, fontSize: 11.5),
               tabs: const [
                 Tab(
                   child: FittedBox(
@@ -559,6 +562,7 @@ Widget _net(String url, ThemeData theme) {
   }
   return CachedNetworkImage(
     cacheManager: AppImageCache.instance,
+    cacheKey: AppImageCache.canonicalKey(url),
     imageUrl: ImageUploadService.optimizeUrl(url, width: 800),
     fit: BoxFit.cover,
     maxWidthDiskCache: 900,
@@ -572,4 +576,3 @@ Widget _net(String url, ThemeData theme) {
             color: theme.colorScheme.onSurfaceVariant)),
   );
 }
-

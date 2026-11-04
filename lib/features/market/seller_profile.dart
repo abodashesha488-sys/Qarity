@@ -1,8 +1,8 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/utils/app_image_cache.dart';
 import '../../core/utils/contact_links.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/utils/launch_link.dart';
@@ -226,7 +226,7 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                 radius: 56,
                 backgroundColor: theme.colorScheme.surfaceContainerHighest,
                 backgroundImage: profile.imageUrl != null
-                    ? CachedNetworkImageProvider(profile.imageUrl!)
+                    ? AppImageCache.provider(profile.imageUrl!)
                     : null,
                 child: profile.imageUrl == null
                     ? Text(
@@ -388,8 +388,8 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
           Container(
               width: 1, height: 40, color: theme.colorScheme.outlineVariant),
           Expanded(
-                  child: _buildStatItem(theme, 'المبيعات',
-                      profile.totalSales.toString(), Icons.trending_up_rounded)),
+              child: _buildStatItem(theme, 'المبيعات',
+                  profile.totalSales.toString(), Icons.trending_up_rounded)),
         ],
       ),
     );
@@ -485,12 +485,11 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                 children: [
                   AspectRatio(
                     aspectRatio: 1,
-                    child: CachedNetworkImage(
-                      imageUrl: product.imageUrls.isNotEmpty
+                    child: AppImageCache.image(
+                      url: product.imageUrls.isNotEmpty
                           ? product.imageUrls.first
                           : product.imageUrl,
-                      fit: BoxFit.cover,
-                      width: double.infinity,
+                                            width: double.infinity,
                       placeholder: (context, url) => ColoredBox(
                         color: theme.colorScheme.surfaceContainerHighest,
                         child: const Center(
@@ -535,18 +534,16 @@ class _SellerProfileScreenState extends State<SellerProfileScreen> {
                             // الأرضيات العنبرية الموثّق يجتاز 7.93 في السمتين.
                             color: Colors.amber,
                             borderRadius: BorderRadius.circular(10)),
-                        child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.star_rounded,
-                                  size: 12, color: AppColors.onWarning),
-                              const SizedBox(width: 4),
-                              Text('مميز',
-                                  style: TextStyle(
-                                      color: AppColors.onWarning,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w800))
-                            ]),
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          Icon(Icons.star_rounded,
+                              size: 12, color: AppColors.onWarning),
+                          const SizedBox(width: 4),
+                          Text('مميز',
+                              style: TextStyle(
+                                  color: AppColors.onWarning,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800))
+                        ]),
                       ),
                     ),
                 ],

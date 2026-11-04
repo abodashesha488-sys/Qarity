@@ -1,7 +1,7 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/utils/app_image_cache.dart';
 import '../../core/utils/relative_time.dart';
 import '../../services/favorites_service.dart';
 import '../../widgets/qurity_app_bar.dart';
@@ -224,9 +224,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                   width: 72,
                   height: 72,
                   child: item.imageUrl.isNotEmpty
-                      ? CachedNetworkImage(
-                          imageUrl: item.imageUrl,
-                          fit: BoxFit.cover,
+                      ? AppImageCache.image(
+                          url: item.imageUrl,
                           placeholder: (_, __) => ColoredBox(
                             color: theme.colorScheme.surfaceContainerHighest,
                           ),

@@ -1,8 +1,8 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:shimmer/shimmer.dart';
 
+import '../../core/utils/app_image_cache.dart';
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
 import '../../services/cache_service.dart';
@@ -402,9 +402,8 @@ class _OccasionsListScreenState extends State<OccasionsListScreen> {
         child: Icon(Icons.celebration_rounded, color: theme.colorScheme.primary),
       );
     }
-    return CachedNetworkImage(
-      imageUrl: url,
-      fit: BoxFit.cover,
+    return AppImageCache.image(
+      url: url,
       placeholder: (c, u) => ColoredBox(color: theme.colorScheme.surfaceContainerHighest),
       errorWidget: (c, u, e) => DecoratedBox(
         decoration: BoxDecoration(color: theme.colorScheme.primaryContainer.withValues(alpha: 0.5)),

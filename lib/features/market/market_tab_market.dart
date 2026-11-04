@@ -588,9 +588,8 @@ class _FeaturedDealsCarouselState extends State<_FeaturedDealsCarousel> {
                       children: [
                         // الصورة الخلفية
                         if (img.isNotEmpty)
-                          CachedNetworkImage(
-                            imageUrl: img,
-                            fit: BoxFit.cover,
+                          AppImageCache.image(
+                            url: img,
                             placeholder: (_, __) => Container(
                               color: theme.colorScheme.surfaceContainerHighest,
                             ),

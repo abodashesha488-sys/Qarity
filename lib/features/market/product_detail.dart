@@ -1,9 +1,10 @@
-import 'package:cached_network_image/cached_network_image.dart';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/utils/app_image_cache.dart';
 import '../../core/utils/comment_style.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/utils/launch_link.dart';
@@ -210,10 +211,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               targetId: product.id,
               collection: 'products',
               title: product.name,
-              subtitle: '${product.effectivePrice.toStringAsFixed(0)} ج.م • ${product.sellerName}',
+              subtitle:
+                  '${product.effectivePrice.toStringAsFixed(0)} ج.م • ${product.sellerName}',
               imageUrl: product.imageUrl.isNotEmpty
                   ? product.imageUrl
-                  : (product.imageUrls.isNotEmpty ? product.imageUrls.first : ''),
+                  : (product.imageUrls.isNotEmpty
+                      ? product.imageUrls.first
+                      : ''),
               route: AppRoutes.marketProductDetail,
               arguments: {'id': product.id},
               createdAt: DateTime.now(),
@@ -529,13 +533,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final current = urls[_currentPage.clamp(0, urls.length - 1)];
 
     return LayoutBuilder(builder: (context, constraints) {
-      final width = constraints.maxWidth.isFinite ? constraints.maxWidth : 360.0;
+      final width =
+          constraints.maxWidth.isFinite ? constraints.maxWidth : 360.0;
       // النسب تُقاس عبر محرك العرض المشترك، فيأخذ الشريط ارتفاع الصورة نفسها
       // وترسم `BoxFit.contain` — لا قصّ لمنتج صُوَّره بمقاسات مختلفة.
-      FullFitImage.measure(current,
-          onResult: (_) {
-            if (mounted) setState(() {});
-          });
+      FullFitImage.measure(current, onResult: (_) {
+        if (mounted) setState(() {});
+      });
       return Stack(
         alignment: Alignment.bottomCenter,
         children: [
@@ -732,8 +736,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   /// بلا بوّابة `canLaunchUrl`: الفحص القبلي كان يرجع false على أندرويد 11+ للحزم
   /// غير المصرّح برؤيتها، فالزر كان يصمت بلا كلمة. الفشل الحقيقي هو ما يُبلَّغ.
   void _shareToWhatsApp() async {
-    final url =
-        'https://wa.me/?text=${Uri.encodeComponent(_productShareText)}';
+    final url = 'https://wa.me/?text=${Uri.encodeComponent(_productShareText)}';
     final error = await launchContactUrl(url,
         unavailable: 'واتساب غير متاح على هذا الجهاز.',
         failed: 'تعذّر فتح المراسلة — تحقّق من الاتصال ثم أعد المحاولة.');
@@ -780,7 +783,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         targetId: product.id,
         collection: 'products',
         title: product.name,
-        subtitle: '${product.effectivePrice.toStringAsFixed(0)} ج.م • ${product.sellerName}',
+        subtitle:
+            '${product.effectivePrice.toStringAsFixed(0)} ج.م • ${product.sellerName}',
         imageUrl: product.imageUrl.isNotEmpty
             ? product.imageUrl
             : (product.imageUrls.isNotEmpty ? product.imageUrls.first : ''),
@@ -802,7 +806,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('يرجى تسجيل الدخول أولاً لتتمكن من إضافة تقييم أو تعليق'),
+          content:
+              Text('يرجى تسجيل الدخول أولاً لتتمكن من إضافة تقييم أو تعليق'),
         ),
       );
       return;
@@ -841,7 +846,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             ),
             decoration: BoxDecoration(
               color: theme.colorScheme.surface,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(24)),
             ),
             child: SingleChildScrollView(
               child: Column(
@@ -877,7 +883,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           iconSize: 34,
                           padding: const EdgeInsets.symmetric(horizontal: 4),
                           onPressed: () {
-                            setModalState(() => selectedRating = star.toDouble());
+                            setModalState(
+                                () => selectedRating = star.toDouble());
                           },
                           icon: Icon(
                             star <= selectedRating
@@ -905,17 +912,21 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     maxLines: 4,
                     minLines: 2,
                     decoration: InputDecoration(
-                      hintText: 'اكتب تجربتك أو رأيك في هذا المنتج بكل أمانة...',
+                      hintText:
+                          'اكتب تجربتك أو رأيك في هذا المنتج بكل أمانة...',
                       hintStyle: TextStyle(
-                        color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                        color: theme.colorScheme.onSurfaceVariant
+                            .withValues(alpha: 0.6),
                         fontSize: 13,
                       ),
                       filled: true,
-                      fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                      fillColor: theme.colorScheme.surfaceContainerHighest
+                          .withValues(alpha: 0.35),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide(
-                          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+                          color: theme.colorScheme.outlineVariant
+                              .withValues(alpha: 0.4),
                         ),
                       ),
                     ),
@@ -928,7 +939,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             final commentText = textController.text.trim();
                             if (commentText.isEmpty) {
                               ScaffoldMessenger.of(ctx).showSnackBar(
-                                const SnackBar(content: Text('يرجى كتابة نص التعليق')),
+                                const SnackBar(
+                                    content: Text('يرجى كتابة نص التعليق')),
                               );
                               return;
                             }
@@ -944,9 +956,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                     .get();
                                 final data = userDoc.data();
                                 if (data != null) {
-                                  final n = (data['name'] as String? ?? '').trim();
+                                  final n =
+                                      (data['name'] as String? ?? '').trim();
                                   if (n.isNotEmpty) userName = n;
-                                  final p = (data['photoUrl'] as String? ?? '').trim();
+                                  final p = (data['photoUrl'] as String? ?? '')
+                                      .trim();
                                   if (p.isNotEmpty) userPhoto = p;
                                 }
                               } catch (_) {}
@@ -968,15 +982,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               if (ctx.mounted) Navigator.pop(ctx);
                               await _loadReviews();
 
-                              final updatedProduct =
-                                  await _marketService.getProductById(_product!.id);
+                              final updatedProduct = await _marketService
+                                  .getProductById(_product!.id);
                               if (mounted) {
                                 setState(() {
                                   _product = updatedProduct;
                                 });
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text('شكراً لك! تم نشر تقييمك بنجاح'),
+                                    content:
+                                        Text('شكراً لك! تم نشر تقييمك بنجاح'),
                                   ),
                                 );
                               }
@@ -984,7 +999,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               setModalState(() => isSubmitting = false);
                               if (ctx.mounted) {
                                 ScaffoldMessenger.of(ctx).showSnackBar(
-                                  SnackBar(content: Text('تعذر حفظ التقييم: $e')),
+                                  SnackBar(
+                                      content: Text('تعذر حفظ التقييم: $e')),
                                 );
                               }
                             }
@@ -1006,7 +1022,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           )
                         : const Text(
                             'نشر التقييم والتعليق',
-                            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                            style: TextStyle(
+                                fontWeight: FontWeight.w800, fontSize: 14),
                           ),
                   ),
                 ],
@@ -1043,13 +1060,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               Icon(
                 Icons.rate_review_outlined,
                 size: 38,
-                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                color:
+                    theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
               ),
               const SizedBox(height: 8),
               Text(
                 'لا توجد تعليقات أو تقييمات بعد',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant),
+                style: theme.textTheme.bodyMedium
+                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
               ),
               const SizedBox(height: 10),
               OutlinedButton.icon(
@@ -1162,7 +1180,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         radius: CommentStyle.avatarRadius,
                         backgroundColor: theme.colorScheme.primaryContainer,
                         backgroundImage: review.userPhotoUrl != null
-                            ? CachedNetworkImageProvider(review.userPhotoUrl!)
+                            ? AppImageCache.provider(review.userPhotoUrl!)
                             : null,
                         child: review.userPhotoUrl == null
                             ? Icon(Icons.person,
@@ -1215,7 +1233,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   Text(review.comment, style: CommentStyle.body(context)),
                   if (review.images.isNotEmpty) ...[
                     const SizedBox(height: 8),
-                    ImageGalleryWrap(urls: review.images, tileWidth: 72, radius: 8, spacing: 8),
+                    ImageGalleryWrap(
+                        urls: review.images,
+                        tileWidth: 72,
+                        radius: 8,
+                        spacing: 8),
                   ],
                 ],
               ),
@@ -1308,17 +1330,20 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: theme.colorScheme.primaryContainer.withValues(alpha: 0.35),
+                color:
+                    theme.colorScheme.primaryContainer.withValues(alpha: 0.35),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.reply_rounded, size: 16, color: theme.colorScheme.primary),
+                  Icon(Icons.reply_rounded,
+                      size: 16, color: theme.colorScheme.primary),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       'الرد على ${_replyToAuthorName ?? "تعليق"}',
-                      style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
+                      style: theme.textTheme.bodySmall
+                          ?.copyWith(fontWeight: FontWeight.w700),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
@@ -1341,11 +1366,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     hintText: 'اسأل البائع أو علّق على هذا المنتج...',
                     hintStyle: TextStyle(
                       fontSize: 12.5,
-                      color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                      color: theme.colorScheme.onSurfaceVariant
+                          .withValues(alpha: 0.7),
                     ),
                     filled: true,
-                    fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    fillColor: theme.colorScheme.surfaceContainerHighest
+                        .withValues(alpha: 0.4),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(22),
                       borderSide: BorderSide.none,
@@ -1500,11 +1528,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               children: [
                 AspectRatio(
                   aspectRatio: 1,
-                  child: CachedNetworkImage(
-                    imageUrl: product.imageUrls.isNotEmpty
+                  child: AppImageCache.image(
+                    url: product.imageUrls.isNotEmpty
                         ? product.imageUrls.first
                         : product.imageUrl,
-                    fit: BoxFit.cover,
+                    
                     width: double.infinity,
                     placeholder: (context, url) => ColoredBox(
                         color: theme.colorScheme.surfaceContainerHighest,
@@ -1663,8 +1691,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('خطأ: $e',
-              style: const TextStyle(color: Colors.white)),
+          content: Text('خطأ: $e', style: const TextStyle(color: Colors.white)),
           backgroundColor: AppColors.error));
     }
   }
@@ -1683,8 +1710,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('خطأ: $e',
-              style: const TextStyle(color: Colors.white)),
+          content: Text('خطأ: $e', style: const TextStyle(color: Colors.white)),
           backgroundColor: AppColors.error));
     }
   }

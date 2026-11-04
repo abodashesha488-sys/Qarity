@@ -1,10 +1,10 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/legal_reference_egypt.dart';
+import '../../core/utils/app_image_cache.dart';
 import '../../core/utils/relative_time.dart';
 import '../../models/legal_models.dart';
 import '../../routes/app_routes.dart';
@@ -179,8 +179,7 @@ class _LawyersTabState extends State<_LawyersTab> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('حذف التسجيل'),
-        content:
-            Text('سيُحذف تسجيل «${lawyer.name}» من سجل المحامين نهائيًا.'),
+        content: Text('سيُحذف تسجيل «${lawyer.name}» من سجل المحامين نهائيًا.'),
         actions: [
           TextButton(
             key: const Key('lawyer-delete-cancel'),
@@ -333,8 +332,7 @@ class _LawyersTabState extends State<_LawyersTab> {
                                 builder: (_) => LawyerFormSheet(
                                     service: _service, existing: lawyer)))
                         : null,
-                    onDelete:
-                        _mineOnly ? () => _confirmDelete(lawyer) : null,
+                    onDelete: _mineOnly ? () => _confirmDelete(lawyer) : null,
                   ).animate(delay: ((i % 8) * 35).ms).fadeIn(duration: 300.ms);
                 },
               );
@@ -442,8 +440,8 @@ class LawyerCard extends StatelessWidget {
                                     style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w700,
-                                        color: theme.colorScheme
-                                            .onSurfaceVariant)),
+                                        color: theme
+                                            .colorScheme.onSurfaceVariant)),
                               ],
                               if (lawyer.phone.isNotEmpty) ...[
                                 const SizedBox(height: 4),
@@ -545,8 +543,8 @@ class LawyerCard extends StatelessWidget {
             child: Text(text,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    fontSize: 11, fontWeight: FontWeight.w700)),
+                style:
+                    const TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
           ),
         ],
       );
@@ -569,12 +567,13 @@ class _LawyerPhoto extends StatelessWidget {
       child: SizedBox(
         width: width,
         height: height,
-        child: CachedNetworkImage(
-          imageUrl: url,
-          fit: BoxFit.cover,
+        child: AppImageCache.image(
+          url: url,
+                    fit: BoxFit.cover,
           alignment: Alignment.bottomCenter,
           memCacheWidth: (width * 3).ceil(),
-          placeholder: (context, _) => _LawyerAvatar(width: width, height: height),
+          placeholder: (context, _) =>
+              _LawyerAvatar(width: width, height: height),
           errorWidget: (context, _, __) =>
               _LawyerAvatar(width: width, height: height),
         ),
@@ -598,8 +597,8 @@ class _LawyerAvatar extends StatelessWidget {
             borderRadius: BorderRadius.circular(12)),
         child: Icon(Icons.gavel_rounded,
             size: 34,
-            color: legalInk(Theme.of(context).brightness)
-                .withValues(alpha: 0.65)),
+            color:
+                legalInk(Theme.of(context).brightness).withValues(alpha: 0.65)),
       );
 }
 
@@ -710,9 +709,8 @@ class _ConsultationsTabState extends State<_ConsultationsTab> {
     final controller = TextEditingController(text: c.answer);
     var approve = true;
     var submitting = false;
-    var selectedResponder = c.answeredByName.isNotEmpty
-        ? c.answeredByName
-        : 'ادمن الاستشارات';
+    var selectedResponder =
+        c.answeredByName.isNotEmpty ? c.answeredByName : 'ادمن الاستشارات';
 
     await showModalBottomSheet<void>(
       context: context,
@@ -819,9 +817,7 @@ class _ConsultationsTabState extends State<_ConsultationsTab> {
                             c.details,
                             style: TextStyle(
                               fontSize: 12,
-                              color: Theme.of(ctx)
-                                  .colorScheme
-                                  .onSurfaceVariant,
+                              color: Theme.of(ctx).colorScheme.onSurfaceVariant,
                               height: 1.5,
                             ),
                           ),
@@ -884,8 +880,8 @@ class _ConsultationsTabState extends State<_ConsultationsTab> {
                           ),
                         ),
                         selected: isSel,
-                        selectedColor: const Color(0xFF2E7D32)
-                            .withValues(alpha: 0.18),
+                        selectedColor:
+                            const Color(0xFF2E7D32).withValues(alpha: 0.18),
                         onSelected: (v) {
                           if (v) setModalState(() => selectedResponder = role);
                         },
@@ -1318,12 +1314,12 @@ class _ConsultationsTabState extends State<_ConsultationsTab> {
                   final c = items[i];
                   return ConsultationCard(
                     consultation: c,
-                    showStatus: _mineOnly || _isLegalAdmin || c.userId == _myUid,
+                    showStatus:
+                        _mineOnly || _isLegalAdmin || c.userId == _myUid,
                     currentUserId: _myUid,
                     isLegalAdmin: _isLegalAdmin,
                     onTap: () => _showConsultationDetails(c),
-                    onAnswer:
-                        _isLegalAdmin ? () => _showAnswerDialog(c) : null,
+                    onAnswer: _isLegalAdmin ? () => _showAnswerDialog(c) : null,
                     onEdit: () => _openEdit(c),
                     onDelete: () => _delete(c),
                   ).animate(delay: ((i % 8) * 35).ms).fadeIn(duration: 300.ms);
@@ -1421,9 +1417,7 @@ class ConsultationCard extends StatelessWidget {
               const SizedBox(height: 9),
               Text(c.question,
                   style: const TextStyle(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 14,
-                      height: 1.5)),
+                      fontWeight: FontWeight.w900, fontSize: 14, height: 1.5)),
               if (c.details.isNotEmpty) ...[
                 const SizedBox(height: 6),
                 Text(c.details,
@@ -1508,8 +1502,8 @@ class ConsultationCard extends StatelessWidget {
                       ),
                     ),
                     icon: const Icon(Icons.gavel_rounded, size: 16),
-                    label: Text(
-                        c.hasAnswer ? 'تعديل الرد' : 'الرد على الاستشارة'),
+                    label:
+                        Text(c.hasAnswer ? 'تعديل الرد' : 'الرد على الاستشارة'),
                     onPressed: onAnswer,
                   ),
                 ),
@@ -1600,7 +1594,8 @@ class _LegalReferenceTab extends StatelessWidget {
                           fontWeight: FontWeight.w600,
                           color: theme.colorScheme.onSurfaceVariant)),
                 ),
-                trailing: const Icon(Icons.keyboard_arrow_down_rounded, size: 20),
+                trailing:
+                    const Icon(Icons.keyboard_arrow_down_rounded, size: 20),
               ),
             ),
           ),
@@ -1821,10 +1816,9 @@ class _LawyerFormSheetState extends State<LawyerFormSheet> {
       bio: _bio.text.trim(),
       photoUrl: _photo,
       submittedBy: widget.existing?.submittedBy ?? _uid,
-      submittedByName:
-          widget.existing?.submittedByName.isNotEmpty ?? false
-              ? widget.existing!.submittedByName
-              : _userName,
+      submittedByName: widget.existing?.submittedByName.isNotEmpty ?? false
+          ? widget.existing!.submittedByName
+          : _userName,
       isApproved: widget.existing?.isApproved ?? false,
       createdAt: widget.existing?.createdAt,
     );
@@ -1849,7 +1843,9 @@ class _LawyerFormSheetState extends State<LawyerFormSheet> {
         hintText: hint,
         isDense: true,
         filled: true,
-        fillColor: Theme.of(context).colorScheme.surfaceContainerHighest
+        fillColor: Theme.of(context)
+            .colorScheme
+            .surfaceContainerHighest
             .withValues(alpha: 0.35),
         border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
@@ -1923,9 +1919,8 @@ class _LawyerFormSheetState extends State<LawyerFormSheet> {
                   key: const Key('lawyer-field-name'),
                   controller: _name,
                   decoration: _dec('اسم المحامي (بالقيد النقابي) *'),
-                  validator: (v) => (v == null || v.trim().isEmpty)
-                      ? 'الاسم مطلوب'
-                      : null,
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'الاسم مطلوب' : null,
                 ),
                 const SizedBox(height: 10),
                 TextFormField(
@@ -2149,7 +2144,9 @@ class _ConsultationFormSheetState extends State<ConsultationFormSheet> {
         hintText: hint,
         isDense: true,
         filled: true,
-        fillColor: Theme.of(context).colorScheme.surfaceContainerHighest
+        fillColor: Theme.of(context)
+            .colorScheme
+            .surfaceContainerHighest
             .withValues(alpha: 0.35),
         border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
@@ -2164,7 +2161,9 @@ class _ConsultationFormSheetState extends State<ConsultationFormSheet> {
         backgroundColor: kLegalAdvisorColor,
         foregroundColor: Colors.white,
         title: Text(
-            widget.existing == null ? 'استشارة قانونية جديدة' : 'تعديل الاستشارة',
+            widget.existing == null
+                ? 'استشارة قانونية جديدة'
+                : 'تعديل الاستشارة',
             style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
       ),
       body: SafeArea(
@@ -2190,8 +2189,8 @@ class _ConsultationFormSheetState extends State<ConsultationFormSheet> {
                     for (final s in kLegalSpecializations)
                       DropdownMenuItem(value: s, child: Text(s)),
                   ],
-                  onChanged: (v) => setState(
-                      () => _category = v ?? 'استشارات عامة'),
+                  onChanged: (v) =>
+                      setState(() => _category = v ?? 'استشارات عامة'),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(

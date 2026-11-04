@@ -1,9 +1,9 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/utils/app_image_cache.dart';
 import '../../core/utils/comment_style.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/utils/relative_time.dart';
@@ -736,7 +736,7 @@ class _ArticleGalleryState extends State<_ArticleGallery> {
     if (url.isEmpty || _probing.contains(index)) return;
     _probing.add(index);
     try {
-      CachedNetworkImageProvider(url)
+      AppImageCache.provider(url)
           .resolve(ImageConfiguration.empty)
           .addListener(ImageStreamListener((info, _) {
         final h = info.image.height;
@@ -939,8 +939,8 @@ class _GalleryPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return CachedNetworkImage(
-      imageUrl: url,
+    return AppImageCache.image(
+      url: url,
       fit: BoxFit.contain,
       placeholder: (context, url) => ColoredBox(
         color: theme.colorScheme.surfaceContainerHighest,
@@ -1046,8 +1046,8 @@ class _FullScreenImageViewerState extends State<_FullScreenImageViewer> {
               maxScale: 4,
               minScale: 1,
               child: Center(
-                child: CachedNetworkImage(
-                  imageUrl: widget.images[i],
+                child: AppImageCache.image(
+                  url: widget.images[i],
                   fit: BoxFit.contain,
                   placeholder: (context, url) => const Center(
                     child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),

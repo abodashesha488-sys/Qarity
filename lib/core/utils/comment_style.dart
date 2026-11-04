@@ -1,5 +1,6 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+
+import 'app_image_cache.dart';
 
 /// تنسيق موحّد لنص التعليقات والمراجعات والتعازي في كل التطبيق.
 ///
@@ -34,6 +35,6 @@ class CommentStyle {
   static ImageProvider? photoProvider(String? url) {
     final trimmed = (url ?? '').trim();
     if (trimmed.isEmpty) return null;
-    return CachedNetworkImageProvider(trimmed);
+    return AppImageCache.provider(trimmed);
   }
 }

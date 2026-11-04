@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -7,6 +6,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/utils/app_image_cache.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/utils/navigator_key.dart';
 import '../../core/utils/role_style.dart';
@@ -556,9 +556,8 @@ class _HomeContentState extends State<HomeContent> {
                   SizedBox(
                     height: 58,
                     width: double.infinity,
-                    child: CachedNetworkImage(
-                        imageUrl: latest[index].imageUrl,
-                        fit: BoxFit.cover,
+                    child: AppImageCache.image(
+                        url: latest[index].imageUrl,
                         errorWidget: (_, __, ___) => ColoredBox(
                             color: theme.colorScheme.surfaceContainerHighest,
                             child: const Icon(Icons.newspaper_rounded))),
@@ -645,9 +644,8 @@ class _HomeContentState extends State<HomeContent> {
                         width: double.infinity,
                         child: post.imageUrl != null &&
                                 post.imageUrl!.isNotEmpty
-                            ? CachedNetworkImage(
-                                imageUrl: post.imageUrl!,
-                                fit: BoxFit.cover,
+                            ? AppImageCache.image(
+                                url: post.imageUrl!,
                                 errorWidget: (_, __, ___) => _postIcon(theme))
                             : _postIcon(theme)),
                     Padding(
@@ -988,9 +986,8 @@ class _ProfileAvatarButton extends StatelessWidget {
             child: photoUrl.isEmpty
                 ? const Icon(Icons.person_outline_rounded,
                     color: Colors.white, size: 19)
-                : CachedNetworkImage(
-                    imageUrl: photoUrl,
-                    fit: BoxFit.cover,
+                : AppImageCache.image(
+                    url: photoUrl,
                     placeholder: (_, __) => const Icon(
                         Icons.person_outline_rounded,
                         color: Colors.white,
@@ -1534,9 +1531,8 @@ class _ProductCard extends StatelessWidget {
                 SizedBox(
                   height: 70,
                   width: double.infinity,
-                  child: CachedNetworkImage(
-                      imageUrl: product.imageUrl,
-                      fit: BoxFit.cover,
+                  child: AppImageCache.image(
+                      url: product.imageUrl,
                       errorWidget: (_, __, ___) => ColoredBox(
                           color: theme.colorScheme.surfaceContainerHighest,
                           child: const Icon(Icons.image_rounded))),
@@ -2382,9 +2378,8 @@ class _OnlineUserItemCard extends StatelessWidget {
                 ),
                 child: ClipOval(
                   child: hasPhoto
-                      ? CachedNetworkImage(
-                          imageUrl: photo,
-                          fit: BoxFit.cover,
+                      ? AppImageCache.image(
+                          url: photo,
                           errorWidget: (_, __, ___) => _buildAvatarFallback(),
                         )
                       : _buildAvatarFallback(),

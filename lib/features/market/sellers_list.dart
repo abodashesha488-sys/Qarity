@@ -1,7 +1,7 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
+import '../../core/utils/app_image_cache.dart';
 import '../../core/utils/role_style.dart';
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
@@ -266,7 +266,8 @@ class _MarketSellersScreenState extends State<MarketSellersScreen>
                       },
                     )
                   : null,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
           ),
         ),
@@ -341,10 +342,9 @@ class _MarketSellersScreenState extends State<MarketSellersScreen>
                 child: Stack(
                   children: [
                     seller.imageUrl != null
-                        ? CachedNetworkImage(
-                            imageUrl: seller.imageUrl!,
-                            fit: BoxFit.cover,
-                            width: double.infinity,
+                        ? AppImageCache.image(
+                            url: seller.imageUrl!,
+                                                        width: double.infinity,
                             placeholder: (context, url) =>
                                 _buildPlaceholder(theme),
                             errorWidget: (context, url, error) =>
@@ -379,14 +379,14 @@ class _MarketSellersScreenState extends State<MarketSellersScreen>
                 padding: const EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                   children: [
-                     RoleNameText(
-                       name: seller.name,
-                       role: 'seller',
-                       sellerType: seller.sellerType,
-                       style: theme.textTheme.titleSmall
-                           ?.copyWith(fontWeight: FontWeight.w800),
-                     ),
+                  children: [
+                    RoleNameText(
+                      name: seller.name,
+                      role: 'seller',
+                      sellerType: seller.sellerType,
+                      style: theme.textTheme.titleSmall
+                          ?.copyWith(fontWeight: FontWeight.w800),
+                    ),
                     const SizedBox(height: 4),
                     if (seller.address != null && seller.address!.isNotEmpty)
                       Row(

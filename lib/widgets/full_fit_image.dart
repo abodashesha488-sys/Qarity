@@ -71,7 +71,7 @@ class FullFitImage extends StatefulWidget {
     }
     try {
       final optimized = ImageUploadService.optimizeUrl(url, width: 800);
-      CachedNetworkImageProvider(optimized, cacheManager: AppImageCache.instance)
+      CachedNetworkImageProvider(optimized, cacheKey: AppImageCache.canonicalKey(url), cacheManager: AppImageCache.instance)
           .resolve(ImageConfiguration.empty)
           .addListener(ImageStreamListener((info, _) {
         final h = info.image.height;
@@ -145,7 +145,7 @@ class _FullFitImageState extends State<FullFitImage> {
         child: widget.imageUrl.isEmpty || _failed
             ? widget.fallback
             : CachedNetworkImage(
-                cacheManager: AppImageCache.instance,
+                cacheManager: AppImageCache.instance, cacheKey: AppImageCache.canonicalKey(widget.imageUrl),
                 imageUrl: ImageUploadService.optimizeUrl(
                   widget.imageUrl,
                   width: (widget.width * 2.5).ceil(),

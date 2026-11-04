@@ -7,7 +7,7 @@ Qarity is a comprehensive digital platform for village community services (قر�
 - **Errors:** 0
 - **Warnings:** 0 · **Info:** 0
 - **Status:** Compiles successfully · `flutter analyze`: No issues found!
-- **اختبارات:** آخر **مجموعة كاملة** موثّقة = **940/940 في كامل المشروع** (83 ملف اختبار) بنجاح 100% (`02:13 +940: All tests passed!`)؛ وقبلها = 937/937. **لا تُصدّر رقمًا لم تَجْرِه.**
+- **اختبارات:** آخر **مجموعة كاملة** موثّقة = **952/952 في كامل المشروع** (83 ملف اختبار) بنجاح 100% (`02:32 +952: All tests passed!`)؛ وقبلها = 950/950. **لا تُصدّر رقمًا لم تَجْرِه.**
 
 ## Firebase Configuration
 
@@ -35,7 +35,7 @@ For Google Sign-In to work on web:
 - Image upload and delivery optimization is handled by ImageUploadService (lib/services/image_upload_service.dart).
 - Uses **Cloudinary** unsigned upload preset (CLOUDINARY_CLOUD_NAME and CLOUDINARY_UPLOAD_PRESET in AppConfig), with legacy fallback to ImgBB (IMGBB_API_KEY).
 - Cloudinary URLs automatically inject on-the-fly delivery optimization (q_auto,f_auto and w_ widths) delivering high-speed, lightweight WebP/AVIF formats to clients.
-- **التخزين المحلي الدائم للصور (AppImageCache):** مدير كاش مركزي موحد (`lib/core/utils/app_image_cache.dart`) يحفظ الصور على قرص الهاتف لمدة 90 يوماً بسعة تصل إلى 2500 صورة محلية عبر `flutter_cache_manager`. يطبق أبعاد قرصية محددة (`maxWidthDiskCache`/`maxHeightDiskCache` = 1000..1200) مع تسليم الحجم الأنسب تلقائياً لتقليل استهلاك الذاكرة وتوفير باقة المستخدم وعرض الصور في 0ms دون إعادة طلبها.
+- **التخزين المحلي الدائم للصور (AppImageCache):** مدير كاش مركزي موحد (`lib/core/utils/app_image_cache.dart`) يحفظ الصور على قرص الهاتف لمدة 90 يوماً بسعة تصل إلى 2500 صورة محلية عبر `flutter_cache_manager`. يعتمد نظام المفتاح الموحد (`canonicalKey`) الذي يجرّد أي تحويلات تحجيم ديناميكية (`w_`, `q_auto`, `f_auto`, `=s96-c`) لضمان اشتراك الصورة المعروضة في القائمة وشاشة التفاصيل بنفس ملف القرص؛ مع خدمة ملفات طويلة الأمد (`_AppLongLivedHttpFileService`) تفرض صلاحية 90 يوماً محلياً وتمنع إعادة طلب الشبكة عند انقطاع الاتصال مع استرجاع تلقائي من `DefaultCacheManager` للصور المحفوظة سابقاً.
 - Build injection:
   - flutter build web --dart-define=CLOUDINARY_CLOUD_NAME=<cloud_name> --dart-define=CLOUDINARY_UPLOAD_PRESET=<preset>
 - Used by: add product, add news, forum, medical submissions, village ads, legal consultations, and profile photos.

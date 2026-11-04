@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../core/constants/app_colors.dart';
+import '../core/utils/app_image_cache.dart';
 
 /// إطار معلوم المساحة لصورة الإعلان: عرضه كامل وارتفاعه ثابت، والصورة تملؤه
 /// بـ`cover` — فلا يختلف ارتفاع البطاقة باختلاف مقاس صورة صاحب الإعلان.
@@ -33,7 +34,7 @@ class AdPhotoFrame extends StatelessWidget {
             ? _blank(brightness)
             : LayoutBuilder(builder: (context, c) {
                 final w = c.maxWidth.isFinite ? c.maxWidth : height;
-                return CachedNetworkImage(
+                return CachedNetworkImage(cacheManager: AppImageCache.instance, cacheKey: AppImageCache.canonicalKey(imageUrl),
                   imageUrl: imageUrl,
                   fit: BoxFit.cover,
                   width: double.infinity,
