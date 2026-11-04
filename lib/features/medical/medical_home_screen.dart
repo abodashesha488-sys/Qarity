@@ -1944,7 +1944,7 @@ class _ClinicRowCard extends StatelessWidget {
           arguments: clinic,
         ),
         child: Container(
-          height: _kImageSide + 18,
+          constraints: const BoxConstraints(minHeight: _kImageSide + 18),
           padding: const EdgeInsets.all(9),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
@@ -1956,9 +1956,8 @@ class _ClinicRowCard extends StatelessWidget {
             ),
           ),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // صورة العيادة: تطابق ارتفاع الكارت تماماً ولا يتعداها الكارت
+              // صورة العيادة: بمقاس متناسق
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: SizedBox(
@@ -1969,7 +1968,8 @@ class _ClinicRowCard extends StatelessWidget {
                     child: clinic.imageUrl.isNotEmpty
                         ? AppImageCache.image(
                             url: clinic.imageUrl,
-                                                        placeholder: (_, __) => const Center(
+                            fit: BoxFit.cover,
+                            placeholder: (_, __) => const Center(
                               child: SizedBox(
                                 width: 22,
                                 height: 22,
@@ -1997,24 +1997,23 @@ class _ClinicRowCard extends StatelessWidget {
               ),
               const SizedBox(width: 10),
 
-              // بيانات العيادة منسقة في 3 أسطر متناسقة ومختصرة
+              // بيانات العيادة كاملة دون أي اقتصاص
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // السطر الأول: اسم العيادة + شارة الحالة (مفتوحة تومض / مغلقة)
+                    // السطر الأول: اسم العيادة كاملاً + شارة الحالة
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
                           child: Text(
                             clinic.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               fontSize: 14.5,
                               fontWeight: FontWeight.bold,
-                              height: 1.2,
+                              height: 1.25,
                             ),
                           ),
                         ),
@@ -2022,6 +2021,7 @@ class _ClinicRowCard extends StatelessWidget {
                         _ClinicBlinkingStatusBadge(isCurrentlyOpen: isOpen),
                       ],
                     ),
+                    const SizedBox(height: 5),
 
                     // السطر الثاني: اسم الطبيب + شارة التخصص في سطر واحد
                     Row(
@@ -2036,8 +2036,6 @@ class _ClinicRowCard extends StatelessWidget {
                           Flexible(
                             child: Text(
                               doctorName,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: 12.5,
                                 fontWeight: FontWeight.w700,
@@ -2076,24 +2074,28 @@ class _ClinicRowCard extends StatelessWidget {
                           ),
                       ],
                     ),
+                    const SizedBox(height: 5),
 
-                    // السطر الثالث: ملخص المواعيد وأيام العمل باختصار
+                    // السطر الثالث: ملخص المواعيد وأيام العمل كاملاً دون اقتصاص
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(
-                          Icons.schedule_rounded,
-                          size: 13,
-                          color: Colors.orange,
+                        const Padding(
+                          padding: EdgeInsets.only(top: 2),
+                          child: Icon(
+                            Icons.schedule_rounded,
+                            size: 13,
+                            color: Colors.orange,
+                          ),
                         ),
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(
                             clinic.shiftsSummary,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontSize: 11,
                               color: theme.colorScheme.onSurfaceVariant,
+                              height: 1.25,
                             ),
                           ),
                         ),

@@ -321,6 +321,61 @@ class VillageClinicService {
     if (clinicId.isEmpty || commentId.isEmpty) return;
     await _col.doc(clinicId).collection('comments').doc(commentId).delete();
   }
+
+  // ── تقييم العيادة (Ratings) ──
+
+  Stream<double?> getUserRatingStream(String clinicId, String userId) {
+    if (clinicId.isEmpty || userId.isEmpty) return Stream.value(null);
+    return _col
+        .doc(clinicId)
+        .collection('ratings')
+        .doc(userId)
+        .snapshots()
+        .map((snap) => (snap.data()?['rating'] as num?)?.toDouble());
+  }
+
+  Future<void> rateClinic(String clinicId, double rating) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || clinicId.isEmpty) return;
+    final ratingRef =
+        _col.doc(clinicId).collection('ratings').doc(user.uid);
+    final clinicRef = _col.doc(clinicId);
+
+    await _firestore.runTransaction((tx) async {
+      final ratingSnap = await tx.get(ratingRef);
+      final clinicSnap = await tx.get(clinicRef);
+      if (!clinicSnap.exists) return;
+
+      final clinicData = clinicSnap.data() ?? <String, dynamic>{};
+      double currentRating =
+          (clinicData['rating'] as num?)?.toDouble() ?? 0.0;
+      int currentCount =
+          (clinicData['ratingCount'] as num?)?.toInt() ?? 0;
+
+      if (ratingSnap.exists) {
+        final oldRating =
+            (ratingSnap.data()?['rating'] as num?)?.toDouble() ?? 0.0;
+        final totalScore =
+            (currentRating * currentCount) - oldRating + rating;
+        currentRating = currentCount > 0 ? totalScore / currentCount : rating;
+      } else {
+        final totalScore = (currentRating * currentCount) + rating;
+        currentCount += 1;
+        currentRating = totalScore / currentCount;
+      }
+
+      tx.set(ratingRef, {
+        'rating': rating,
+        'userId': user.uid,
+        'updatedAt': Timestamp.now(),
+      });
+
+      tx.update(clinicRef, {
+        'rating': double.parse(currentRating.toStringAsFixed(1)),
+        'ratingCount': currentCount,
+      });
+    });
+  }
 }
 
 /// خدمة صيدليات القرية — مدخلات مستخدمين تحتاج موافقة الأدمن.

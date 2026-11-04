@@ -653,6 +653,7 @@ class _HeritageFormState extends State<HeritageForm> {
   final _source = TextEditingController();
   final _contributor = TextEditingController();
   final _order = TextEditingController(text: '0');
+  final _videoUrl = TextEditingController();
   String _category = 'customs';
   String _imageUrl = '';
   bool _saving = false;
@@ -670,6 +671,7 @@ class _HeritageFormState extends State<HeritageForm> {
       _source.text = e.source;
       _contributor.text = e.contributor;
       _order.text = e.sortOrder.toString();
+      _videoUrl.text = e.videoUrl;
       if (_categories.containsKey(e.category)) _category = e.category;
       _imageUrl = e.images.isNotEmpty ? e.images.first : '';
     }
@@ -683,6 +685,7 @@ class _HeritageFormState extends State<HeritageForm> {
     _source.dispose();
     _contributor.dispose();
     _order.dispose();
+    _videoUrl.dispose();
     super.dispose();
   }
 
@@ -714,7 +717,7 @@ class _HeritageFormState extends State<HeritageForm> {
         description: _description.text.trim(),
         images: _keepImages(_imageUrl, e?.images ?? const []),
         audioUrl: e?.audioUrl ?? '',
-        videoUrl: e?.videoUrl ?? '',
+        videoUrl: _videoUrl.text.trim(),
         historicalPeriod: _period.text.trim(),
         source: _source.text.trim(),
         contributor: _contributor.text.trim(),

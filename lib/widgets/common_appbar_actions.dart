@@ -9,9 +9,9 @@ class CommonAppBarActions {
   static List<Widget> actions(BuildContext context) => const [
         NotificationBellButton(),
       ];
-  }
+}
 
-/// جرس الإشعارات — عادي لـ AppBar، أو `compact` دائري زجاجي لهيدر الرئيسية.
+/// جرس الإشعارات — عادي لـ AppBar، أو `compact` كبسولة لهيدر الرئيسية بنفس تنسيق متصل وعضو.
 class NotificationBellButton extends StatefulWidget {
   const NotificationBellButton({super.key, this.compact = false});
   final bool compact;
@@ -67,41 +67,73 @@ class _NotificationBellButtonState extends State<NotificationBellButton> {
             onPressed: open,
           );
         }
-        // النسخة المضغوطة (هيدر الرئيسية) — رمز نقي بلا دائرة ولا لون
+        // النسخة المضغوطة (هيدر الرئيسية) — بنفس تنسيق كبسولات الهيدر المقابلة (متصل وعضو)
         return Material(
           color: Colors.transparent,
           child: InkWell(
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: BorderRadius.circular(14),
             onTap: open,
-            child: Padding(
-              padding: const EdgeInsets.all(6),
-              child: Badge(
-                isLabelVisible: unread > 0,
-                label: Text(
-                  unread > 99 ? '99+' : '$unread',
-                  style: const TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
+            child: Container(
+              height: 27,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.45),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: const Color(0xFFFFD700).withValues(alpha: 0.6),
+                  width: 0.9,
+                ),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x38000000),
+                    blurRadius: 6,
+                    offset: Offset(0, 2),
                   ),
-                ),
-                backgroundColor: const Color(0xFFE53935),
-                child: const Icon(
-                  Icons.notifications_none_rounded,
-                  size: 24,
-                  color: Color(0xFFFFD700),
-                  shadows: [
-                    Shadow(
-                      color: Color(0x99000000),
-                      blurRadius: 4,
-                      offset: Offset(0, 1),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Badge(
+                    isLabelVisible: unread > 0,
+                    label: Text(
+                      unread > 99 ? '99+' : '$unread',
+                      style: const TextStyle(
+                        fontSize: 8,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                      ),
                     ),
-                    Shadow(
-                      color: Color(0x66FFD700),
-                      blurRadius: 6,
+                    backgroundColor: const Color(0xFFE53935),
+                    child: const Icon(
+                      Icons.notifications_none_rounded,
+                      size: 14.5,
+                      color: Color(0xFFFFD700),
                     ),
+                  ),
+                  const SizedBox(width: 4.5),
+                  if (unread > 0) ...[
+                    Text(
+                      '$unread',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        height: 1.1,
+                      ),
+                    ),
+                    const SizedBox(width: 3.5),
                   ],
-                ),
+                  Text(
+                    'إشعارات',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.85),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                      height: 1.1,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

@@ -796,10 +796,11 @@ class _HeroHeader extends StatelessWidget {
                         minHeight: 0,
                         maxHeight: 120,
                         minWidth: 0,
-                        maxWidth: 100,
+                        maxWidth: 160,
                         alignment: Alignment.topRight,
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             NotificationBellButton(compact: true),
                             SizedBox(height: 4),
@@ -864,26 +865,46 @@ class _HeaderSearchButton extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(14),
         onTap: () {
           HapticFeedback.lightImpact();
           Navigator.pushNamed(context, AppRoutes.globalSearch);
         },
-        child: const Padding(
-          padding: EdgeInsets.all(5),
-          child: Icon(
-            Icons.search_rounded,
-            size: 28,
-            color: Color(0xFFFFD700),
-            shadows: [
-              Shadow(
-                color: Color(0x99000000),
-                blurRadius: 4,
-                offset: Offset(0, 1),
-              ),
-              Shadow(
-                color: Color(0x66FFD700),
+        child: Container(
+          height: 27,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.45),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: const Color(0xFF4FC3F7).withValues(alpha: 0.6),
+              width: 0.9,
+            ),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x38000000),
                 blurRadius: 6,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.search_rounded,
+                size: 15,
+                color: Color(0xFF4FC3F7),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                'بحث',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.85),
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                  height: 1.1,
+                ),
               ),
             ],
           ),

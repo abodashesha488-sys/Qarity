@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/app_image_cache.dart';
@@ -179,13 +180,49 @@ class MedDetailHeader extends StatelessWidget {
         ),
         if (imageUrl.isNotEmpty)
           SliverToBoxAdapter(
-            child: SizedBox(
-              height: 210,
+            child: Container(
+              constraints: const BoxConstraints(
+                minHeight: 180,
+                maxHeight: 320,
+              ),
               width: double.infinity,
-              child: AppImageCache.image(
+              color: Colors.black.withValues(alpha: 0.04),
+              child: GestureDetector(
+                onTap: () {
+                  showDialog<void>(
+                    context: context,
+                    barrierColor: Colors.black.withValues(alpha: 0.85),
+                    builder: (ctx) => Dialog(
+                      backgroundColor: Colors.transparent,
+                      insetPadding: const EdgeInsets.all(16),
+                      child: Stack(
+                        alignment: Alignment.topRight,
+                        children: [
+                          Center(
+                            child: InteractiveViewer(
+                              maxScale: 4.0,
+                              child: AppImageCache.image(
+                                url: imageUrl,
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close_rounded,
+                                color: Colors.white, size: 28),
+                            onPressed: () => Navigator.pop(ctx),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+                child: AppImageCache.image(
                   url: imageUrl,
-                  errorWidget: (_, __, ___) =>
-                      _gradientFallback(context)),
+                  fit: BoxFit.contain,
+                  errorWidget: (_, __, ___) => _gradientFallback(context),
+                ),
+              ),
             ),
           ),
       ],
@@ -360,13 +397,117 @@ class _VillageClinicDetailScreenState extends State<VillageClinicDetailScreen> {
     }
   }
 
+  Widget _buildRatingBar(ThemeData theme, VillageClinic clinic) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 14),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: _teal.withValues(alpha: 0.2),
+          width: 0.8,
+        ),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.star_rounded, color: Colors.amber, size: 22),
+                      const SizedBox(width: 4),
+                      Text(
+                        clinic.rating > 0 ? clinic.rating.toStringAsFixed(1) : 'لا تقييم بعد',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    clinic.ratingCount > 0 ? '(${clinic.ratingCount} تقييم)' : 'كن أول من يقيّم العيادة',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+              if (_currentUid.isNotEmpty)
+                StreamBuilder<double?>(
+                  stream: _service.getUserRatingStream(clinic.id, _currentUid),
+                  builder: (context, snapshot) {
+                    final myRating = snapshot.data ?? 0.0;
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          myRating > 0 ? 'تقييمك: ${myRating.toInt()} نجوم' : 'قيّم هذه العيادة',
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                            color: _teal,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        RatingBar.builder(
+                          initialRating: myRating,
+                          minRating: 1,
+                          itemSize: 22,
+                          unratedColor: Colors.grey.withValues(alpha: 0.3),
+                          itemBuilder: (context, _) => const Icon(
+                            Icons.star_rounded,
+                            color: Colors.amber,
+                          ),
+                          onRatingUpdate: (rating) async {
+                            try {
+                              await _service.rateClinic(clinic.id, rating);
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('شكراً لتقييمك!'),
+                                    duration: Duration(seconds: 2),
+                                  ),
+                                );
+                              }
+                            } catch (_) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('تعذر حفظ التقييم')),
+                                );
+                              }
+                            }
+                          },
+                        ),
+                      ],
+                    );
+                  },
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildComments(ThemeData theme, VillageClinic clinic) {
     if (clinic.id.isEmpty) return const SizedBox.shrink();
 
     return MedSection(
       title: 'التعليقات والتقييمات',
       accent: _teal,
-      child: StreamBuilder<QuerySnapshot>(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildRatingBar(theme, clinic),
+          StreamBuilder<QuerySnapshot>(
         stream: _service.getCommentsStream(clinic.id),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting &&
@@ -442,6 +583,8 @@ class _VillageClinicDetailScreenState extends State<VillageClinicDetailScreen> {
             },
           );
         },
+      ),
+        ],
       ),
     );
   }

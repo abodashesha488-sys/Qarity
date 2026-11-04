@@ -193,6 +193,10 @@ class VillageClinic {
   final String eveningStart;
   final String eveningEnd;
 
+  // ── التقييمات ──
+  final double rating;
+  final int ratingCount;
+
   const VillageClinic({
     required this.id,
     required this.name,
@@ -215,6 +219,8 @@ class VillageClinic {
     this.hasEveningShift = false,
     this.eveningStart = '',
     this.eveningEnd = '',
+    this.rating = 0.0,
+    this.ratingCount = 0,
   });
 
   factory VillageClinic.fromJson(Map<String, dynamic> json, String docId) {
@@ -242,6 +248,8 @@ class VillageClinic {
       hasEveningShift: json['hasEveningShift'] as bool? ?? false,
       eveningStart: json['eveningStart'] as String? ?? '',
       eveningEnd: json['eveningEnd'] as String? ?? '',
+      rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
+      ratingCount: (json['ratingCount'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -268,6 +276,8 @@ class VillageClinic {
         'hasEveningShift': hasEveningShift,
         'eveningStart': eveningStart,
         'eveningEnd': eveningEnd,
+        'rating': rating,
+        'ratingCount': ratingCount,
       };
 
   String get imageUrl => imageUrls.isNotEmpty ? imageUrls.first : '';

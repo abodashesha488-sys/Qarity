@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/village_content_models.dart';
 import '../../services/village_extended_service.dart';
+import '../../widgets/village_video_card.dart';
 import 'village_extended_admin.dart';
 import 'village_section_scaffold.dart';
 
@@ -57,6 +58,32 @@ class _VillageHeritageScreenState extends State<VillageHeritageScreen> {
           if (h.contributor.isNotEmpty) 'الراوي/المساهم: ${h.contributor}',
           if (h.source.isNotEmpty) 'المصدر: ${h.source}',
         ],
+        footer: h.videoUrl.isNotEmpty
+            ? Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFFC62828),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: () => VillageVideoHelper.playInApp(
+                      ctx,
+                      h.videoUrl,
+                      title: h.title,
+                    ),
+                    icon: const Icon(Icons.play_circle_fill_rounded, size: 20),
+                    label: const Text('مشاهدة فيديو التراث داخل التطبيق',
+                        style: TextStyle(
+                            fontSize: 12, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              )
+            : null,
       ),
     );
   }
