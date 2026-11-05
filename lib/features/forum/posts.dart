@@ -120,11 +120,16 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
     if (_topic != 'الكل') {
       posts = posts.where((p) => (p.category.isEmpty ? 'عام' : p.category) == _topic).toList();
     }
-    if (_selectedFilter == _latestFilter) {
-      posts.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    } else if (_selectedFilter == _topFilter) {
-      posts.sort((a, b) => b.likes.compareTo(a.likes));
-    }
+    posts.sort((a, b) {
+      if (a.isPinned != b.isPinned) {
+        return a.isPinned ? -1 : 1;
+      }
+      if (_selectedFilter == _topFilter) {
+        final likeCmp = b.likes.compareTo(a.likes);
+        if (likeCmp != 0) return likeCmp;
+      }
+      return b.createdAt.compareTo(a.createdAt);
+    });
     if (_searchQuery.isEmpty) return posts;
     return posts
         .where((p) =>
@@ -141,7 +146,7 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
 
     return Scaffold(
       appBar: QurityAppBar(
-        title: 'حوارات المندرة',
+        title: 'حوارات القرية',
         onAdd: () => Navigator.pushNamed(context, AppRoutes.forumCreatePost),
         addTooltip: 'موضوع جديد',
       ),
@@ -373,6 +378,8 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
   Widget _buildPostCard(ThemeData theme, ForumPost post, int index) {
     final isLiked = _currentUserId.isNotEmpty && post.likedBy.contains(_currentUserId);
     final isDark = theme.brightness == Brightness.dark;
+    final hasTitle = post.title.trim().isNotEmpty;
+    final isContentSame = hasTitle && post.content.trim() == post.title.trim();
 
     return Container(
       decoration: BoxDecoration(
@@ -417,15 +424,24 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
                           width: 1.5,
                         ),
                       ),
-                      child: CircleAvatar(
-                        radius: 20,
-                        backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
-                        backgroundImage: post.userPhotoUrl.isNotEmpty
-                            ? AppImageCache.provider(post.userPhotoUrl)
-                            : null,
-                        child: post.userPhotoUrl.isEmpty
-                            ? Icon(Icons.person_rounded, color: theme.colorScheme.primary, size: 22)
-                            : null,
+                      child: SizedBox(
+                        width: 40,
+                        height: 40,
+                        child: ClipOval(
+                          child: post.userPhotoUrl.isNotEmpty
+                              ? AppImageCache.image(
+                                  url: post.userPhotoUrl,
+                                  width: 40,
+                                  height: 40,
+                                  fit: BoxFit.cover,
+                                  errorWidget: (_, __, ___) => Icon(
+                                      Icons.person_rounded,
+                                      color: theme.colorScheme.primary,
+                                      size: 22),
+                                )
+                              : Icon(Icons.person_rounded,
+                                  color: theme.colorScheme.primary, size: 22),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -435,7 +451,7 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           RoleNameText(
-                            name: post.userName,
+                            name: post.userName.trim().isNotEmpty ? post.userName : 'أحد أهالي القرية',
                             role: post.userRole,
                             sellerType: post.userSellerType,
                             style: theme.textTheme.titleSmall?.copyWith(
@@ -541,8 +557,8 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
                   ),
                 ],
 
-                // 3. العنوان والمحتوى
-                if (post.title.isNotEmpty) ...[
+                // 3. العنوان والمحتوى (دون تكرار النص إذا تطابق العنوان والمحتوى)
+                if (hasTitle) ...[
                   const SizedBox(height: 8),
                   Text(
                     post.title,
@@ -555,17 +571,19 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
-                const SizedBox(height: 6),
-                Text(
-                  post.content,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    height: 1.6,
-                    fontSize: 13.5,
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
+                if (!isContentSame && post.content.trim().isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    post.content,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      height: 1.6,
+                      fontSize: 13.5,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
+                    ),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                ],
 
                 // 4. صورة المنشور (إن وجدت)
                 if (post.imageUrl != null && post.imageUrl!.isNotEmpty) ...[
@@ -636,7 +654,7 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
                               ),
                               const SizedBox(width: 5),
                               Text(
-                                '${post.likes}',
+                                '${post.likes} إعجاب',
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w800,
@@ -669,7 +687,7 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
                               ),
                               const SizedBox(width: 5),
                               Text(
-                                '${post.comments}',
+                                '${post.comments} تعليق',
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w800,
@@ -691,7 +709,7 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
                               size: 14, color: theme.colorScheme.onSurfaceVariant),
                           const SizedBox(width: 4),
                           Text(
-                            '${post.views}',
+                            '${post.views} مشاهدة',
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
@@ -867,7 +885,9 @@ class _CommentsSheetState extends State<CommentsSheet> {
           Padding(
             padding: const EdgeInsets.all(16),
             child: Text(
-              widget.post.content,
+              widget.post.title.trim().isNotEmpty
+                  ? widget.post.title
+                  : widget.post.content,
               style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
 
 import '../../core/constants/app_colors.dart';
 import 'navigator_key.dart';
@@ -46,16 +45,23 @@ class AppHelpers {
   static void hapticMedium() => HapticFeedback.mediumImpact();
 
   static String formatDate(DateTime date) {
-    return DateFormat('yyyy/MM/dd', 'ar').format(date);
+    return '${date.year}/${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}';
   }
 
   static String formatRelativeDate(DateTime date) {
     final now = DateTime.now();
     final diff = now.difference(date);
-    if (diff.inMinutes < 60) return '${diff.inMinutes} دقيقة';
-    if (diff.inHours < 24) return '${diff.inHours} ساعة';
-    if (diff.inDays < 7) return '${diff.inDays} يوم';
-    return '${date.day}/${date.month}/${date.year}';
+    if (diff.isNegative || diff.inSeconds < 60) return 'الآن';
+    if (diff.inMinutes == 1) return 'منذ دقيقة';
+    if (diff.inMinutes == 2) return 'منذ دقيقتين';
+    if (diff.inMinutes < 60) return 'منذ ${diff.inMinutes} دقيقة';
+    if (diff.inHours == 1) return 'منذ ساعة';
+    if (diff.inHours == 2) return 'منذ ساعتين';
+    if (diff.inHours < 24) return 'منذ ${diff.inHours} ساعة';
+    if (diff.inDays == 1) return 'أمس';
+    if (diff.inDays == 2) return 'منذ يومين';
+    if (diff.inDays < 7) return 'منذ ${diff.inDays} أيام';
+    return '${date.year}/${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}';
   }
 
   static Color colorFromString(String text) {

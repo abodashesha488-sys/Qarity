@@ -224,9 +224,9 @@ class _ForumPostDetailScreenState extends State<ForumPostDetailScreen> {
 
     return Scaffold(
       appBar: QurityAppBar(
-        title: (passedPost != null && passedPost.title.isNotEmpty)
+        title: (passedPost != null && passedPost.title.trim().isNotEmpty)
             ? passedPost.title
-            : (passedPost?.userName.isNotEmpty == true ? passedPost!.userName : 'الموضوع'),
+            : 'تفاصيل الموضوع',
         actions: [
           if (passedPost != null)
             IconButton(
@@ -313,6 +313,8 @@ class _ForumPostDetailScreenState extends State<ForumPostDetailScreen> {
 
   Widget _buildPostCard(ThemeData theme, ForumPost post) {
     final isLiked = _currentUserId.isNotEmpty && post.likedBy.contains(_currentUserId);
+    final hasDetailTitle = post.title.trim().isNotEmpty;
+    final isContentSame = hasDetailTitle && post.content.trim() == post.title.trim();
 
     return Card(
       elevation: 0,
@@ -375,7 +377,7 @@ class _ForumPostDetailScreenState extends State<ForumPostDetailScreen> {
                           color: theme.colorScheme.secondary)),
                 ),
               ),
-            if (post.title.isNotEmpty)
+            if (hasDetailTitle)
               Padding(
                 padding: const EdgeInsets.only(bottom: 10),
                 child: Text(
@@ -383,17 +385,28 @@ class _ForumPostDetailScreenState extends State<ForumPostDetailScreen> {
                   style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900, height: 1.3),
                 ),
               ),
-            Text(
-              post.content,
-              style: theme.textTheme.bodyLarge?.copyWith(height: 1.8, color: theme.colorScheme.onSurface),
-            ),
+            if (!isContentSame && post.content.trim().isNotEmpty)
+              Text(
+                post.content,
+                style: theme.textTheme.bodyLarge?.copyWith(height: 1.8, color: theme.colorScheme.onSurface),
+              ),
             if (post.imageUrl != null && post.imageUrl!.isNotEmpty) ...[
               const SizedBox(height: 14),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(14),
+              Container(
+                width: double.infinity,
+                constraints: const BoxConstraints(maxHeight: 400),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
+                  ),
+                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                ),
+                clipBehavior: Clip.antiAlias,
                 child: AppImageCache.image(
                   url: post.imageUrl!,
                   width: double.infinity,
+                  fit: BoxFit.contain,
                   placeholder: (context, url) => Container(
                     height: 200,
                     color: theme.colorScheme.surfaceContainerHighest,

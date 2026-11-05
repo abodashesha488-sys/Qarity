@@ -209,7 +209,7 @@ class _OccasionDetailContent extends StatelessWidget {
             if (occasion.date.isNotEmpty)
               _MetaChip(
                 icon: Icons.calendar_today_rounded,
-                label: occasion.date,
+                label: _formatOccasionDateArabic(occasion.date),
                 color: theme.colorScheme.primary,
               ),
             _AttendeesCountChip(occasionId: occasion.id),
@@ -230,7 +230,7 @@ class _OccasionDetailContent extends StatelessWidget {
                 _InfoRow(
                     icon: Icons.calendar_today_rounded,
                     label: 'التاريخ',
-                    value: occasion.date),
+                    value: '${_formatOccasionDateArabic(occasion.date)} (${occasion.date})'),
               if (occasion.location.isNotEmpty)
                 _InfoRow(
                     icon: Icons.location_on_rounded,
@@ -488,26 +488,41 @@ class _CountdownBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final raw = occasion.date;
-    final date =
-        raw.isEmpty ? null : DateTime.tryParse(raw.replaceAll('/', '-'));
-    if (date == null) return const SizedBox.shrink();
-    final diff = date.difference(DateTime.now());
-    if (diff.isNegative) {
+    final d = _parseOccasionDate(occasion.date);
+    if (d == null) return const SizedBox.shrink();
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final target = DateTime(d.year, d.month, d.day);
+    final diffDays = target.difference(today).inDays;
+
+    if (diffDays < 0) {
       return Padding(
         padding: const EdgeInsets.only(bottom: 12),
         child: _banner(theme, 'انتهت هذه المناسبة', Colors.grey),
       );
     }
-    final days = diff.inDays;
-    final label = days == 0
-        ? 'المناسبة اليوم 🎉'
-        : days == 1
-            ? 'غداً بإذن الله • يوم واحد'
-            : 'بعد $days يوم من الآن';
+    if (diffDays == 0) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: _banner(theme, 'المناسبة اليوم — أهلاً بكم جميعاً 🎉', const Color(0xFF2E7D32)),
+      );
+    }
+    if (diffDays == 1) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: _banner(theme, 'غداً بإذن الله • متبقي يوم واحد', const Color(0xFFE65100)),
+      );
+    }
+    if (diffDays == 2) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: _banner(theme, 'بعد غد • متبقي يومان', theme.colorScheme.primary),
+      );
+    }
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: _banner(theme, label, theme.colorScheme.primary),
+      child: _banner(theme, 'متبقي $diffDays يوماً على المناسبة', theme.colorScheme.primary),
     );
   }
 
@@ -544,9 +559,10 @@ class _HeroImage extends StatelessWidget {
     final theme = Theme.of(context);
     final url = imageUrl;
 
-    final fallback = DecoratedBox(
+    final fallback = Container(
+      height: 200,
       decoration: BoxDecoration(
-        color: theme.colorScheme.primaryContainer.withValues(alpha: 0.4),
+        color: theme.colorScheme.primaryContainer.withValues(alpha: 0.35),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Center(
@@ -554,25 +570,29 @@ class _HeroImage extends StatelessWidget {
       ),
     );
 
-    return AspectRatio(
-      aspectRatio: 16 / 10,
-      child: url == null || url.isEmpty
-          ? fallback
-          : ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: AppImageCache.image(
-                url: url,
-                
-                width: double.infinity,
-                placeholder: (context, url) => ColoredBox(
-                  color: theme.colorScheme.surfaceContainerHighest
-                      .withValues(alpha: 0.6),
-                  child: const Center(
-                      child: CircularProgressIndicator(strokeWidth: 2)),
-                ),
-                errorWidget: (context, url, error) => fallback,
-              ),
-            ),
+    if (url == null || url.isEmpty) return fallback;
+
+    return Container(
+      width: double.infinity,
+      constraints: const BoxConstraints(minHeight: 180, maxHeight: 380),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: AppImageCache.image(
+        url: url,
+        width: double.infinity,
+        fit: BoxFit.contain,
+        placeholder: (context, url) => const SizedBox(
+          height: 220,
+          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        ),
+        errorWidget: (context, url, error) => fallback,
+      ),
     );
   }
 }
@@ -711,11 +731,45 @@ class _ErrorStateView extends StatelessWidget {
   }
 }
 
-/// هل انقضت المناسبة؟ (تاريخها بصيغة yyyy/MM/dd)
+DateTime? _parseOccasionDate(String raw) {
+  final trimmed = raw.trim();
+  if (trimmed.isEmpty) return null;
+  final d = DateTime.tryParse(trimmed.replaceAll('/', '-'));
+  if (d != null) return d;
+  final parts = trimmed.split(RegExp(r'[/.-]'));
+  if (parts.length == 3) {
+    if (parts[0].length == 4) {
+      final y = int.tryParse(parts[0]);
+      final m = int.tryParse(parts[1]);
+      final day = int.tryParse(parts[2]);
+      if (y != null && m != null && day != null) return DateTime(y, m, day);
+    } else if (parts[2].length == 4) {
+      final day = int.tryParse(parts[0]);
+      final m = int.tryParse(parts[1]);
+      final y = int.tryParse(parts[2]);
+      if (y != null && m != null && day != null) return DateTime(y, m, day);
+    }
+  }
+  return null;
+}
+
+String _formatOccasionDateArabic(String raw) {
+  final d = _parseOccasionDate(raw);
+  if (d == null) return raw;
+  const days = ['الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت', 'الأحد'];
+  const months = [
+    'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+    'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+  ];
+  final dayName = days[d.weekday - 1];
+  final monthName = months[d.month - 1];
+  return '$dayName، ${d.day} $monthName ${d.year}';
+}
+
+/// هل انقضت المناسبة؟ (تعتبر منتهية بعد انقضاء يومها بالكامل 23:59:59)
 bool _isPastOccasion(Occasion o) {
-  final raw = o.date.trim();
-  if (raw.isEmpty) return false;
-  final d = DateTime.tryParse(raw.replaceAll('/', '-'));
+  final d = _parseOccasionDate(o.date);
   if (d == null) return false;
-  return d.isBefore(DateTime.now());
+  final endOfDay = DateTime(d.year, d.month, d.day, 23, 59, 59);
+  return endOfDay.isBefore(DateTime.now());
 }
