@@ -1399,245 +1399,193 @@ class _AgriConsultationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final c = consultation;
-    final isMine = c.userId == currentUserId;
+    final isDark = theme.brightness == Brightness.dark;
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
+    return Material(
+      color: theme.colorScheme.surface,
+      borderRadius: BorderRadius.circular(16),
+      elevation: 0.5,
+      shadowColor: Colors.black.withValues(alpha: 0.04),
+      child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: c.hasAnswer
+                  ? kAgriColor.withValues(alpha: 0.3)
+                  : theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+            ),
           ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // الهيدر: التصنيف + المحصول + السائل + الوقت
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: kAgriColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      c.category,
+                      style: const TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w900,
+                        color: kAgriColor,
+                      ),
+                    ),
+                  ),
+                  if (c.cropName.isNotEmpty) ...[
+                    const SizedBox(width: 6),
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        '🌾 ${c.cropName}',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ),
+                    ),
+                  ],
+                  if (c.userName.isNotEmpty) ...[
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        'السائل: ${c.userName}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w700,
+                          color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+                        ),
+                      ),
+                    ),
+                  ],
+                  const Spacer(),
+                  Text(
+                    relativeTimeLabelAr(c.createdAt),
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+
+              // نص السؤال مختصر (سطرين كحد أقصى)
+              Text(
+                c.question,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w800,
+                  height: 1.4,
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              // شريط الحالة والتفاعل السفلي
+              Row(
+                children: [
+                  if (c.hasAnswer)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
                       decoration: BoxDecoration(
                         color: kAgriColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: Text(
-                        c.category,
-                        style: const TextStyle(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w900,
-                          color: kAgriColor,
-                        ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.check_circle_rounded, size: 13, color: kAgriColor),
+                          const SizedBox(width: 4),
+                          Text(
+                            'تم رد المستشار (${c.responderTitle})',
+                            style: const TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w800,
+                              color: kAgriColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.hourglass_top_rounded, size: 12, color: Colors.orange),
+                          const SizedBox(width: 4),
+                          Text(
+                            'بانتظار رد المستشار',
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w800,
+                              color: isDark ? Colors.amber.shade300 : Colors.orange.shade900,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    if (c.cropName.isNotEmpty) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          '🌾 ${c.cropName}',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            color: theme.colorScheme.onSurface,
-                          ),
-                        ),
-                      ),
-                    ],
-                    const Spacer(),
+                  if (c.images.isNotEmpty) ...[
+                    const SizedBox(width: 8),
+                    Icon(Icons.photo_library_outlined,
+                        size: 13, color: theme.colorScheme.onSurfaceVariant),
+                    const SizedBox(width: 3),
                     Text(
-                      relativeTimeLabelAr(c.createdAt),
+                      '${c.images.length}',
                       style: TextStyle(
                         fontSize: 10.5,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.bold,
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  c.question,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w900,
-                    height: 1.4,
-                  ),
-                ),
-                if (c.details.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    c.details,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.onSurfaceVariant,
-                      height: 1.5,
-                    ),
-                  ),
-                ],
-                if (c.images.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  ConsultationImageGallery(images: c.images, thumbHeight: 52),
-                ],
-                const SizedBox(height: 10),
-                // صندوق رد المستشار الزراعي
-                if (c.hasAnswer) ...[
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: kAgriColor.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                          color: kAgriColor.withValues(alpha: 0.3)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.verified_rounded,
-                                size: 14, color: kAgriColor),
-                            const SizedBox(width: 5),
-                            Text(
-                              'رد المستشار الزراعي (${c.responderTitle})',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w900,
-                                fontSize: 12,
-                                color: kAgriColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          c.answer,
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 12.5,
-                            height: 1.6,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ] else ...[
-                  Text(
-                    'بانتظار رد المستشار الزراعي',
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w700,
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-                if (showStatus) ...[
-                  const SizedBox(height: 10),
-                  Row(
+                  const Spacer(),
+                  const Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: c.isApproved
-                              ? AppColors.success.withValues(alpha: 0.12)
-                              : Colors.orange.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: c.isApproved
-                                ? AppColors.success.withValues(alpha: 0.3)
-                                : Colors.orange.withValues(alpha: 0.3),
-                          ),
-                        ),
-                        child: Text(
-                          c.isApproved ? 'معتمدة ومنشورة' : 'بانتظار المراجعة',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            color: c.isApproved
-                                ? AppColors.success
-                                : Colors.orange,
-                          ),
+                      Text(
+                        'التفاصيل والردود',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: kAgriColor,
                         ),
                       ),
-                      const Spacer(),
-                      if (c.userName.isNotEmpty && !isMine)
-                        Text(
-                          'السائل: ${c.userName}',
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w600,
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
+                      SizedBox(width: 2),
+                      Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        size: 11,
+                        color: kAgriColor,
+                      ),
                     ],
                   ),
                 ],
-                if ((isMine || isAgriAdmin) && onEdit != null) ...[
-                  const SizedBox(height: 8),
-                  OwnerActions(
-                    keyTag: 'agri-consult-${c.id}',
-                    ownerId: c.userId,
-                    currentUserId: currentUserId,
-                    isAdmin: isAgriAdmin,
-                    itemName: 'الاستشارة',
-                    editLabel: 'تعديل السؤال',
-                    deleteLabel: 'حذف السؤال',
-                    onEdit: onEdit ?? () {},
-                    onDelete: onDelete ?? () async => false,
-                  ),
-                ],
-                if (isAgriAdmin && onAnswer != null) ...[
-                  const SizedBox(height: 10),
-                  Align(
-                    alignment: AlignmentDirectional.centerEnd,
-                    child: FilledButton.icon(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: kAgriColor,
-                        foregroundColor: Colors.white,
-                        visualDensity: VisualDensity.compact,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      onPressed: onAnswer,
-                      icon: const Icon(Icons.reply_rounded, size: 16),
-                      label: Text(
-                        c.hasAnswer ? 'تعديل الرد' : 'الرد على الاستشارة',
-                        style: const TextStyle(
-                            fontSize: 12, fontWeight: FontWeight.w800),
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

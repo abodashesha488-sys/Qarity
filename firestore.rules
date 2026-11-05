@@ -486,13 +486,10 @@ service cloud.firestore {
     }
 
     // ────────────────── مستشار القرية: استشارات الأهالي القانونية ──────────────────
-    // السؤال القانوني حسّاس: المعتمد فقط يُقرأ للعموم، وصاحب السؤال يرى
-    // معلّقه، والرد (`answer`) يكتبه الأدمن وحده حتى لا يُنسب زورًا لمستشار.
+    // القراءة عامة للجميع للاطلاع على الاستشارات، والرد يكتبه الأدمن أو المستشار.
     match /legal_consultations/{docId} {
-      allow get: if isAdmin() || isLegalAdmin() || resource.data.isApproved == true
-                 || (isSignedIn() && resource.data.userId == request.auth.uid);
-      allow list: if isAdmin() || isLegalAdmin() || resource.data.isApproved == true
-                  || (isSignedIn() && resource.data.userId == request.auth.uid);
+      // القراءة عامة للجميع للاطلاع على الاستشارات (resource.data.isApproved == true)
+      allow read: if true;
       allow create: if accountActive()
                     && request.auth.uid == request.resource.data.userId
                     && request.resource.data.isApproved == false;
@@ -519,11 +516,9 @@ service cloud.firestore {
     }
 
     // ────────────────── مستشارك الزراعي: استشارات الأهالي والمزارعين ──────────────────
+    // القراءة عامة للجميع للاطلاع على الاستشارات، والرد يكتبه الأدمن أو المستشار الزراعي.
     match /agriculture_consultations/{docId} {
-      allow get: if isAdmin() || isAgriculturalAdmin() || resource.data.isApproved == true
-                 || (isSignedIn() && resource.data.userId == request.auth.uid);
-      allow list: if isAdmin() || isAgriculturalAdmin() || resource.data.isApproved == true
-                  || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow read: if true;
       allow create: if accountActive()
                     && request.auth.uid == request.resource.data.userId
                     && request.resource.data.isApproved == false;

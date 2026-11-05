@@ -634,7 +634,8 @@ class _ConsultationsTab extends StatefulWidget {
 class _ConsultationsTabState extends State<_ConsultationsTab> {
   late final LegalConsultationService _service =
       widget.service ?? LegalConsultationService();
-  late final Stream<List<LegalConsultation>> _feed = _service.watchApproved();
+  late final Stream<List<LegalConsultation>> _feed =
+      _service.watchApproved();
   bool _mineOnly = false;
   String _myUid = '';
   Stream<List<LegalConsultation>>? _mineStream;
@@ -1350,7 +1351,7 @@ class _ConsultationsTabState extends State<_ConsultationsTab> {
       );
 }
 
-/// بطاقة استشارة: السؤال ثم الرد إن كُتب.
+/// بطاقة استشارة مختصرة ومنسقة لعرض كميات كبيرة بسلاسة
 class ConsultationCard extends StatelessWidget {
   const ConsultationCard({
     super.key,
@@ -1377,137 +1378,176 @@ class ConsultationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final c = consultation;
-    return Card(
-      elevation: 0,
-      margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-        side: BorderSide(color: kLegalAdvisorColor.withValues(alpha: 0.28)),
-      ),
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Material(
+      color: theme.colorScheme.surface,
+      borderRadius: BorderRadius.circular(16),
+      elevation: 0.5,
+      shadowColor: Colors.black.withValues(alpha: 0.04),
       child: InkWell(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: c.hasAnswer
+                  ? const Color(0xFF2E7D32).withValues(alpha: 0.25)
+                  : kLegalAdvisorColor.withValues(alpha: 0.18),
+            ),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // الهيدر: التصنيف + السائل + الوقت
               Row(
                 children: [
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
+                      color: kLegalAdvisorColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      c.category,
+                      style: const TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w900,
                         color: kLegalAdvisorColor,
-                        borderRadius: BorderRadius.circular(7)),
-                    child: Text(c.category,
-                        style: const TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.white)),
-                  ),
-                  const Spacer(),
-                  Text(relativeTimeLabelAr(c.createdAt),
-                      style: TextStyle(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w700,
-                          color: theme.colorScheme.onSurfaceVariant)),
-                ],
-              ),
-              const SizedBox(height: 9),
-              Text(c.question,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w900, fontSize: 14, height: 1.5)),
-              if (c.details.isNotEmpty) ...[
-                const SizedBox(height: 6),
-                Text(c.details,
-                    style: TextStyle(
-                        fontSize: 12.5,
-                        height: 1.65,
-                        fontWeight: FontWeight.w600,
-                        color: theme.colorScheme.onSurfaceVariant)),
-              ],
-              if (c.images.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                ConsultationImageGallery(images: c.images, thumbHeight: 52),
-              ],
-              if (c.hasAnswer) ...[
-                const SizedBox(height: 11),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                      color: kLegalAdvisorColor.withValues(alpha: 0.07),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                          color: kLegalAdvisorColor.withValues(alpha: 0.3))),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.verified_rounded,
-                              size: 14, color: legalInk(theme.brightness)),
-                          const SizedBox(width: 5),
-                          Text('رد المستشار (${c.responderTitle})',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 12,
-                                  color: legalInk(theme.brightness))),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(c.answer,
-                          style: const TextStyle(
-                              fontSize: 13,
-                              height: 1.7,
-                              fontWeight: FontWeight.w600)),
-                    ],
-                  ),
-                ),
-              ] else ...[
-                const SizedBox(height: 9),
-                Text('بانتظار رد المستشار',
-                    style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w800,
-                        color: theme.colorScheme.onSurfaceVariant)),
-              ],
-              if (showStatus) ...[
-                const SizedBox(height: 10),
-                _StatusMark(approved: c.isApproved),
-                const SizedBox(height: 10),
-                OwnerActions(
-                  keyTag: 'consult-${c.id}',
-                  ownerId: c.userId,
-                  currentUserId: currentUserId,
-                  isAdmin: isLegalAdmin,
-                  itemName: 'استشارتك',
-                  editLabel: 'تعديل السؤال',
-                  deleteLabel: 'حذف السؤال',
-                  onEdit: onEdit ?? () {},
-                  onDelete: onDelete ?? () async => false,
-                ),
-              ],
-              if (isLegalAdmin && onAnswer != null) ...[
-                const SizedBox(height: 10),
-                Align(
-                  alignment: AlignmentDirectional.centerEnd,
-                  child: FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF2E7D32),
-                      foregroundColor: Colors.white,
-                      visualDensity: VisualDensity.compact,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    icon: const Icon(Icons.gavel_rounded, size: 16),
-                    label:
-                        Text(c.hasAnswer ? 'تعديل الرد' : 'الرد على الاستشارة'),
-                    onPressed: onAnswer,
                   ),
+                  if (c.userName.isNotEmpty) ...[
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        'السائل: ${c.userName}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w700,
+                          color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+                        ),
+                      ),
+                    ),
+                  ],
+                  const Spacer(),
+                  Text(
+                    relativeTimeLabelAr(c.createdAt),
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+
+              // نص السؤال مختصر (سطرين كحد أقصى)
+              Text(
+                c.question,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13.5,
+                  height: 1.4,
                 ),
-              ],
+              ),
+
+              const SizedBox(height: 10),
+
+              // شريط الحالة والتفاعل السفلي
+              Row(
+                children: [
+                  if (c.hasAnswer)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2E7D32).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.check_circle_rounded,
+                              size: 13, color: Color(0xFF2E7D32)),
+                          const SizedBox(width: 4),
+                          Text(
+                            'تم الرد (${c.responderTitle})',
+                            style: const TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF2E7D32),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.hourglass_top_rounded,
+                              size: 12, color: Colors.orange),
+                          const SizedBox(width: 4),
+                          Text(
+                            'بانتظار رد المستشار',
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w800,
+                              color: isDark ? Colors.amber.shade300 : Colors.orange.shade900,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  if (c.images.isNotEmpty) ...[
+                    const SizedBox(width: 8),
+                    Icon(Icons.photo_library_outlined,
+                        size: 13, color: theme.colorScheme.onSurfaceVariant),
+                    const SizedBox(width: 3),
+                    Text(
+                      '${c.images.length}',
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                  const Spacer(),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'التفاصيل والردود',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: legalInk(theme.brightness),
+                        ),
+                      ),
+                      const SizedBox(width: 2),
+                      Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        size: 11,
+                        color: legalInk(theme.brightness),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ],
           ),
         ),
