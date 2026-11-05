@@ -735,19 +735,15 @@ class _VillageClinicDetailScreenState extends State<VillageClinicDetailScreen> {
             accentDark: _tealDark,
             imageUrl: clinic.imageUrl,
             icon: Icons.add_business_rounded,
-            onShare: () => ShareService.shareText(
-                title: '🏥 ${clinic.name}',
-                body: [
-                  if (clinic.specialty.isNotEmpty)
-                    'التخصص: ${clinic.specialty}',
-                  if (clinic.ownerName.isNotEmpty)
-                    'الطبيب: ${clinic.ownerName}',
-                  'الحالة: ${isOpen ? "مفتوحة الآن" : "مغلقة الآن"}',
-                  'أيام العمل: ${clinic.workDaysSummary}',
-                  'المواعيد: ${clinic.shiftsSummary}',
-                  if (clinic.address.isNotEmpty) 'العنوان: ${clinic.address}',
-                  if (clinic.phone.isNotEmpty) 'هاتف: ${clinic.phone}',
-                ].join('\n')),
+            onShare: () => ShareService.shareClinicDetails(
+              clinicName: clinic.name,
+              doctorName: clinic.ownerName,
+              specialty: clinic.specialty,
+              phone: clinic.phone,
+              address: clinic.address,
+              workingHours: '${clinic.workDaysSummary} • ${clinic.shiftsSummary}',
+              imageUrl: clinic.imageUrl,
+            ),
           ),
           SliverToBoxAdapter(
             child: Padding(

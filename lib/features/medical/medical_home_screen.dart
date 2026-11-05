@@ -5,6 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/product_categories.dart';
 import '../../core/utils/app_image_cache.dart';
+import '../../core/utils/contact_links.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/utils/launch_link.dart';
 import '../../models/data_models.dart';
@@ -1069,6 +1070,15 @@ class _OpenRequestsList extends StatelessWidget {
     }
   }
 
+  void _showCompatibleDonorsSheet(BuildContext context, BloodRequest r) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _CompatibleDonorsSheet(request: r),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -1171,30 +1181,47 @@ class _OpenRequestsList extends StatelessWidget {
                       alignment: AlignmentDirectional.centerStart,
                       child: Wrap(
                         spacing: 8,
+                        runSpacing: 6,
                         children: [
+                          ElevatedButton.icon(
+                            onPressed: () =>
+                                ShareService.shareEmergencyBlood(request: r),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red.shade700,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 8),
+                              elevation: 0,
+                            ),
+                            icon: const Icon(Icons.campaign_rounded, size: 16),
+                            label: const Text('استغاثة واتساب',
+                                style: TextStyle(
+                                    fontSize: 12, fontWeight: FontWeight.bold)),
+                          ),
                           OutlinedButton.icon(
-                            onPressed: () => ShareService.shareText(
-                                title:
-                                    '🩸 طلب تبرع بالدم — فصيلة ${r.bloodType.code}',
-                                body: [
-                                  if (r.patientName.isNotEmpty)
-                                    'المريض: ${r.patientName}',
-                                  'الوحدات المطلوبة: ${r.units}',
-                                  if (r.hospital.isNotEmpty)
-                                    'المكان: ${r.hospital}',
-                                  if (r.phone.isNotEmpty)
-                                    'للتواصل: ${r.phone}',
-                                ].join('\n')),
-                            icon: const Icon(Icons.share_rounded, size: 16),
-                            label: const Text('مشاركة الطلب'),
+                            onPressed: () =>
+                                _showCompatibleDonorsSheet(context, r),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFFC62828),
+                              side: const BorderSide(color: Color(0xFFC62828)),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 8),
+                            ),
+                            icon: const Icon(Icons.people_alt_rounded, size: 16),
+                            label: const Text('المتبرعون المتطابقون',
+                                style: TextStyle(
+                                    fontSize: 12, fontWeight: FontWeight.bold)),
                           ),
                           if (r.phone.isNotEmpty)
                             OutlinedButton.icon(
                               onPressed: () => _call(r.phone),
                               style: OutlinedButton.styleFrom(
-                                  foregroundColor: const Color(0xFF00897B)),
+                                  foregroundColor: const Color(0xFF00897B),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 8)),
                               icon: const Icon(Icons.call_rounded, size: 16),
-                              label: const Text('اتصال'),
+                              label: const Text('اتصال',
+                                  style: TextStyle(fontSize: 12)),
                             ),
                           if (mine)
                             TextButton.icon(
@@ -1203,12 +1230,14 @@ class _OpenRequestsList extends StatelessWidget {
                                   await _service.closeRequest(r.id);
                                   onSnackbar('تم إغلاق الطلب');
                                 } catch (_) {
-                                  onSnackbar('تعذّر إغلاق الطلب — تحقّق من الصلاحيات أو من الاتصال');
+                                  onSnackbar(
+                                      'تعذّر إغلاق الطلب — تحقّق من الصلاحيات أو من الاتصال');
                                 }
                               },
                               icon: const Icon(Icons.check_circle_outline_rounded,
                                   size: 16),
-                              label: const Text('تمت الاستجابة'),
+                              label: const Text('تمت الاستجابة',
+                                  style: TextStyle(fontSize: 12)),
                             ),
                         ],
                       ),
@@ -1245,6 +1274,270 @@ class _OpenRequestsList extends StatelessWidget {
           Text(text, style: const TextStyle(fontSize: 12)),
         ],
       );
+}
+
+/// شيت عرض المتبرعين المتطابقين بالقرية مع الحالة الطارئة
+class _CompatibleDonorsSheet extends StatelessWidget {
+  const _CompatibleDonorsSheet({required this.request});
+  final BloodRequest request;
+
+  static final BloodBankService _service = BloodBankService();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.85,
+      ),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.people_alt_rounded,
+                      color: Colors.red, size: 22),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'المتبرعون المتطابقون بالقرية',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        'للمريض: ${request.patientName.isNotEmpty ? request.patientName : 'حالة طلب دم'} • فصيلة ${request.bloodType.code}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.red.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline_rounded,
+                      size: 16, color: Colors.red),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'الفصائل التي يمكنها التبرع طبياً: ${request.bloodType.compatibleSummary}',
+                      style: const TextStyle(
+                          fontSize: 11.5, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: StreamBuilder<List<BloodDonor>>(
+                stream: _service.getApprovedDonorsStream(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  final allDonors = snapshot.data ?? [];
+                  final matched = allDonors
+                      .where(
+                          (d) => request.bloodType.canReceiveFrom(d.bloodType))
+                      .toList()
+                    ..sort((a, b) {
+                      final aExact = a.bloodType == request.bloodType ? 0 : 1;
+                      final bExact = b.bloodType == request.bloodType ? 0 : 1;
+                      return aExact.compareTo(bExact);
+                    });
+
+                  if (matched.isEmpty) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.person_search_rounded,
+                                size: 54,
+                                color: Colors.grey.withValues(alpha: 0.5)),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'لا يوجد متبرعون مسجلون بهذه الفصائل حالياً',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 14),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'يمكنك نشر استغاثة فورية بالزر أدناه لمجموعات الواتساب لتصل لأهالي القرية فوراً.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: theme.colorScheme.onSurfaceVariant),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+
+                  return ListView.separated(
+                    itemCount: matched.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      final donor = matched[index];
+                      final isExact = donor.bloodType == request.bloodType;
+                      return Card(
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          side: BorderSide(
+                            color: isExact
+                                ? Colors.red.withValues(alpha: 0.4)
+                                : theme.dividerColor.withValues(alpha: 0.5),
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 10),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: isExact
+                                      ? Colors.red
+                                      : Colors.red.shade100,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  donor.bloodType.code,
+                                  style: TextStyle(
+                                    color: isExact
+                                        ? Colors.white
+                                        : Colors.red.shade900,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      donor.name,
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14),
+                                    ),
+                                    Text(
+                                      isExact
+                                          ? 'فصيلة مطابقة تماماً'
+                                          : 'فصيلة متوافقة طبياً',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: isExact
+                                            ? Colors.red.shade700
+                                            : Colors.grey.shade600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (donor.phone.isNotEmpty) ...[
+                                IconButton(
+                                  icon: const Icon(Icons.call_rounded,
+                                      color: Color(0xFF00897B), size: 20),
+                                  tooltip: 'اتصال هاتف',
+                                  onPressed: () => launchPhoneCall(donor.phone),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.chat_bubble_rounded,
+                                      color: Colors.teal, size: 20),
+                                  tooltip: 'واتساب',
+                                  onPressed: () {
+                                    final wa = egyptianWhatsAppUrl(donor.phone);
+                                    if (wa != null) launchWhatsAppUrl(wa);
+                                  },
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                ShareService.shareEmergencyBlood(request: request);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red.shade700,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              icon: const Icon(Icons.campaign_rounded, size: 20),
+              label: const Text(
+                'نشر نداء استغاثة عاجل على واتساب',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _DonorCard extends StatelessWidget {

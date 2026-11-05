@@ -39,6 +39,7 @@ dependencies:
   timezone: ^0.10.0
   audioplayers: ^6.8.1
   package_info_plus: ^10.2.1
+  speech_to_text: ^7.5.0
 
 dev_dependencies:
   flutter_test:

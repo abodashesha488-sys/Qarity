@@ -9,6 +9,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../core/constants/app_colors.dart';
 import '../models/data_models.dart';
+import '../models/medical_models.dart';
 import '../widgets/obituary_share_card.dart';
 
 /// يولّد بطاقة تعزية كصورة عالية الجودة للمشاركة على السوشيال ميديا
@@ -120,6 +121,70 @@ class ShareService {
       imageUrls: imageUrls,
       details: details,
       link: link,
+    );
+  }
+
+  /// مشاركة استغاثة عاجلة لطلب دم مصممة خصيصاً لمجموعات الواتساب ومواقع التواصل
+  static Future<void> shareEmergencyBlood({
+    required BloodRequest request,
+  }) async {
+    final buffer = StringBuffer();
+    buffer.writeln('🚨 *نداء استغاثة عاجل — مطلوب متبرعين بالدم فوراً* 🩸');
+    buffer.writeln('قرية أبوديشيشة وضواحيها');
+    buffer.writeln('━━━━━━━━━━━━━━━━━━━━');
+    buffer.writeln('▫️ *الفصيلة المطلوبة:* ${request.bloodType.code} (${request.bloodType.label})');
+    buffer.writeln('▫️ *عدد الوحدات المطلوبة:* ${request.units} كيس دم');
+    if (request.patientName.trim().isNotEmpty) {
+      buffer.writeln('▫️ *اسم المريض:* ${request.patientName.trim()}');
+    }
+    if (request.hospital.trim().isNotEmpty) {
+      buffer.writeln('▫️ *المستشفى / المكان:* ${request.hospital.trim()}');
+    }
+    buffer.writeln('▫️ *درجة الاستعجال:* ${request.urgency}');
+    if (request.phone.trim().isNotEmpty) {
+      buffer.writeln('📞 *للتواصل الفوري:* ${request.phone.trim()}');
+    }
+    if (request.notes.trim().isNotEmpty) {
+      buffer.writeln('📝 *ملاحظات إضافية:* ${request.notes.trim()}');
+    }
+    buffer.writeln('━━━━━━━━━━━━━━━━━━━━');
+    buffer.writeln('💡 *فصائل الدم المتوافقة التي يمكنها التبرع:*');
+    buffer.writeln('👉 ${request.bloodType.compatibleSummary}');
+    buffer.writeln();
+    buffer.writeln('﴿ وَمَنْ أَحْيَاهَا فَكَأَنَّمَا أَحْيَا النَّاسَ جَمِيعًا ﴾');
+    buffer.writeln();
+    buffer.write(appSignature);
+
+    await SharePlus.instance.share(
+      ShareParams(
+        text: buffer.toString().trim(),
+        subject: 'نداء استغاثة عاجل للتبرع بالدم (${request.bloodType.code})',
+      ),
+    );
+  }
+
+  /// مشاركة تفاصيل عيادة أو مركز طبي باحترافية
+  static Future<void> shareClinicDetails({
+    required String clinicName,
+    required String doctorName,
+    required String specialty,
+    required String phone,
+    String? address,
+    String? workingHours,
+    String? imageUrl,
+  }) async {
+    final details = <String, String>{
+      'الطبيب': doctorName,
+      'التخصص': specialty,
+      if (phone.isNotEmpty) 'الهاتف': phone,
+      if (address != null && address.isNotEmpty) 'العنوان': address,
+      if (workingHours != null && workingHours.isNotEmpty) 'مواعيد العمل': workingHours,
+    };
+
+    await shareContent(
+      title: 'عيادة $clinicName',
+      details: details,
+      imageUrls: (imageUrl != null && imageUrl.isNotEmpty) ? [imageUrl] : const [],
     );
   }
 

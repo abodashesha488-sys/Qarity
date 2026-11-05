@@ -261,6 +261,9 @@ class Donation {
   final String? userRole;
   final String? userSellerType;
   final DateTime? createdAt;
+  final double? targetAmount;
+  final double? collectedAmount;
+  final String? supervisorName;
 
   const Donation({
     required this.id,
@@ -276,6 +279,9 @@ class Donation {
     this.userRole,
     this.userSellerType,
     this.createdAt,
+    this.targetAmount,
+    this.collectedAmount,
+    this.supervisorName,
   });
 
   factory Donation.fromJson(Map<String, dynamic> json, String docId) {
@@ -294,6 +300,9 @@ class Donation {
       userRole: json['userRole'] as String?,
       userSellerType: json['userSellerType'] as String?,
       createdAt: json['createdAt'] != null ? tsOrNow(json['createdAt']) : null,
+      targetAmount: (json['targetAmount'] as num?)?.toDouble(),
+      collectedAmount: (json['collectedAmount'] as num?)?.toDouble(),
+      supervisorName: json['supervisorName'] as String?,
     );
   }
 
@@ -309,6 +318,9 @@ class Donation {
         'isApproved': isApproved,
         if (userRole != null) 'userRole': userRole,
         if (userSellerType != null) 'userSellerType': userSellerType,
+        if (targetAmount != null) 'targetAmount': targetAmount,
+        if (collectedAmount != null) 'collectedAmount': collectedAmount,
+        if (supervisorName != null) 'supervisorName': supervisorName,
         'createdAt': createdAt != null
             ? Timestamp.fromDate(createdAt!)
             : FieldValue.serverTimestamp(),
@@ -318,4 +330,11 @@ class Donation {
   String get statusLabel => isAvailable ? 'متاح للتبرّع' : 'تم تسليمها';
   Color get statusColor => isAvailable ? const Color(0xFFEF6C00) : Colors.blueGrey;
   String get imageUrl => imageUrls.isNotEmpty ? imageUrls.first : '';
+
+  bool get hasFinancialGoal => (targetAmount ?? 0) > 0;
+  double get progressRatio =>
+      hasFinancialGoal ? ((collectedAmount ?? 0) / targetAmount!).clamp(0.0, 1.0) : 0.0;
+  int get progressPercent => (progressRatio * 100).toInt();
+  double get remainingAmount =>
+      hasFinancialGoal ? (targetAmount! - (collectedAmount ?? 0)).clamp(0.0, double.infinity) : 0.0;
 }

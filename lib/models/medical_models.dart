@@ -23,6 +23,43 @@ enum BloodType {
         (e) => e.code == c,
         orElse: () => BloodType.oPos,
       );
+
+  /// الفصائل التي يمكن للشخص صاحب هذه الفصيلة أن يستقبل الدم منها
+  List<BloodType> get compatibleDonorTypes {
+    switch (this) {
+      case BloodType.oNeg:
+        return const [BloodType.oNeg];
+      case BloodType.oPos:
+        return const [BloodType.oPos, BloodType.oNeg];
+      case BloodType.aNeg:
+        return const [BloodType.aNeg, BloodType.oNeg];
+      case BloodType.aPos:
+        return const [BloodType.aPos, BloodType.aNeg, BloodType.oPos, BloodType.oNeg];
+      case BloodType.bNeg:
+        return const [BloodType.bNeg, BloodType.oNeg];
+      case BloodType.bPos:
+        return const [BloodType.bPos, BloodType.bNeg, BloodType.oPos, BloodType.oNeg];
+      case BloodType.abNeg:
+        return const [BloodType.abNeg, BloodType.aNeg, BloodType.bNeg, BloodType.oNeg];
+      case BloodType.abPos:
+        return const [
+          BloodType.abPos,
+          BloodType.abNeg,
+          BloodType.aPos,
+          BloodType.aNeg,
+          BloodType.bPos,
+          BloodType.bNeg,
+          BloodType.oPos,
+          BloodType.oNeg,
+        ];
+    }
+  }
+
+  /// هل يمكن استقبال الدم من فصيلة المتبرع المعطاة؟
+  bool canReceiveFrom(BloodType donor) => compatibleDonorTypes.contains(donor);
+
+  /// ملخص نصي للفصائل المتوافقة (مثل: "A+, A-, O+, O-")
+  String get compatibleSummary => compatibleDonorTypes.map((e) => e.code).join('، ');
 }
 
 /// فئات العيادات (للمركز الخيري والعيادات والصيدليات).

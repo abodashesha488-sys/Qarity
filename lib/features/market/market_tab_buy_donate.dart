@@ -1514,6 +1514,41 @@ class _DonationsTabState extends State<_DonationsTab> {
                                       theme.colorScheme.onSurfaceVariant,
                                   height: 1.45)),
                         ],
+                        if (d.hasFinancialGoal) ...[
+                          const SizedBox(height: 5),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: LinearProgressIndicator(
+                              value: d.progressRatio,
+                              minHeight: 5,
+                              backgroundColor: Colors.grey.shade200,
+                              valueColor: const AlwaysStoppedAnimation<Color>(
+                                  Color(0xFF2E7D32)),
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'تم جمع ${(d.collectedAmount ?? 0).toInt()} من ${d.targetAmount!.toInt()} ج.م',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF2E7D32),
+                                ),
+                              ),
+                              Text(
+                                '${d.progressPercent}%',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF2E7D32),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                         const SizedBox(height: 6),
                         Row(
                           children: [
@@ -1637,6 +1672,12 @@ class _DonationDetailPageState extends State<_DonationDetailPage> {
                 title: '🎁 تبرّع: ${d.title}',
                 body: [
                   'تصنيف: ${d.category}',
+                  if (d.hasFinancialGoal) ...[
+                    'المبلغ المستهدف: ${d.targetAmount!.toInt()} ج.م',
+                    'تم جمع: ${(d.collectedAmount ?? 0).toInt()} ج.م (${d.progressPercent}%)',
+                    if (d.supervisorName != null && d.supervisorName!.isNotEmpty)
+                      'المشرف على الحالة: ${d.supervisorName}',
+                  ],
                   if (d.description.isNotEmpty) d.description,
                   '— من قرية أبوديشيشة',
                 ].join('\n')),
@@ -1662,6 +1703,105 @@ class _DonationDetailPageState extends State<_DonationDetailPage> {
                   color: _donateInk),
             ],
           ),
+          if (d.hasFinancialGoal) ...[
+            const SizedBox(height: 12),
+            Card(
+              elevation: 0,
+              color: const Color(0xFFE8F5E9),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: const BorderSide(color: Color(0xFF81C784)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.volunteer_activism_rounded,
+                            color: Color(0xFF2E7D32), size: 20),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'حالة مساهمة وتبرع خيري',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: Color(0xFF2E7D32)),
+                        ),
+                        const Spacer(),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF2E7D32),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'تم جمع ${d.progressPercent}%',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: LinearProgressIndicator(
+                        value: d.progressRatio,
+                        minHeight: 8,
+                        backgroundColor: Colors.white,
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                            Color(0xFF2E7D32)),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'المجموع: ${(d.collectedAmount ?? 0).toInt()} ج.م',
+                          style: const TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.w700),
+                        ),
+                        Text(
+                          'الهدف: ${d.targetAmount!.toInt()} ج.م',
+                          style: const TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.w700),
+                        ),
+                        Text(
+                          'المتبقي: ${d.remainingAmount.toInt()} ج.م',
+                          style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFFC62828)),
+                        ),
+                      ],
+                    ),
+                    if (d.supervisorName != null &&
+                        d.supervisorName!.trim().isNotEmpty) ...[
+                      const Divider(height: 16),
+                      Row(
+                        children: [
+                          const Icon(Icons.verified_user_rounded,
+                              size: 15, color: Color(0xFF2E7D32)),
+                          const SizedBox(width: 6),
+                          Text(
+                            'اللجنة / المشرف المسؤول: ${d.supervisorName!.trim()}',
+                            style: const TextStyle(
+                                fontSize: 11.5, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 10),
           Card(
             elevation: 0,
@@ -1717,8 +1857,11 @@ class _DonationDetailPageState extends State<_DonationDetailPage> {
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14)),
                     icon: const Icon(Icons.call_rounded, size: 18),
-                    label: const Text('اتصال بالمتبرّع',
-                        style: TextStyle(fontWeight: FontWeight.w800)),
+                    label: Text(
+                        d.hasFinancialGoal
+                            ? 'اتصال بمسؤول الحالة'
+                            : 'اتصال بالمتبرّع',
+                        style: const TextStyle(fontWeight: FontWeight.w800)),
                   ),
                 ),
                 const SizedBox(width: 10),
