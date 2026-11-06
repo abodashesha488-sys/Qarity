@@ -557,8 +557,8 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
                   ),
                 ],
 
-                // 3. العنوان والمحتوى (دون تكرار النص إذا تطابق العنوان والمحتوى)
-                if (hasTitle) ...[
+                // 3. العنوان والمحتوى (عرض متناسق دون تكرار ودون إخفاء)
+                if (hasTitle && !isContentSame) ...[
                   const SizedBox(height: 8),
                   Text(
                     post.title,
@@ -571,7 +571,7 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
-                if (!isContentSame && post.content.trim().isNotEmpty) ...[
+                if (post.content.trim().isNotEmpty) ...[
                   const SizedBox(height: 6),
                   Text(
                     post.content,
@@ -580,7 +580,19 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
                       fontSize: 13.5,
                       color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
                     ),
-                    maxLines: 3,
+                    maxLines: hasTitle && !isContentSame ? 3 : 5,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ] else if (hasTitle) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    post.title,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      height: 1.6,
+                      fontSize: 13.5,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
+                    ),
+                    maxLines: 5,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
@@ -601,6 +613,7 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
                         url: post.imageUrl!,
                         width: double.infinity,
                         height: 190,
+                        fit: BoxFit.cover,
                         placeholder: (context, url) => Container(
                           height: 190,
                           color: theme.colorScheme.surfaceContainerHighest,

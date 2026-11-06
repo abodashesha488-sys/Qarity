@@ -377,7 +377,7 @@ class _ForumPostDetailScreenState extends State<ForumPostDetailScreen> {
                           color: theme.colorScheme.secondary)),
                 ),
               ),
-            if (hasDetailTitle)
+            if (hasDetailTitle && !isContentSame)
               Padding(
                 padding: const EdgeInsets.only(bottom: 10),
                 child: Text(
@@ -385,9 +385,14 @@ class _ForumPostDetailScreenState extends State<ForumPostDetailScreen> {
                   style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900, height: 1.3),
                 ),
               ),
-            if (!isContentSame && post.content.trim().isNotEmpty)
+            if (post.content.trim().isNotEmpty)
               Text(
                 post.content,
+                style: theme.textTheme.bodyLarge?.copyWith(height: 1.8, color: theme.colorScheme.onSurface),
+              )
+            else if (hasDetailTitle)
+              Text(
+                post.title,
                 style: theme.textTheme.bodyLarge?.copyWith(height: 1.8, color: theme.colorScheme.onSurface),
               ),
             if (post.imageUrl != null && post.imageUrl!.isNotEmpty) ...[

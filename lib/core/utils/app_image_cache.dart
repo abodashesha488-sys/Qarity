@@ -182,7 +182,8 @@ class AppImageCache {
 
     final optimizedUrl = ImageUploadService.optimizeUrl(
       trimmed,
-      width: targetWidth ?? (width != null ? (width * 2.5).ceil() : 800),
+      width: targetWidth ??
+          (width != null && width.isFinite ? (width * 2.5).ceil() : 800),
     );
 
     return CachedNetworkImage(

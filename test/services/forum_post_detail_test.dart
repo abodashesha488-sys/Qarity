@@ -75,4 +75,48 @@ void main() {
     final textWidget = tester.widget<Text>(commentText);
     expect(textWidget.style?.color, AppColors.textPrimary);
   });
+
+  testWidgets('منشور بتطابق العنوان والمحتوى وصورة لا يرمي استثناء ويعرض المحتوى', (tester) async {
+    final fake = FakeFirebaseFirestore();
+    final postId = 'post-same';
+    await fake.collection('forum_posts').doc(postId).set({
+      'userId': 'owner',
+      'userName': 'صاحب الموضوع',
+      'title': 'نص موحد للموضوع',
+      'content': 'نص موحد للموضوع',
+      'imageUrl': 'https://res.cloudinary.com/demo/image/upload/sample.jpg',
+      'comments': 0,
+      'isApproved': true,
+    });
+    final svc = ForumService(fake);
+
+    final post = ForumPost(
+      id: postId,
+      userId: 'owner',
+      userName: 'صاحب الموضوع',
+      title: 'نص موحد للموضوع',
+      content: 'نص موحد للموضوع',
+      imageUrl: 'https://res.cloudinary.com/demo/image/upload/sample.jpg',
+      createdAt: DateTime(2026),
+    );
+
+    final navKey = GlobalKey<NavigatorState>();
+    await tester.pumpWidget(MaterialApp(
+      theme: AppTheme.lightTheme,
+      navigatorKey: navKey,
+      home: const SizedBox.shrink(),
+    ));
+    navKey.currentState!.push(
+      MaterialPageRoute(
+        settings: RouteSettings(name: '/forum/detail', arguments: post),
+        builder: (_) => ForumPostDetailScreen(forumService: svc),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // لا استثناءات أثناء البناء حتى مع وجود صورة وعرض لانهائي وتطابق العنوان والمحتوى
+    expect(tester.takeException(), isNull);
+    expect(find.text('نص موحد للموضوع'), findsWidgets);
+  });
 }
