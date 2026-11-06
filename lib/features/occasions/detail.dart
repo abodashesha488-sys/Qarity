@@ -16,14 +16,17 @@ import '../../widgets/qurity_app_bar.dart';
 import 'add.dart';
 
 class OccasionDetailScreen extends StatefulWidget {
-  const OccasionDetailScreen({super.key});
+  const OccasionDetailScreen({super.key, this.service, this.engagement});
+
+  final OccasionService? service;
+  final EngagementService? engagement;
 
   @override
   State<OccasionDetailScreen> createState() => _OccasionDetailScreenState();
 }
 
 class _OccasionDetailScreenState extends State<OccasionDetailScreen> {
-  final OccasionService _service = OccasionService();
+  late final OccasionService _service = widget.service ?? OccasionService();
 
   bool _argumentsResolved = false;
   Occasion? _occasion;
@@ -128,7 +131,10 @@ class _OccasionDetailScreenState extends State<OccasionDetailScreen> {
       return RefreshIndicator(
         onRefresh: _refresh,
         child: _OccasionDetailContent(
-            occasion: occasion, ownerActions: _ownerActions(occasion)),
+          occasion: occasion,
+          ownerActions: _ownerActions(occasion),
+          engagement: widget.engagement,
+        ),
       );
     }
 
@@ -167,7 +173,10 @@ class _OccasionDetailScreenState extends State<OccasionDetailScreen> {
         return RefreshIndicator(
           onRefresh: _refresh,
           child: _OccasionDetailContent(
-              occasion: loaded, ownerActions: _ownerActions(loaded)),
+            occasion: loaded,
+            ownerActions: _ownerActions(loaded),
+            engagement: widget.engagement,
+          ),
         );
       },
     );
@@ -175,12 +184,15 @@ class _OccasionDetailScreenState extends State<OccasionDetailScreen> {
 }
 
 class _OccasionDetailContent extends StatelessWidget {
-  const _OccasionDetailContent({required this.occasion, this.ownerActions});
+  const _OccasionDetailContent({
+    required this.occasion,
+    this.ownerActions,
+    this.engagement,
+  });
 
   final Occasion occasion;
-
-  /// صفا تعديل المالك وحذفه — تبنيهما الشاشة الأم بحسب الجلسة.
   final Widget? ownerActions;
+  final EngagementService? engagement;
 
   @override
   Widget build(BuildContext context) {
@@ -212,7 +224,10 @@ class _OccasionDetailContent extends StatelessWidget {
                 label: _formatOccasionDateArabic(occasion.date),
                 color: theme.colorScheme.primary,
               ),
-            _AttendeesCountChip(occasionId: occasion.id),
+            _AttendeesCountChip(
+              occasionId: occasion.id,
+              engagement: engagement,
+            ),
           ],
         ),
         const SizedBox(height: 20),
@@ -267,7 +282,10 @@ class _OccasionDetailContent extends StatelessWidget {
         const SizedBox(height: 24),
         if (!_isPastOccasion(occasion))
           _AttendanceSection(
-              occasionId: occasion.id, occasionTitle: occasion.title),
+            occasionId: occasion.id,
+            occasionTitle: occasion.title,
+            engagement: engagement,
+          ),
         if (ownerActions != null) ...[
           const SizedBox(height: 20),
           ownerActions!,
@@ -278,21 +296,31 @@ class _OccasionDetailContent extends StatelessWidget {
 }
 
 class _AttendanceSection extends StatefulWidget {
-  const _AttendanceSection(
-      {required this.occasionId, required this.occasionTitle});
+  const _AttendanceSection({
+    required this.occasionId,
+    required this.occasionTitle,
+    this.engagement,
+  });
 
   final String occasionId;
   final String occasionTitle;
+  final EngagementService? engagement;
 
   @override
   State<_AttendanceSection> createState() => _AttendanceSectionState();
 }
 
 class _AttendanceSectionState extends State<_AttendanceSection> {
-  final EngagementService _engagement = EngagementService();
+  late final EngagementService _engagement =
+      widget.engagement ?? EngagementService();
 
   Future<void> _toggle(bool attending) async {
-    final user = FirebaseAuth.instance.currentUser;
+    User? user;
+    try {
+      user = FirebaseAuth.instance.currentUser;
+    } catch (_) {
+      user = null;
+    }
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         // أرضية الشريط لون ثابت في السمتين بينما حبره الافتراضي يُقرأ من
@@ -432,7 +460,12 @@ class _AttendanceSectionState extends State<_AttendanceSection> {
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
+    User? user;
+    try {
+      user = FirebaseAuth.instance.currentUser;
+    } catch (_) {
+      user = null;
+    }
     final userId = user?.uid ?? '';
     return StreamBuilder<int>(
       stream: _engagement.attendeesCount(widget.occasionId),
@@ -459,15 +492,27 @@ class _AttendanceSectionState extends State<_AttendanceSection> {
 }
 
 class _AttendeesCountChip extends StatelessWidget {
-  const _AttendeesCountChip({required this.occasionId});
+  const _AttendeesCountChip({
+    required this.occasionId,
+    this.engagement,
+  });
 
   final String occasionId;
+  final EngagementService? engagement;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    Stream<int>? countStream;
+    try {
+      countStream = (engagement ?? EngagementService()).attendeesCount(occasionId);
+    } catch (_) {
+      countStream = null;
+    }
+    if (countStream == null) return const SizedBox.shrink();
+
     return StreamBuilder<int>(
-      stream: EngagementService().attendeesCount(occasionId),
+      stream: countStream,
       builder: (context, snapshot) {
         final count = snapshot.data ?? 0;
         return _MetaChip(
@@ -574,7 +619,7 @@ class _HeroImage extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      constraints: const BoxConstraints(minHeight: 180, maxHeight: 380),
+      height: 240,
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
         borderRadius: BorderRadius.circular(20),
@@ -586,10 +631,12 @@ class _HeroImage extends StatelessWidget {
       child: AppImageCache.image(
         url: url,
         width: double.infinity,
-        fit: BoxFit.contain,
-        placeholder: (context, url) => const SizedBox(
-          height: 220,
-          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        height: 240,
+        fit: BoxFit.cover,
+        placeholder: (context, url) => Container(
+          height: 240,
+          color: theme.colorScheme.surfaceContainerHighest,
+          child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
         ),
         errorWidget: (context, url, error) => fallback,
       ),

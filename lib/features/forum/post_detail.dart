@@ -399,7 +399,7 @@ class _ForumPostDetailScreenState extends State<ForumPostDetailScreen> {
               const SizedBox(height: 14),
               Container(
                 width: double.infinity,
-                constraints: const BoxConstraints(maxHeight: 400),
+                height: 240,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
@@ -411,14 +411,15 @@ class _ForumPostDetailScreenState extends State<ForumPostDetailScreen> {
                 child: AppImageCache.image(
                   url: post.imageUrl!,
                   width: double.infinity,
-                  fit: BoxFit.contain,
+                  height: 240,
+                  fit: BoxFit.cover,
                   placeholder: (context, url) => Container(
-                    height: 200,
+                    height: 240,
                     color: theme.colorScheme.surfaceContainerHighest,
                     child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
                   ),
                   errorWidget: (context, url, error) => Container(
-                    height: 200,
+                    height: 240,
                     color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
                     child: Center(
                       child: Icon(Icons.broken_image_rounded, color: theme.colorScheme.onSurfaceVariant),
