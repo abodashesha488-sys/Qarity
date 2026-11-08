@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     نشر كامل للمشروع في خطوة واحدة: فحص الجودة + رفع الكود + بناء وإصدار APK + نسخة الويب ونشر Hosting + نشر قواعد Firestore + تحديث إصدار التطبيق.
 
@@ -253,7 +253,15 @@ function Invoke-GitHubApi {
         $params["Body"] = (New-Object System.Text.UTF8Encoding($false)).GetBytes($json)
         $params["ContentType"] = "application/json; charset=utf-8"
     }
-    return Invoke-RestMethod @params
+    $maxRetries = 3
+    for ($attempt = 1; $attempt -le $maxRetries; $attempt++) {
+        try {
+            return Invoke-RestMethod @params
+        } catch {
+            if ($attempt -eq $maxRetries) { throw }
+            Start-Sleep -Seconds 3
+        }
+    }
 }
 
 # ============================================================
