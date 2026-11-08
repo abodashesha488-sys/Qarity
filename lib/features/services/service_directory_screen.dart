@@ -1805,17 +1805,78 @@ class _ProviderCard extends StatelessWidget {
   }
 
   Widget _avatar(ThemeData theme, Color accent) {
-    final path = provider.isEducational
-        ? EduKindMark.imageOf(provider.providerKind)
-        : null;
-    if (path == null) return _letterAvatar(theme, accent);
-    return Image.asset(
-      path,
+    if (provider.isEducational) {
+      final path = EduKindMark.imageOf(provider.providerKind);
+      if (path != null) {
+        return Image.asset(
+          path,
+          width: _kImageSide,
+          height: _kImageSide,
+          fit: BoxFit.cover,
+          cacheWidth: (_kImageSide * 3).round(),
+          errorBuilder: (_, __, ___) => _letterAvatar(theme, accent),
+        );
+      }
+    }
+    // في دليل الحرفيين والخدمات: عند عدم وضع صورة للفني يُعرض اسم الخدمة مع أيقونة مناسبة بنفس حجم الصورة
+    if (provider.category == ServiceCategory.technicians ||
+        provider.category == ServiceCategory.agricultural ||
+        provider.specialty.trim().isNotEmpty) {
+      return _craftServicePlaceholder(theme, accent);
+    }
+    return _letterAvatar(theme, accent);
+  }
+
+  Widget _craftServicePlaceholder(ThemeData theme, Color accent) {
+    final craft = provider.displaySpecialty.trim().isNotEmpty
+        ? provider.displaySpecialty.trim()
+        : (provider.specialty.trim().isNotEmpty
+            ? provider.specialty.trim()
+            : 'حرفي');
+    final icon = craftIconFor(craft);
+    final ink = AppColors.inkOn(accent, theme.brightness);
+
+    return Container(
       width: _kImageSide,
       height: _kImageSide,
-      fit: BoxFit.cover,
-      cacheWidth: (_kImageSide * 3).round(),
-      errorBuilder: (_, __, ___) => _letterAvatar(theme, accent),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.08),
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            accent.withValues(alpha: 0.16),
+            accent.withValues(alpha: 0.06),
+          ],
+        ),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 28, color: ink),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            craft,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+              color: ink,
+              height: 1.15,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1832,6 +1893,90 @@ class _ProviderCard extends StatelessWidget {
               fontSize: 34),
         ),
       );
+}
+
+/// أيقونة مناسبة لكل حرفة / خدمة في دليل الحرفيين
+IconData craftIconFor(String craft) {
+  final c = craft.trim().toLowerCase();
+  if (c.contains('نجار') || c.contains('موبيليا') || c.contains('أثاث')) {
+    return Icons.carpenter_rounded;
+  }
+  if (c.contains('سباك') || c.contains('صحي') || c.contains('مواسير')) {
+    return Icons.plumbing_rounded;
+  }
+  if (c.contains('كهرب')) {
+    return Icons.electrical_services_rounded;
+  }
+  if (c.contains('حداد') || c.contains('لحام') || c.contains('حديد')) {
+    return Icons.hardware_rounded;
+  }
+  if (c.contains('تكييف') ||
+      c.contains('تبريد') ||
+      c.contains('تلاجة') ||
+      c.contains('غسالة')) {
+    return Icons.ac_unit_rounded;
+  }
+  if (c.contains('محار') ||
+      c.contains('بناء') ||
+      c.contains('مبان') ||
+      c.contains('تلييس')) {
+    return Icons.foundation_rounded;
+  }
+  if (c.contains('دهان') || c.contains('نقاش') || c.contains('تشطيب')) {
+    return Icons.format_paint_rounded;
+  }
+  if (c.contains('ألمنيوم') || c.contains('الوميتال') || c.contains('زجاج')) {
+    return Icons.window_rounded;
+  }
+  if (c.contains('رخام') || c.contains('بلاط') || c.contains('سيراميك')) {
+    return Icons.grid_on_rounded;
+  }
+  if (c.contains('ميكانيك') ||
+      c.contains('توكتوك') ||
+      c.contains('تكاتك') ||
+      c.contains('سيار') ||
+      c.contains('موتوسيكل')) {
+    return Icons.build_rounded;
+  }
+  if (c.contains('موبايل') || c.contains('هاتف') || c.contains('شاش')) {
+    return Icons.smartphone_rounded;
+  }
+  if (c.contains('دش') ||
+      c.contains('كامير') ||
+      c.contains('مراقبة') ||
+      c.contains('تلفزيون')) {
+    return Icons.videocam_rounded;
+  }
+  if (c.contains('خياط') ||
+      c.contains('ترزي') ||
+      c.contains('تفصيل') ||
+      c.contains('قماش')) {
+    return Icons.content_cut_rounded;
+  }
+  if (c.contains('حذاء') || c.contains('أحذية') || c.contains('جلود')) {
+    return Icons.roller_skating_rounded;
+  }
+  if (c.contains('فخار') || c.contains('يدوي')) {
+    return Icons.palette_rounded;
+  }
+  if (c.contains('أفراح') || c.contains('مناسبات') || c.contains('فراشة')) {
+    return Icons.celebration_rounded;
+  }
+  if (c.contains('دعاية') ||
+      c.contains('إعلان') ||
+      c.contains('طباعة') ||
+      c.contains('لافتات')) {
+    return Icons.campaign_rounded;
+  }
+  if (c.contains('جرار') ||
+      c.contains('حرث') ||
+      c.contains('محراث') ||
+      c.contains('حصاد') ||
+      c.contains('دراسة') ||
+      c.contains('زراع')) {
+    return Icons.agriculture_rounded;
+  }
+  return Icons.engineering_rounded;
 }
 
 class _EmptyCategory extends StatelessWidget {

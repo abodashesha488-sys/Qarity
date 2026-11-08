@@ -232,12 +232,7 @@ class _ForumPostDetailScreenState extends State<ForumPostDetailScreen> {
             IconButton(
               tooltip: 'مشاركة',
               icon: const Icon(Icons.share_rounded),
-              onPressed: () => ShareService.shareText(
-                title: passedPost.title.isNotEmpty
-                    ? passedPost.title
-                    : 'منشور من ${passedPost.userName}',
-                body: passedPost.content,
-              ),
+              onPressed: () => ShareService.shareForumPost(passedPost),
             ),
           if (passedPost != null)
             ModerationService.instance.buildMoreOptionsButton(

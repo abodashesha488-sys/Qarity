@@ -124,6 +124,33 @@ class ShareService {
     );
   }
 
+  /// مشاركة موضوع منتدى وحوارات القرية مع كامل تفاصيله وصورته الفعلية المرفقة
+  static Future<void> shareForumPost(ForumPost post) async {
+    final details = <String, String>{
+      'الكاتب': post.userName,
+      if (post.category.isNotEmpty && post.category != 'عام')
+        'القسم': post.category,
+      'تاريخ النشر':
+          '${post.createdAt.year}/${post.createdAt.month.toString().padLeft(2, '0')}/${post.createdAt.day.toString().padLeft(2, '0')}',
+      if (post.likes > 0) 'الإعجابات': '${post.likes} ❤️',
+      if (post.comments > 0) 'التعليقات': '${post.comments} 💬',
+    };
+
+    final validImages =
+        (post.imageUrl != null && post.imageUrl!.trim().isNotEmpty)
+            ? [post.imageUrl!.trim()]
+            : const <String>[];
+
+    await shareContent(
+      title: post.title.isNotEmpty
+          ? post.title
+          : 'حوار منتدى القرية: ${post.userName}',
+      body: post.content,
+      imageUrls: validImages,
+      details: details,
+    );
+  }
+
   /// مشاركة استغاثة عاجلة لطلب دم مصممة خصيصاً لمجموعات الواتساب ومواقع التواصل
   static Future<void> shareEmergencyBlood({
     required BloodRequest request,

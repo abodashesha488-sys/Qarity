@@ -513,12 +513,7 @@ class _ForumPostsScreenState extends State<ForumPostsScreen> with AutomaticKeepA
                       constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                       icon: Icon(Icons.share_rounded,
                           size: 17, color: theme.colorScheme.onSurfaceVariant),
-                      onPressed: () => ShareService.shareText(
-                        title: post.title.isNotEmpty
-                            ? post.title
-                            : 'منشور من ${post.userName}',
-                        body: post.content,
-                      ),
+                      onPressed: () => ShareService.shareForumPost(post),
                     ),
                     ModerationService.instance.buildMoreOptionsButton(
                       context: context,

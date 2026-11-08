@@ -954,6 +954,7 @@ class _ReviewCard extends StatelessWidget {
         'obituaries' => 'نعوة بانتظار النشر',
         'occasions' => 'مناسبة بانتظار النشر',
         'forum_posts' => 'منشور في المندرة',
+        'reports' => 'بلاغ عن محتوى مسيء',
         'upgrade_requests' => 'طلب ترقية الحساب',
         'seller_requests' => 'طلب تحوّل إلى بائع',
         'phone_directory' => item['isDispute'] == true
@@ -988,6 +989,11 @@ class _ReviewCard extends StatelessWidget {
       final u = item['userName'] ?? 'مستخدم';
       return 'طلب ترقية: $t ($u)';
     }
+    if (collection == 'reports') {
+      final r = item['reason'] ?? 'محتوى مسيء';
+      final a = item['authorName'] ?? 'مستخدم';
+      return 'بلاغ: $r (الناشر: $a)';
+    }
     final t = item['title'] ??
         item['name'] ??
         item['shopName'] ??
@@ -1016,6 +1022,13 @@ class _ReviewCard extends StatelessWidget {
       final noteStr = notes.isNotEmpty ? '\nملاحظات: $notes' : '';
       return 'الحالي: $current ← المطلوب: ${item['targetTitle'] ?? ''}$noteStr';
     }
+    if (collection == 'reports') {
+      final target = item['targetType'] ?? 'محتوى';
+      final snippet = item['contentSnippet'] ?? '';
+      final snippetStr = snippet.toString().trim().isNotEmpty ? '\nالمحتوى: «$snippet»' : '';
+      final status = item['status'] == 'resolved' ? 'تم اتخاذ إجراء' : (item['status'] == 'dismissed' ? 'تم التجاهل' : 'قيد المراجعة');
+      return 'النوع: $target · الحالة: $status$snippetStr';
+    }
     return item['description'] ??
         item['content'] ??
         item['question'] ??
@@ -1041,8 +1054,10 @@ class _ReviewCard extends StatelessWidget {
   DateTime? get _createdAt => tsToDateTime(item['createdAt']);
 
   bool get _isApproved {
-    if (collection == 'seller_requests' || collection == 'upgrade_requests') {
-      return item['status'] == 'approved';
+    if (collection == 'seller_requests' ||
+        collection == 'upgrade_requests' ||
+        collection == 'reports') {
+      return item['status'] == 'approved' || item['status'] == 'resolved';
     }
     if (collection == 'seller_profiles') {
       return true;

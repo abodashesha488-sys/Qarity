@@ -1525,6 +1525,11 @@ class VillageInstitution implements VillageContentItem {
   final List<String> imageUrls;
   final int sortOrder;
   final DateTime? createdAt;
+  final String supervisor; // المشرف / المدير / الإمام / المسؤول
+  final String stage;      // المرحلة / التخصص / الفئة المستهدفة
+  final String fees;       // الرسوم / مجاني
+  final String capacity;   // السعة / عدد الفصول / المصلين
+  final List<String> services; // الخدمات والأنشطة المقدمة
 
   const VillageInstitution({
     this.id = '',
@@ -1537,6 +1542,11 @@ class VillageInstitution implements VillageContentItem {
     this.imageUrls = const [],
     this.sortOrder = 0,
     this.createdAt,
+    this.supervisor = '',
+    this.stage = '',
+    this.fees = '',
+    this.capacity = '',
+    this.services = const [],
   });
 
   factory VillageInstitution.fromJson(Map<String, dynamic> j, String docId) =>
@@ -1552,6 +1562,11 @@ class VillageInstitution implements VillageContentItem {
             (j['imageUrls'] as List<dynamic>?)?.cast<String>() ?? const [],
         sortOrder: (j['sortOrder'] as num?)?.toInt() ?? 0,
         createdAt: tsToDateTime(j['createdAt']),
+        supervisor: j['supervisor'] as String? ?? '',
+        stage: j['stage'] as String? ?? '',
+        fees: j['fees'] as String? ?? '',
+        capacity: j['capacity'] as String? ?? '',
+        services: (j['services'] as List<dynamic>?)?.cast<String>() ?? const [],
       );
 
   Map<String, dynamic> toJson() => {
@@ -1566,6 +1581,11 @@ class VillageInstitution implements VillageContentItem {
         'createdAt': createdAt != null
             ? Timestamp.fromDate(createdAt!)
             : FieldValue.serverTimestamp(),
+        'supervisor': supervisor,
+        'stage': stage,
+        'fees': fees,
+        'capacity': capacity,
+        'services': services,
       };
 
   VillageInstitution copyWith({String? id}) => VillageInstitution(
@@ -1579,6 +1599,11 @@ class VillageInstitution implements VillageContentItem {
         imageUrls: imageUrls,
         sortOrder: sortOrder,
         createdAt: createdAt,
+        supervisor: supervisor,
+        stage: stage,
+        fees: fees,
+        capacity: capacity,
+        services: services,
       );
 
   String get imageUrl => imageUrls.isNotEmpty ? imageUrls.first : '';

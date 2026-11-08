@@ -55,7 +55,9 @@ class AdminService {
   /// شارة حيّة؛ صفر زائف يعني «لا معلّقات» فيمضي المراجع دون أن ينظر. يترك
   /// المشترِك الرقم القديم كما هو ويستعيد بالسحب للتحديث.
   Future<int> recountPending(String collection) =>
-      (collection == 'seller_requests' || collection == 'upgrade_requests')
+      (collection == 'seller_requests' ||
+              collection == 'upgrade_requests' ||
+              collection == 'reports')
           ? _statusPendingCount(collection, strict: true)
           : _pendingCountOnce(collection, strict: true);
 
@@ -625,6 +627,9 @@ class AdminService {
     if (collection == 'upgrade_requests') {
       return getPendingUpgradeRequestsStream();
     }
+    if (collection == 'reports') {
+      return getPendingReportsStream();
+    }
     return _pendingStream(collection);
   }
 
@@ -707,7 +712,13 @@ class AdminService {
         docData['content'] as String? ??
         doc.id;
 
-    if (collection == 'phone_directory' && docData['isDispute'] == true) {
+    if (collection == 'reports') {
+      await _firestore.collection('reports').doc(docId).update({
+        'status': 'resolved',
+        'resolvedAt': FieldValue.serverTimestamp(),
+        'resolvedBy': _auth.currentUser?.uid,
+      });
+    } else if (collection == 'phone_directory' && docData['isDispute'] == true) {
       final oldEntryId = docData['oldEntryId'] as String?;
       final newName = docData['name'] as String?;
       final job = docData['job'] as String?;
@@ -1007,11 +1018,19 @@ class AdminService {
       throw Exception('بيانات غير صالحة: معرّف العنصر أو المجموعة فارغ');
     }
     final snapshot = await _firestore.collection(collection).doc(docId).get();
-    await _firestore.collection(collection).doc(docId).update({
-      'isApproved': false,
-      'rejectedAt': FieldValue.serverTimestamp(),
-      'rejectedBy': _auth.currentUser?.uid,
-    });
+    if (collection == 'reports') {
+      await _firestore.collection('reports').doc(docId).update({
+        'status': 'dismissed',
+        'dismissedAt': FieldValue.serverTimestamp(),
+        'dismissedBy': _auth.currentUser?.uid,
+      });
+    } else {
+      await _firestore.collection(collection).doc(docId).update({
+        'isApproved': false,
+        'rejectedAt': FieldValue.serverTimestamp(),
+        'rejectedBy': _auth.currentUser?.uid,
+      });
+    }
     _invalidateContentCache(collection);
     _emitPendingCountEvent(collection);
     try {
@@ -1141,6 +1160,7 @@ class AdminService {
       _pendingCountOnce('buy_requests'),
       _pendingCountOnce('donations'),
       _statusPendingCount('upgrade_requests'),
+      _statusPendingCount('reports'),
     ]);
     return {
       'news': results[0],
@@ -1167,6 +1187,7 @@ class AdminService {
       'buy_requests': results[21],
       'donations': results[22],
       'upgrade_requests': results[23],
+      'reports': results[24],
     };
   }
 
@@ -1367,6 +1388,26 @@ class AdminService {
     return _firestore
         .collection('upgrade_requests')
         .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList());
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // Content Moderation Reports (بلاغات المحتوى المسيء)
+  // ═══════════════════════════════════════════════════════════════
+  Stream<List<Map<String, dynamic>>> getPendingReportsStream() {
+    return _firestore
+        .collection('reports')
+        .where('status', isEqualTo: 'pending')
+        .snapshots()
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList());
+  }
+
+  Stream<List<Map<String, dynamic>>> getAllReportsStream() {
+    return _firestore
+        .collection('reports')
         .snapshots()
         .map((snapshot) =>
             snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList());

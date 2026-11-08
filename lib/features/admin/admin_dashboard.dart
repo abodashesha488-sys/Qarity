@@ -124,6 +124,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         Colors.indigo),
     const _Cat('occasions', 'المناسبات', Icons.celebration_rounded, Colors.teal),
     const _Cat('forum_posts', 'المنتدى', Icons.forum_rounded, Colors.brown),
+    const _Cat('reports', 'بلاغات المحتوى', Icons.flag_rounded, Colors.redAccent),
     const _Cat('upgrade_requests', 'طلبات الترقية', Icons.upgrade_rounded,
         Color(0xFF673AB7)),
     const _Cat('phone_directory', 'دليل الهاتف', Icons.phone_rounded, Colors.cyan),

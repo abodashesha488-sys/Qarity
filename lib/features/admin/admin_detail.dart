@@ -450,6 +450,8 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
         return Icons.add_business_rounded;
       case 'pharmacies':
         return Icons.local_pharmacy_rounded;
+      case 'reports':
+        return Icons.flag_rounded;
       default:
         return Icons.description_rounded;
     }
@@ -493,6 +495,8 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
         return 'عيادة';
       case 'pharmacies':
         return 'صيدلية';
+      case 'reports':
+        return 'بلاغ عن محتوى مسيء';
       default:
         return 'عنصر';
     }

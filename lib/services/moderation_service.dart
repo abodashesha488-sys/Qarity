@@ -1,11 +1,13 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-
 import '../core/constants/app_colors.dart';
 import '../core/utils/helpers.dart';
+import 'remote_push_service.dart';
 
 /// خدمة الإشراف وحماية المستخدمين (مطابقة لشروط Google Play للمحتوى المنشأ بواسطة المستخدمين UGC)
 /// توفر: الإبلاغ عن المحتوى المسيء وحظر المستخدمين المزعجين محلياً.
@@ -191,6 +193,7 @@ class ModerationService {
         'createdAt': FieldValue.serverTimestamp(),
         'status': 'pending',
       });
+      unawaited(RemotePushService.notifyAdmins('reports'));
 
       if (context.mounted) {
         showDialog(
