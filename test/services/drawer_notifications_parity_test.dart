@@ -39,13 +39,13 @@ void main() {
       'static PageRouteBuilder<dynamic> _buildSlideRoute');
 
   group('القائمة الجانبية تواكب شبكة الرئيسية', () {
-    test('شبكة الخدمات ستة عشر بلاطة كما هي', () {
-      expect(RegExp(r"_ServiceItem\('").allMatches(gridBlock).length, 16);
+    test('شبكة الخدمات سبعة عشر بلاطة كما هي', () {
+      expect(RegExp(r"_ServiceItem\('").allMatches(gridBlock).length, 17);
     });
 
     test('كل مسار في شبكة الرئيسية له مدخل في القائمة الجانبية', () {
       final gridRoutes = routeNames(gridBlock);
-      expect(gridRoutes.length, 16);
+      expect(gridRoutes.length, 17);
       expect(routeNames(drawerBlock), containsAll(gridRoutes));
     });
 
@@ -65,6 +65,7 @@ void main() {
         'الخدمات الطبية',
         'الخدمات التعليمية',
         'خدمات المزارع',
+        'منشأة القرية',
         'إعلانات القرية',
         'المفقودات',
         'ركن الأطفال',

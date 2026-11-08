@@ -69,6 +69,7 @@ import '../features/village/village_contributions_review_screen.dart';
 import '../features/village/village_development_timeline_screen.dart';
 import '../features/village/village_digital_archive_screen.dart';
 import '../features/village/village_education_history_screen.dart';
+import '../features/village/village_facilities_screen.dart';
 import '../features/village/village_family_screen.dart';
 import '../features/village/village_heritage_screen.dart';
 import '../features/village/village_history_screen.dart';
@@ -99,6 +100,7 @@ class AppRoutes {
   static const String villageHistory = '/village/history';
   static const String villageArchive = '/village/archive';
   static const String villageInstitutions = '/village/institutions';
+  static const String villageFacilities = '/village/facilities';
   static const String villageProfile = '/village/profile';
   static const String villageMemory = '/village/memory';
   static const String villageMemoryList = '/village/memory/list';
@@ -201,6 +203,7 @@ static const String marketProducts = '/market';
     villageHistory: (_) => const VillageHistoryScreen(),
     villageArchive: (_) => const VillageArchiveScreen(),
     villageInstitutions: (_) => const VillageInstitutionsScreen(),
+    villageFacilities: (_) => const VillageFacilitiesScreen(),
     villageProfile: (_) => const VillageProfileScreen(),
     villageMemory: (_) => const VillageMemoryScreen(),
     villagePeople: (_) => const VillagePeopleScreen(),
@@ -384,6 +387,12 @@ obituariesAdd: (_) => const AddObituaryScreen(),
     if (settings.name == farmerWeather) {
       return _buildSlideRoute(
         (_) => const WeatherAdvisoryScreen(),
+        settings,
+      );
+    }
+    if (settings.name == villageFacilities) {
+      return _buildSlideRoute(
+        (_) => const VillageFacilitiesScreen(),
         settings,
       );
     }

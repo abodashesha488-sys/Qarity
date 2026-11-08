@@ -486,7 +486,7 @@ void main() {
       );
     });
 
-    test('الشاشة الرئيسية: المستشار بعد الفنيين والإعلانات بعد المزارع', () {
+    test('الشاشة الرئيسية: المستشار بعد الفنيين والمنشآت بعد المزارع والإعلانات بعدها', () {
       final home = src('lib/features/home/home.dart');
       final start = home.indexOf('static const _services = [');
       final block = home.substring(start, home.indexOf('];', start));
@@ -495,11 +495,13 @@ void main() {
           .allMatches(block)
           .map((m) => '${m.group(2)}|${m.group(1)}|${m.group(3)}')
           .toList();
-      expect(tiles.length, 16);
+      expect(tiles.length, 17);
       expect(tiles[5], 'legalAdvisor|مستشار القرية|assets/images/low.jpg');
-      expect(tiles[9], 'villageAds|إعلانات القرية|assets/images/ealan.jpg');
+      expect(tiles[8], startsWith('farmerServices|'));
+      expect(tiles[9], 'villageFacilities|منشأة القرية|assets/images/bilding.jpg');
+      expect(tiles[10], 'villageAds|إعلانات القرية|assets/images/ealan.jpg');
       expect(tiles[4], startsWith('techniciansDirectory|'));
-      expect(tiles[10], startsWith('lostItems|'));
+      expect(tiles[11], startsWith('lostItems|'));
     });
 
     test('الإشعارات: الثلاثة تُبلّغ الإدارة، والاستشارة لا تُبث للقرية', () {

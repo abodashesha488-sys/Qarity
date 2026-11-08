@@ -517,6 +517,8 @@ class _AboutScreenState extends State<AboutScreen> {
           Icons.school_rounded, Color(0xFF1565C0)),
       _AppSection(AppRoutes.farmerServices, 'خدمات المزارع',
           Icons.agriculture_rounded, Color(0xFFAD1457)),
+      _AppSection(AppRoutes.villageFacilities, 'منشأة القرية',
+          Icons.domain_rounded, Color(0xFF1565C0)),
       _AppSection(AppRoutes.villageAds, 'إعلانات القرية',
           Icons.campaign_rounded, Color(0xFF311B92)),
       _AppSection(AppRoutes.lostItems, 'المفقودات', Icons.search_rounded,

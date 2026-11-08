@@ -82,7 +82,8 @@ String promoKeyForRoute(String name, Object? args) {
     case AppRoutes.villageArchive:
       return 'village_archive';
     case AppRoutes.villageInstitutions:
-      return 'village_institutions';
+    case AppRoutes.villageFacilities:
+      return 'village_facilities';
     case AppRoutes.techniciansDirectory:
       return 'svc_technicians';
     case AppRoutes.agriculturalServices:
@@ -170,6 +171,7 @@ const List<PromoInternalLink> kPromoInternalLinks = [
   PromoInternalLink('تاريخ القرية', AppRoutes.villageHistory),
   PromoInternalLink('أرشيف القرية', AppRoutes.villageArchive),
   PromoInternalLink('منشآت القرية', AppRoutes.villageInstitutions),
+  PromoInternalLink('منشأة القرية', AppRoutes.villageFacilities),
   
   PromoInternalLink('دليل الحرفيين', AppRoutes.techniciansDirectory),
   PromoInternalLink('خدمات زراعية', AppRoutes.agriculturalServices),

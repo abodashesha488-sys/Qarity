@@ -1440,60 +1440,74 @@ class VillageContribution implements VillageContentItem {
 
 class InstitutionType {
   InstitutionType._();
+  static const youth = 'youth';
+  static const health = 'health';
+  static const post = 'post';
+  static const agri = 'agri';
   static const schools = 'schools';
   static const azhar = 'azhar';
-  static const agri = 'agri';
-  static const post = 'post';
-  static const health = 'health';
   static const mosque = 'mosque';
+  static const awqaf = 'awqaf';
   static const other = 'other';
 
   static const List<String> ordered = [
+    youth,
+    health,
+    post,
+    agri,
     schools,
     azhar,
-    agri,
-    post,
-    health,
     mosque,
-    other
+    awqaf,
+    other,
   ];
 
   static String label(String t) => switch (t) {
-        schools => 'مدارس',
-        azhar => 'معاهد أزهرية',
-        agri => 'الجمعية الزراعية',
-        post => 'مكتب البريد',
+        youth => 'مركز الشباب',
         health => 'الوحدة الصحية',
+        post => 'مكتب البريد',
+        agri => 'الجمعية الزراعية',
+        schools => 'مدارس القرية',
+        azhar => 'المعاهد الدينية',
         mosque => 'مساجد القرية',
+        awqaf => 'مكتب الأوقاف',
         _ => 'منشآت أخرى',
       };
 
   static IconData icon(String t) => switch (t) {
+        youth => Icons.sports_soccer_rounded,
+        health => Icons.local_hospital_rounded,
+        post => Icons.local_post_office_rounded,
+        agri => Icons.agriculture_rounded,
         schools => Icons.school_rounded,
         azhar => Icons.menu_book_rounded,
-        agri => Icons.agriculture_rounded,
-        post => Icons.local_post_office_rounded,
-        health => Icons.local_hospital_rounded,
         mosque => Icons.mosque_rounded,
-        _ => Icons.account_balance_rounded,
+        awqaf => Icons.account_balance_rounded,
+        _ => Icons.business_rounded,
       };
 
   static Color color(String t) => switch (t) {
-        schools => const Color(0xFF1565C0),
-        azhar => const Color(0xFF00695C),
-        agri => const Color(0xFFEF6C00),
-        post => const Color(0xFF6A1B9A),
+        youth => const Color(0xFF2E7D32),
         health => const Color(0xFFC62828),
+        post => const Color(0xFF1565C0),
+        agri => const Color(0xFFEF6C00),
+        schools => const Color(0xFF0277BD),
+        azhar => const Color(0xFF00695C),
         mosque => const Color(0xFF00897B),
+        awqaf => const Color(0xFF6A1B9A),
         _ => Colors.blueGrey,
       };
 
   static String guessFromName(String name) {
-    if (name.contains('مدرسة') || name.contains('تعليم')) return schools;
-    if (name.contains('أزهر') || name.contains('معهد')) return azhar;
-    if (name.contains('زراع')) return agri;
-    if (name.contains('بريد')) return post;
+    if (name.contains('شباب') || name.contains('رياض')) return youth;
     if (name.contains('صحة') || name.contains('وحدة')) return health;
+    if (name.contains('بريد')) return post;
+    if (name.contains('زراع')) return agri;
+    if (name.contains('مدرسة') || name.contains('تعليم')) return schools;
+    if (name.contains('أزهر') || name.contains('معهد') || name.contains('دين')) {
+      return azhar;
+    }
+    if (name.contains('أوقاف')) return awqaf;
     if (name.contains('مسجد') || name.contains('جامع')) return mosque;
     return other;
   }

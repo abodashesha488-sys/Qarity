@@ -121,6 +121,7 @@ void main() {
           'medical|الخدمات الطبية',
           'educationalServices|الخدمات التعليمية',
           'farmerServices|خدمات المزارع',
+          'villageFacilities|منشأة القرية',
           'villageAds|إعلانات القرية',
           'lostItems|المفقودات',
           'phoneDirectory|دليل الهاتف',
