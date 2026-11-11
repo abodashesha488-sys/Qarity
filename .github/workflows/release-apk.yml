@@ -143,48 +143,58 @@ jobs:
         env:
           MANUAL_VERSION: ${{ github.event.inputs.version }}
         run: |
+          # Read current version from pubspec.yaml
+          PUBSPEC_VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d ' ')
+          PUBSPEC_NAME=${PUBSPEC_VERSION%+*}
+          PUBSPEC_BUILD=${PUBSPEC_VERSION#*+}
+
           # Read or initialize sequential build counter
           BUILD_FILE="build_number.txt"
           if [ -f "$BUILD_FILE" ]; then
-            CURRENT_BUILD=$(cat "$BUILD_FILE" | tr -d '[:space:]')
+            FILE_BUILD=$(cat "$BUILD_FILE" | tr -d '[:space:]')
           else
-            CURRENT_BUILD=0
+            FILE_BUILD=0
           fi
           
-          # Increment build number (sequential counter)
-          NEW_BUILD=$((CURRENT_BUILD + 1))
-          
-          # حساب رقم الإصدار بنظام التدوير عند 10:
-          # Build 1..9  -> 1.0.1 .. 1.0.9
-          # Build 10    -> 1.1.0 (بدل 1.0.10)
-          # Build 11..19-> 1.1.1 .. 1.1.9
-          # Build 20    -> 1.2.0 (بدل 1.1.10)
-          MAJOR=$(( 1 + (NEW_BUILD / 100) ))
-          MINOR=$(( (NEW_BUILD / 10) % 10 ))
-          PATCH=$(( NEW_BUILD % 10 ))
-          AUTO_NAME="${MAJOR}.${MINOR}.${PATCH}"
+          # If version was already bumped locally in pubspec.yaml & build_number.txt
+          if [ -n "$PUBSPEC_BUILD" ] && [ "$PUBSPEC_BUILD" -eq "$FILE_BUILD" ] && [ "$FILE_BUILD" -gt 0 ]; then
+            NEW_BUILD=$FILE_BUILD
+            if [ -n "$MANUAL_VERSION" ]; then
+              NEW_NAME="$MANUAL_VERSION"
+            else
+              NEW_NAME="$PUBSPEC_NAME"
+            fi
+          else
+            # Increment build number (sequential counter)
+            NEW_BUILD=$((FILE_BUILD + 1))
+            
+            # حساب رقم الإصدار بنظام التدوير عند 10:
+            # Build 1..9  -> 1.0.1 .. 1.0.9
+            # Build 10    -> 1.1.0 (بدل 1.0.10)
+            # Build 11..19-> 1.1.1 .. 1.1.9
+            # Build 20    -> 1.2.0 (بدل 1.1.10)
+            MAJOR=$(( 1 + (NEW_BUILD / 100) ))
+            MINOR=$(( (NEW_BUILD / 10) % 10 ))
+            PATCH=$(( NEW_BUILD % 10 ))
+            AUTO_NAME="${MAJOR}.${MINOR}.${PATCH}"
+
+            if [ -n "$MANUAL_VERSION" ]; then
+              NEW_NAME="$MANUAL_VERSION"
+            else
+              NEW_NAME="$AUTO_NAME"
+            fi
+          fi
 
           # مع حزمة Google Play الجديدة (app.abudshisha.qarity) يبدأ versionCode من 1 ويتزايد
           NEW_CODE=$NEW_BUILD
-          if [ -n "$MANUAL_VERSION" ]; then
-            NEW_NAME="$MANUAL_VERSION"
-          else
-            NEW_NAME="$AUTO_NAME"
-          fi
-
           NEW_VERSION="${NEW_NAME}+${NEW_CODE}"
           
           # Save new build number for next run
           echo "$NEW_BUILD" > "$BUILD_FILE"
           
-          # For backward compatibility, also read current pubspec
-          CURRENT_VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d ' ')
-          CURRENT_NAME=${CURRENT_VERSION%+*}
-          CURRENT_BUILD=${CURRENT_VERSION#*+}
-          
-          echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-          echo "current_name=$CURRENT_NAME" >> $GITHUB_OUTPUT
-          echo "current_build=$CURRENT_BUILD" >> $GITHUB_OUTPUT
+          echo "current_version=$PUBSPEC_VERSION" >> $GITHUB_OUTPUT
+          echo "current_name=$PUBSPEC_NAME" >> $GITHUB_OUTPUT
+          echo "current_build=$PUBSPEC_BUILD" >> $GITHUB_OUTPUT
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "new_name=$NEW_NAME" >> $GITHUB_OUTPUT
           echo "new_build=$NEW_BUILD" >> $GITHUB_OUTPUT
@@ -202,10 +212,14 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add pubspec.yaml build_number.txt
-          git commit -m "chore: bump version to ${{ steps.version.outputs.new_version }}"
-          # Pull latest changes before push to avoid non-fast-forward rejection
-          git pull --rebase origin main
-          git push origin main
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: bump version to ${{ steps.version.outputs.new_version }}"
+            # Pull latest changes before push to avoid non-fast-forward rejection
+            git pull --rebase origin main
+            git push origin main
+          else
+            echo "Version files already up to date, skipping commit."
+          fi
 
       # ─── Install dependencies ───
       - name: Get Flutter dependencies

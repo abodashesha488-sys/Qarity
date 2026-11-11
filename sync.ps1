@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     نشر كامل للمشروع في خطوة واحدة: فحص الجودة + رفع الكود + بناء وإصدار APK + نسخة الويب ونشر Hosting + نشر قواعد Firestore + تحديث إصدار التطبيق.
 
@@ -347,9 +347,57 @@ if (-not $SkipTests) {
 Write-Host ""
 Write-Host "[Stage 1b] الالتزام ورفع الكود..." -ForegroundColor Cyan
 
+# قراءة رقم البناء الحالي
+$currentBuildNo = 0
+if (Test-Path "build_number.txt") {
+    [int]::TryParse(((Get-Content "build_number.txt" -ErrorAction SilentlyContinue) -replace '\s', ''), [ref]$currentBuildNo) | Out-Null
+}
+
 $localChanges = @(git status --short 2>$null)
 
+# إذا كانت هناك تغييرات غير ملتزمة، نحدث رقم الإصدار محليًا تلقائيًا ليتطابق دائمًا مع النشر
 if ($localChanges.Count -gt 0) {
+    # إذا كانت التغييرات تشمل كوداً برمجياً فنرقي رقم الإصدار تلقائياً
+    $codeChanges = @($localChanges | Where-Object { $_ -notmatch 'build_number\.txt|pubspec\.yaml|update\.json' })
+    if ($codeChanges.Count -gt 0 -or $currentBuildNo -le 0) {
+        $nextBuildNo = $currentBuildNo + 1
+        $major = 1 + [Math]::Floor($nextBuildNo / 100)
+        $minor = [Math]::Floor(($nextBuildNo / 10) % 10)
+        $patch = $nextBuildNo % 10
+        $autoVersionName = "$major.$minor.$patch"
+        $versionName = if (-not [string]::IsNullOrWhiteSpace($Version)) { $Version } else { $autoVersionName }
+        $fullVersion = "${versionName}+${nextBuildNo}"
+
+        Write-Host "تحديث رقم الإصدار محليًا: $fullVersion (Build $nextBuildNo)..." -ForegroundColor Yellow
+
+        # 1. تحديث build_number.txt
+        "$nextBuildNo`n" | Set-Content -Path "build_number.txt" -Encoding ascii
+
+        # 2. تحديث pubspec.yaml
+        $pubspecRaw = Get-Content "pubspec.yaml" -Raw
+        $pubspecUpdated = $pubspecRaw -replace '(?m)^version:\s*.*$', "version: $fullVersion"
+        [System.IO.File]::WriteAllText((Resolve-Path "pubspec.yaml"), $pubspecUpdated, [System.Text.Encoding]::UTF8)
+
+        # 3. تحديث update.json
+        if (Test-Path "update.json") {
+            try {
+                $updateData = Get-Content "update.json" -Raw | ConvertFrom-Json
+                $updateData.versionCode = $nextBuildNo
+                $updateData.versionName = $versionName
+                $notes = if ([string]::IsNullOrWhiteSpace($ReleaseNotes)) { $Message } else { $ReleaseNotes }
+                if (-not [string]::IsNullOrWhiteSpace($notes)) {
+                    $updateData.releaseNotes = $notes
+                }
+                $updateJson = $updateData | ConvertTo-Json -Depth 5
+                [System.IO.File]::WriteAllText((Resolve-Path "update.json"), $updateJson, (New-Object System.Text.UTF8Encoding($false)))
+            } catch {
+                Write-Host "تعذر تحديث update.json محليًا: $_" -ForegroundColor DarkGray
+            }
+        }
+    }
+
+    # إعادة فحص التغييرات بعد تحديث ملفات الإصدار
+    $localChanges = @(git status --short 2>$null)
     foreach ($change in $localChanges) { Write-FileStatus $change }
 
     git add -A
@@ -464,13 +512,14 @@ if (-not $ghToken) {
 
 $notes = if ([string]::IsNullOrWhiteSpace($ReleaseNotes)) { $Message } else { $ReleaseNotes }
 
-# قراءة رقم البناء الحالي للعرض
+# قراءة رقم البناء وإصدار النشر
 $currentBuildNo = 0
 if (Test-Path "build_number.txt") {
     [int]::TryParse(((Get-Content "build_number.txt" -ErrorAction SilentlyContinue) -replace '\s', ''), [ref]$currentBuildNo) | Out-Null
 }
-$nextBuildNo = $currentBuildNo + 1
-Write-Host "رقم البناء الحالي: $currentBuildNo -> التالي المتوقع: $nextBuildNo" -ForegroundColor Gray
+$pubspecVersion = (Get-Content "pubspec.yaml" | Select-String '^version:\s*(.+)$').Matches.Groups[1].Value.Trim()
+$currentVersionName = ($pubspecVersion -split '\+')[0]
+Write-Host "إصدار النشر المعتمد: $pubspecVersion (Build $currentBuildNo)" -ForegroundColor Green
 
 # التحقق من وجود الـ workflow
 try {
@@ -489,8 +538,8 @@ Write-Host "workflow نشط: $($wf.name)" -ForegroundColor Green
 # تشغيل الـ workflow
 $dispatchInputs = [ordered]@{
     message = $notes
+    version = if (-not [string]::IsNullOrWhiteSpace($Version)) { $Version } else { $currentVersionName }
 }
-if (-not [string]::IsNullOrWhiteSpace($Version))   { $dispatchInputs["version"] = $Version }
 if (-not [string]::IsNullOrWhiteSpace($MinBuild))  { $dispatchInputs["min_build"] = $MinBuild }
 $dispatchInputs["maintenance"] = if ($Maintenance) { "true" } else { "false" }
 if (-not [string]::IsNullOrWhiteSpace($MaintenanceMessage)) { $dispatchInputs["maintenance_message"] = $MaintenanceMessage }
