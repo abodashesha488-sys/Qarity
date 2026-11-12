@@ -11,11 +11,11 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 
-import '../../core/utils/navigator_key.dart';
-import '../../routes/app_routes.dart';
 import '../core/constants/app_colors.dart';
 import '../core/constants/app_config.dart';
+import '../core/utils/navigator_key.dart';
 import '../core/utils/notification_deeplink.dart';
+import '../routes/app_routes.dart';
 import 'notification_inbox_service.dart';
 
 class NotificationService {

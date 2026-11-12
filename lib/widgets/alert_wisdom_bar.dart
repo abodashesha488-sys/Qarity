@@ -3,14 +3,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
-import '../../core/constants/app_colors.dart';
-import '../../core/constants/wisdom_calendar.dart';
-import '../../models/village_alert.dart';
-import '../../services/alert_service.dart';
-import '../../services/alert_sound_service.dart';
-import '../../services/hijri_calendar_service.dart';
-import '../../services/share_service.dart';
-import '../../services/weather_service.dart';
+import '../core/constants/app_colors.dart';
+import '../core/constants/wisdom_calendar.dart';
+import '../models/village_alert.dart';
+import '../services/alert_service.dart';
+import '../services/alert_sound_service.dart';
+import '../services/hijri_calendar_service.dart';
+import '../services/share_service.dart';
+import '../services/weather_service.dart';
 
 /// الشريط الثابت أسفل هيدر الرئيسية:
 /// — تنبيه عاجل أحمر نابض عند تفعيله من لوحة الأدمن (يضغط لعرض النص كاملاً).

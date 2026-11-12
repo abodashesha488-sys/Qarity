@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter/foundation.dart';
 
-import '../../models/data_models.dart';
+import '../models/data_models.dart';
 import 'cache_service.dart';
 import 'user_presence_service.dart';
 
