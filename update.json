@@ -1,7 +1,7 @@
 {
-  "versionCode": 14,
-  "versionName": "1.1.4",
-  "apkUrl": "https://github.com/abodashesha488-sys/Qarity/releases/latest/download/Qarity.apk",
-  "forceUpdate": false,
-  "releaseNotes": "تحديث منشآت القرية ودليل الحرفيين وأيقونات الشاشة الرئيسية"
+    "versionCode":  15,
+    "versionName":  "1.1.5",
+    "apkUrl":  "https://github.com/abodashesha488-sys/Qarity/releases/latest/download/Qarity.apk",
+    "forceUpdate":  false,
+    "releaseNotes":  "feat: إضافة ميزة جديدة"
 }
