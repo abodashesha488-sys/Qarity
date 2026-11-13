@@ -1,7 +1,7 @@
 {
-    "versionCode":  16,
-    "versionName":  "1.1.6",
+    "versionCode":  17,
+    "versionName":  "1.1.7",
     "apkUrl":  "https://github.com/abodashesha488-sys/Qarity/releases/latest/download/Qarity.apk",
     "forceUpdate":  false,
-    "releaseNotes":  "fix(android): align AGP to 9.3.1 and Gradle to 9.5.0 for Flutter 3.50"
+    "releaseNotes":  "fix(android): migrate to Java 17 and remove deprecated kotlinOptions"
 }
