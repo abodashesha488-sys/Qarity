@@ -1,7 +1,7 @@
 {
-    "versionCode":  17,
-    "versionName":  "1.1.7",
+    "versionCode":  18,
+    "versionName":  "1.1.8",
     "apkUrl":  "https://github.com/abodashesha488-sys/Qarity/releases/latest/download/Qarity.apk",
     "forceUpdate":  false,
-    "releaseNotes":  "fix(android): migrate to Java 17 and remove deprecated kotlinOptions"
+    "releaseNotes":  "fix(android): disable lint abort on release build"
 }

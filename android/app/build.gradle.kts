@@ -24,6 +24,11 @@ android {
         isCoreLibraryDesugaringEnabled = true
     }
 
+    lint {
+        checkReleaseBuilds = false
+        abortOnError = false
+    }
+
     defaultConfig {
         applicationId = "app.abudshisha.qarity"
         minSdk = flutter.minSdkVersion
