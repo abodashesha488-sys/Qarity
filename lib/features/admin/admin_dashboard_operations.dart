@@ -114,7 +114,7 @@ class _OperationsHubPageState extends State<_OperationsHubPage> {
                 const _AlertsControlPage(),
                 _PromosPage(currentUid: widget.currentUid),
                 const _ReportsPage(),
-                const GroupDealsAdminScreen(),
+                const GroupDealsAdminScreen(isEmbedded: true),
               ],
             ),
           ),

@@ -9,12 +9,14 @@ import '../services/admin_service.dart';
 import '../services/group_deal_service.dart';
 import '../services/share_service.dart';
 import '../services/user_service.dart';
+import 'commercial_receipt_dialog.dart';
 import 'group_deal_delivery_screen.dart';
 
 class GroupDealDetailSheet extends StatefulWidget {
-  const GroupDealDetailSheet({super.key, required this.dealId});
+  const GroupDealDetailSheet({super.key, this.dealId, this.initialDealId});
 
-  final String dealId;
+  final String? dealId;
+  final String? initialDealId;
 
   @override
   State<GroupDealDetailSheet> createState() => _GroupDealDetailSheetState();
@@ -25,6 +27,7 @@ class _GroupDealDetailSheetState extends State<GroupDealDetailSheet> {
   final UserService _userService = UserService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
+  String? _activeDealId;
   int _selectedQuantity = 1;
   int? _editingQuantity;
   int _currentImageIndex = 0;
@@ -39,6 +42,7 @@ class _GroupDealDetailSheetState extends State<GroupDealDetailSheet> {
   @override
   void initState() {
     super.initState();
+    _activeDealId = widget.initialDealId ?? widget.dealId;
     _nameCtrl = TextEditingController();
     _phoneCtrl = TextEditingController();
     _notesCtrl = TextEditingController();
@@ -120,27 +124,77 @@ class _GroupDealDetailSheetState extends State<GroupDealDetailSheet> {
     final theme = Theme.of(context);
     final uid = _auth.currentUser?.uid ?? '';
 
-    return StreamBuilder<GroupDealModel?>(
-      stream: _service.watchDeal(widget.dealId),
+    return StreamBuilder<List<GroupDealModel>>(
+      stream: _service.watchActiveDeals(),
       builder: (context, snapshot) {
-        final deal = snapshot.data;
-        if (deal == null) {
-          return Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(24)),
-            ),
-            child: const Center(
-              child: CircularProgressIndicator(),
-            ),
-          );
+        final deals = snapshot.data ?? [];
+        if (deals.isEmpty) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: const Center(child: CircularProgressIndicator()),
+            );
+          }
+
+          final fallbackId = _activeDealId ?? widget.dealId ?? widget.initialDealId;
+          if (fallbackId != null && fallbackId.isNotEmpty) {
+            return StreamBuilder<GroupDealModel?>(
+              stream: _service.watchDeal(fallbackId),
+              builder: (ctx, singleSnap) {
+                final d = singleSnap.data;
+                if (d == null) return _buildEmptySheet(context, theme);
+                return _buildSheetBody(context, theme, uid, d, [d]);
+              },
+            );
+          }
+          return _buildEmptySheet(context, theme);
         }
 
-        return StreamBuilder<DealParticipantModel?>(
-          stream: _service.watchUserBooking(deal.id, uid),
-          builder: (context, bookingSnap) {
+        final selectedDeal = _activeDealId != null
+            ? deals.firstWhere((d) => d.id == _activeDealId, orElse: () => deals.first)
+            : deals.first;
+
+        return _buildSheetBody(context, theme, uid, selectedDeal, deals);
+      },
+    );
+  }
+
+  Widget _buildEmptySheet(BuildContext context, ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.inventory_2_outlined, size: 54, color: Colors.grey),
+          const SizedBox(height: 12),
+          const Text('لا توجد صفقات جماعية جارية حالياً', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold)),
+          const SizedBox(height: 6),
+          const Text('ترقبوا انطلاق الصفقات والعروض القادمة قريباً بإذن الله.', style: TextStyle(fontFamily: 'Cairo', fontSize: 12, color: Colors.grey)),
+          const SizedBox(height: 16),
+          FilledButton(onPressed: () => Navigator.pop(context), child: const Text('إغلاق', style: TextStyle(fontFamily: 'Cairo'))),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSheetBody(
+    BuildContext context,
+    ThemeData theme,
+    String uid,
+    GroupDealModel deal,
+    List<GroupDealModel> deals,
+  ) {
+    return StreamBuilder<DealParticipantModel?>(
+      stream: _service.watchUserBooking(deal.id, uid),
+      builder: (context, bookingSnap) {
             final userBooking = bookingSnap.data;
             return Container(
               constraints: BoxConstraints(
@@ -237,6 +291,141 @@ class _GroupDealDetailSheetState extends State<GroupDealDetailSheet> {
                     ),
                     const Divider(height: 20),
 
+                    // منتقي واستعراض كافة الصفقات المفتوحة
+                    if (deals.length > 1) ...[
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 14),
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFFD97706).withValues(alpha: 0.2)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.layers_rounded, size: 16, color: Color(0xFFD97706)),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'الصفقات المتاحة حالياً (${deals.length}):',
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, fontFamily: 'Cairo'),
+                                    ),
+                                  ],
+                                ),
+                                const Text('اضغط لاختيار الصفقة 👈', style: TextStyle(fontSize: 10, color: Colors.grey, fontFamily: 'Cairo')),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            SizedBox(
+                              height: 64,
+                              child: ListView.separated(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: deals.length,
+                                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                                itemBuilder: (ctx, idx) {
+                                  final d = deals[idx];
+                                  final isSelected = d.id == deal.id;
+                                  return InkWell(
+                                    borderRadius: BorderRadius.circular(12),
+                                    onTap: () {
+                                      setState(() {
+                                        _activeDealId = d.id;
+                                        _currentImageIndex = 0;
+                                        _selectedQuantity = 1;
+                                        _isBookingOpen = false;
+                                      });
+                                    },
+                                    child: Container(
+                                      width: 175,
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? theme.colorScheme.primary.withValues(alpha: 0.12)
+                                            : theme.colorScheme.surface,
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: isSelected
+                                              ? theme.colorScheme.primary
+                                              : theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                                          width: isSelected ? 1.8 : 1.0,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          ClipRRect(
+                                            borderRadius: BorderRadius.circular(8),
+                                            child: SizedBox(
+                                              width: 48,
+                                              height: 48,
+                                              child: d.primaryImage.isNotEmpty
+                                                  ? AppImageCache.image(
+                                                      url: d.primaryImage,
+                                                      width: 48,
+                                                      height: 48,
+                                                      fit: BoxFit.cover,
+                                                      errorWidget: (_, __, ___) => const Icon(Icons.inventory_2_outlined, size: 20),
+                                                    )
+                                                  : const Icon(Icons.inventory_2_outlined, size: 20),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Column(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  d.title,
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                                                    fontFamily: 'Cairo',
+                                                    color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 2),
+                                                Row(
+                                                  children: [
+                                                    Text(
+                                                      '${d.dealPrice.toStringAsFixed(0)} ج',
+                                                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF16A34A), fontFamily: 'Cairo'),
+                                                    ),
+                                                    const Spacer(),
+                                                    Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.amber.shade100,
+                                                        borderRadius: BorderRadius.circular(4),
+                                                      ),
+                                                      child: Text(
+                                                        '${d.currentCount}/${d.targetCount}',
+                                                        style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.amber.shade900, fontFamily: 'Cairo'),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
                     // 1. تفاصيل الصفقة والمنتج
                     _buildDealHeader(theme, deal),
                     const SizedBox(height: 14),
@@ -317,8 +506,6 @@ class _GroupDealDetailSheetState extends State<GroupDealDetailSheet> {
             );
           },
         );
-      },
-    );
   }
 
   Widget _buildDealHeader(ThemeData theme, GroupDealModel deal) {
@@ -764,23 +951,54 @@ class _GroupDealDetailSheetState extends State<GroupDealDetailSheet> {
                       fontWeight: FontWeight.bold,
                       fontFamily: 'Cairo'),
                 ),
-                Text(
-                  'العربون: ${booking.depositRequired(deal.depositAmount).toStringAsFixed(0)} ج',
-                  style: const TextStyle(
+                if (deal.depositAmount > 0) ...[
+                  Text(
+                    'العربون: ${booking.depositRequired(deal.depositAmount).toStringAsFixed(0)} ج',
+                    style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Cairo'),
+                  ),
+                  Text(
+                    'المتبقي: ${booking.remainingOnDelivery(deal.dealPrice, deal.depositAmount).toStringAsFixed(0)} ج',
+                    style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
-                      fontFamily: 'Cairo'),
-                ),
-                Text(
-                  'المتبقي للتسليم: ${booking.remainingOnDelivery(deal.dealPrice, deal.depositAmount).toStringAsFixed(0)} ج',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.primary,
-                    fontFamily: 'Cairo',
+                      color: theme.colorScheme.primary,
+                      fontFamily: 'Cairo',
+                    ),
                   ),
-                ),
+                ] else ...[
+                  Text(
+                    'الإجمالي عند الاستلام: ${(booking.quantity * deal.dealPrice).toStringAsFixed(0)} ج',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.primary,
+                      fontFamily: 'Cairo',
+                    ),
+                  ),
+                ],
               ],
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // زر طباعة ومشاركة الفاتورة للمشترك
+          OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () => CommercialReceiptDialog.showDealReceipt(
+              context,
+              deal: deal,
+              participant: booking,
+            ),
+            icon: const Icon(Icons.print_rounded, size: 16, color: Color(0xFF16A34A)),
+            label: const Text(
+              'طباعة ومشاركة فاتورة الحجز 🖨️',
+              style: TextStyle(fontFamily: 'Cairo', fontSize: 11, fontWeight: FontWeight.bold),
             ),
           ),
 
@@ -1118,44 +1336,50 @@ class _GroupDealDetailSheetState extends State<GroupDealDetailSheet> {
             ),
             child: Column(
               children: [
+                if (deal.depositAmount > 0) ...[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('العربون المطلوب لتأكيد الجدية:',
+                          style: TextStyle(fontSize: 11, fontFamily: 'Cairo')),
+                      Text('${deposit.toStringAsFixed(0)} جنيه',
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFFB45309),
+                              fontFamily: 'Cairo')),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('المتبقي للدفع عند استلام الحصة:',
+                          style: TextStyle(fontSize: 11, fontFamily: 'Cairo')),
+                      Text('${remaining.toStringAsFixed(0)} جنيه',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.primary,
+                              fontFamily: 'Cairo')),
+                    ],
+                  ),
+                  const Divider(height: 12),
+                ],
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('العربون المطلوب لتأكيد الجدية:',
-                        style: TextStyle(fontSize: 11, fontFamily: 'Cairo')),
-                    Text('${deposit.toStringAsFixed(0)} جنيه',
+                    Text(
+                        deal.depositAmount > 0
+                            ? 'إجمالي قيمة الصفقة:'
+                            : 'الإجمالي المطلوب عند الاستلام:',
                         style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFFB45309),
-                            fontFamily: 'Cairo')),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('المتبقي للدفع عند استلام الحصة:',
-                        style: TextStyle(fontSize: 11, fontFamily: 'Cairo')),
-                    Text('${remaining.toStringAsFixed(0)} جنيه',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.primary,
-                            fontFamily: 'Cairo')),
-                  ],
-                ),
-                const Divider(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('إجمالي قيمة الصفقة:',
-                        style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                             fontFamily: 'Cairo')),
                     Text('${total.toStringAsFixed(0)} جنيه',
-                        style: const TextStyle(
-                            fontSize: 13,
+                        style: TextStyle(
+                            fontSize: 14,
                             fontWeight: FontWeight.w900,
+                            color: theme.colorScheme.primary,
                             fontFamily: 'Cairo')),
                   ],
                 ),

@@ -23,6 +23,8 @@ class RoleStyle {
   static const Color agriculturalGreen = Color(0xFF558B2F);
   static const Color legalGreen = Color(0xFF2E7D32);
   static const Color heritageBrown = Color(0xFF8D6E63);
+  static const Color commercialGreen = Color(0xFF16A34A);
+  static const Color deliveryOrange = Color(0xFFEA580C);
   static const Color moderatorOrange = Color(0xFFEF6C00);
 
   static SellerType? parseSellerType(String? code) {
@@ -62,6 +64,10 @@ class RoleStyle {
         return legalGreen;
       case 'heritage_admin':
         return heritageBrown;
+      case 'commercial_admin':
+        return commercialGreen;
+      case 'delivery_agent':
+        return deliveryOrange;
       case 'moderator':
         return moderatorOrange;
       default:
@@ -82,6 +88,10 @@ class RoleStyle {
         return Icons.gavel_rounded; // مطرقة العدالة (أدمن قانوني)
       case 'heritage_admin':
         return Icons.auto_stories_rounded; // كتاب التراث (أدمن التراث)
+      case 'commercial_admin':
+        return Icons.storefront_rounded; // متجر (أدمن تجارة وتسويق)
+      case 'delivery_agent':
+        return Icons.two_wheeler_rounded; // دراجة نارية (مندوب توصيل)
       case 'medical_admin':
       case 'moderator':
         return Icons.star_rounded; // نجمة
@@ -103,6 +113,10 @@ class RoleStyle {
         return legalGreen;
       case 'heritage_admin':
         return heritageBrown;
+      case 'commercial_admin':
+        return commercialGreen;
+      case 'delivery_agent':
+        return deliveryOrange;
       case 'moderator':
         return moderatorOrange;
       default:

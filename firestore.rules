@@ -61,6 +61,16 @@ service cloud.firestore {
         me().data.role in ['admin', 'assistant_admin', 'heritage_admin'];
     }
 
+    function isCommercialAdmin() {
+      return accountActive() &&
+        me().data.role in ['admin', 'assistant_admin', 'commercial_admin'];
+    }
+
+    function isDeliveryAgent() {
+      return accountActive() &&
+        me().data.role in ['admin', 'assistant_admin', 'commercial_admin', 'delivery_agent'];
+    }
+
     function isOwner(userId) {
       return accountActive() && request.auth.uid == userId;
     }
@@ -112,6 +122,8 @@ service cloud.firestore {
                     && request.resource.data.role != 'seller'
                     && request.resource.data.role != 'agricultural_admin'
                     && request.resource.data.role != 'legal_admin'
+                    && request.resource.data.role != 'commercial_admin'
+                    && request.resource.data.role != 'delivery_agent'
                     && request.resource.data.isActive == true;
 
       // المدير العام يغيّر أي شيء في أي حساب (الأدوار/النوع/التفعيل).
@@ -616,7 +628,7 @@ service cloud.firestore {
     // ───────────────────────── صفقات الشراء الجماعي وخدمات التوصيل والتسوق ─────────────────────────
     match /group_deals/{docId} {
       allow list, get: if true;
-      allow create, update, delete: if isAdmin();
+      allow create, update, delete: if isCommercialAdmin();
     }
 
     match /deal_participants/{docId} {
@@ -625,46 +637,50 @@ service cloud.firestore {
                     && request.auth.uid == request.resource.data.userId
                     && request.resource.data.isConfirmedByAdmin == false
                     && request.resource.data.isDelivered == false;
-      allow update, delete: if isAdmin()
-                            || (accountActive() && resource.data.userId == request.auth.uid && resource.data.isConfirmedByAdmin == false);
+      allow update: if isCommercialAdmin()
+                    || isDeliveryAgent()
+                    || (accountActive() && resource.data.userId == request.auth.uid && resource.data.isConfirmedByAdmin == false);
+      allow delete: if isCommercialAdmin();
     }
 
     match /group_deal_reopens/{docId} {
       allow list, get: if isSignedIn();
       allow create: if accountActive() && request.auth.uid == request.resource.data.userId;
-      allow update, delete: if isAdmin();
+      allow update, delete: if isCommercialAdmin();
     }
 
     // خدمة إشتريلي (طلبات الشراء والتوصيل الخاصة)
     match /eshterili_orders/{docId} {
-      allow list, get: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow list, get: if isCommercialAdmin() || isDeliveryAgent() || (isSignedIn() && resource.data.userId == request.auth.uid);
       allow create: if accountActive() && request.resource.data.userId == request.auth.uid;
-      allow update: if isAdmin()
+      allow update: if isCommercialAdmin()
+                    || isDeliveryAgent()
                     || (accountActive() && resource.data.userId == request.auth.uid
                         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
                         && request.resource.data.status in ['cancelled', 'in_progress']);
-      allow delete: if isAdmin();
+      allow delete: if isCommercialAdmin();
     }
 
     // خدمة إتسوقلي (أسواق الخضار والسلع الأسبوعية)
     match /etsawaqli_markets/{docId} {
       allow list, get: if true;
-      allow create, update, delete: if isAdmin();
+      allow create, update, delete: if isCommercialAdmin();
     }
 
     match /etsawaqli_products/{docId} {
       allow list, get: if true;
-      allow create, update, delete: if isAdmin();
+      allow create, update, delete: if isCommercialAdmin();
     }
 
     match /etsawaqli_orders/{docId} {
-      allow list, get: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow list, get: if isCommercialAdmin() || isDeliveryAgent() || (isSignedIn() && resource.data.userId == request.auth.uid);
       allow create: if accountActive() && request.resource.data.userId == request.auth.uid;
-      allow update: if isAdmin()
+      allow update: if isCommercialAdmin()
+                    || isDeliveryAgent()
                     || (accountActive() && resource.data.userId == request.auth.uid
                         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
                         && request.resource.data.status == 'cancelled');
-      allow delete: if isAdmin();
+      allow delete: if isCommercialAdmin();
     }
 
     // ───────────────────────── الخدمات الطبية ─────────────────────────

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../models/eshterili_model.dart';
 import '../services/eshterili_service.dart';
 import '../services/user_service.dart';
+import 'commercial_receipt_dialog.dart';
 
 /// نافذة خدمة «إشتريلي» للمستخدم: تسجيل طلب شراء جديد ومتابعة الطلبات الجارية وأكواد التسليم
 class EshteriliOrderSheet extends StatefulWidget {
@@ -503,6 +504,22 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> with SingleTi
                         backgroundColor: Color(0xFFDCFCE7),
                       ),
                   ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                onPressed: () => CommercialReceiptDialog.showEshteriliReceipt(
+                  context,
+                  order: order,
+                ),
+                icon: const Icon(Icons.print_rounded, size: 16, color: Color(0xFF2563EB)),
+                label: const Text(
+                  'طباعة ومشاركة فاتورة الطلب 🖨️',
+                  style: TextStyle(fontFamily: 'Cairo', fontSize: 11, fontWeight: FontWeight.bold),
                 ),
               ),
               const SizedBox(height: 10),

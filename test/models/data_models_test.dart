@@ -326,6 +326,8 @@ void main() {
       expect(labelFor('moderator'), 'مشرف');
       expect(labelFor('assistant_admin'), 'أدمن مساعد');
       expect(labelFor('medical_admin'), 'مدير المركز الطبي');
+      expect(labelFor('commercial_admin'), 'أدمن التجارة والتسويق');
+      expect(labelFor('delivery_agent'), 'مندوب توصيل');
       expect(labelFor('admin'), 'مدير عام');
       expect(labelFor('unknown'), 'unknown');
     });

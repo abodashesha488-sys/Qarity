@@ -707,6 +707,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const Color(0xFF8D6E63),
           Icons.auto_stories_rounded
         ),
+      'commercial_admin' => (
+          'أدمن التجارة والتسويق',
+          const Color(0xFF16A34A),
+          Icons.storefront_rounded
+        ),
+      'delivery_agent' => (
+          'مندوب توصيل',
+          const Color(0xFFEA580C),
+          Icons.two_wheeler_rounded
+        ),
       'moderator' => ('مشرف', Colors.orange, Icons.verified_user_rounded),
       'seller' => ('بائع', Colors.deepPurple, Icons.store_rounded),
       _ => ('مستخدم', Colors.teal, Icons.person_rounded),
@@ -898,6 +908,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       'assistant_admin',
       'medical_admin',
       'agricultural_admin',
+      'commercial_admin',
+      'delivery_agent',
       'legal_admin',
       'heritage_admin',
       'moderator'
@@ -1355,6 +1367,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         'assistant_admin' => const Color(0xFF6A1B9A),
         'medical_admin' => const Color(0xFF00897B),
         'agricultural_admin' => const Color(0xFF558B2F),
+        'commercial_admin' => const Color(0xFF16A34A),
+        'delivery_agent' => const Color(0xFFEA580C),
         'legal_admin' => const Color(0xFF2E7D32),
         'heritage_admin' => const Color(0xFF8D6E63),
         'moderator' => Colors.orange,

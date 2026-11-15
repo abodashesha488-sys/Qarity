@@ -9,6 +9,7 @@ import '../../models/group_deal_model.dart';
 import '../../services/eshterili_service.dart';
 import '../../services/etsawaqli_service.dart';
 import '../../services/group_deal_service.dart';
+import '../../widgets/commercial_receipt_dialog.dart';
 import '../../widgets/group_deal_delivery_screen.dart';
 import '../village/village_content_admin.dart';
 
@@ -17,7 +18,9 @@ import '../village/village_content_admin.dart';
 /// 2- إشتريلي (طلبات الشراء الخاصة + التسعير + تعيين المندوب + تأكيد التسليم)
 /// 3- إتسوقلي (فواتير كاشير الأسواق + تسعير السلع والخضروات + إدارة الأسواق والمواعيد)
 class GroupDealsAdminScreen extends StatefulWidget {
-  const GroupDealsAdminScreen({super.key});
+  const GroupDealsAdminScreen({super.key, this.isEmbedded = false});
+
+  final bool isEmbedded;
 
   @override
   State<GroupDealsAdminScreen> createState() => _GroupDealsAdminScreenState();
@@ -44,10 +47,66 @@ class _GroupDealsAdminScreenState extends State<GroupDealsAdminScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    final tabContent = TabBarView(
+      children: [
+        _buildGroupDealsTab(theme),
+        _buildEshteriliTab(theme),
+        _buildEtsawaqliTab(theme),
+      ],
+    );
+
+    if (widget.isEmbedded) {
+      return DefaultTabController(
+        length: 3,
+        child: Column(
+          children: [
+            // شريط تبويبات أنيق بدون خلفية خضراء تعلو أو تغطي على تبويبات مركز الأدوات
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                border: Border(
+                  bottom: BorderSide(
+                    color: theme.colorScheme.outlineVariant.withValues(alpha: 0.2),
+                  ),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TabBar(
+                      labelColor: const Color(0xFF16A34A),
+                      unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
+                      indicatorColor: const Color(0xFF16A34A),
+                      indicatorWeight: 3,
+                      labelStyle: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 12.5),
+                      tabs: const [
+                        Tab(icon: Icon(Icons.local_fire_department_rounded, size: 18), text: 'صفقات الجملة 🔥'),
+                        Tab(icon: Icon(Icons.two_wheeler_rounded, size: 18), text: 'إشتريلي 🛵'),
+                        Tab(icon: Icon(Icons.shopping_basket_rounded, size: 18), text: 'إتسوقلي 🧺'),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'إضافة صفقة جملة جديدة',
+                    icon: const Icon(Icons.add_circle_outline_rounded, size: 24, color: Color(0xFF16A34A)),
+                    onPressed: () => _openDealFormDialog(context),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(child: tabContent),
+          ],
+        ),
+      );
+    }
+
     return DefaultTabController(
       length: 3,
       child: Scaffold(
         appBar: AppBar(
+          backgroundColor: theme.colorScheme.surface,
+          foregroundColor: theme.colorScheme.onSurface,
+          elevation: 0,
           title: const Text(
             'إدارة الخدمات التجارية والتسوق',
             style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
@@ -68,13 +127,7 @@ class _GroupDealsAdminScreenState extends State<GroupDealsAdminScreen> {
             ),
           ],
         ),
-        body: TabBarView(
-          children: [
-            _buildGroupDealsTab(theme),
-            _buildEshteriliTab(theme),
-            _buildEtsawaqliTab(theme),
-          ],
-        ),
+        body: tabContent,
       ),
     );
   }
@@ -776,7 +829,9 @@ class _GroupDealsAdminScreenState extends State<GroupDealsAdminScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'حجز ${p.quantity} ${deal.unitName} • العربون: ${p.depositRequired(deal.depositAmount).toStringAsFixed(0)} ج',
+              deal.depositAmount > 0
+                  ? 'حجز ${p.quantity} ${deal.unitName} • العربون: ${p.depositRequired(deal.depositAmount).toStringAsFixed(0)} ج'
+                  : 'حجز ${p.quantity} ${deal.unitName} • الإجمالي: ${(p.quantity * deal.dealPrice).toStringAsFixed(0)} ج',
               style: const TextStyle(fontFamily: 'Cairo', fontSize: 11),
             ),
             if (p.userPhone.isNotEmpty)
@@ -789,31 +844,42 @@ class _GroupDealsAdminScreenState extends State<GroupDealsAdminScreen> {
               ),
           ],
         ),
-        trailing: p.isDelivered
-            ? const Chip(
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              tooltip: 'طباعة ومشاركة الفاتورة',
+              icon: const Icon(Icons.print_rounded, size: 20, color: Color(0xFF16A34A)),
+              onPressed: () => CommercialReceiptDialog.showDealReceipt(context, deal: deal, participant: p),
+            ),
+            if (p.isDelivered)
+              const Chip(
                 label: Text('تم التسليم 📦', style: TextStyle(fontFamily: 'Cairo', fontSize: 10)),
                 backgroundColor: Color(0xFFDCFCE7),
               )
-            : (!p.isConfirmedByAdmin
-                ? FilledButton.tonal(
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                    onPressed: () async {
-                      await _dealService.confirmDeposit(
-                        dealId: deal.id,
-                        participantId: p.id,
-                        quantity: p.quantity,
-                        adminUid: FirebaseAuth.instance.currentUser?.uid ?? 'admin',
-                      );
-                    },
-                    child: const Text('تأكيد العربون', style: TextStyle(fontFamily: 'Cairo', fontSize: 11)),
-                  )
-                : const Chip(
-                    label: Text('عربون مؤكد', style: TextStyle(fontFamily: 'Cairo', fontSize: 10)),
-                    backgroundColor: Color(0xFFE0E7FF),
-                  )),
+            else if (!p.isConfirmedByAdmin)
+              FilledButton.tonal(
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                onPressed: () async {
+                  await _dealService.confirmDeposit(
+                    dealId: deal.id,
+                    participantId: p.id,
+                    quantity: p.quantity,
+                    adminUid: FirebaseAuth.instance.currentUser?.uid ?? 'admin',
+                  );
+                },
+                child: Text(deal.depositAmount > 0 ? 'تأكيد العربون' : 'تأكيد الحجز', style: const TextStyle(fontFamily: 'Cairo', fontSize: 11)),
+              )
+            else
+              Chip(
+                label: Text(deal.depositAmount > 0 ? 'عربون مؤكد' : 'حجز مؤكد', style: const TextStyle(fontFamily: 'Cairo', fontSize: 10)),
+                backgroundColor: const Color(0xFFE0E7FF),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -1082,6 +1148,12 @@ class _GroupDealsAdminScreenState extends State<GroupDealsAdminScreen> {
                     },
                   ),
                 ],
+                const SizedBox(width: 8),
+                IconButton.filledTonal(
+                  tooltip: 'طباعة ومشاركة الفاتورة',
+                  icon: const Icon(Icons.print_rounded, size: 20, color: Color(0xFF2563EB)),
+                  onPressed: () => CommercialReceiptDialog.showEshteriliReceipt(context, order: order),
+                ),
               ],
             ),
           ],
@@ -1575,6 +1647,12 @@ class _GroupDealsAdminScreenState extends State<GroupDealsAdminScreen> {
                         child: const Icon(Icons.more_horiz),
                       ),
                     ),
+                    const SizedBox(width: 8),
+                    IconButton.filledTonal(
+                      tooltip: 'طباعة ومشاركة فاتورة الكاشير',
+                      icon: const Icon(Icons.print_rounded, size: 20, color: Color(0xFF16A34A)),
+                      onPressed: () => CommercialReceiptDialog.showEtsawaqliReceipt(context, order: order),
+                    ),
                   ],
                 ),
               ],
@@ -1984,7 +2062,6 @@ class _GroupDealsAdminScreenState extends State<GroupDealsAdminScreen> {
     final descCtrl = TextEditingController(text: existing?.description ?? '');
     final marketPriceCtrl = TextEditingController(text: existing?.marketPrice.toStringAsFixed(0) ?? '250');
     final dealPriceCtrl = TextEditingController(text: existing?.dealPrice.toStringAsFixed(0) ?? '180');
-    final depositCtrl = TextEditingController(text: existing?.depositAmount.toStringAsFixed(0) ?? '50');
     final targetCtrl = TextEditingController(text: existing?.targetCount.toString() ?? '20');
 
     String selectedCategory = existing?.category ?? GroupDealModel.supportedCategories.first;
@@ -2177,24 +2254,10 @@ class _GroupDealsAdminScreenState extends State<GroupDealsAdminScreen> {
                       ],
                     ),
                     const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: depositCtrl,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(labelText: 'مبلغ العربون (ج)', labelStyle: TextStyle(fontFamily: 'Cairo', fontSize: 12)),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: TextField(
-                            controller: targetCtrl,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(labelText: 'العدد المستهدف (حصة)', labelStyle: TextStyle(fontFamily: 'Cairo', fontSize: 12)),
-                          ),
-                        ),
-                      ],
+                    TextField(
+                      controller: targetCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: 'العدد المستهدف (حصة / كرتونة)', labelStyle: TextStyle(fontFamily: 'Cairo', fontSize: 12)),
                     ),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<int>(
@@ -2227,7 +2290,6 @@ class _GroupDealsAdminScreenState extends State<GroupDealsAdminScreen> {
 
                   final mPrice = double.tryParse(marketPriceCtrl.text.trim()) ?? 0;
                   final dPrice = double.tryParse(dealPriceCtrl.text.trim()) ?? 0;
-                  final dep = double.tryParse(depositCtrl.text.trim()) ?? 0;
                   final target = int.tryParse(targetCtrl.text.trim()) ?? 1;
 
                   final finalCategory = selectedCategory == 'أخرى' && customCategoryCtrl.text.trim().isNotEmpty
@@ -2248,7 +2310,7 @@ class _GroupDealsAdminScreenState extends State<GroupDealsAdminScreen> {
                       imageUrls: imageUrls,
                       marketPrice: mPrice,
                       dealPrice: dPrice,
-                      depositAmount: dep,
+                      depositAmount: 0.0,
                       targetCount: target,
                       unitName: finalUnit,
                       endTime: DateTime.now().add(Duration(days: daysLeft)),
@@ -2263,7 +2325,7 @@ class _GroupDealsAdminScreenState extends State<GroupDealsAdminScreen> {
                       imageUrls: imageUrls,
                       marketPrice: mPrice,
                       dealPrice: dPrice,
-                      depositAmount: dep,
+                      depositAmount: 0.0,
                       targetCount: target,
                       unitName: finalUnit,
                     );

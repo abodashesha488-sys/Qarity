@@ -472,6 +472,10 @@ class OnlineUserInfo {
         return 'مدير طبي';
       case 'agricultural_admin':
         return 'مشرف زراعي';
+      case 'commercial_admin':
+        return 'أدمن تجارة وتسويق';
+      case 'delivery_agent':
+        return 'مندوب توصيل';
       case 'seller':
         return 'بائع معتمد';
       case 'moderator':

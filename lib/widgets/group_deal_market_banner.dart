@@ -320,7 +320,9 @@ class _GroupDealMarketSectionState extends State<GroupDealMarketSection> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                'احجز حصتك الآن (عربون ${deal.depositAmount.toStringAsFixed(0)} ج) 👈',
+                deal.depositAmount > 0
+                    ? 'احجز حصتك الآن (عربون ${deal.depositAmount.toStringAsFixed(0)} ج) 👈'
+                    : 'احجز حصتك الآن بدون أي عربون 👈',
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.bold,

@@ -149,6 +149,37 @@ class AdminService {
     }
   }
 
+  /// هل هذا المستخدم «أدمن التجارة والتسويق» أو أي مدير (عام/مساعد)؟
+  /// مهمته: إدارة صفقات الجملة وخدمة إشتريلي وخدمة إتسوقلي وقبول الطلبات والتسعير.
+  Future<bool> isCommercialAdmin(String uid) async {
+    try {
+      final doc = await _firestore.collection('users').doc(uid).get();
+      final role = doc.data()?['role'] as String?;
+      return role == 'commercial_admin' ||
+          role == 'admin' ||
+          role == 'assistant_admin';
+    } catch (e) {
+      debugPrint('isCommercialAdmin error: $e');
+      return false;
+    }
+  }
+
+  /// هل هذا المستخدم «مندوب توصيل» أو أدمن تجاري أو مدير (عام/مساعد)؟
+  /// مهمته: إدخال كود الاستلام وتأكيد تسليم البضائع والطلبات للمشتركين.
+  Future<bool> isDeliveryAgent(String uid) async {
+    try {
+      final doc = await _firestore.collection('users').doc(uid).get();
+      final role = doc.data()?['role'] as String?;
+      return role == 'delivery_agent' ||
+          role == 'commercial_admin' ||
+          role == 'admin' ||
+          role == 'assistant_admin';
+    } catch (e) {
+      debugPrint('isDeliveryAgent error: $e');
+      return false;
+    }
+  }
+
   Future<int> getPendingCountFuture(String collection) =>
       _pendingCountOnce(collection);
 

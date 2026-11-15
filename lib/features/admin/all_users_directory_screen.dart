@@ -89,6 +89,16 @@ class _AllUsersDirectoryScreenState extends State<AllUsersDirectoryScreen> {
       Color(0xFF8D6E63),
       Icons.auto_stories_rounded
     ),
+    'commercial_admin': (
+      'أدمن التجارة والتسويق',
+      Color(0xFF16A34A),
+      Icons.storefront_rounded,
+    ),
+    'delivery_agent': (
+      'مندوب توصيل',
+      Color(0xFFEA580C),
+      Icons.two_wheeler_rounded,
+    ),
     'assistant_admin': ('أدمن مساعد', Color(0xFF6A1B9A), Icons.shield_rounded),
     'admin': (
       'مدير عام',
@@ -292,6 +302,8 @@ class _AllUsersDirectoryScreenState extends State<AllUsersDirectoryScreen> {
                 'assistant_admin',
                 'medical_admin',
                 'agricultural_admin',
+                'commercial_admin',
+                'delivery_agent',
                 'legal_admin',
                 'heritage_admin',
                 'moderator',

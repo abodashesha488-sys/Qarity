@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../models/etsawaqli_model.dart';
 import '../services/etsawaqli_service.dart';
 import '../services/user_service.dart';
+import 'commercial_receipt_dialog.dart';
 
 /// نافذة خدمة «إتسوقلي» للمستخدم: اختيار السوق الأسبوعي واختيار السلع وفاتورة كاشير السوبر ماركت
 class EtsawaqliMarketSheet extends StatefulWidget {
@@ -761,6 +762,22 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> with Single
                     ),
                   ),
                 ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: () => CommercialReceiptDialog.showEtsawaqliReceipt(
+                context,
+                order: order,
+              ),
+              icon: const Icon(Icons.print_rounded, size: 16, color: Color(0xFF16A34A)),
+              label: const Text(
+                'طباعة ومشاركة فاتورة الكاشير 🖨️',
+                style: TextStyle(fontFamily: 'Cairo', fontSize: 11, fontWeight: FontWeight.bold),
               ),
             ),
           ],

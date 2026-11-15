@@ -1,7 +1,7 @@
 {
-    "versionCode":  23,
-    "versionName":  "1.2.3",
+    "versionCode":  24,
+    "versionName":  "1.2.4",
     "apkUrl":  "https://github.com/abodashesha488-sys/Qarity/releases/latest/download/Qarity.apk",
     "forceUpdate":  false,
-    "releaseNotes":  "feat: complete unified deals and delivery hub with zero analyze issues"
+    "releaseNotes":  "feat: add commercial admin and delivery agent roles with invoice printing and tabs layout fix"
 }

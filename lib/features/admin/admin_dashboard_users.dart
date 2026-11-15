@@ -59,6 +59,16 @@ class _UsersPageState extends State<_UsersPage> {
       Color(0xFF8D6E63),
       Icons.auto_stories_rounded
     ),
+    'commercial_admin': (
+      'أدمن التجارة والتسويق',
+      Color(0xFF16A34A),
+      Icons.storefront_rounded,
+    ),
+    'delivery_agent': (
+      'مندوب توصيل',
+      Color(0xFFEA580C),
+      Icons.two_wheeler_rounded,
+    ),
     'assistant_admin': ('أدمن مساعد', Color(0xFF6A1B9A), Icons.shield_rounded),
     'admin': (
       'مدير عام',
@@ -76,6 +86,8 @@ class _UsersPageState extends State<_UsersPage> {
     ('agricultural_admin', 'مدير زراعي'),
     ('legal_admin', 'أدمن قانوني'),
     ('heritage_admin', 'أدمن التراث'),
+    ('commercial_admin', 'أدمن تجارة'),
+    ('delivery_agent', 'مناديب توصيل'),
     ('assistant_admin', 'أدمن مساعد'),
     ('admin', 'مدراء'),
     ('disabled', 'معطّلون'),
@@ -1708,6 +1720,10 @@ class _UsersPageState extends State<_UsersPage> {
         return 'الرد على الاستشارات القانونية في مستشار القرية فقط';
       case 'heritage_admin':
         return 'إدارة وتعديل وحذف كل محتوى وتاريخ ومعالم وفيديوهات وذكريات القرية';
+      case 'commercial_admin':
+        return 'إدارة كاملة لصفقات الجملة وخدمة إشتريلي وخدمة إتسوقلي وقبول الطلبات والتسعير';
+      case 'delivery_agent':
+        return 'مندوب توصيل — صلاحية إدخال كود التسليم لتأكيد تسليم الطلبات والسلع';
       case 'admin':
         return 'كل الصلاحيات + تعيين الأدوار';
       default:
