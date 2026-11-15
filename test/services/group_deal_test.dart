@@ -15,6 +15,7 @@ void main() {
         depositAmount: 50.0,
         targetCount: 20,
         currentCount: 15,
+        confirmedCount: 15,
         endTime: DateTime.now().add(const Duration(days: 2)),
       );
 
@@ -108,7 +109,6 @@ void main() {
         id: 'deal_1',
         title: 'كرتونة تموين',
         description: 'زيت وسكر',
-        imageUrl: '',
         marketPrice: 500.0,
         dealPrice: 400.0, // 100 LE saving
         depositAmount: 100.0,

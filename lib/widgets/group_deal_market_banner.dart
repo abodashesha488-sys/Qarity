@@ -91,12 +91,26 @@ class _GroupDealMarketSectionState extends State<GroupDealMarketSection> {
                     ),
                   ),
                   const Spacer(),
-                  Text(
-                    'وفر واشترك بسعر الجملة',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: theme.colorScheme.onSurfaceVariant,
-                      fontFamily: 'Cairo',
+                  InkWell(
+                    onTap: () => _openExecutedDealsSheet(context, theme),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      child: Row(
+                        children: [
+                          Icon(Icons.history_edu_rounded, size: 14, color: theme.colorScheme.primary),
+                          const SizedBox(width: 4),
+                          Text(
+                            'سجل الصفقات 📜',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.primary,
+                              fontFamily: 'Cairo',
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -165,9 +179,9 @@ class _GroupDealMarketSectionState extends State<GroupDealMarketSection> {
                     width: 58,
                     height: 58,
                     color: theme.colorScheme.surfaceContainerHighest,
-                    child: deal.imageUrl.isNotEmpty
+                    child: deal.primaryImage.isNotEmpty
                         ? AppImageCache.image(
-                            url: deal.imageUrl,
+                            url: deal.primaryImage,
                             fit: BoxFit.cover,
                             width: 58,
                             height: 58,
@@ -316,6 +330,103 @@ class _GroupDealMarketSectionState extends State<GroupDealMarketSection> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  void _openExecutedDealsSheet(BuildContext context, ThemeData theme) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.8,
+        ),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: StreamBuilder<List<GroupDealModel>>(
+          stream: _service.watchExecutedDeals(),
+          builder: (context, snap) {
+            final executed = snap.data ?? [];
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.history_edu_rounded, color: Color(0xFF16A34A), size: 24),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'سجل الصفقات السابقة والمنفذة',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+                const Divider(),
+                if (executed.isEmpty)
+                  const Expanded(
+                    child: Center(
+                      child: Text(
+                        'لا توجد صفقات منفذة سابقة حتى الآن.',
+                        style: TextStyle(fontFamily: 'Cairo', color: Colors.grey),
+                      ),
+                    ),
+                  )
+                else
+                  Expanded(
+                    child: ListView.separated(
+                      itemCount: executed.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 10),
+                      itemBuilder: (context, idx) {
+                        final d = executed[idx];
+                        return Card(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            side: BorderSide(color: const Color(0xFF16A34A).withValues(alpha: 0.3)),
+                          ),
+                          child: ListTile(
+                            onTap: () {
+                              Navigator.pop(context);
+                              showModalBottomSheet(
+                                context: context,
+                                isScrollControlled: true,
+                                backgroundColor: Colors.transparent,
+                                builder: (_) => GroupDealDetailSheet(dealId: d.id),
+                              );
+                            },
+                            leading: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: SizedBox(
+                                width: 44,
+                                height: 44,
+                                child: d.primaryImage.isNotEmpty
+                                    ? AppImageCache.image(url: d.primaryImage, fit: BoxFit.cover)
+                                    : const Icon(Icons.inventory_2_outlined),
+                              ),
+                            ),
+                            title: Text(d.title, style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Cairo', fontSize: 13)),
+                            subtitle: Text(
+                              'وفر الأهالي: ${d.confirmedVillageSavings.toStringAsFixed(0)} ج • الحصص: ${d.confirmedCount}',
+                              style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, color: Color(0xFF16A34A)),
+                            ),
+                            trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            );
+          },
         ),
       ),
     );

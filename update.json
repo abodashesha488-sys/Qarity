@@ -1,7 +1,7 @@
 {
-    "versionCode":  21,
-    "versionName":  "1.2.1",
+    "versionCode":  22,
+    "versionName":  "1.2.2",
     "apkUrl":  "https://github.com/abodashesha488-sys/Qarity/releases/latest/download/Qarity.apk",
     "forceUpdate":  false,
-    "releaseNotes":  "fix(android): restore verified Gradle 9.5.0 wrapper and build configs"
+    "releaseNotes":  "feat: style breaking alert in warm yellow wisdom layout and show user\u0027s total savings by booked quantity"
 }

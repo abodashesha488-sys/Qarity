@@ -123,21 +123,27 @@ class GroupDealService {
     return code.toString();
   }
 
-  /// بث حي بكافة الصفقات النشطة
+  /// بث حي بكافة الصفقات النشطة الجارية حالياً
   Stream<List<GroupDealModel>> watchActiveDeals() {
-    return _dealsCol
-        .where('isActive', isEqualTo: true)
-        .snapshots()
-        .map((snap) {
+    return _dealsCol.snapshots().map((snap) {
       final list = snap.docs
           .map((d) => GroupDealModel.fromJson(d.data(), d.id))
+          .where((d) => d.isActive && !d.isCompleted && !d.isExpired)
           .toList();
-      // ترتيب الصفقات: الأقرب للانتهاء والنشطة أولاً
-      list.sort((a, b) {
-        if (a.isAvailableForBooking && !b.isAvailableForBooking) return -1;
-        if (!a.isAvailableForBooking && b.isAvailableForBooking) return 1;
-        return a.endTime.compareTo(b.endTime);
-      });
+      // ترتيب الصفقات: الأقرب للانتهاء أولاً
+      list.sort((a, b) => a.endTime.compareTo(b.endTime));
+      return list;
+    });
+  }
+
+  /// بث حي بكافة الصفقات المنفذة والمكتملة (أرشيف وسجل الصفقات السابقة)
+  Stream<List<GroupDealModel>> watchExecutedDeals() {
+    return _dealsCol.snapshots().map((snap) {
+      final list = snap.docs
+          .map((d) => GroupDealModel.fromJson(d.data(), d.id))
+          .where((d) => d.isCompleted || d.isExpired)
+          .toList();
+      list.sort((a, b) => b.endTime.compareTo(a.endTime));
       return list;
     });
   }
@@ -194,7 +200,7 @@ class GroupDealService {
     });
   }
 
-  /// تسجيل حجز جديد في الصفقة الجماعية
+  /// تسجيل حجز جديد في الصفقة الجماعية (معاملة ذرية لتحديث العداد الفعلي فورياً)
   Future<String> bookDeal({
     required String dealId,
     required String userId,
@@ -205,29 +211,99 @@ class GroupDealService {
     String notes = '',
   }) async {
     final claimCode = generateClaimCode();
+    final cleanQty = quantity.clamp(1, 100);
 
-    await _participantsCol.add({
-      'dealId': dealId,
-      'userId': userId,
-      'userName': userName.trim(),
-      'userPhone': userPhone.trim(),
-      'quantity': quantity.clamp(1, 100),
-      'paymentMethod': paymentMethod,
-      'claimCode': claimCode,
-      'isConfirmedByAdmin': false,
-      'confirmedAt': null,
-      'confirmedBy': '',
-      'isDelivered': false,
-      'deliveredAt': null,
-      'deliveredBy': '',
-      'notes': notes.trim(),
-      'createdAt': FieldValue.serverTimestamp(),
+    final dealRef = _dealsCol.doc(dealId);
+    final participantRef = _participantsCol.doc();
+
+    await _firestore.runTransaction((tx) async {
+      final dealSnap = await tx.get(dealRef);
+      if (!dealSnap.exists) throw Exception('الصفقة غير موجودة');
+
+      final current = (dealSnap.data()?['currentCount'] as num?)?.toInt() ?? 0;
+      final target = (dealSnap.data()?['targetCount'] as num?)?.toInt() ?? 1;
+      final newCount = current + cleanQty;
+
+      tx.set(participantRef, {
+        'dealId': dealId,
+        'userId': userId,
+        'userName': userName.trim(),
+        'userPhone': userPhone.trim(),
+        'quantity': cleanQty,
+        'paymentMethod': paymentMethod,
+        'claimCode': claimCode,
+        'isConfirmedByAdmin': false,
+        'confirmedAt': null,
+        'confirmedBy': '',
+        'isDelivered': false,
+        'deliveredAt': null,
+        'deliveredBy': '',
+        'notes': notes.trim(),
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      tx.update(dealRef, {
+        'currentCount': newCount,
+        'isCompleted': newCount >= target,
+      });
     });
 
     // إشعار الأدمن بحجز جديد لمراجعة العربون
     unawaited(RemotePushService.notifyAdmins('group_deals'));
 
     return claimCode;
+  }
+
+  /// تعديل كمية الحجز بواسطة المستخدم قبل اكتمال أو انتهاء الصفقة
+  Future<void> updateBookingQuantity({
+    required String dealId,
+    required String participantId,
+    required int oldQuantity,
+    required int newQuantity,
+    required bool wasConfirmed,
+  }) async {
+    final diff = newQuantity - oldQuantity;
+    if (diff == 0) return;
+
+    final dealRef = _dealsCol.doc(dealId);
+    final participantRef = _participantsCol.doc(participantId);
+
+    await _firestore.runTransaction((tx) async {
+      final dealSnap = await tx.get(dealRef);
+      if (!dealSnap.exists) throw Exception('الصفقة غير موجودة');
+
+      final current = (dealSnap.data()?['currentCount'] as num?)?.toInt() ?? 0;
+      final confirmed = (dealSnap.data()?['confirmedCount'] as num?)?.toInt() ?? 0;
+      final target = (dealSnap.data()?['targetCount'] as num?)?.toInt() ?? 1;
+
+      final newCurrent = (current + diff).clamp(0, 999999);
+      final newConfirmed = wasConfirmed ? (confirmed + diff).clamp(0, newCurrent) : confirmed;
+
+      tx.update(participantRef, {
+        'quantity': newQuantity,
+      });
+
+      tx.update(dealRef, {
+        'currentCount': newCurrent,
+        if (wasConfirmed) 'confirmedCount': newConfirmed,
+        'isCompleted': newCurrent >= target,
+      });
+    });
+  }
+
+  /// إلغاء حجز المشترك لنفسه قبل تسليم البضاعة
+  Future<void> cancelUserBooking({
+    required String dealId,
+    required String participantId,
+    required int quantity,
+    required bool wasConfirmed,
+  }) async {
+    await cancelParticipant(
+      dealId: dealId,
+      participantId: participantId,
+      quantity: quantity,
+      wasConfirmed: wasConfirmed,
+    );
   }
 
   /// تأكيد استلام العربون بواسطة الأدمن (معاملة ذرية لزيادة العداد بأمان)
@@ -245,8 +321,10 @@ class GroupDealService {
       if (!dealSnap.exists) throw Exception('الصفقة غير موجودة');
 
       final current = (dealSnap.data()?['currentCount'] as num?)?.toInt() ?? 0;
+      final confirmed = (dealSnap.data()?['confirmedCount'] as num?)?.toInt() ?? 0;
       final target = (dealSnap.data()?['targetCount'] as num?)?.toInt() ?? 1;
-      final newCount = current + quantity;
+      final newConfirmed = confirmed + quantity;
+      final safeCurrent = current < newConfirmed ? newConfirmed : current;
 
       tx.update(participantRef, {
         'isConfirmedByAdmin': true,
@@ -255,8 +333,9 @@ class GroupDealService {
       });
 
       tx.update(dealRef, {
-        'currentCount': newCount,
-        'isCompleted': newCount >= target,
+        'confirmedCount': newConfirmed,
+        'currentCount': safeCurrent,
+        'isCompleted': safeCurrent >= target,
       });
     });
   }
@@ -271,23 +350,24 @@ class GroupDealService {
     final dealRef = _dealsCol.doc(dealId);
     final participantRef = _participantsCol.doc(participantId);
 
-    if (wasConfirmed) {
-      await _firestore.runTransaction((tx) async {
-        final dealSnap = await tx.get(dealRef);
-        if (dealSnap.exists) {
-          final current = (dealSnap.data()?['currentCount'] as num?)?.toInt() ?? 0;
-          final newCount = (current - quantity).clamp(0, 999999);
-          final target = (dealSnap.data()?['targetCount'] as num?)?.toInt() ?? 1;
-          tx.update(dealRef, {
-            'currentCount': newCount,
-            'isCompleted': newCount >= target,
-          });
-        }
-        tx.delete(participantRef);
-      });
-    } else {
-      await participantRef.delete();
-    }
+    await _firestore.runTransaction((tx) async {
+      final dealSnap = await tx.get(dealRef);
+      if (dealSnap.exists) {
+        final current = (dealSnap.data()?['currentCount'] as num?)?.toInt() ?? 0;
+        final confirmed = (dealSnap.data()?['confirmedCount'] as num?)?.toInt() ?? 0;
+        final target = (dealSnap.data()?['targetCount'] as num?)?.toInt() ?? 1;
+
+        final newCurrent = (current - quantity).clamp(0, 999999);
+        final newConfirmed = wasConfirmed ? (confirmed - quantity).clamp(0, newCurrent) : confirmed;
+
+        tx.update(dealRef, {
+          'currentCount': newCurrent,
+          if (wasConfirmed) 'confirmedCount': newConfirmed,
+          'isCompleted': newCurrent >= target,
+        });
+      }
+      tx.delete(participantRef);
+    });
   }
 
   /// تسليم البضاعة والتحقق من كود الـ 4 أرقام

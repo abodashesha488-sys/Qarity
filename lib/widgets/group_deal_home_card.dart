@@ -23,6 +23,7 @@ class _GroupDealHomeCardState extends State<GroupDealHomeCard> {
   final AlertService _alerts = AlertService();
   final GroupDealService _dealService = GroupDealService();
 
+  int _currentDealIndex = 0;
   Timer? _countdownTimer;
   Timer? _breakingExpiryTimer;
   StreamSubscription<VillageAlert?>? _breakingSubscription;
@@ -102,15 +103,66 @@ class _GroupDealHomeCardState extends State<GroupDealHomeCard> {
       return _buildBreakingBanner(context, _breaking!);
     }
 
-    // 2. عرض الداش بورد الحي لصفقات الجملة
-    return StreamBuilder<GroupDealModel?>(
-      stream: _dealService.watchPrimaryFeaturedDeal(),
+    // 2. عرض الداش بورد الحي لصفقات الجملة (يدعم صفقات متعددة)
+    return StreamBuilder<List<GroupDealModel>>(
+      stream: _dealService.watchActiveDeals(),
       builder: (context, snapshot) {
-        final deal = snapshot.data;
-        if (deal == null) {
+        final deals = snapshot.data ?? [];
+        if (deals.isEmpty) {
           return _buildDefaultPlaceholderCard(context, theme);
         }
-        return _buildDealDashboardCard(context, theme, deal);
+
+        final safeIndex = _currentDealIndex.clamp(0, deals.length - 1);
+        final activeDeal = deals[safeIndex];
+
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (deals.length > 1) ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                child: SizedBox(
+                  height: 36,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: deals.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemBuilder: (context, idx) {
+                      final d = deals[idx];
+                      final isSelected = idx == safeIndex;
+                      return ChoiceChip(
+                        label: Text(
+                          '${d.title} (${d.currentCount}/${d.targetCount})',
+                          style: TextStyle(
+                            fontFamily: 'Cairo',
+                            fontSize: 11,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          ),
+                        ),
+                        selected: isSelected,
+                        selectedColor: const Color(0xFFD97706).withValues(alpha: 0.2),
+                        avatar: Icon(
+                          Icons.local_fire_department_rounded,
+                          size: 14,
+                          color: isSelected ? const Color(0xFFD97706) : Colors.grey,
+                        ),
+                        onSelected: (_) => setState(() => _currentDealIndex = idx),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
+            _buildDealDashboardCard(
+              context,
+              theme,
+              activeDeal,
+              totalDeals: deals.length,
+              dealIndex: safeIndex,
+            ),
+          ],
+        );
       },
     );
   }
@@ -118,8 +170,10 @@ class _GroupDealHomeCardState extends State<GroupDealHomeCard> {
   Widget _buildDealDashboardCard(
     BuildContext context,
     ThemeData theme,
-    GroupDealModel deal,
-  ) {
+    GroupDealModel deal, {
+    int totalDeals = 1,
+    int dealIndex = 0,
+  }) {
     final countdown = _formatCountdown(deal.endTime);
     final isExpired = deal.isExpired;
     final primaryColor = theme.colorScheme.primary;
@@ -252,9 +306,9 @@ class _GroupDealHomeCardState extends State<GroupDealHomeCard> {
                             width: 74,
                             height: 74,
                             color: theme.colorScheme.surfaceContainerHighest,
-                            child: deal.imageUrl.isNotEmpty
+                            child: deal.primaryImage.isNotEmpty
                                 ? AppImageCache.image(
-                                    url: deal.imageUrl,
+                                    url: deal.primaryImage,
                                     fit: BoxFit.cover,
                                     width: 74,
                                     height: 74,
@@ -420,6 +474,22 @@ class _GroupDealHomeCardState extends State<GroupDealHomeCard> {
                         ),
                       ),
                     ),
+                    if (totalDeals > 1) ...[
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'صفقة ${dealIndex + 1} من $totalDeals • اضغط للاطلاع أو الحجز بسعر الجملة 🔥',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: theme.colorScheme.onSurfaceVariant,
+                              fontFamily: 'Cairo',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ],
@@ -487,56 +557,189 @@ class _GroupDealHomeCardState extends State<GroupDealHomeCard> {
   }
 
   Widget _buildBreakingBanner(BuildContext context, VillageAlert alert) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    final bgColors = isDark
+        ? const [Color(0xFF451A03), Color(0xFF78350F)]
+        : const [Color(0xFFFFFBEB), Color(0xFFFEF3C7)];
+
+    final borderColor = isDark ? const Color(0xFFF59E0B) : const Color(0xFFEAB308);
+    final headerTextColor = isDark ? const Color(0xFFFDE68A) : const Color(0xFF92400E);
+    final messageTextColor = isDark ? const Color(0xFFFEF9C3) : const Color(0xFF78350F);
+    final hintTextColor = isDark ? const Color(0xFFFBBF24) : const Color(0xFFB45309);
+
+    final now = DateTime.now();
+    final timeStr = '${now.hour % 12 == 0 ? 12 : now.hour % 12}:${now.minute.toString().padLeft(2, '0')} ${now.hour >= 12 ? 'م' : 'ص'}';
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-      child: Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFFB71C1C),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.red.withValues(alpha: 0.35),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Row(
-          children: [
-            const Icon(Icons.warning_amber_rounded,
-                color: Colors.white, size: 26),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text(
-                    'تنبيه عاجل من إدارة القرية ⚠️',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'Cairo',
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    alert.message,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontFamily: 'Cairo',
-                    ),
-                  ),
-                ],
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        elevation: 3,
+        shadowColor: borderColor.withValues(alpha: 0.25),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () => _showAlertDialog(context, alert),
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 120),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: bgColors,
+                begin: Alignment.topRight,
+                end: Alignment.bottomLeft,
               ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: borderColor,
+                width: 1.8,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: borderColor.withValues(alpha: 0.25),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // السطر الأول: التاريخ/الوقت - شارة عاجل - إدارة القرية
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'قرية أبودشيشة • $timeStr',
+                      style: TextStyle(
+                        color: headerTextColor,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
+                        fontFamily: 'Cairo',
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFDC2626), Color(0xFFB91C1C)],
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.red.withValues(alpha: 0.35),
+                            blurRadius: 4,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.warning_amber_rounded, size: 13, color: Colors.white),
+                          SizedBox(width: 4),
+                          Text(
+                            'تنبيه عاجل ⚠️',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w900,
+                              fontFamily: 'Cairo',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      'إدارة القرية 📢',
+                      style: TextStyle(
+                        color: headerTextColor,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
+                        fontFamily: 'Cairo',
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+
+                // نص التنبيه العاجل بتنسيق الحكمة في المنتصف
+                Text(
+                  '« ${alert.message} »',
+                  textAlign: TextAlign.center,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w800,
+                    color: messageTextColor,
+                    height: 1.5,
+                    fontFamily: 'Cairo',
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // السطر السفلي: زر التفاعل وتفاصيل التنبيه
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.touch_app_outlined, size: 14, color: hintTextColor),
+                    const SizedBox(width: 4),
+                    Text(
+                      'اضغط هنا لقراءة كامل التنبيه والتعليمات 👈',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: hintTextColor,
+                        fontFamily: 'Cairo',
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showAlertDialog(BuildContext context, VillageAlert alert) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Color(0xFFDC2626), size: 24),
+            SizedBox(width: 8),
+            Text(
+              'تنبيه عاجل من إدارة القرية',
+              style: TextStyle(fontWeight: FontWeight.w900, fontFamily: 'Cairo', fontSize: 16),
             ),
           ],
         ),
+        content: SingleChildScrollView(
+          child: Text(
+            alert.message,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              fontFamily: 'Cairo',
+              height: 1.6,
+            ),
+          ),
+        ),
+        actions: [
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFDC2626)),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('حسناً، فهمت', style: TextStyle(fontFamily: 'Cairo')),
+          ),
+        ],
       ),
     );
   }

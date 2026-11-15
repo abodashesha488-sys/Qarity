@@ -7,11 +7,13 @@ class GroupDealModel {
   final String title;
   final String description;
   final String imageUrl;
+  final List<String> imageUrls; // دعم صور متعددة للمنتج
   final double marketPrice; // السعر في السوق
   final double dealPrice; // سعر الصفقة الجماعية (سعر الجملة)
   final double depositAmount; // قيمة عربون جدية الحجز للوحدة
   final int targetCount; // العدد المطلوب لاكتمال الصفقة
-  final int currentCount; // العدد الفعلي المؤكد حتى الآن
+  final int currentCount; // إجمالي الحصص المحجوزة حتى الآن
+  final int confirmedCount; // الحصص المؤكدة باستلام العربون
   final DateTime endTime; // وقت انتهاء العرض
   final bool isActive; // هل الصفقة معروضة ونشطة
   final bool isCompleted; // هل اكتمل العدد أو أغلقت
@@ -24,20 +26,45 @@ class GroupDealModel {
     required this.id,
     required this.title,
     required this.description,
-    required this.imageUrl,
+    this.imageUrl = '',
+    this.imageUrls = const [],
     required this.marketPrice,
     required this.dealPrice,
     required this.depositAmount,
     required this.targetCount,
     this.currentCount = 0,
+    this.confirmedCount = 0,
     required this.endTime,
     this.isActive = true,
     this.isCompleted = false,
-    this.category = 'تموين وأغذية',
+    this.category = 'تموين ومواد غذائية',
     this.unitName = 'حصة',
     this.createdBy = '',
     this.createdAt,
   });
+
+  /// الصورة الرئيسية الأولى
+  String get primaryImage {
+    if (imageUrls.isNotEmpty && imageUrls.first.trim().isNotEmpty) {
+      return imageUrls.first.trim();
+    }
+    return imageUrl.trim();
+  }
+
+  /// قائمة كل الصور المتاحة بدون فراغات
+  List<String> get allImages {
+    final list = <String>[];
+    for (final img in imageUrls) {
+      final t = img.trim();
+      if (t.isNotEmpty && !list.contains(t)) list.add(t);
+    }
+    final single = imageUrl.trim();
+    if (single.isNotEmpty && !list.contains(single)) list.add(single);
+    return list;
+  }
+
+  /// الحصص قيد انتظار تأكيد العربون
+  int get pendingCount => (currentCount - confirmedCount).clamp(0, currentCount);
 
   /// الوفر للوحدة الواحدة (جنيه)
   double get savingsPerUnit => (marketPrice - dealPrice).clamp(0, double.infinity);
@@ -49,14 +76,23 @@ class GroupDealModel {
     return pct.clamp(0, 100).round();
   }
 
-  /// إجمالي الوفر المالي لأهالي القرية حتى الآن من هذه الصفقة
+  /// إجمالي الوفر المالي لأهالي القرية المحجوز حتى الآن من هذه الصفقة
   double get totalVillageSavings => currentCount * savingsPerUnit;
 
-  /// إجمالي قيمة المبيعات المتوقعة أو المحققة
+  /// الوفر المالي المؤكد فعلياً
+  double get confirmedVillageSavings => confirmedCount * savingsPerUnit;
+
+  /// إجمالي قيمة المبيعات المحجوزة
   double get totalDealValue => currentCount * dealPrice;
 
+  /// إجمالي قيمة المبيعات المؤكدة
+  double get confirmedDealValue => confirmedCount * dealPrice;
+
   /// إجمالي العربون المؤكد استلامه
-  double get totalDepositsCollected => currentCount * depositAmount;
+  double get totalDepositsCollected => confirmedCount * depositAmount;
+
+  /// العربون قيد الانتظار
+  double get pendingDeposits => pendingCount * depositAmount;
 
   /// إجمالي المتبقي للتحصيل عند التسليم
   double get totalRemainingToCollect => currentCount * (dealPrice - depositAmount);
@@ -67,7 +103,7 @@ class GroupDealModel {
     return (currentCount / targetCount).clamp(0.0, 1.0);
   }
 
-  /// عدد الحصص المتبقية لتفعيل سعر الجملة
+  /// عدد الحصص المتبقية لاكتمال الصفقة
   int get remainingCount => (targetCount - currentCount).clamp(0, targetCount);
 
   /// هل انتهى وقت الصفقة
@@ -76,21 +112,58 @@ class GroupDealModel {
   /// هل الصفقة متاحة للحجز حالياً
   bool get isAvailableForBooking => isActive && !isCompleted && !isExpired && remainingCount > 0;
 
+  static const List<String> supportedCategories = [
+    'تموين ومواد غذائية',
+    'لحوم ودواجن وأسماك',
+    'خضروات وفواكه جملة',
+    'أعلاف وثروة حيوانية',
+    'أسمدة ومستلزمات زراعية',
+    'أجهزة كهربائية ومنزلية',
+    'ملابس ومفروشات',
+    'مستلزمات مدرسية ومكتبية',
+    'أخرى',
+  ];
+
+  static const List<String> supportedUnits = [
+    'كرتونة',
+    'شيكارة',
+    'كيلو',
+    'قفص / عداية',
+    'طرد / باكت',
+    'لتر / جركن',
+    'رأس',
+    'قطعة / جهاز',
+    'طن',
+    'حصة',
+  ];
+
   factory GroupDealModel.fromJson(Map<String, dynamic> json, String docId) {
+    final imgs = (json['imageUrls'] as List<dynamic>?)
+            ?.map((e) => e.toString().trim())
+            .where((e) => e.isNotEmpty)
+            .toList() ??
+        const [];
+    final singleImg = (json['imageUrl'] as String? ?? '').trim();
+    final resolvedList = imgs.isNotEmpty
+        ? imgs
+        : (singleImg.isNotEmpty ? [singleImg] : const <String>[]);
+
     return GroupDealModel(
       id: docId,
       title: json['title'] as String? ?? '',
       description: json['description'] as String? ?? '',
-      imageUrl: json['imageUrl'] as String? ?? '',
+      imageUrl: singleImg.isNotEmpty ? singleImg : (resolvedList.isNotEmpty ? resolvedList.first : ''),
+      imageUrls: resolvedList,
       marketPrice: (json['marketPrice'] as num?)?.toDouble() ?? 0.0,
       dealPrice: (json['dealPrice'] as num?)?.toDouble() ?? 0.0,
       depositAmount: (json['depositAmount'] as num?)?.toDouble() ?? 0.0,
       targetCount: (json['targetCount'] as num?)?.toInt() ?? 1,
       currentCount: (json['currentCount'] as num?)?.toInt() ?? 0,
+      confirmedCount: (json['confirmedCount'] as num?)?.toInt() ?? 0,
       endTime: tsToDateTime(json['endTime']) ?? DateTime.now().add(const Duration(days: 3)),
       isActive: json['isActive'] as bool? ?? true,
       isCompleted: json['isCompleted'] as bool? ?? false,
-      category: json['category'] as String? ?? 'تموين وأغذية',
+      category: json['category'] as String? ?? 'تموين ومواد غذائية',
       unitName: json['unitName'] as String? ?? 'حصة',
       createdBy: json['createdBy'] as String? ?? '',
       createdAt: tsToDateTime(json['createdAt']),
@@ -101,12 +174,14 @@ class GroupDealModel {
     return {
       'title': title,
       'description': description,
-      'imageUrl': imageUrl,
+      'imageUrl': primaryImage,
+      'imageUrls': allImages,
       'marketPrice': marketPrice,
       'dealPrice': dealPrice,
       'depositAmount': depositAmount,
       'targetCount': targetCount,
       'currentCount': currentCount,
+      'confirmedCount': confirmedCount,
       'endTime': Timestamp.fromDate(endTime),
       'isActive': isActive,
       'isCompleted': isCompleted,
@@ -121,11 +196,13 @@ class GroupDealModel {
     String? title,
     String? description,
     String? imageUrl,
+    List<String>? imageUrls,
     double? marketPrice,
     double? dealPrice,
     double? depositAmount,
     int? targetCount,
     int? currentCount,
+    int? confirmedCount,
     DateTime? endTime,
     bool? isActive,
     bool? isCompleted,
@@ -137,11 +214,13 @@ class GroupDealModel {
       title: title ?? this.title,
       description: description ?? this.description,
       imageUrl: imageUrl ?? this.imageUrl,
+      imageUrls: imageUrls ?? this.imageUrls,
       marketPrice: marketPrice ?? this.marketPrice,
       dealPrice: dealPrice ?? this.dealPrice,
       depositAmount: depositAmount ?? this.depositAmount,
       targetCount: targetCount ?? this.targetCount,
       currentCount: currentCount ?? this.currentCount,
+      confirmedCount: confirmedCount ?? this.confirmedCount,
       endTime: endTime ?? this.endTime,
       isActive: isActive ?? this.isActive,
       isCompleted: isCompleted ?? this.isCompleted,
@@ -240,5 +319,36 @@ class DealParticipantModel {
       'notes': notes,
       'createdAt': createdAt != null ? Timestamp.fromDate(createdAt!) : FieldValue.serverTimestamp(),
     };
+  }
+
+  DealParticipantModel copyWith({
+    int? quantity,
+    String? paymentMethod,
+    bool? isConfirmedByAdmin,
+    DateTime? confirmedAt,
+    String? confirmedBy,
+    bool? isDelivered,
+    DateTime? deliveredAt,
+    String? deliveredBy,
+    String? notes,
+  }) {
+    return DealParticipantModel(
+      id: id,
+      dealId: dealId,
+      userId: userId,
+      userName: userName,
+      userPhone: userPhone,
+      quantity: quantity ?? this.quantity,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
+      claimCode: claimCode,
+      isConfirmedByAdmin: isConfirmedByAdmin ?? this.isConfirmedByAdmin,
+      confirmedAt: confirmedAt ?? this.confirmedAt,
+      confirmedBy: confirmedBy ?? this.confirmedBy,
+      isDelivered: isDelivered ?? this.isDelivered,
+      deliveredAt: deliveredAt ?? this.deliveredAt,
+      deliveredBy: deliveredBy ?? this.deliveredBy,
+      notes: notes ?? this.notes,
+      createdAt: createdAt,
+    );
   }
 }

@@ -26,6 +26,8 @@ class _GroupDealDetailSheetState extends State<GroupDealDetailSheet> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   int _selectedQuantity = 1;
+  int? _editingQuantity;
+  int _currentImageIndex = 0;
   String _paymentMethod = 'مندوب القرية';
   late final TextEditingController _nameCtrl;
   late final TextEditingController _phoneCtrl;
@@ -275,6 +277,9 @@ class _GroupDealDetailSheetState extends State<GroupDealDetailSheet> {
   }
 
   Widget _buildDealHeader(ThemeData theme, GroupDealModel deal) {
+    final images = deal.allImages;
+    final hasMultipleImages = images.length > 1;
+
     return Container(
       decoration: BoxDecoration(
         color:
@@ -285,85 +290,186 @@ class _GroupDealDetailSheetState extends State<GroupDealDetailSheet> {
       ),
       padding: const EdgeInsets.all(12),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(14),
-                child: SizedBox(
-                  width: 80,
-                  height: 80,
-                  child: deal.imageUrl.isNotEmpty
-                      ? AppImageCache.image(
-                          url: deal.imageUrl,
-                          fit: BoxFit.cover,
-                          width: 80,
-                          height: 80,
-                          errorWidget: (_, __, ___) =>
-                              const Icon(Icons.inventory_2_outlined, size: 36),
-                        )
-                      : const Icon(Icons.inventory_2_outlined, size: 36),
+          if (hasMultipleImages) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: SizedBox(
+                height: 160,
+                width: double.infinity,
+                child: AppImageCache.image(
+                  url: images[_currentImageIndex.clamp(0, images.length - 1)],
+                  fit: BoxFit.cover,
+                  errorWidget: (_, __, ___) =>
+                      const Icon(Icons.inventory_2_outlined, size: 48),
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      deal.title,
-                      style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Cairo'),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Text(
-                          '${deal.dealPrice.toStringAsFixed(0)} جنيه',
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w900,
-                            color: theme.colorScheme.primary,
-                            fontFamily: 'Cairo',
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${deal.marketPrice.toStringAsFixed(0)} ج',
-                          style: TextStyle(
-                            fontSize: 12,
-                            decoration: TextDecoration.lineThrough,
-                            color: theme.colorScheme.onSurfaceVariant,
-                            fontFamily: 'Cairo',
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 48,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: images.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (context, i) {
+                  final isSel = i == _currentImageIndex;
+                  return GestureDetector(
+                    onTap: () => setState(() => _currentImageIndex = i),
+                    child: Container(
+                      width: 48,
+                      height: 48,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF16A34A).withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isSel ? const Color(0xFFD97706) : Colors.transparent,
+                          width: 2,
+                        ),
                       ),
-                      child: Text(
-                        'وفر ${deal.savingsPerUnit.toStringAsFixed(0)} جنيه لكل ${deal.unitName} (خصم ${deal.discountPercentage}%)',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF16A34A),
-                          fontFamily: 'Cairo',
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: AppImageCache.image(
+                          url: images[i],
+                          fit: BoxFit.cover,
+                          errorWidget: (_, __, ___) => const Icon(Icons.broken_image, size: 20),
                         ),
                       ),
                     ),
-                  ],
-                ),
+                  );
+                },
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              deal.title,
+              style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Cairo'),
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Text(
+                  '${deal.dealPrice.toStringAsFixed(0)} جنيه',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: theme.colorScheme.primary,
+                    fontFamily: 'Cairo',
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '${deal.marketPrice.toStringAsFixed(0)} ج',
+                  style: TextStyle(
+                    fontSize: 12,
+                    decoration: TextDecoration.lineThrough,
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontFamily: 'Cairo',
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF16A34A).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    'وفر ${deal.savingsPerUnit.toStringAsFixed(0)} ج لكل ${deal.unitName} (خصم ${deal.discountPercentage}%)',
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF16A34A),
+                      fontFamily: 'Cairo',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ] else ...[
+            Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: SizedBox(
+                    width: 80,
+                    height: 80,
+                    child: deal.primaryImage.isNotEmpty
+                        ? AppImageCache.image(
+                            url: deal.primaryImage,
+                            fit: BoxFit.cover,
+                            width: 80,
+                            height: 80,
+                            errorWidget: (_, __, ___) =>
+                                const Icon(Icons.inventory_2_outlined, size: 36),
+                          )
+                        : const Icon(Icons.inventory_2_outlined, size: 36),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        deal.title,
+                        style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Cairo'),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Text(
+                            '${deal.dealPrice.toStringAsFixed(0)} جنيه',
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w900,
+                              color: theme.colorScheme.primary,
+                              fontFamily: 'Cairo',
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '${deal.marketPrice.toStringAsFixed(0)} ج',
+                            style: TextStyle(
+                              fontSize: 12,
+                              decoration: TextDecoration.lineThrough,
+                              color: theme.colorScheme.onSurfaceVariant,
+                              fontFamily: 'Cairo',
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF16A34A).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'وفر ${deal.savingsPerUnit.toStringAsFixed(0)} جنيه لكل ${deal.unitName} (خصم ${deal.discountPercentage}%)',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF16A34A),
+                            fontFamily: 'Cairo',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
           if (deal.description.isNotEmpty) ...[
             const SizedBox(height: 10),
             Text(
@@ -535,6 +641,66 @@ class _GroupDealDetailSheetState extends State<GroupDealDetailSheet> {
           ),
           const SizedBox(height: 8),
 
+          // بطاقة إجمالي المبلغ الموفر للمستخدم بناءً على كمية الحجز
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF16A34A), Color(0xFF15803D)],
+                begin: Alignment.topRight,
+                end: Alignment.bottomLeft,
+              ),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF16A34A).withValues(alpha: 0.25),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.savings_rounded, color: Colors.white, size: 22),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'إجمالي المبلغ الموفر بحجزك: ${(booking.quantity * deal.savingsPerUnit).toStringAsFixed(0)} جنيه 🎉',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12.5,
+                          fontFamily: 'Cairo',
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'حجزت ${booking.quantity} ${deal.unitName} (سعر السوق: ${(booking.quantity * deal.marketPrice).toStringAsFixed(0)} ج • سعر جملتك: ${(booking.quantity * deal.dealPrice).toStringAsFixed(0)} ج)',
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 10.5,
+                          fontFamily: 'Cairo',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 4),
+
           // تفاصيل الحجز المالية للمشترك
           Container(
             padding: const EdgeInsets.all(8),
@@ -572,9 +738,190 @@ class _GroupDealDetailSheetState extends State<GroupDealDetailSheet> {
               ],
             ),
           ),
+
+          // إمكانية تعديل كمية الحجز أو إلغائه قبل اكتمال الصفقة
+          if (!booking.isDelivered && !deal.isCompleted && !deal.isExpired) ...[
+            const SizedBox(height: 12),
+            _buildBookingEditSection(theme, deal, booking),
+          ],
         ],
       ),
     );
+  }
+
+  Widget _buildBookingEditSection(
+    ThemeData theme,
+    GroupDealModel deal,
+    DealParticipantModel booking,
+  ) {
+    final currentQty = _editingQuantity ?? booking.quantity;
+    final maxAllowed = booking.quantity + deal.remainingCount;
+
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: theme.colorScheme.outline.withValues(alpha: 0.25),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'تعديل كمية الحصة:',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Cairo',
+                ),
+              ),
+              Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
+                    onPressed: currentQty > 1 && !_isSubmitting
+                        ? () => setState(() => _editingQuantity = currentQty - 1)
+                        : null,
+                  ),
+                  Text(
+                    '$currentQty ${deal.unitName}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      fontFamily: 'Cairo',
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.add_circle_outline, color: Color(0xFF16A34A)),
+                    onPressed: (currentQty < maxAllowed) && !_isSubmitting
+                        ? () => setState(() => _editingQuantity = currentQty + 1)
+                        : null,
+                  ),
+                ],
+              ),
+            ],
+          ),
+          if (currentQty != booking.quantity) ...[
+            const SizedBox(height: 6),
+            Text(
+              'المبلغ الموفر بالكمية الجديدة: ${(currentQty * deal.savingsPerUnit).toStringAsFixed(0)} جنيه (بدلاً من ${(booking.quantity * deal.savingsPerUnit).toStringAsFixed(0)} ج)',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF16A34A),
+                fontFamily: 'Cairo',
+              ),
+            ),
+            const SizedBox(height: 4),
+            FilledButton.tonal(
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF16A34A).withValues(alpha: 0.15),
+                foregroundColor: const Color(0xFF16A34A),
+              ),
+              onPressed: _isSubmitting ? null : () async {
+                setState(() => _isSubmitting = true);
+                try {
+                  await _service.updateBookingQuantity(
+                    dealId: deal.id,
+                    participantId: booking.id,
+                    oldQuantity: booking.quantity,
+                    newQuantity: currentQty,
+                    wasConfirmed: booking.isConfirmedByAdmin,
+                  );
+                  setState(() {
+                    _editingQuantity = null;
+                    _isSubmitting = false;
+                  });
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('تم تعديل كمية الحجز بنجاح ✅', style: TextStyle(fontFamily: 'Cairo')),
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  setState(() => _isSubmitting = false);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('تعذر تعديل الكمية: $e', style: const TextStyle(fontFamily: 'Cairo'))),
+                    );
+                  }
+                }
+              },
+              child: Text(
+                'حفظ تعديل الكمية ($currentQty ${deal.unitName})',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Cairo', fontSize: 12),
+              ),
+            ),
+          ],
+          const SizedBox(height: 4),
+          Center(
+            child: TextButton.icon(
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              icon: const Icon(Icons.cancel_outlined, size: 16),
+              label: const Text('إلغاء الحجز بالكامل', style: TextStyle(fontFamily: 'Cairo', fontSize: 11)),
+              onPressed: _isSubmitting ? null : () => _confirmUserCancellation(deal, booking),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _confirmUserCancellation(
+    GroupDealModel deal,
+    DealParticipantModel booking,
+  ) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('إلغاء حجز الحصة', style: TextStyle(fontFamily: 'Cairo')),
+        content: Text(
+          'هل أنت متأكد من رغبتك في إلغاء حجز حصتك (${booking.quantity} ${deal.unitName})؟ سيتم إتاحة الحصة لأهالي القرية مجدداً وتعديل العدادات.',
+          style: const TextStyle(fontFamily: 'Cairo'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('تراجع')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('تأكيد الإلغاء', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (ok == true && mounted) {
+      setState(() => _isSubmitting = true);
+      try {
+        await _service.cancelUserBooking(
+          dealId: deal.id,
+          participantId: booking.id,
+          quantity: booking.quantity,
+          wasConfirmed: booking.isConfirmedByAdmin,
+        );
+        setState(() {
+          _isSubmitting = false;
+          _isBookingOpen = false;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('تم إلغاء حجزك بنجاح', style: TextStyle(fontFamily: 'Cairo'))),
+          );
+        }
+      } catch (e) {
+        setState(() => _isSubmitting = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('تعذر إلغاء الحجز: $e', style: const TextStyle(fontFamily: 'Cairo'))),
+          );
+        }
+      }
+    }
   }
 
   Widget _buildBookingForm(ThemeData theme, GroupDealModel deal, String uid) {
