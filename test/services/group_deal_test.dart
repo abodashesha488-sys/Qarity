@@ -20,7 +20,8 @@ void main() {
 
       expect(deal.savingsPerUnit, 60.0);
       expect(deal.discountPercentage, 20); // (60 / 300) * 100 = 20%
-      expect(deal.totalVillageSavings, 900.0); // 15 * 60 = 900 LE saved for village
+      expect(deal.totalVillageSavings,
+          900.0); // 15 * 60 = 900 LE saved for village
       expect(deal.totalDealValue, 3600.0); // 15 * 240 = 3600 LE
       expect(deal.totalDepositsCollected, 750.0); // 15 * 50 = 750 LE
       expect(deal.totalRemainingToCollect, 2850.0); // 15 * (240 - 50) = 2850 LE
@@ -73,7 +74,8 @@ void main() {
 
       expect(participant.depositRequired(50.0), 150.0); // 3 * 50 = 150 LE
       expect(participant.totalAmount(240.0), 720.0); // 3 * 240 = 720 LE
-      expect(participant.remainingOnDelivery(240.0, 50.0), 570.0); // 3 * 190 = 570 LE
+      expect(participant.remainingOnDelivery(240.0, 50.0),
+          570.0); // 3 * 190 = 570 LE
     });
 
     test('Serialization of participant preserves claimCode and statuses', () {
@@ -100,7 +102,8 @@ void main() {
   });
 
   group('GroupDealFinancialSummary Tests', () {
-    test('Calculates full financial balance sheet for deal and participants', () {
+    test('Calculates full financial balance sheet for deal and participants',
+        () {
       final deal = GroupDealModel(
         id: 'deal_1',
         title: 'كرتونة تموين',

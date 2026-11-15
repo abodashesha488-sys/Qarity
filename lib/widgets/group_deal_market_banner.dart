@@ -52,7 +52,8 @@ class _GroupDealMarketSectionState extends State<GroupDealMarketSection> {
       builder: (context, snapshot) {
         final deals = snapshot.data ?? [];
         if (deals.isEmpty) {
-          return const SizedBox.shrink(); // يختفي تماماً إذا لم تكن هناك صفقات نشطة
+          return const SizedBox
+              .shrink(); // يختفي تماماً إذا لم تكن هناك صفقات نشطة
         }
 
         return Column(
@@ -63,7 +64,8 @@ class _GroupDealMarketSectionState extends State<GroupDealMarketSection> {
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
                         colors: [Color(0xFFD97706), Color(0xFFB45309)],
@@ -73,7 +75,8 @@ class _GroupDealMarketSectionState extends State<GroupDealMarketSection> {
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.local_fire_department_rounded, color: Colors.white, size: 14),
+                        Icon(Icons.local_fire_department_rounded,
+                            color: Colors.white, size: 14),
                         SizedBox(width: 4),
                         Text(
                           'صفقات الجملة للأهالي 🔥',
@@ -118,7 +121,8 @@ class _GroupDealMarketSectionState extends State<GroupDealMarketSection> {
     );
   }
 
-  Widget _buildDealCard(BuildContext context, ThemeData theme, GroupDealModel deal) {
+  Widget _buildDealCard(
+      BuildContext context, ThemeData theme, GroupDealModel deal) {
     final countdown = _formatCountdown(deal.endTime);
     final primaryColor = theme.colorScheme.primary;
 
@@ -167,7 +171,9 @@ class _GroupDealMarketSectionState extends State<GroupDealMarketSection> {
                             fit: BoxFit.cover,
                             width: 58,
                             height: 58,
-                            errorWidget: (_, __, ___) => const Icon(Icons.inventory_2_outlined, size: 28),
+                            errorWidget: (_, __, ___) => const Icon(
+                                Icons.inventory_2_outlined,
+                                size: 28),
                           )
                         : const Icon(Icons.inventory_2_outlined, size: 28),
                   ),
@@ -181,7 +187,10 @@ class _GroupDealMarketSectionState extends State<GroupDealMarketSection> {
                         deal.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
+                        style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Cairo'),
                       ),
                       const SizedBox(height: 2),
                       Row(
@@ -207,9 +216,11 @@ class _GroupDealMarketSectionState extends State<GroupDealMarketSection> {
                           ),
                           const Spacer(),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF16A34A).withValues(alpha: 0.12),
+                              color: const Color(0xFF16A34A)
+                                  .withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
@@ -227,11 +238,16 @@ class _GroupDealMarketSectionState extends State<GroupDealMarketSection> {
                       const SizedBox(height: 2),
                       Row(
                         children: [
-                          const Icon(Icons.timer_outlined, size: 12, color: Color(0xFFD97706)),
+                          const Icon(Icons.timer_outlined,
+                              size: 12, color: Color(0xFFD97706)),
                           const SizedBox(width: 4),
                           Text(
                             countdown,
-                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFFD97706), fontFamily: 'Cairo'),
+                            style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFFD97706),
+                                fontFamily: 'Cairo'),
                           ),
                         ],
                       ),
@@ -246,14 +262,22 @@ class _GroupDealMarketSectionState extends State<GroupDealMarketSection> {
               children: [
                 Text(
                   'اشترك ${deal.currentCount} من ${deal.targetCount}',
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: primaryColor, fontFamily: 'Cairo'),
+                  style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: primaryColor,
+                      fontFamily: 'Cairo'),
                 ),
                 Text(
-                  deal.remainingCount > 0 ? 'باقي ${deal.remainingCount}' : 'مكتملة 🎉',
+                  deal.remainingCount > 0
+                      ? 'باقي ${deal.remainingCount}'
+                      : 'مكتملة 🎉',
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
-                    color: deal.remainingCount > 0 ? const Color(0xFFD97706) : const Color(0xFF16A34A),
+                    color: deal.remainingCount > 0
+                        ? const Color(0xFFD97706)
+                        : const Color(0xFF16A34A),
                     fontFamily: 'Cairo',
                   ),
                 ),
@@ -267,7 +291,9 @@ class _GroupDealMarketSectionState extends State<GroupDealMarketSection> {
                 minHeight: 6,
                 backgroundColor: theme.colorScheme.surfaceContainerHighest,
                 valueColor: AlwaysStoppedAnimation<Color>(
-                  deal.progressRatio >= 1.0 ? const Color(0xFF16A34A) : const Color(0xFFD97706),
+                  deal.progressRatio >= 1.0
+                      ? const Color(0xFF16A34A)
+                      : const Color(0xFFD97706),
                 ),
               ),
             ),

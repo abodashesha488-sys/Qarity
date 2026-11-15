@@ -1,7 +1,7 @@
 {
-    "versionCode":  19,
-    "versionName":  "1.1.9",
+    "versionCode":  20,
+    "versionName":  "1.2.0",
     "apkUrl":  "https://github.com/abodashesha488-sys/Qarity/releases/latest/download/Qarity.apk",
     "forceUpdate":  false,
-    "releaseNotes":  "feat: add Abu-Dshisha wholesale group deals with live dashboard and delivery code verification"
+    "releaseNotes":  "fix(android): align Gradle to 8.10.2 and AGP to 8.7.3 for release build stability"
 }
