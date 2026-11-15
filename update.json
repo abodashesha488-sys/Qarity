@@ -1,7 +1,7 @@
 {
-    "versionCode":  22,
-    "versionName":  "1.2.2",
+    "versionCode":  23,
+    "versionName":  "1.2.3",
     "apkUrl":  "https://github.com/abodashesha488-sys/Qarity/releases/latest/download/Qarity.apk",
     "forceUpdate":  false,
-    "releaseNotes":  "feat: style breaking alert in warm yellow wisdom layout and show user\u0027s total savings by booked quantity"
+    "releaseNotes":  "feat: complete unified deals and delivery hub with zero analyze issues"
 }

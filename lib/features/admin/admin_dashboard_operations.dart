@@ -98,9 +98,9 @@ class _OperationsHubPageState extends State<_OperationsHubPage> {
                 const SizedBox(width: 4),
                 _buildToolTab(
                   index: 4,
-                  label: 'الجملة 🔥',
-                  icon: Icons.local_fire_department_rounded,
-                  color: const Color(0xFFD97706),
+                  label: 'التجارة والتسوق 🛍️',
+                  icon: Icons.storefront_rounded,
+                  color: const Color(0xFF16A34A),
                 ),
               ],
             ),

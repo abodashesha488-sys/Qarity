@@ -80,6 +80,41 @@ class _GroupDealDetailSheetState extends State<GroupDealDetailSheet> {
     );
   }
 
+  Future<void> _requestReopenDeal(BuildContext context, GroupDealModel deal) async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('يرجى تسجيل الدخول أولاً لطلب فتح الصفقة', style: TextStyle(fontFamily: 'Cairo'))),
+      );
+      return;
+    }
+
+    final success = await _service.requestDealReopen(
+      dealId: deal.id,
+      dealTitle: deal.title,
+      userId: uid,
+      userName: _nameCtrl.text.trim().isNotEmpty ? _nameCtrl.text.trim() : 'أحد أهالي القرية',
+      userPhone: _phoneCtrl.text.trim(),
+    );
+
+    if (context.mounted) {
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Color(0xFF16A34A),
+            content: Text('تم تسجيل طلبك لإعادة فتح الصفقة بنجاح! ستراجع الإدارة لإعادة طرحها قريباً ✅', style: TextStyle(fontFamily: 'Cairo')),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('لقد قمت بطلب فتح هذه الصفقة مسبقاً، طلبك مسجل لدى الإدارة ⏳', style: TextStyle(fontFamily: 'Cairo')),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -217,29 +252,39 @@ class _GroupDealDetailSheetState extends State<GroupDealDetailSheet> {
 
                     // 3. أزرار الإجراءات
                     if (userBooking == null && !_isBookingOpen) ...[
-                      FilledButton.icon(
-                        icon: const Icon(Icons.how_to_reg_rounded),
-                        label: Text(
-                          deal.isAvailableForBooking
-                              ? 'احجز حصتك الآن بسعر الجملة'
-                              : (deal.remainingCount <= 0
-                                  ? 'اكتملت الصفقة'
-                                  : 'العرض منتهي'),
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
+                      if (deal.isAvailableForBooking)
+                        FilledButton.icon(
+                          icon: const Icon(Icons.how_to_reg_rounded),
+                          label: const Text(
+                            'احجز حصتك الآن بسعر الجملة',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
+                          ),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: theme.colorScheme.primary,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14)),
+                          ),
+                          onPressed: () => setState(() => _isBookingOpen = true),
+                        )
+                      else ...[
+                        FilledButton.tonalIcon(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFFD97706).withValues(alpha: 0.15),
+                            foregroundColor: const Color(0xFFD97706),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14)),
+                          ),
+                          onPressed: () => _requestReopenDeal(context, deal),
+                          icon: const Icon(Icons.replay_rounded),
+                          label: Text(
+                            'طلب فتح الصفقة من جديد (${deal.reopenRequestsCount} طلبات) 🔄',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Cairo', fontSize: 13),
+                          ),
                         ),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: deal.isAvailableForBooking
-                              ? theme.colorScheme.primary
-                              : Colors.grey,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14)),
-                        ),
-                        onPressed: deal.isAvailableForBooking
-                            ? () => setState(() => _isBookingOpen = true)
-                            : null,
-                      ),
+                      ],
                       const SizedBox(height: 10),
                     ],
 

@@ -19,6 +19,7 @@ class GroupDealModel {
   final bool isCompleted; // هل اكتمل العدد أو أغلقت
   final String category; // تصنيف السلعة (أغذية، تموين، أعلاف، إلخ)
   final String unitName; // اسم الوحدة (كرتونة، شيكارة، كيلو، إلخ)
+  final int reopenRequestsCount; // عدد طلبات إعادة فتح الصفقة
   final String createdBy; // معرف الأدمن المنشئ
   final DateTime? createdAt;
 
@@ -37,6 +38,7 @@ class GroupDealModel {
     required this.endTime,
     this.isActive = true,
     this.isCompleted = false,
+    this.reopenRequestsCount = 0,
     this.category = 'تموين ومواد غذائية',
     this.unitName = 'حصة',
     this.createdBy = '',
@@ -68,6 +70,7 @@ class GroupDealModel {
 
   /// الوفر للوحدة الواحدة (جنيه)
   double get savingsPerUnit => (marketPrice - dealPrice).clamp(0, double.infinity);
+  double get savingPerUnit => savingsPerUnit;
 
   /// نسبة الخصم المئوية
   int get discountPercentage {
@@ -165,6 +168,7 @@ class GroupDealModel {
       isCompleted: json['isCompleted'] as bool? ?? false,
       category: json['category'] as String? ?? 'تموين ومواد غذائية',
       unitName: json['unitName'] as String? ?? 'حصة',
+      reopenRequestsCount: (json['reopenRequestsCount'] as num?)?.toInt() ?? 0,
       createdBy: json['createdBy'] as String? ?? '',
       createdAt: tsToDateTime(json['createdAt']),
     );
@@ -187,6 +191,7 @@ class GroupDealModel {
       'isCompleted': isCompleted,
       'category': category,
       'unitName': unitName,
+      'reopenRequestsCount': reopenRequestsCount,
       'createdBy': createdBy,
       'createdAt': createdAt != null ? Timestamp.fromDate(createdAt!) : FieldValue.serverTimestamp(),
     };
@@ -208,6 +213,7 @@ class GroupDealModel {
     bool? isCompleted,
     String? category,
     String? unitName,
+    int? reopenRequestsCount,
   }) {
     return GroupDealModel(
       id: id,
@@ -226,6 +232,7 @@ class GroupDealModel {
       isCompleted: isCompleted ?? this.isCompleted,
       category: category ?? this.category,
       unitName: unitName ?? this.unitName,
+      reopenRequestsCount: reopenRequestsCount ?? this.reopenRequestsCount,
       createdBy: createdBy,
       createdAt: createdAt,
     );
@@ -350,5 +357,57 @@ class DealParticipantModel {
       notes: notes ?? this.notes,
       createdAt: createdAt,
     );
+  }
+}
+
+/// طلب إعادة فتح صفقة منتهية من قبل مستخدم لم يلحق التسجيل بها
+class GroupDealReopenRequest {
+  final String id;
+  final String dealId;
+  final String dealTitle;
+  final String userId;
+  final String userName;
+  final String userPhone;
+  final int requestedQuantity;
+  final DateTime createdAt;
+  final bool isHandled;
+
+  const GroupDealReopenRequest({
+    required this.id,
+    required this.dealId,
+    required this.dealTitle,
+    required this.userId,
+    required this.userName,
+    required this.userPhone,
+    this.requestedQuantity = 1,
+    required this.createdAt,
+    this.isHandled = false,
+  });
+
+  factory GroupDealReopenRequest.fromJson(Map<String, dynamic> json, String docId) {
+    return GroupDealReopenRequest(
+      id: docId,
+      dealId: json['dealId'] as String? ?? '',
+      dealTitle: json['dealTitle'] as String? ?? '',
+      userId: json['userId'] as String? ?? '',
+      userName: json['userName'] as String? ?? '',
+      userPhone: json['userPhone'] as String? ?? '',
+      requestedQuantity: (json['requestedQuantity'] as num?)?.toInt() ?? 1,
+      createdAt: tsToDateTime(json['createdAt']) ?? DateTime.now(),
+      isHandled: json['isHandled'] as bool? ?? false,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'dealId': dealId,
+      'dealTitle': dealTitle,
+      'userId': userId,
+      'userName': userName,
+      'userPhone': userPhone,
+      'requestedQuantity': requestedQuantity,
+      'createdAt': Timestamp.fromDate(createdAt),
+      'isHandled': isHandled,
+    };
   }
 }

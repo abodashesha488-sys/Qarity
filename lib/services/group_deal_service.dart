@@ -37,6 +37,8 @@ class GroupDealFinancialSummary {
   final double totalRemainingToCollect;
   final double totalDeliveredValue;
 
+  double get totalVillageSavingsAchieved => totalVillageSavings;
+
   const GroupDealFinancialSummary({
     required this.targetCount,
     required this.confirmedCount,
@@ -465,5 +467,94 @@ class GroupDealService {
     for (final doc in parts.docs) {
       await doc.reference.delete();
     }
+  }
+
+  // ───────────────────────── طلبات إعادة فتح الصفقات ─────────────────────────
+
+  CollectionReference<Map<String, dynamic>> get _reopensCol =>
+      _firestore.collection('group_deal_reopens');
+
+  /// تقديم طلب من المستخدم لإعادة فتح صفقة منتهية لم يلحق التسجيل بها
+  Future<bool> requestDealReopen({
+    required String dealId,
+    required String dealTitle,
+    required String userId,
+    required String userName,
+    required String userPhone,
+    int requestedQuantity = 1,
+  }) async {
+    // التحقق إن كان المستخدم قدم طلباً مسبقاً لهذه الصفقة
+    final existing = await _reopensCol
+        .where('dealId', isEqualTo: dealId)
+        .where('userId', isEqualTo: userId)
+        .limit(1)
+        .get();
+
+    if (existing.docs.isNotEmpty) {
+      return false; // طلب مسبقاً
+    }
+
+    final req = GroupDealReopenRequest(
+      id: '',
+      dealId: dealId,
+      dealTitle: dealTitle,
+      userId: userId,
+      userName: userName,
+      userPhone: userPhone,
+      requestedQuantity: requestedQuantity,
+      createdAt: DateTime.now(),
+    );
+
+    await _reopensCol.add(req.toJson());
+    await _dealsCol.doc(dealId).update({
+      'reopenRequestsCount': FieldValue.increment(1),
+    });
+    return true;
+  }
+
+  /// بث طلبات إعادة فتح الصفقات للوحة الإدارة
+  Stream<List<GroupDealReopenRequest>> watchReopenRequests({String? dealId}) {
+    Query<Map<String, dynamic>> q = _reopensCol;
+    if (dealId != null && dealId.isNotEmpty) {
+      q = q.where('dealId', isEqualTo: dealId);
+    }
+    return q.snapshots().map((snap) {
+      final list = snap.docs
+          .map((d) => GroupDealReopenRequest.fromJson(d.data(), d.id))
+          .toList();
+      list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return list;
+    });
+  }
+
+  /// إعادة طرح صفقة جديدة معتمدة على صفقة سابقة ولكن برقم جديد وسجل مستخدمين جديد
+  Future<String> relaunchDealFromOld({
+    required GroupDealModel oldDeal,
+    required int durationDays,
+    int? newTargetCount,
+  }) async {
+    final newDeal = GroupDealModel(
+      id: '',
+      title: oldDeal.title,
+      description: oldDeal.description,
+      imageUrl: oldDeal.primaryImage,
+      imageUrls: oldDeal.allImages,
+      marketPrice: oldDeal.marketPrice,
+      dealPrice: oldDeal.dealPrice,
+      depositAmount: oldDeal.depositAmount,
+      targetCount: newTargetCount ?? oldDeal.targetCount,
+      unitName: oldDeal.unitName,
+      category: oldDeal.category,
+      endTime: DateTime.now().add(Duration(days: durationDays)),
+    );
+
+    return await createDeal(newDeal);
+  }
+
+  /// جلب صفقة محددة عبر معرفها
+  Future<GroupDealModel?> getDealById(String dealId) async {
+    final doc = await _dealsCol.doc(dealId).get();
+    if (!doc.exists || doc.data() == null) return null;
+    return GroupDealModel.fromJson(doc.data()!, doc.id);
   }
 }
