@@ -28,6 +28,7 @@ import '../../services/user_service.dart';
 import '../../widgets/document_field_editor.dart';
 import '../../widgets/favorite_button.dart';
 import '../../widgets/full_fit_image.dart';
+import '../../widgets/group_deal_market_banner.dart';
 import '../../widgets/image_gallery_wrap.dart';
 import '../../widgets/offline_stream_builder.dart';
 import '../../widgets/owner_actions.dart';

@@ -24,14 +24,14 @@ class _OperationsHubPageState extends State<_OperationsHubPage> {
   @override
   void initState() {
     super.initState();
-    _selectedTool = widget.initialTool.clamp(0, 3);
+    _selectedTool = widget.initialTool.clamp(0, 4);
   }
 
   @override
   void didUpdateWidget(covariant _OperationsHubPage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.initialTool != oldWidget.initialTool) {
-      _selectedTool = widget.initialTool.clamp(0, 3);
+      _selectedTool = widget.initialTool.clamp(0, 4);
     }
   }
 
@@ -95,6 +95,13 @@ class _OperationsHubPageState extends State<_OperationsHubPage> {
                   icon: Icons.assessment_rounded,
                   color: Colors.teal,
                 ),
+                const SizedBox(width: 4),
+                _buildToolTab(
+                  index: 4,
+                  label: 'الجملة 🔥',
+                  icon: Icons.local_fire_department_rounded,
+                  color: const Color(0xFFD97706),
+                ),
               ],
             ),
           ),
@@ -107,6 +114,7 @@ class _OperationsHubPageState extends State<_OperationsHubPage> {
                 const _AlertsControlPage(),
                 _PromosPage(currentUid: widget.currentUid),
                 const _ReportsPage(),
+                const GroupDealsAdminScreen(),
               ],
             ),
           ),

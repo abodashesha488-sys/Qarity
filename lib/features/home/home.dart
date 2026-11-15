@@ -26,11 +26,11 @@ import '../../services/user_service.dart';
 import '../../services/weather_service.dart';
 import '../../widgets/alert_wisdom_bar.dart';
 import '../../widgets/common_appbar_actions.dart';
+import '../../widgets/group_deal_home_card.dart';
 import '../../widgets/offline_stream_builder.dart';
 import '../../widgets/qurity_logo.dart';
 import '../../widgets/update_flow.dart';
 import '../../widgets/village_prayer_dialog.dart';
-import '../../widgets/village_weather_bar.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -448,7 +448,7 @@ class _HomeContentState extends State<HomeContent> {
         if (prayerAlertBanner != null) prayerAlertBanner,
         if (greetingBanner != null) greetingBanner,
         const AlertWisdomBar(),
-        const VillageWeatherBar(),
+        const GroupDealHomeCard(),
         Expanded(
           child: RefreshIndicator(
             onRefresh: () async {},

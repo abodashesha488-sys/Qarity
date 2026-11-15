@@ -39,6 +39,7 @@ import '../../widgets/edu_kind_mark.dart';
 import '../../widgets/promo_host.dart';
 import '../../widgets/qurity_app_bar.dart';
 import 'all_users_directory_screen.dart';
+import 'group_deals_admin_screen.dart';
 
 part 'admin_dashboard_alerts.dart';
 part 'admin_dashboard_broadcast.dart';

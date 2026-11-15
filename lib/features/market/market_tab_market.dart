@@ -211,6 +211,12 @@ class _MarketTabState extends State<_MarketTab> {
                   ),
           ),
 
+        // 2.1. قسم صفقات الشراء الجماعي بسعر الجملة للأهالي 🔥
+        if (isDefaultBrowse)
+          const SliverToBoxAdapter(
+            child: GroupDealMarketSection(),
+          ),
+
         // 3. شريط التصنيفات البصرية النظيف بالأيقونات
         SliverToBoxAdapter(
           child: Padding(

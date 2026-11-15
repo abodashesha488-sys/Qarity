@@ -7,6 +7,7 @@ import '../features/admin/admin_dashboard.dart';
 import '../features/admin/admin_detail.dart';
 import '../features/admin/admin_edit.dart';
 import '../features/admin/all_users_directory_screen.dart';
+import '../features/admin/group_deals_admin_screen.dart';
 import '../features/ads/village_ad_detail_screen.dart';
 import '../features/ads/village_ads_screen.dart';
 import '../features/auth/complete_profile.dart';
@@ -134,6 +135,7 @@ class AppRoutes {
   static const String adminEdit = '/admin/edit';
   static const String adminDetail = '/admin/detail';
   static const String adminAllUsers = '/admin/all-users';
+  static const String adminGroupDeals = '/admin/group-deals';
 static const String marketProducts = '/market';
   static const String marketAdd = '/market/add';
   static const String marketProductDetail = '/market/product';
@@ -301,10 +303,18 @@ obituariesAdd: (_) => const AddObituaryScreen(),
         settings,
       );
     }
-        if (settings.name == adminAllUsers) {
+    if (settings.name == adminAllUsers) {
       return _buildSlideRoute(
         (_) => const AdminGuard(
           child: AllUsersDirectoryScreen(),
+        ),
+        settings,
+      );
+    }
+    if (settings.name == adminGroupDeals) {
+      return _buildSlideRoute(
+        (_) => const AdminGuard(
+          child: GroupDealsAdminScreen(),
         ),
         settings,
       );

@@ -613,6 +613,22 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    // ───────────────────────── صفقات الشراء الجماعي (سعر الجملة) ─────────────────────────
+    match /group_deals/{docId} {
+      allow list, get: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /deal_participants/{docId} {
+      allow list, get: if true;
+      allow create: if accountActive()
+                    && request.auth.uid == request.resource.data.userId
+                    && request.resource.data.isConfirmedByAdmin == false
+                    && request.resource.data.isDelivered == false;
+      allow update, delete: if isAdmin()
+                            || (accountActive() && resource.data.userId == request.auth.uid && resource.data.isConfirmedByAdmin == false);
+    }
+
     // ───────────────────────── الخدمات الطبية ─────────────────────────
     // عيادات المركز الطبي الخيري: العام للقراءة؛ يديرها مدير المركز الطبي
     // (وهي الصلاحية الوحيدة لهذا الدور) أو أي من المديرين العام/المساعد.
