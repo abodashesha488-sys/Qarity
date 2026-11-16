@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     نشر كامل للمشروع في خطوة واحدة: فحص الجودة + رفع الكود + بناء وإصدار APK + نسخة الويب ونشر Hosting + نشر قواعد Firestore + تحديث إصدار التطبيق.
 
@@ -355,11 +355,11 @@ if (Test-Path "build_number.txt") {
 
 $localChanges = @(git status --short 2>$null)
 
-# إذا كانت هناك تغييرات غير ملتزمة، نحدث رقم الإصدار محليًا تلقائيًا ليتطابق دائمًا مع النشر
-if ($localChanges.Count -gt 0) {
+# إذا كانت هناك تغييرات غير ملتزمة أو تم تحديد إصدار صراحةً، نحدث رقم الإصدار محليًا تلقائيًا ليتطابق دائمًا مع النشر
+if ($localChanges.Count -gt 0 -or -not [string]::IsNullOrWhiteSpace($Version)) {
     # إذا كانت التغييرات تشمل كوداً برمجياً فنرقي رقم الإصدار تلقائياً
     $codeChanges = @($localChanges | Where-Object { $_ -notmatch 'build_number\.txt|pubspec\.yaml|update\.json' })
-    if ($codeChanges.Count -gt 0 -or $currentBuildNo -le 0) {
+    if ($codeChanges.Count -gt 0 -or $currentBuildNo -le 0 -or -not [string]::IsNullOrWhiteSpace($Version)) {
         $nextBuildNo = $currentBuildNo + 1
         $major = 1 + [Math]::Floor($nextBuildNo / 100)
         $minor = [Math]::Floor(($nextBuildNo / 10) % 10)
