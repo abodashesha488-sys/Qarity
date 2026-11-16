@@ -1,6 +1,9 @@
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:qurity/models/eshterili_model.dart';
 import 'package:qurity/services/eshterili_service.dart';
+import 'package:qurity/widgets/eshterili_order_sheet.dart';
 
 void main() {
   group('EshteriliModel Tests', () {
@@ -97,6 +100,111 @@ void main() {
         expect(numVal, isNotNull);
         expect(numVal! >= 1000 && numVal <= 9999, isTrue);
       }
+    });
+  });
+
+  group('EshteriliOrderSheet UI & Workflow Tests', () {
+    testWidgets('renders landing view with intro hero card and two main buttons', (tester) async {
+      final fakeFirestore = FakeFirebaseFirestore();
+      final eshteriliService = EshteriliService(firestore: fakeFirestore);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: EshteriliOrderSheet(
+              service: eshteriliService,
+              currentUserId: 'user_test_123',
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('خدمة إشتريلي (مندوب القرية) 🛵'), findsOneWidget);
+      expect(find.text('مندوب قرية أبودشيشة للشراء والتوصيل'), findsOneWidget);
+      expect(find.text('طلب شراء جديد ➕'), findsOneWidget);
+      expect(find.text('متابعة طلباتي 📦'), findsOneWidget);
+    });
+
+    testWidgets('navigates to simplified new order view and displays only essential fields', (tester) async {
+      final fakeFirestore = FakeFirebaseFirestore();
+      final eshteriliService = EshteriliService(firestore: fakeFirestore);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: EshteriliOrderSheet(
+              service: eshteriliService,
+              currentUserId: 'user_test_123',
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // التمرير والنقر على زر طلب شراء جديد ➕
+      await tester.ensureVisible(find.text('طلب شراء جديد ➕'));
+      await tester.tap(find.text('طلب شراء جديد ➕'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('طلب شراء جديد 📝'), findsOneWidget);
+      expect(find.text('قائمة الطلبات والكميات المطلوبة *'), findsOneWidget);
+      expect(find.text('اسم صاحب الطلب *'), findsOneWidget);
+      expect(find.text('رقم الهاتف للتواصل *'), findsOneWidget);
+      expect(find.text('عنوان أو مكان التوصيل بالقرية *'), findsOneWidget);
+      expect(find.text('إرسال الطلب للمندوب الآن 🛵'), findsOneWidget);
+    });
+
+    testWidgets('navigates to my orders view and renders summary card with status, date, orderNumber, amount', (tester) async {
+      final fakeFirestore = FakeFirebaseFirestore();
+      final eshteriliService = EshteriliService(firestore: fakeFirestore);
+
+      await fakeFirestore.collection('eshterili_orders').doc('esh_test_1').set({
+        'orderNumber': 'ESH-20261117-1111',
+        'userId': 'user_test_123',
+        'userName': 'أحمد علي',
+        'userPhone': '01011112222',
+        'itemsDescription': '2 كيلو طماطم وعلبة بنادول',
+        'estimatedBudget': 0.0,
+        'storeOrArea': 'حسب الأنسب للمندوب',
+        'deliveryAddress': 'بجوار المسجد',
+        'status': 'in_progress',
+        'itemCost': 85.0,
+        'serviceFee': 10.0,
+        'deliveryFee': 15.0,
+        'claimCode': '4321',
+        'createdAt': DateTime.now().toIso8601String(),
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: EshteriliOrderSheet(
+              initialView: 2,
+              service: eshteriliService,
+              currentUserId: 'user_test_123',
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('متابعة طلباتي 📦'), findsOneWidget);
+      expect(find.text('ESH-20261117-1111'), findsOneWidget);
+      expect(find.text('جاري الشراء والتوصيل 🛵'), findsOneWidget);
+      expect(find.text('110 ج'), findsOneWidget);
+
+      // النقر على الكارت يفتح تفاصيل العملية بالكامل
+      await tester.tap(find.text('ESH-20261117-1111'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('تفاصيل العملية (ESH-20261117-1111)'), findsOneWidget);
+      expect(find.text('4321'), findsOneWidget); // كود الاستلام
     });
   });
 }

@@ -9,7 +9,10 @@ import 'remote_push_service.dart';
 
 /// خدمة إدارة طلبات ومحاسبة «إشتريلي»
 class EshteriliService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  EshteriliService({FirebaseFirestore? firestore})
+      : _firestore = firestore ?? FirebaseFirestore.instance;
+
+  final FirebaseFirestore _firestore;
 
   CollectionReference<Map<String, dynamic>> get _ordersCol =>
       _firestore.collection('eshterili_orders');
