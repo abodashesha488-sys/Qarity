@@ -1,5 +1,9 @@
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:qurity/features/market/available_group_deals_screen.dart';
 import 'package:qurity/models/group_deal_model.dart';
+import 'package:qurity/routes/app_routes.dart';
 import 'package:qurity/services/group_deal_service.dart';
 
 void main() {
@@ -174,6 +178,54 @@ void main() {
         expect(numVal, isNotNull);
         expect(numVal! >= 1000 && numVal <= 9999, isTrue);
       }
+    });
+  });
+
+  group('GroupDeal Route and UI Tests', () {
+    test('AppRoutes.groupDeals constant is correctly defined', () {
+      expect(AppRoutes.groupDeals, '/group-deals');
+    });
+
+    testWidgets('AvailableGroupDealsScreen renders intro card and subtabs',
+        (tester) async {
+      final fakeFirestore = FakeFirebaseFirestore();
+      final dealService = GroupDealService(firestore: fakeFirestore);
+
+      await fakeFirestore.collection('group_deals').doc('deal_ui_test').set({
+        'title': 'كرتونة زيت تجريبية',
+        'description': 'وصف تجريبي',
+        'imageUrl': '',
+        'marketPrice': 300.0,
+        'dealPrice': 240.0,
+        'depositAmount': 50.0,
+        'targetCount': 20,
+        'currentCount': 5,
+        'confirmedCount': 5,
+        'endTime': DateTime.now().add(const Duration(days: 3)),
+        'isActive': true,
+        'isCompleted': false,
+        'category': 'تموين ومواد غذائية',
+        'unitName': 'كرتونة',
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: AvailableGroupDealsScreen(service: dealService),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('صفقات اليوم بسعر الجملة 🔥'), findsOneWidget);
+      expect(find.text('مبادرة صفقات القرية بسعر الجملة والتكلفة'), findsOneWidget);
+      expect(find.text('سعر جملة وتكلفة'), findsOneWidget);
+      expect(find.text('حجز مجاني بدون عربون'), findsOneWidget);
+      expect(find.text('استلام مقر أو منزلي'), findsOneWidget);
+      expect(find.text('جودة ومعاينة مسبقة'), findsOneWidget);
+      expect(find.text('الصفقات المتاحة حالياً 🔥'), findsOneWidget);
+      expect(find.text('أرشيف المنفذة سابقاً 📜'), findsOneWidget);
+      expect(find.text('كرتونة زيت تجريبية'), findsOneWidget);
+      expect(find.text('التفاصيل والحجز 👈'), findsOneWidget);
     });
   });
 }

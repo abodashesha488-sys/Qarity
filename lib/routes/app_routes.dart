@@ -24,6 +24,7 @@ import '../features/home/splash.dart';
 import '../features/legal/lawyer_detail_screen.dart';
 import '../features/legal/legal_advisor_screen.dart';
 import '../features/market/add_product.dart';
+import '../features/market/available_group_deals_screen.dart';
 import '../features/market/market_tabs_screen.dart';
 import '../features/market/product_detail.dart';
 import '../features/market/seller_detail.dart';
@@ -136,6 +137,7 @@ class AppRoutes {
   static const String adminDetail = '/admin/detail';
   static const String adminAllUsers = '/admin/all-users';
   static const String adminGroupDeals = '/admin/group-deals';
+  static const String groupDeals = '/group-deals';
 static const String marketProducts = '/market';
   static const String marketAdd = '/market/add';
   static const String marketProductDetail = '/market/product';
@@ -316,6 +318,14 @@ obituariesAdd: (_) => const AddObituaryScreen(),
         (_) => const AdminGuard(
           child: GroupDealsAdminScreen(),
         ),
+        settings,
+      );
+    }
+    if (settings.name == groupDeals) {
+      final args = settings.arguments as Map<String, dynamic>? ?? {};
+      final initialDealId = args['initialDealId'] as String?;
+      return _buildSlideRoute(
+        (_) => AvailableGroupDealsScreen(initialHighlightDealId: initialDealId),
         settings,
       );
     }

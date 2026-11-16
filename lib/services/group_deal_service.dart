@@ -107,10 +107,10 @@ class GroupDealFinancialSummary {
 class GroupDealService {
   GroupDealService({FirebaseFirestore? firestore, FirebaseAuth? auth})
       : _firestore = firestore ?? FirebaseFirestore.instance,
-        _auth = auth ?? FirebaseAuth.instance;
+        _auth = auth;
 
   final FirebaseFirestore _firestore;
-  final FirebaseAuth _auth;
+  final FirebaseAuth? _auth;
 
   CollectionReference<Map<String, dynamic>> get _dealsCol =>
       _firestore.collection('group_deals');
@@ -451,7 +451,7 @@ class GroupDealService {
 
   /// إنشاء صفقة جديدة من قبل الإدارة
   Future<String> createDeal(GroupDealModel deal) async {
-    final uid = _auth.currentUser?.uid ?? '';
+    final uid = (_auth ?? FirebaseAuth.instance).currentUser?.uid ?? '';
     final ref = await _dealsCol.add({
       ...deal.toJson(),
       'createdBy': uid,

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../core/utils/app_image_cache.dart';
+import '../features/market/available_group_deals_screen.dart';
 import '../models/group_deal_model.dart';
 import '../models/village_alert.dart';
 import '../services/alert_service.dart';
@@ -10,7 +11,6 @@ import '../services/alert_sound_service.dart';
 import '../services/group_deal_service.dart';
 import 'eshterili_order_sheet.dart';
 import 'etsawaqli_market_sheet.dart';
-import 'group_deal_detail_dialog.dart';
 
 /// كارت خدمات الشراء والتسوق في الشاشة الرئيسية
 /// بضعف مساحة كارت حكمة اليوم تماماً (125-130 بكسل) مع 3 تبويبات احترافية:
@@ -28,7 +28,9 @@ class _GroupDealHomeCardState extends State<GroupDealHomeCard> {
 
   int _selectedTab = 0; // 0: صفقة اليوم, 1: إشتريلي, 2: إتسوقلي
   int _currentDealIndex = 0;
+  int _activeDealsCount = 0;
   Timer? _countdownTimer;
+  Timer? _dealsAutoCycleTimer;
   Timer? _breakingExpiryTimer;
   StreamSubscription<VillageAlert?>? _breakingSubscription;
   VillageAlert? _breaking;
@@ -40,12 +42,23 @@ class _GroupDealHomeCardState extends State<GroupDealHomeCard> {
       if (mounted) setState(() {});
     });
 
+    // تتابع تلقائي متسلسل بين صفقات اليوم كل 4 ثوانٍ
+    _dealsAutoCycleTimer = Timer.periodic(const Duration(milliseconds: 4000), (_) {
+      if (!mounted || _selectedTab != 0) return;
+      if (_activeDealsCount > 1) {
+        setState(() {
+          _currentDealIndex = (_currentDealIndex + 1) % _activeDealsCount;
+        });
+      }
+    });
+
     _breakingSubscription = _alerts.watchLiveBreaking().listen(_onBreakingChanged);
   }
 
   @override
   void dispose() {
     _countdownTimer?.cancel();
+    _dealsAutoCycleTimer?.cancel();
     _breakingExpiryTimer?.cancel();
     _breakingSubscription?.cancel();
     super.dispose();
@@ -253,11 +266,14 @@ class _GroupDealHomeCardState extends State<GroupDealHomeCard> {
       stream: _dealService.watchActiveDeals(),
       builder: (context, snap) {
         final deals = snap.data ?? [];
+        _activeDealsCount = deals.length;
         if (deals.isEmpty) {
           return InkWell(
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('ترقبوا انطلاق صفقة الجملة القادمة قريباً 🔥', style: TextStyle(fontFamily: 'Cairo'))),
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const AvailableGroupDealsScreen(),
+                ),
               );
             },
             child: Row(
@@ -277,8 +293,8 @@ class _GroupDealHomeCardState extends State<GroupDealHomeCard> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('صفقات الشراء الجماعي بسعر الجملة', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, fontFamily: 'Cairo')),
-                      Text('لا توجد صفقة نشطة حالياً — تابعنا للعرض القادم', style: TextStyle(fontSize: 10.5, color: Colors.grey, fontFamily: 'Cairo')),
+                      Text('صفقات الشراء الجماعي بسعر الجملة 🔥', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, fontFamily: 'Cairo')),
+                      Text('اضغط هنا لاستعراض تفاصيل المبادرة وسجل الصفقات 👈', style: TextStyle(fontSize: 10.5, color: Colors.grey, fontFamily: 'Cairo')),
                     ],
                   ),
                 ),
@@ -304,149 +320,177 @@ class _GroupDealHomeCardState extends State<GroupDealHomeCard> {
           child: InkWell(
             borderRadius: BorderRadius.circular(12),
             onTap: () {
-              showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                backgroundColor: Colors.transparent,
-                builder: (_) => GroupDealDetailSheet(initialDealId: deal.id),
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => AvailableGroupDealsScreen(initialHighlightDealId: deal.id),
+                ),
               );
             },
-            child: Row(
-              children: [
-                // صورة الصفقة مع شارة الوفر
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: Container(
-                    width: 62,
-                    height: 62,
-                    color: theme.colorScheme.surfaceContainerHighest,
-                    child: deal.primaryImage.isNotEmpty
-                        ? AppImageCache.image(
-                            url: deal.primaryImage,
-                            width: 62,
-                            height: 62,
-                            fit: BoxFit.cover,
-                            errorWidget: (_, __, ___) => const Icon(Icons.inventory_2_outlined, size: 28),
-                          )
-                        : const Icon(Icons.inventory_2_outlined, size: 28),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 350),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              transitionBuilder: (child, animation) {
+                return FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0.04, 0),
+                      end: Offset.zero,
+                    ).animate(animation),
+                    child: child,
                   ),
-                ),
-                const SizedBox(width: 8),
+                );
+              },
+              child: KeyedSubtree(
+                key: ValueKey<String>(deal.id),
+                child: Row(
+                  children: [
+                    // صورة الصفقة مع شارة الوفر
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        width: 62,
+                        height: 62,
+                        color: theme.colorScheme.surfaceContainerHighest,
+                        child: deal.primaryImage.isNotEmpty
+                            ? AppImageCache.image(
+                                url: deal.primaryImage,
+                                width: 62,
+                                height: 62,
+                                fit: BoxFit.cover,
+                                errorWidget: (_, __, ___) => const Icon(Icons.inventory_2_outlined, size: 28),
+                              )
+                            : const Icon(Icons.inventory_2_outlined, size: 28),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
 
-                // التفاصيل
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+                    // التفاصيل
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: Text(
-                              deal.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, fontFamily: 'Cairo'),
-                            ),
-                          ),
-                          if (deals.length > 1) ...[
-                            const SizedBox(width: 4),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFD97706).withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  InkWell(
-                                    onTap: () {
-                                      setState(() {
-                                        _currentDealIndex = (_currentDealIndex + 1) % deals.length;
-                                      });
-                                    },
-                                    child: const Icon(Icons.chevron_left_rounded, size: 14, color: Color(0xFFD97706)),
-                                  ),
-                                  Text(
-                                    '${safeIdx + 1}/${deals.length}',
-                                    style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFFD97706), fontFamily: 'Cairo'),
-                                  ),
-                                  InkWell(
-                                    onTap: () {
-                                      setState(() {
-                                        _currentDealIndex = (_currentDealIndex - 1 + deals.length) % deals.length;
-                                      });
-                                    },
-                                    child: const Icon(Icons.chevron_right_rounded, size: 14, color: Color(0xFFD97706)),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                      const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          Text(
-                            '${deal.dealPrice.toStringAsFixed(0)} ج',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w900,
-                              color: theme.colorScheme.primary,
-                              fontFamily: 'Cairo',
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          if (deal.marketPrice > deal.dealPrice)
-                            Text(
-                              '${deal.marketPrice.toStringAsFixed(0)} ج',
-                              style: const TextStyle(fontSize: 10, decoration: TextDecoration.lineThrough, color: Colors.grey, fontFamily: 'Cairo'),
-                            ),
-                          const Spacer(),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF16A34A).withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              'وفر ${deal.savingsPerUnit.toStringAsFixed(0)} ج',
-                              style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Color(0xFF16A34A), fontFamily: 'Cairo'),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'اشترك ${deal.currentCount} من ${deal.targetCount}',
-                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
-                          ),
                           Row(
                             children: [
-                              const Icon(Icons.timer_outlined, size: 11, color: Color(0xFFD97706)),
-                              const SizedBox(width: 2),
-                              Text(
-                                countdown,
-                                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFFD97706), fontFamily: 'Cairo'),
+                              Expanded(
+                                child: Text(
+                                  deal.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, fontFamily: 'Cairo'),
+                                ),
                               ),
-                              const SizedBox(width: 4),
-                              const Text(
-                                '• احجز 👈',
-                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF16A34A), fontFamily: 'Cairo'),
+                              if (deals.length > 1) ...[
+                                const SizedBox(width: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFD97706).withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      // مؤشر النقاط المتتابعة
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: List.generate(deals.length, (dotIdx) {
+                                          final isDotActive = dotIdx == safeIdx;
+                                          return AnimatedContainer(
+                                            duration: const Duration(milliseconds: 300),
+                                            margin: const EdgeInsets.symmetric(horizontal: 1),
+                                            width: isDotActive ? 7 : 3,
+                                            height: 3,
+                                            decoration: BoxDecoration(
+                                              color: isDotActive
+                                                  ? const Color(0xFFD97706)
+                                                  : const Color(0xFFD97706).withValues(alpha: 0.28),
+                                              borderRadius: BorderRadius.circular(3),
+                                            ),
+                                          );
+                                        }),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        '${safeIdx + 1}/${deals.length}',
+                                        style: const TextStyle(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFFD97706),
+                                          fontFamily: 'Cairo',
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              Text(
+                                '${deal.dealPrice.toStringAsFixed(0)} ج',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w900,
+                                  color: theme.colorScheme.primary,
+                                  fontFamily: 'Cairo',
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              if (deal.marketPrice > deal.dealPrice)
+                                Text(
+                                  '${deal.marketPrice.toStringAsFixed(0)} ج',
+                                  style: const TextStyle(fontSize: 10, decoration: TextDecoration.lineThrough, color: Colors.grey, fontFamily: 'Cairo'),
+                                ),
+                              const Spacer(),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF16A34A).withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  'وفر ${deal.savingsPerUnit.toStringAsFixed(0)} ج',
+                                  style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Color(0xFF16A34A), fontFamily: 'Cairo'),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'اشترك ${deal.currentCount} من ${deal.targetCount}',
+                                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
+                              ),
+                              Row(
+                                children: [
+                                  const Icon(Icons.timer_outlined, size: 11, color: Color(0xFFD97706)),
+                                  const SizedBox(width: 2),
+                                  Text(
+                                    countdown,
+                                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFFD97706), fontFamily: 'Cairo'),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Text(
+                                    '• كل الصفقات 👈',
+                                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF16A34A), fontFamily: 'Cairo'),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
                         ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         );
