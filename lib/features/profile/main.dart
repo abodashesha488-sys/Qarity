@@ -15,6 +15,7 @@ import '../../services/image_upload_service.dart';
 import '../../services/market_service.dart';
 import '../../services/theme_service.dart';
 import '../../services/user_service.dart';
+import '../../widgets/delivery_agent_dashboard.dart';
 import '../../widgets/gender_selector.dart';
 import '../../widgets/qurity_app_bar.dart';
 
@@ -397,6 +398,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final isAdminRole =
         _user?.isAdmin == true || _user?.role == 'medical_admin';
     final isMedicalOnly = _user?.role == 'medical_admin';
+    final isDeliveryOrCommercial = _user?.role == 'delivery_agent' ||
+        _user?.role == 'commercial_admin' ||
+        _user?.role == 'admin' ||
+        _user?.role == 'assistant_admin';
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -531,6 +536,60 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             const SizedBox(width: 6),
                             const Icon(Icons.keyboard_arrow_down_rounded,
                                 color: Colors.white70, size: 20),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+            if (isDeliveryOrCommercial) ...[
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFEA580C), Color(0xFFC2410C)],
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFEA580C).withValues(alpha: 0.3),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(14),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const DeliveryAgentDashboard(),
+                        ),
+                      ),
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.two_wheeler_rounded, color: Colors.white, size: 20),
+                            SizedBox(width: 8),
+                            Text(
+                              'منظومة المندوبين ومطابقة الاستلام',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 13.5,
+                              ),
+                            ),
+                            SizedBox(width: 6),
+                            Icon(Icons.arrow_forward_ios_rounded, color: Colors.white70, size: 14),
                           ],
                         ),
                       ),

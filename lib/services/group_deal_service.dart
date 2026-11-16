@@ -188,6 +188,10 @@ class GroupDealService {
     });
   }
 
+  /// الاسم البديل لبث المشتركين
+  Stream<List<DealParticipantModel>> watchParticipants(String dealId) =>
+      watchDealParticipants(dealId);
+
   /// بث حجز المستخدم الحالي لصفقة معينة
   Stream<DealParticipantModel?> watchUserBooking(String dealId, String userId) {
     if (userId.isEmpty) return Stream.value(null);
@@ -210,6 +214,9 @@ class GroupDealService {
     required String userPhone,
     int quantity = 1,
     String paymentMethod = 'مندوب القرية',
+    String deliveryOption = 'hub',
+    String deliveryAddress = '',
+    double deliveryFee = 0.0,
     String notes = '',
   }) async {
     final claimCode = generateClaimCode();
@@ -240,6 +247,9 @@ class GroupDealService {
         'isDelivered': false,
         'deliveredAt': null,
         'deliveredBy': '',
+        'deliveryOption': deliveryOption,
+        'deliveryAddress': deliveryAddress.trim(),
+        'deliveryFee': deliveryFee,
         'notes': notes.trim(),
         'createdAt': FieldValue.serverTimestamp(),
       });

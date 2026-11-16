@@ -255,6 +255,9 @@ class DealParticipantModel {
   final bool isDelivered; // هل استلم العميل بضاعته
   final DateTime? deliveredAt;
   final String deliveredBy; // معرف عامل التوصيل أو الأدمن المسلم
+  final String deliveryOption; // 'hub' (مقر التوزيع - مجاناً) أو 'home' (توصيل للبيت)
+  final String deliveryAddress; // عنوان التوصيل إذا كان توصيل منزلي
+  final double deliveryFee; // رسوم التوصيل المنزلي إن وجدت
   final String notes;
   final DateTime? createdAt;
 
@@ -273,6 +276,9 @@ class DealParticipantModel {
     this.isDelivered = false,
     this.deliveredAt,
     this.deliveredBy = '',
+    this.deliveryOption = 'hub',
+    this.deliveryAddress = '',
+    this.deliveryFee = 0.0,
     this.notes = '',
     this.createdAt,
   });
@@ -280,12 +286,12 @@ class DealParticipantModel {
   /// حساب إجمالي العربون المستحق لهذا المشترك
   double depositRequired(double unitDeposit) => quantity * unitDeposit;
 
-  /// حساب إجمالي المبلغ الكلي للحصة
-  double totalAmount(double dealPrice) => quantity * dealPrice;
+  /// حساب إجمالي المبلغ الكلي للحصة مع رسوم التوصيل إن وجدت
+  double totalAmount(double dealPrice) => (quantity * dealPrice) + deliveryFee;
 
-  /// المبلغ المتبقي للدفع عند الاستلام
+  /// المبلغ المتبقي للدفع عند الاستلام مع رسوم التوصيل
   double remainingOnDelivery(double dealPrice, double unitDeposit) =>
-      quantity * (dealPrice - unitDeposit);
+      (quantity * (dealPrice - unitDeposit)) + deliveryFee;
 
   factory DealParticipantModel.fromJson(Map<String, dynamic> json, String docId) {
     return DealParticipantModel(
@@ -303,6 +309,9 @@ class DealParticipantModel {
       isDelivered: json['isDelivered'] as bool? ?? false,
       deliveredAt: tsToDateTime(json['deliveredAt']),
       deliveredBy: json['deliveredBy'] as String? ?? '',
+      deliveryOption: json['deliveryOption'] as String? ?? 'hub',
+      deliveryAddress: json['deliveryAddress'] as String? ?? '',
+      deliveryFee: (json['deliveryFee'] as num?)?.toDouble() ?? 0.0,
       notes: json['notes'] as String? ?? '',
       createdAt: tsToDateTime(json['createdAt']),
     );
@@ -323,6 +332,9 @@ class DealParticipantModel {
       'isDelivered': isDelivered,
       'deliveredAt': deliveredAt != null ? Timestamp.fromDate(deliveredAt!) : null,
       'deliveredBy': deliveredBy,
+      'deliveryOption': deliveryOption,
+      'deliveryAddress': deliveryAddress,
+      'deliveryFee': deliveryFee,
       'notes': notes,
       'createdAt': createdAt != null ? Timestamp.fromDate(createdAt!) : FieldValue.serverTimestamp(),
     };

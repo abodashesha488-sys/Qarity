@@ -79,6 +79,9 @@ class EshteriliOrder {
   final String assignedAgentId;
   final String assignedAgentName;
   final String assignedAgentPhone;
+  final String imageUrl; // صورة ملحقة بالطلب (روشتة، قائمة مكتوبة بخط اليد، صورة المنتج)
+  final List<String> imageUrls;
+  final String receiptImageUrl; // صورة فاتورة المحل الورقية المرفوعة من المندوب
   final String notes;
   final DateTime createdAt;
   final DateTime? deliveredAt;
@@ -93,7 +96,7 @@ class EshteriliOrder {
     required this.estimatedBudget,
     required this.storeOrArea,
     required this.deliveryAddress,
-    this.status = EshteriliStatus.pendingPricing,
+    this.status = EshteriliStatus.inProgress,
     this.itemCost = 0.0,
     this.serviceFee = 0.0,
     this.deliveryFee = 0.0,
@@ -101,6 +104,9 @@ class EshteriliOrder {
     this.assignedAgentId = '',
     this.assignedAgentName = '',
     this.assignedAgentPhone = '',
+    this.imageUrl = '',
+    this.imageUrls = const [],
+    this.receiptImageUrl = '',
     this.notes = '',
     required this.createdAt,
     this.deliveredAt,
@@ -131,6 +137,9 @@ class EshteriliOrder {
       assignedAgentId: json['assignedAgentId'] as String? ?? '',
       assignedAgentName: json['assignedAgentName'] as String? ?? '',
       assignedAgentPhone: json['assignedAgentPhone'] as String? ?? '',
+      imageUrl: json['imageUrl'] as String? ?? '',
+      imageUrls: (json['imageUrls'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? const [],
+      receiptImageUrl: json['receiptImageUrl'] as String? ?? '',
       notes: json['notes'] as String? ?? '',
       createdAt: tsToDateTime(json['createdAt']) ?? DateTime.now(),
       deliveredAt: tsToDateTime(json['deliveredAt']),
@@ -156,6 +165,9 @@ class EshteriliOrder {
       'assignedAgentId': assignedAgentId,
       'assignedAgentName': assignedAgentName,
       'assignedAgentPhone': assignedAgentPhone,
+      'imageUrl': imageUrl,
+      'imageUrls': imageUrls,
+      'receiptImageUrl': receiptImageUrl,
       'notes': notes,
       'createdAt': Timestamp.fromDate(createdAt),
       'deliveredAt': deliveredAt != null ? Timestamp.fromDate(deliveredAt!) : null,
@@ -170,6 +182,9 @@ class EshteriliOrder {
     String? assignedAgentId,
     String? assignedAgentName,
     String? assignedAgentPhone,
+    String? imageUrl,
+    List<String>? imageUrls,
+    String? receiptImageUrl,
     String? notes,
     DateTime? deliveredAt,
   }) {
@@ -191,6 +206,9 @@ class EshteriliOrder {
       assignedAgentId: assignedAgentId ?? this.assignedAgentId,
       assignedAgentName: assignedAgentName ?? this.assignedAgentName,
       assignedAgentPhone: assignedAgentPhone ?? this.assignedAgentPhone,
+      imageUrl: imageUrl ?? this.imageUrl,
+      imageUrls: imageUrls ?? this.imageUrls,
+      receiptImageUrl: receiptImageUrl ?? this.receiptImageUrl,
       notes: notes ?? this.notes,
       createdAt: createdAt,
       deliveredAt: deliveredAt ?? this.deliveredAt,

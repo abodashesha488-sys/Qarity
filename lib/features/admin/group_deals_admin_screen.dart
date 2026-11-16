@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -9,7 +10,9 @@ import '../../models/group_deal_model.dart';
 import '../../services/eshterili_service.dart';
 import '../../services/etsawaqli_service.dart';
 import '../../services/group_deal_service.dart';
+import '../../services/share_service.dart';
 import '../../widgets/commercial_receipt_dialog.dart';
+import '../../widgets/delivery_agent_dashboard.dart';
 import '../../widgets/group_deal_delivery_screen.dart';
 import '../village/village_content_admin.dart';
 
@@ -87,6 +90,19 @@ class _GroupDealsAdminScreenState extends State<GroupDealsAdminScreen> {
                     ),
                   ),
                   IconButton(
+                    tooltip: 'تقرير الإيرادات والحصيلة المالية 📊',
+                    icon: const Icon(Icons.analytics_rounded, size: 23, color: Color(0xFF2563EB)),
+                    onPressed: () => _showRevenueReportDialog(context),
+                  ),
+                  IconButton(
+                    tooltip: 'منظومة المندوبين ومطابقة الاستلام',
+                    icon: const Icon(Icons.two_wheeler_rounded, size: 22, color: Color(0xFFEA580C)),
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const DeliveryAgentDashboard()),
+                    ),
+                  ),
+                  IconButton(
                     tooltip: 'إضافة صفقة جملة جديدة',
                     icon: const Icon(Icons.add_circle_outline_rounded, size: 24, color: Color(0xFF16A34A)),
                     onPressed: () => _openDealFormDialog(context),
@@ -120,6 +136,19 @@ class _GroupDealsAdminScreenState extends State<GroupDealsAdminScreen> {
             ],
           ),
           actions: [
+            IconButton(
+              tooltip: 'تقرير الإيرادات والحصيلة المالية 📊',
+              icon: const Icon(Icons.analytics_rounded, size: 25, color: Color(0xFF2563EB)),
+              onPressed: () => _showRevenueReportDialog(context),
+            ),
+            IconButton(
+              tooltip: 'منظومة المندوبين ومطابقة الاستلام',
+              icon: const Icon(Icons.two_wheeler_rounded, size: 24, color: Color(0xFFEA580C)),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const DeliveryAgentDashboard()),
+              ),
+            ),
             IconButton(
               tooltip: 'إضافة صفقة جملة جديدة',
               icon: const Icon(Icons.add_circle_outline_rounded, size: 26),
@@ -535,11 +564,11 @@ class _GroupDealsAdminScreenState extends State<GroupDealsAdminScreen> {
 
         final totalVillageSavings = executedDeals.fold<double>(
           0.0,
-          (sum, d) => sum + d.confirmedVillageSavings,
+          (acc, d) => acc + d.confirmedVillageSavings,
         );
         final totalUnitsDelivered = executedDeals.fold<int>(
           0,
-          (sum, d) => sum + d.confirmedCount,
+          (acc, d) => acc + d.confirmedCount,
         );
 
         return ListView(
@@ -2371,5 +2400,342 @@ class _GroupDealsAdminScreenState extends State<GroupDealsAdminScreen> {
         );
       }
     }
+  }
+
+  // =========================================================================
+  // ==================== تقرير الإيرادات والحصيلة المالية ====================
+  // =========================================================================
+
+  void _showRevenueReportDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520, maxHeight: 680),
+            child: FutureBuilder<Map<String, dynamic>>(
+              future: _computeFinancialStats(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const SizedBox(
+                    height: 250,
+                    child: Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                  );
+                }
+
+                final stats = snapshot.data ?? {};
+                final totalRevenue = (stats['totalRevenue'] as num?)?.toDouble() ?? 0.0;
+                final totalGoods = (stats['totalGoods'] as num?)?.toDouble() ?? 0.0;
+                final totalSavings = (stats['totalSavings'] as num?)?.toDouble() ?? 0.0;
+                final totalOrders = (stats['totalOrders'] as num?)?.toInt() ?? 0;
+
+                final dealSales = (stats['dealSales'] as num?)?.toDouble() ?? 0.0;
+                final dealOrdersCount = (stats['dealOrdersCount'] as num?)?.toInt() ?? 0;
+                final eshteriliItemsCost = (stats['eshteriliItemsCost'] as num?)?.toDouble() ?? 0.0;
+                final eshteriliFees = (stats['eshteriliFees'] as num?)?.toDouble() ?? 0.0;
+                final eshteriliCount = (stats['eshteriliCount'] as num?)?.toInt() ?? 0;
+                final etsawaqliGoods = (stats['etsawaqliGoods'] as num?)?.toDouble() ?? 0.0;
+                final etsawaqliFees = (stats['etsawaqliFees'] as num?)?.toDouble() ?? 0.0;
+                final etsawaqliCount = (stats['etsawaqliCount'] as num?)?.toInt() ?? 0;
+
+                return Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)],
+                          begin: Alignment.topRight,
+                          end: Alignment.bottomLeft,
+                        ),
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.analytics_rounded, color: Colors.white, size: 24),
+                          const SizedBox(width: 8),
+                          const Expanded(
+                            child: Text(
+                              'تقرير الإيرادات والحصيلة المالية الشامل 📊',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                fontFamily: 'Cairo',
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close_rounded, color: Colors.white, size: 20),
+                            onPressed: () => Navigator.pop(ctx),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    const Color(0xFF16A34A).withValues(alpha: 0.15),
+                                    const Color(0xFF15803D).withValues(alpha: 0.05),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: const Color(0xFF16A34A).withValues(alpha: 0.3)),
+                              ),
+                              child: Column(
+                                children: [
+                                  const Text(
+                                    'صافي رسوم الخدمة والتوصيل للمنظومة والمندوبين',
+                                    style: TextStyle(fontSize: 11, color: Colors.grey, fontFamily: 'Cairo'),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${totalRevenue.toStringAsFixed(0)} ج.م',
+                                    style: const TextStyle(
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.w900,
+                                      color: Color(0xFF16A34A),
+                                      fontFamily: 'Cairo',
+                                    ),
+                                  ),
+                                  const Divider(height: 16),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                    children: [
+                                      _buildFinancialMetricCol('إجمالي المبيعات', '${totalGoods.toStringAsFixed(0)} ج', const Color(0xFF2563EB)),
+                                      _buildFinancialMetricCol('وفر أهالي القرية 🎉', '${totalSavings.toStringAsFixed(0)} ج', const Color(0xFFD97706)),
+                                      _buildFinancialMetricCol('العمليات المنفذة', '$totalOrders طلب', Colors.black87),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            _buildServiceFinancialCard(
+                              title: 'صفقات الجملة بسعر التكلفة 🔥',
+                              color: const Color(0xFFD97706),
+                              icon: Icons.local_fire_department_rounded,
+                              metrics: [
+                                'العمليات المكتملة: $dealOrdersCount حصة',
+                                'إجمالي قيمة الصفقات: ${dealSales.toStringAsFixed(0)} ج.م',
+                                'إجمالي وفورات الأهالي: ${totalSavings.toStringAsFixed(0)} ج.م',
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            _buildServiceFinancialCard(
+                              title: 'خدمة إشتريلي (مندوب القرية) 🛵',
+                              color: const Color(0xFF2563EB),
+                              icon: Icons.delivery_dining_rounded,
+                              metrics: [
+                                'الطلبات المنفذة: $eshteriliCount طلبات',
+                                'مشتريات البضائع: ${eshteriliItemsCost.toStringAsFixed(0)} ج.م',
+                                'رسوم الخدمة والتوصيل: ${eshteriliFees.toStringAsFixed(0)} ج.م',
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            _buildServiceFinancialCard(
+                              title: 'خدمة إتسوقلي (سوق الجمعة والقرى) 🧺',
+                              color: const Color(0xFF16A34A),
+                              icon: Icons.shopping_basket_rounded,
+                              metrics: [
+                                'فواتير الأسواق: $etsawaqliCount فاتورة',
+                                'مشتريات الخضار واللحوم: ${etsawaqliGoods.toStringAsFixed(0)} ج.م',
+                                'رسوم التسوق والتوصيل: ${etsawaqliFees.toStringAsFixed(0)} ج.م',
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.pop(ctx),
+                              child: const Text('إغلاق', style: TextStyle(fontFamily: 'Cairo')),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            flex: 2,
+                            child: FilledButton.icon(
+                              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF1E3A8A)),
+                              icon: const Icon(Icons.share_rounded, size: 18),
+                              label: const Text('مشاركة وطباعة التقرير 🖨️', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 12)),
+                              onPressed: () {
+                                final text = StringBuffer()
+                                  ..writeln('📊 ═════════════════════════════════')
+                                  ..writeln('   تقرير الإيرادات والحصيلة المالية للمنظومة التجارية')
+                                  ..writeln('        قرية أبودشيشة — منصة الخدمات')
+                                  ..writeln('═════════════════════════════════')
+                                  ..writeln('🗓️ التاريخ: ${DateTime.now().toLocal().toString().split(".")[0]}')
+                                  ..writeln('---------------------------------')
+                                  ..writeln('▫️ صافي رسوم الخدمة والتوصيل: ${totalRevenue.toStringAsFixed(0)} ج.م')
+                                  ..writeln('▫️ إجمالي حجم المبيعات والبضائع: ${totalGoods.toStringAsFixed(0)} ج.م')
+                                  ..writeln('▫️ إجمالي ما تم توفيره لأهالي القرية: ${totalSavings.toStringAsFixed(0)} ج.م 🎉')
+                                  ..writeln('▫️ إجمالي العمليات والطلبات المنفذة: $totalOrders عملية')
+                                  ..writeln('---------------------------------')
+                                  ..writeln('1️⃣ صفقات الجملة:')
+                                  ..writeln('   • الحصص: $dealOrdersCount حصة')
+                                  ..writeln('   • المبيعات: ${dealSales.toStringAsFixed(0)} ج')
+                                  ..writeln('   • الوفر: ${totalSavings.toStringAsFixed(0)} ج')
+                                  ..writeln('2️⃣ خدمة إشتريلي:')
+                                  ..writeln('   • الطلبات: $eshteriliCount طلب')
+                                  ..writeln('   • المشتريات: ${eshteriliItemsCost.toStringAsFixed(0)} ج')
+                                  ..writeln('   • الرسوم والتوصيل: ${eshteriliFees.toStringAsFixed(0)} ج')
+                                  ..writeln('3️⃣ خدمة إتسوقلي:')
+                                  ..writeln('   • الفواتير: $etsawaqliCount فاتورة')
+                                  ..writeln('   • مشتريات السوق: ${etsawaqliGoods.toStringAsFixed(0)} ج')
+                                  ..writeln('   • الرسوم والتوصيل: ${etsawaqliFees.toStringAsFixed(0)} ج')
+                                  ..writeln('═════════════════════════════════');
+                                ShareService.shareText(
+                                  title: 'تقرير الإيرادات والحصيلة المالية',
+                                  body: text.toString(),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<Map<String, dynamic>> _computeFinancialStats() async {
+    final firestore = FirebaseFirestore.instance;
+
+    final dealsSnap = await firestore.collection('group_deals').get();
+    final participantsSnap = await firestore.collection('deal_participants').where('isDelivered', isEqualTo: true).get();
+
+    final dealsMap = <String, GroupDealModel>{};
+    for (final d in dealsSnap.docs) {
+      dealsMap[d.id] = GroupDealModel.fromJson(d.data(), d.id);
+    }
+
+    double dealSales = 0.0;
+    double dealSavings = 0.0;
+    int dealOrdersCount = 0;
+
+    for (final pDoc in participantsSnap.docs) {
+      final p = DealParticipantModel.fromJson(pDoc.data(), pDoc.id);
+      final deal = dealsMap[p.dealId];
+      if (deal != null) {
+        dealSales += p.totalAmount(deal.dealPrice);
+        dealSavings += p.quantity * deal.savingsPerUnit;
+        dealOrdersCount += p.quantity;
+      }
+    }
+
+    final eshteriliSnap = await firestore.collection('eshterili_orders').where('status', isEqualTo: 'completed').get();
+    double eshteriliItemsCost = 0.0;
+    double eshteriliFees = 0.0;
+    final eshteriliCount = eshteriliSnap.docs.length;
+
+    for (final doc in eshteriliSnap.docs) {
+      final order = EshteriliOrder.fromJson(doc.data(), doc.id);
+      eshteriliItemsCost += order.itemCost;
+      eshteriliFees += (order.serviceFee + order.deliveryFee);
+    }
+
+    final etsawaqliSnap = await firestore.collection('etsawaqli_orders').where('status', isEqualTo: 'completed').get();
+    double etsawaqliGoods = 0.0;
+    double etsawaqliFees = 0.0;
+    final etsawaqliCount = etsawaqliSnap.docs.length;
+
+    for (final doc in etsawaqliSnap.docs) {
+      final order = EtsawaqliOrder.fromJson(doc.data(), doc.id);
+      etsawaqliGoods += order.itemsSubtotal;
+      etsawaqliFees += (order.serviceFee + order.deliveryFee);
+    }
+
+    final totalRevenue = eshteriliFees + etsawaqliFees;
+    final totalGoods = dealSales + eshteriliItemsCost + etsawaqliGoods;
+    final totalSavings = dealSavings;
+    final totalOrders = dealOrdersCount + eshteriliCount + etsawaqliCount;
+
+    return {
+      'totalRevenue': totalRevenue,
+      'totalGoods': totalGoods,
+      'totalSavings': totalSavings,
+      'totalOrders': totalOrders,
+      'dealSales': dealSales,
+      'dealOrdersCount': dealOrdersCount,
+      'eshteriliItemsCost': eshteriliItemsCost,
+      'eshteriliFees': eshteriliFees,
+      'eshteriliCount': eshteriliCount,
+      'etsawaqliGoods': etsawaqliGoods,
+      'etsawaqliFees': etsawaqliFees,
+      'etsawaqliCount': etsawaqliCount,
+    };
+  }
+
+  Widget _buildFinancialMetricCol(String label, String value, Color color) {
+    return Column(
+      children: [
+        Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: color, fontFamily: 'Cairo')),
+        const SizedBox(height: 2),
+        Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey, fontFamily: 'Cairo')),
+      ],
+    );
+  }
+
+  Widget _buildServiceFinancialCard({
+    required String title,
+    required Color color,
+    required IconData icon,
+    required List<String> metrics,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 18, color: color),
+              const SizedBox(width: 6),
+              Text(title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: color, fontFamily: 'Cairo')),
+            ],
+          ),
+          const SizedBox(height: 8),
+          for (final m in metrics)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Row(
+                children: [
+                  Icon(Icons.check_circle_outline_rounded, size: 13, color: color),
+                  const SizedBox(width: 6),
+                  Text(m, style: const TextStyle(fontSize: 11, fontFamily: 'Cairo')),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
   }
 }

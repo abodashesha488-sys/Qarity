@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/etsawaqli_model.dart';
 import 'group_deal_service.dart';
+import 'remote_push_service.dart';
 
 /// خدمة إدارة أسواق ومشتريات وفواتير «إتسوقلي»
 class EtsawaqliService {
@@ -298,6 +300,7 @@ class EtsawaqliService {
     required double serviceFee,
     required double deliveryFee,
     required String deliveryAddress,
+    bool isRecurringWeekly = false,
     String notes = '',
   }) async {
     final docRef = _ordersCol.doc();
@@ -320,11 +323,13 @@ class EtsawaqliService {
       totalAmount: itemsSubtotal + serviceFee + deliveryFee,
       claimCode: claimCode,
       deliveryAddress: deliveryAddress.trim(),
+      isRecurringWeekly: isRecurringWeekly,
       notes: notes.trim(),
       createdAt: DateTime.now(),
     );
 
     await docRef.set(order.toJson());
+    unawaited(RemotePushService.notifyAdmins('etsawaqli_orders'));
     return docRef.id;
   }
 

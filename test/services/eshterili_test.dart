@@ -44,7 +44,6 @@ void main() {
         estimatedBudget: 150.0,
         storeOrArea: 'سوق بلقاس',
         deliveryAddress: 'عزبة أبو دقيقة',
-        status: EshteriliStatus.inProgress,
         itemCost: 140.0,
         serviceFee: 20.0,
         deliveryFee: 15.0,
@@ -52,6 +51,7 @@ void main() {
         assignedAgentId: 'agent_5',
         assignedAgentName: 'إبراهيم حسن',
         assignedAgentPhone: '01111122233',
+        receiptImageUrl: 'https://cloudinary.com/test_receipt.jpg',
         notes: 'ممنوع التأخير',
         createdAt: now,
       );
@@ -67,6 +67,7 @@ void main() {
       expect(restored.totalAmount, 175.0);
       expect(restored.claimCode, '1834');
       expect(restored.assignedAgentName, 'إبراهيم حسن');
+      expect(restored.receiptImageUrl, 'https://cloudinary.com/test_receipt.jpg');
       expect(restored.notes, 'ممنوع التأخير');
     });
 

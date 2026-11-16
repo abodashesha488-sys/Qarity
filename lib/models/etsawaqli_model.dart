@@ -153,6 +153,8 @@ class EtsawaqliCartItem {
   final double quantity; // e.g. 1.0 or 2.5
   final double unitPrice;
   final String userNotes; // مثال: طماطم جامدة للسلطة
+  final bool isCustom; // صنف غير مقيد بالقائمة الافتراضية
+  final String preference; // تفضيل النضج أو الجودة
 
   const EtsawaqliCartItem({
     required this.productId,
@@ -162,6 +164,8 @@ class EtsawaqliCartItem {
     required this.quantity,
     required this.unitPrice,
     this.userNotes = '',
+    this.isCustom = false,
+    this.preference = '',
   });
 
   double get totalPrice => quantity * unitPrice;
@@ -175,6 +179,8 @@ class EtsawaqliCartItem {
       quantity: (json['quantity'] as num?)?.toDouble() ?? 1.0,
       unitPrice: (json['unitPrice'] as num?)?.toDouble() ?? 0.0,
       userNotes: json['userNotes'] as String? ?? '',
+      isCustom: json['isCustom'] as bool? ?? false,
+      preference: json['preference'] as String? ?? '',
     );
   }
 
@@ -188,6 +194,8 @@ class EtsawaqliCartItem {
       'unitPrice': unitPrice,
       'totalPrice': totalPrice,
       'userNotes': userNotes,
+      'isCustom': isCustom,
+      'preference': preference,
     };
   }
 }
@@ -215,6 +223,7 @@ class EtsawaqliOrder {
   final String deliveryAddress;
   final DateTime createdAt;
   final DateTime? deliveredAt;
+  final bool isRecurringWeekly; // اشتراك أسبوعي تلقائي
   final String notes;
 
   const EtsawaqliOrder({
@@ -238,6 +247,7 @@ class EtsawaqliOrder {
     required this.deliveryAddress,
     required this.createdAt,
     this.deliveredAt,
+    this.isRecurringWeekly = false,
     this.notes = '',
   });
 
@@ -289,6 +299,7 @@ class EtsawaqliOrder {
       deliveryAddress: json['deliveryAddress'] as String? ?? '',
       createdAt: tsToDateTime(json['createdAt']) ?? DateTime.now(),
       deliveredAt: tsToDateTime(json['deliveredAt']),
+      isRecurringWeekly: json['isRecurringWeekly'] as bool? ?? false,
       notes: json['notes'] as String? ?? '',
     );
   }
@@ -312,6 +323,7 @@ class EtsawaqliOrder {
       'shopperName': shopperName,
       'shopperPhone': shopperPhone,
       'deliveryAddress': deliveryAddress,
+      'isRecurringWeekly': isRecurringWeekly,
       'createdAt': Timestamp.fromDate(createdAt),
       'deliveredAt':
           deliveredAt != null ? Timestamp.fromDate(deliveredAt!) : null,

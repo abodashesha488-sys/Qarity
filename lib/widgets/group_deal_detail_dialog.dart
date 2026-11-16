@@ -32,8 +32,10 @@ class _GroupDealDetailSheetState extends State<GroupDealDetailSheet> {
   int? _editingQuantity;
   int _currentImageIndex = 0;
   String _paymentMethod = 'مندوب القرية';
+  String _deliveryOption = 'hub'; // 'hub' (مقر التوزيع - مجاناً) أو 'home' (توصيل للبيت)
   late final TextEditingController _nameCtrl;
   late final TextEditingController _phoneCtrl;
+  late final TextEditingController _deliveryAddressCtrl;
   late final TextEditingController _notesCtrl;
   bool _isSubmitting = false;
   bool _isBookingOpen = false;
@@ -45,6 +47,7 @@ class _GroupDealDetailSheetState extends State<GroupDealDetailSheet> {
     _activeDealId = widget.initialDealId ?? widget.dealId;
     _nameCtrl = TextEditingController();
     _phoneCtrl = TextEditingController();
+    _deliveryAddressCtrl = TextEditingController();
     _notesCtrl = TextEditingController();
     _initUserData();
   }
@@ -66,21 +69,24 @@ class _GroupDealDetailSheetState extends State<GroupDealDetailSheet> {
   void dispose() {
     _nameCtrl.dispose();
     _phoneCtrl.dispose();
+    _deliveryAddressCtrl.dispose();
     _notesCtrl.dispose();
     super.dispose();
   }
 
   void _shareWithNeighbors(GroupDealModel deal) {
-    ShareService.shareContent(
-      title: '🔥 فرصة شراء جماعي بسعر الجملة: ${deal.title}',
-      details: {
-        'السعر في السوق': '${deal.marketPrice.toStringAsFixed(0)} جنيه',
-        'سعر الجملة': '${deal.dealPrice.toStringAsFixed(0)} جنيه',
-        'وفر في الحصة': '${deal.savingsPerUnit.toStringAsFixed(0)} جنيه',
-        'الكمية المستهدفة': '${deal.targetCount} ${deal.unitName}',
-      },
-      imageUrls:
-          deal.imageUrl.trim().isNotEmpty ? [deal.imageUrl.trim()] : const [],
+    final buffer = StringBuffer()
+      ..writeln('📢 فرصة شراء جماعي بسعر الجملة لأهل قرية أبودشيشة الكرام!')
+      ..writeln('🔥 صفقة: ${deal.title}')
+      ..writeln('💰 سعر الجملة: ${deal.dealPrice.toStringAsFixed(0)} جنيه (بدل ${deal.marketPrice.toStringAsFixed(0)} ج بالسوق)')
+      ..writeln('🎉 وفر في الحصة: ${deal.savingsPerUnit.toStringAsFixed(0)} جنيه (خصم ${deal.discountPercentage}%)')
+      ..writeln('⏳ باقي ${deal.remainingCount} ${deal.unitName} فقط وتكتمل الشحنة وتصل للقرية.')
+      ..writeln('📲 احجز حصتك الآن مجاناً وبدون أي عربون من تطبيق قرية أبودشيشة!');
+
+    ShareService.shareText(
+      title: 'صفقة جملة بالقرية: ${deal.title}',
+      body: buffer.toString(),
+      imageUrls: deal.imageUrl.trim().isNotEmpty ? [deal.imageUrl.trim()] : const [],
     );
   }
 
@@ -753,6 +759,70 @@ class _GroupDealDetailSheetState extends State<GroupDealDetailSheet> {
               ),
             ),
           ),
+          const SizedBox(height: 10),
+
+          // شريط التفاعل الاجتماعي الحي (Live Social Proof Ticker)
+          StreamBuilder<List<DealParticipantModel>>(
+            stream: _service.watchParticipants(deal.id),
+            builder: (context, snap) {
+              final list = snap.data ?? [];
+              if (list.isEmpty) return const SizedBox.shrink();
+              final latest = list.first;
+              // إخفاء اللقب لحماية الخصوصية
+              final nameParts = latest.userName.trim().split(' ');
+              final privacyName = nameParts.length > 1
+                  ? '${nameParts[0]} ${nameParts[1][0]}.'
+                  : latest.userName;
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF3C7),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFFDE68A)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.bolt_rounded, size: 16, color: Color(0xFFD97706)),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        '🔥 آخر الحجوزات: حجز $privacyName (${latest.quantity} ${deal.unitName}) منذ قليل • باقي ${deal.remainingCount} وتصل الشحنة!',
+                        style: const TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF92400E),
+                          fontFamily: 'Cairo',
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+
+          // زر شير الصفقة مع جيرانك على واتساب بنقرة واحدة
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Color(0xFF16A34A), width: 1.2),
+                foregroundColor: const Color(0xFF16A34A),
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () => _shareWithNeighbors(deal),
+              icon: const Icon(Icons.share_rounded, size: 17),
+              label: const Text(
+                'شير الصفقة مع جيرانك على واتساب 📲',
+                style: TextStyle(fontFamily: 'Cairo', fontSize: 11.5, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -1188,9 +1258,10 @@ class _GroupDealDetailSheetState extends State<GroupDealDetailSheet> {
   }
 
   Widget _buildBookingForm(ThemeData theme, GroupDealModel deal, String uid) {
+    final deliveryFee = _deliveryOption == 'home' ? 10.0 : 0.0;
     final deposit = _selectedQuantity * deal.depositAmount;
-    final total = _selectedQuantity * deal.dealPrice;
-    final remaining = _selectedQuantity * (deal.dealPrice - deal.depositAmount);
+    final total = (_selectedQuantity * deal.dealPrice) + deliveryFee;
+    final remaining = (_selectedQuantity * (deal.dealPrice - deal.depositAmount)) + deliveryFee;
 
     return Container(
       decoration: BoxDecoration(
@@ -1251,6 +1322,44 @@ class _GroupDealDetailSheetState extends State<GroupDealDetailSheet> {
                   const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             ),
           ),
+          const SizedBox(height: 12),
+
+          // طريقة الاستلام والتوصيل
+          const Text(
+            'طريقة الاستلام والتوصيل:',
+            style: TextStyle(
+                fontWeight: FontWeight.bold, fontSize: 12, fontFamily: 'Cairo'),
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 8,
+            children: [
+              ChoiceChip(
+                label: const Text('مقر التوزيع بالقرية (مجاناً)',
+                    style: TextStyle(fontFamily: 'Cairo', fontSize: 11)),
+                selected: _deliveryOption == 'hub',
+                onSelected: (_) => setState(() => _deliveryOption = 'hub'),
+              ),
+              ChoiceChip(
+                label: const Text('توصيل للمنزل (+10 جنيه)',
+                    style: TextStyle(fontFamily: 'Cairo', fontSize: 11)),
+                selected: _deliveryOption == 'home',
+                onSelected: (_) => setState(() => _deliveryOption = 'home'),
+              ),
+            ],
+          ),
+          if (_deliveryOption == 'home') ...[
+            const SizedBox(height: 10),
+            TextField(
+              controller: _deliveryAddressCtrl,
+              decoration: InputDecoration(
+                labelText: 'عنوان المنزل / علامة مميزة بالقرية',
+                labelStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 12),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
 
           // عداد الكمية
@@ -1364,6 +1473,21 @@ class _GroupDealDetailSheetState extends State<GroupDealDetailSheet> {
                   ),
                   const Divider(height: 12),
                 ],
+                if (_deliveryOption == 'home') ...[
+                  const Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('رسوم التوصيل المنزلي:',
+                          style: TextStyle(fontSize: 11, fontFamily: 'Cairo')),
+                      Text('10 جنيه',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF16A34A),
+                              fontFamily: 'Cairo')),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                ],
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -1424,6 +1548,14 @@ class _GroupDealDetailSheetState extends State<GroupDealDetailSheet> {
       return;
     }
 
+    if (_deliveryOption == 'home' && _deliveryAddressCtrl.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('يرجى إدخال عنوان المنزل للتوصيل')),
+      );
+      return;
+    }
+
     setState(() => _isSubmitting = true);
     try {
       final code = await _service.bookDeal(
@@ -1434,6 +1566,9 @@ class _GroupDealDetailSheetState extends State<GroupDealDetailSheet> {
         quantity: _selectedQuantity,
         paymentMethod: _paymentMethod,
         notes: _notesCtrl.text.trim(),
+        deliveryOption: _deliveryOption,
+        deliveryAddress: _deliveryOption == 'home' ? _deliveryAddressCtrl.text.trim() : '',
+        deliveryFee: _deliveryOption == 'home' ? 10.0 : 0.0,
       );
 
       if (mounted) {

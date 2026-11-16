@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/eshterili_model.dart';
 import 'group_deal_service.dart';
+import 'remote_push_service.dart';
 
 /// خدمة إدارة طلبات ومحاسبة «إشتريلي»
 class EshteriliService {
@@ -34,6 +36,8 @@ class EshteriliService {
     required double estimatedBudget,
     required String storeOrArea,
     required String deliveryAddress,
+    String imageUrl = '',
+    List<String> imageUrls = const [],
     String notes = '',
   }) async {
     final docRef = _ordersCol.doc();
@@ -51,12 +55,22 @@ class EshteriliService {
       storeOrArea: storeOrArea.trim(),
       deliveryAddress: deliveryAddress.trim(),
       claimCode: claimCode,
+      imageUrl: imageUrl.trim(),
+      imageUrls: imageUrls,
       notes: notes.trim(),
       createdAt: DateTime.now(),
     );
 
     await docRef.set(order.toJson());
+    unawaited(RemotePushService.notifyAdmins('eshterili_orders'));
     return docRef.id;
+  }
+
+  /// إرفاق صورة فاتورة الشراء الورقية الصادرة من المحل (بواسطة المندوب)
+  Future<void> attachReceiptImage(String orderId, String receiptImageUrl) async {
+    await _ordersCol.doc(orderId).update({
+      'receiptImageUrl': receiptImageUrl.trim(),
+    });
   }
 
   /// تسعير الطلب من قبل الإدارة أو المندوب

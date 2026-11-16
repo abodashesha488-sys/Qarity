@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/utils/app_image_cache.dart';
 import '../models/eshterili_model.dart';
 import '../models/etsawaqli_model.dart';
 import '../models/group_deal_model.dart';
@@ -22,7 +23,7 @@ class CommercialReceiptDialog {
     required GroupDealModel deal,
     required DealParticipantModel participant,
   }) {
-    final totalPrice = participant.quantity * deal.dealPrice;
+    final totalPrice = participant.totalAmount(deal.dealPrice);
     final totalSavings = participant.quantity * deal.savingPerUnit;
     final marketVal = participant.quantity * deal.marketPrice;
 
@@ -36,6 +37,7 @@ class CommercialReceiptDialog {
       ..writeln('▫️ رقم الهاتف: ${participant.userPhone}')
       ..writeln('▫️ الكمية المحجوزة: ${participant.quantity} ${deal.unitName}')
       ..writeln('▫️ سعر الجملة للوحدة: ${deal.dealPrice.toStringAsFixed(0)} ج (السوق: ${deal.marketPrice.toStringAsFixed(0)} ج)')
+      ..writeln('▫️ طريقة الاستلام: ${participant.deliveryOption == "home" ? "توصيل منزلي (+${participant.deliveryFee.toStringAsFixed(0)} ج)" : "مقر التوزيع الرئيسي (مجاناً)"}')
       ..writeln('---------------------------------')
       ..writeln('▫️ القيمة الإجمالية بالسوق: ${marketVal.toStringAsFixed(0)} ج')
       ..writeln('▫️ الإجمالي المطلوب عند الاستلام: ${totalPrice.toStringAsFixed(0)} ج')
@@ -67,6 +69,13 @@ class CommercialReceiptDialog {
           _buildInfoRow('الكمية:', '${participant.quantity} ${deal.unitName}'),
           _buildInfoRow('سعر الوحدة بالجملة:', '${deal.dealPrice.toStringAsFixed(0)} جنيه'),
           _buildInfoRow('سعر السوق الفعلي:', '${deal.marketPrice.toStringAsFixed(0)} جنيه'),
+          if (participant.deliveryOption == 'home') ...[
+            _buildInfoRow('طريقة الاستلام:', 'توصيل منزلي (+${participant.deliveryFee.toStringAsFixed(0)} ج)'),
+            if (participant.deliveryAddress.isNotEmpty)
+              _buildInfoRow('عنوان التوصيل:', participant.deliveryAddress),
+          ] else ...[
+            _buildInfoRow('طريقة الاستلام:', 'مقر التوزيع بالقرية (مجاناً)'),
+          ],
           const Divider(height: 20),
           _buildTotalRow('الإجمالي المطلوب عند الاستلام:', '${totalPrice.toStringAsFixed(0)} جنيه', isHighlight: true),
           if (totalSavings > 0)
@@ -149,6 +158,20 @@ class CommercialReceiptDialog {
           _buildInfoRow('مصاريف التوصيل:', '${order.deliveryFee.toStringAsFixed(0)} ج'),
           const Divider(height: 16),
           _buildTotalRow('المبلغ الإجمالي المستحق:', '${order.totalAmount.toStringAsFixed(0)} جنيه', isHighlight: true),
+          if (order.receiptImageUrl.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            const Text('صورة فاتورة المحل المرفقة من المندوب:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'Cairo')),
+            const SizedBox(height: 6),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: AppImageCache.image(
+                url: order.receiptImageUrl,
+                width: double.infinity,
+                height: 180,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ],
           const SizedBox(height: 14),
           _buildClaimCodeBox(order.claimCode, order.status == EshteriliStatus.completed),
         ],

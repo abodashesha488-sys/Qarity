@@ -331,6 +331,9 @@ const Set<String> kAdminNotifyCollections = {
   'blood_donors',
   'medical_center_clinics',
   'village_contributions',
+  'group_deals',
+  'eshterili_orders',
+  'etsawaqli_orders',
 };
 
 /// المجموعات التي يدعمها إجراء `user_notify` (إخطار صاحب المحتوى بالإعجاب).
@@ -346,6 +349,7 @@ const Map<String, String> kPushTopicForCollection = {
   'obituaries': 'village_obituaries',
   'occasions': 'village_occasions',
   'market_products': 'village_market',
+  'group_deals': 'village_market',
   'forum_posts': 'village_forum',
   'service_requests': 'village_services',
   'service_providers': 'village_services',
