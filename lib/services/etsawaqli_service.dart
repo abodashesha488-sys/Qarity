@@ -9,7 +9,10 @@ import 'remote_push_service.dart';
 
 /// خدمة إدارة أسواق ومشتريات وفواتير «إتسوقلي»
 class EtsawaqliService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  EtsawaqliService({FirebaseFirestore? firestore})
+      : _firestore = firestore ?? FirebaseFirestore.instance;
+
+  final FirebaseFirestore _firestore;
 
   CollectionReference<Map<String, dynamic>> get _marketsCol =>
       _firestore.collection('etsawaqli_markets');

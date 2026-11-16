@@ -8,43 +8,60 @@ import '../services/etsawaqli_service.dart';
 import '../services/user_service.dart';
 import 'commercial_receipt_dialog.dart';
 
-/// نافذة خدمة «إتسوقلي» للمستخدم: اختيار السوق الأسبوعي، السلع، الأصناف الخاصة، وفاتورة كاشير السوبر ماركت
-/// (مستوحى من معايير Instacart & Nana & Breadfast العالمية المخصصة للريف المصري)
+/// 🧺 نافذة خدمة «إتسوقلي» للمستخدم
+///
+/// مصممة ببساطة وسلاسة لتناسب كافة ثقافات ومستويات المستخدمين:
+/// 1. الشاشة الرئيسية: نبذة تعريفية راقية وشرح للخدمة + زر "قائمة المشتريات" + زر "سجل العمليات".
+/// 2. قائمة المشتريات: اختيار السوق والأصناف والكميات مع إمكانية إضافة أصناف خاصة تعامل كالبنود الأصلية، وبيانات التوصيل.
+/// 3. سجل العمليات: كروت عمليات ملخصة (حالة العملية - تاريخ العملية - رقم العملية - مبلغ العملية) مع فتح التفاصيل بدون كود تسليم.
 class EtsawaqliMarketSheet extends StatefulWidget {
-  const EtsawaqliMarketSheet({super.key});
+  const EtsawaqliMarketSheet({
+    super.key,
+    this.initialView = 0,
+    this.service,
+    this.userService,
+    this.currentUserId,
+  });
+
+  /// 0: شاشة التفاصيل والنبذة التعريفية (الافتراضية)
+  /// 1: قائمة المشتريات واختيار السلع
+  /// 2: سجل العمليات (كروت العمليات الموجزة)
+  final int initialView;
+
+  /// خدمة إتسوقلي (تسمح بالحقن للاختبارات)
+  final EtsawaqliService? service;
+
+  /// خدمة المستخدم (تسمح بالحقن للاختبارات)
+  final UserService? userService;
+
+  /// معرف المستخدم الحالي (تسمح بالحقن للاختبارات)
+  final String? currentUserId;
 
   @override
   State<EtsawaqliMarketSheet> createState() => _EtsawaqliMarketSheetState();
 }
 
-class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet>
-    with SingleTickerProviderStateMixin {
-  final EtsawaqliService _service = EtsawaqliService();
-  final UserService _userService = UserService();
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
+  late final EtsawaqliService _service;
 
-  late final TabController _tabController;
+  late int _currentView; // 0: نبذة وأزرار رئيسية, 1: قائمة المشتريات, 2: سجل العمليات
+  final TextEditingController _nameCtrl = TextEditingController();
+  final TextEditingController _phoneCtrl = TextEditingController();
   final TextEditingController _addressCtrl = TextEditingController();
   final TextEditingController _notesCtrl = TextEditingController();
 
-  String _userName = '';
-  String _userPhone = '';
+  // إدخال صنف خاص ليس بالقوائم
+  final TextEditingController _customItemNameCtrl = TextEditingController();
+  double _customItemQty = 1.0;
+  String _customItemUnit = 'كيلو';
+
   bool _isSubmitting = false;
 
   EtsawaqliMarket? _selectedMarket;
   String _selectedCategory = 'الكل';
   final Map<String, double> _cartQuantities = {}; // productId -> quantity
   final Map<String, String> _cartNotes = {}; // productId -> notes
-  final Map<String, String> _cartPreferences = {}; // productId -> preference
-  final List<EtsawaqliCartItem> _customItems =
-      []; // أصناف خاصة غير موجودة بالقائمة
-
-  static const List<String> _freshnessChips = [
-    'جامد للسلطة',
-    'مستوي للأكل فوراً',
-    'حجم متوسط',
-    'طازة بلدي',
-  ];
+  final List<EtsawaqliCartItem> _customItems = []; // أصناف خاصة غير مقيدة بالقائمة الافتراضية
 
   final List<String> _categories = [
     'الكل',
@@ -56,29 +73,58 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet>
     'ألبان وجبن',
   ];
 
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    _initUserData();
-  }
+  final List<String> _units = ['كيلو', 'نصف كيلو', 'ربطة', 'قفص / كرتونة', 'حبة / رأس'];
 
-  Future<void> _initUserData() async {
-    final user = await _userService.getCurrentUser();
-    if (user != null && mounted) {
-      setState(() {
-        _userName = user.name;
-        _userPhone = user.phone ?? '';
-      });
+  String get _currentUid {
+    if (widget.currentUserId != null && widget.currentUserId!.isNotEmpty) {
+      return widget.currentUserId!;
+    }
+    try {
+      return FirebaseAuth.instance.currentUser?.uid ?? '';
+    } catch (_) {
+      return '';
     }
   }
 
   @override
+  void initState() {
+    super.initState();
+    _service = widget.service ?? EtsawaqliService();
+    _currentView = widget.initialView;
+    _initUserData();
+  }
+
+  Future<void> _initUserData() async {
+    try {
+      final userSvc = widget.userService ?? UserService();
+      final user = await userSvc.getCurrentUser();
+      if (user != null && mounted) {
+        setState(() {
+          if (_nameCtrl.text.isEmpty) _nameCtrl.text = user.name;
+          if (_phoneCtrl.text.isEmpty) _phoneCtrl.text = user.phone ?? '';
+        });
+      }
+    } catch (_) {}
+  }
+
+  @override
   void dispose() {
-    _tabController.dispose();
+    _nameCtrl.dispose();
+    _phoneCtrl.dispose();
     _addressCtrl.dispose();
     _notesCtrl.dispose();
+    _customItemNameCtrl.dispose();
     super.dispose();
+  }
+
+  String _formatDate(DateTime dt) {
+    final d = dt.day.toString().padLeft(2, '0');
+    final m = dt.month.toString().padLeft(2, '0');
+    final y = dt.year.toString();
+    final h = (dt.hour % 12 == 0 ? 12 : dt.hour % 12).toString().padLeft(2, '0');
+    final min = dt.minute.toString().padLeft(2, '0');
+    final period = dt.hour >= 12 ? 'م' : 'ص';
+    return '$d/$m/$y • $h:$min $period';
   }
 
   double _calculateItemsSubtotal(List<EtsawaqliProductItem> allProducts) {
@@ -95,8 +141,7 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet>
     return sum;
   }
 
-  List<EtsawaqliCartItem> _buildCartItems(
-      List<EtsawaqliProductItem> allProducts) {
+  List<EtsawaqliCartItem> _buildCartItems(List<EtsawaqliProductItem> allProducts) {
     final list = <EtsawaqliCartItem>[];
     for (final p in allProducts) {
       final q = _cartQuantities[p.id] ?? 0.0;
@@ -109,7 +154,6 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet>
           quantity: q,
           unitPrice: p.estimatedPrice,
           userNotes: _cartNotes[p.id] ?? '',
-          preference: _cartPreferences[p.id] ?? '',
         ));
       }
     }
@@ -117,14 +161,48 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet>
     return list;
   }
 
-  Future<void> _submitMarketOrder(List<EtsawaqliProductItem> allProducts,
-      {bool isRecurringWeekly = false}) async {
-    final uid = _auth.currentUser?.uid;
-    if (uid == null) {
+  void _addCustomItemDirectly() {
+    final name = _customItemNameCtrl.text.trim();
+    if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('يرجى تسجيل الدخول أولاً لإتمام الاشتراك',
-                style: TextStyle(fontFamily: 'Cairo'))),
+          content: Text('يرجى كتابة اسم الصنف المراد إضافته', style: TextStyle(fontFamily: 'Cairo')),
+        ),
+      );
+      return;
+    }
+
+    final newItem = EtsawaqliCartItem(
+      productId: 'custom_${DateTime.now().millisecondsSinceEpoch}',
+      productName: name,
+      category: 'أصناف خاصة',
+      unit: _customItemUnit,
+      quantity: _customItemQty,
+      unitPrice: 0.0, // يُحسب بسعر السوق الفعلي
+      isCustom: true,
+    );
+
+    setState(() {
+      _customItems.add(newItem);
+      _customItemNameCtrl.clear();
+      _customItemQty = 1.0;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: const Color(0xFF16A34A),
+        content: Text('تمت إضافة "$name" إلى قائمة مشترياتك بنجاح ✅', style: const TextStyle(fontFamily: 'Cairo')),
+      ),
+    );
+  }
+
+  Future<void> _submitMarketOrder(List<EtsawaqliProductItem> allProducts) async {
+    final uid = _currentUid;
+    if (uid.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('يرجى تسجيل الدخول أولاً لإرسال طلب التسوق', style: TextStyle(fontFamily: 'Cairo')),
+        ),
       );
       return;
     }
@@ -133,8 +211,32 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet>
     if (cartItems.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('يرجى اختيار صنف واحد على الأقل للتسوق',
-                style: TextStyle(fontFamily: 'Cairo'))),
+          content: Text('يرجى اختيار أو إضافة صنف واحد على الأقل في قائمة المشتريات', style: TextStyle(fontFamily: 'Cairo')),
+        ),
+      );
+      return;
+    }
+
+    final name = _nameCtrl.text.trim();
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('يرجى إدخال اسم صاحب الطلب', style: TextStyle(fontFamily: 'Cairo'))),
+      );
+      return;
+    }
+
+    final phone = _phoneCtrl.text.trim();
+    if (phone.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('يرجى إدخال رقم الهاتف للتواصل', style: TextStyle(fontFamily: 'Cairo'))),
+      );
+      return;
+    }
+
+    final address = _addressCtrl.text.trim();
+    if (address.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('يرجى إدخال عنوان أو مكان التوصيل بالقرية', style: TextStyle(fontFamily: 'Cairo'))),
       );
       return;
     }
@@ -146,8 +248,8 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet>
     try {
       await _service.createOrder(
         userId: uid,
-        userName: _userName.isNotEmpty ? _userName : 'أحد أهالي القرية',
-        userPhone: _userPhone,
+        userName: name,
+        userPhone: phone,
         marketId: market.id,
         marketName: market.name,
         marketDay: market.dayOfWeek,
@@ -155,168 +257,47 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet>
         itemsSubtotal: subtotal,
         serviceFee: market.serviceFee,
         deliveryFee: market.deliveryFee,
-        deliveryAddress: _addressCtrl.text.trim().isEmpty
-            ? 'داخل القرية'
-            : _addressCtrl.text.trim(),
+        deliveryAddress: address,
         notes: _notesCtrl.text.trim(),
-        isRecurringWeekly: isRecurringWeekly,
       );
 
-      setState(() {
-        _cartQuantities.clear();
-        _cartNotes.clear();
-        _cartPreferences.clear();
-        _customItems.clear();
-        _isSubmitting = false;
-        _tabController.animateTo(1);
-      });
+      _cartQuantities.clear();
+      _cartNotes.clear();
+      _customItems.clear();
+      _notesCtrl.clear();
 
       if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+          _currentView = 2; // الانتقال مباشرة لسجل العمليات
+        });
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             backgroundColor: Color(0xFF16A34A),
             content: Text(
-                'تم تسجيل اشتراكك بفاتورة كاشير معتمدة! ستتسوق المندوبة لك يوم السوق ✅',
-                style: TextStyle(fontFamily: 'Cairo')),
+              'تم تسجيل طلب تسوقك بنجاح! ستتسوق المندوبة وتوصل لك يوم السوق حتى باب بيتك 🧺',
+              style: TextStyle(fontFamily: 'Cairo'),
+            ),
           ),
         );
       }
     } catch (e) {
-      setState(() => _isSubmitting = false);
       if (mounted) {
+        setState(() => _isSubmitting = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text('حدث خطأ أثناء تسجيل الاشتراك: $e',
-                  style: const TextStyle(fontFamily: 'Cairo'))),
+            content: Text('حدث خطأ أثناء تسجيل الطلب: $e', style: const TextStyle(fontFamily: 'Cairo')),
+          ),
         );
       }
     }
   }
 
-  void _showAddCustomItemDialog() {
-    final nameCtrl = TextEditingController();
-    final qtyCtrl = TextEditingController(text: '1');
-    final unitCtrl = TextEditingController(text: 'كيلو');
-    final notesCtrl = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.add_task_rounded, color: Color(0xFF16A34A)),
-            SizedBox(width: 8),
-            Text('إضافة صنف خاص غير موجود بالقائمة',
-                style: TextStyle(
-                    fontFamily: 'Cairo',
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold)),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'اسم الصنف أو الطلب *',
-                  hintText: 'مثال: نعناع أخضر، بهارات كذا، ملوخية مخروطة...',
-                  labelStyle: TextStyle(fontFamily: 'Cairo', fontSize: 12),
-                ),
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: qtyCtrl,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
-                      decoration: const InputDecoration(
-                        labelText: 'الكمية *',
-                        labelStyle:
-                            TextStyle(fontFamily: 'Cairo', fontSize: 12),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextField(
-                      controller: unitCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'الوحدة',
-                        hintText: 'كيلو / ربطة / حبة',
-                        labelStyle:
-                            TextStyle(fontFamily: 'Cairo', fontSize: 12),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: notesCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'أي تفضيل أو مواصفات خاصة للصنف',
-                  labelStyle: TextStyle(fontFamily: 'Cairo', fontSize: 12),
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('إلغاء', style: TextStyle(fontFamily: 'Cairo')),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF16A34A)),
-            onPressed: () {
-              final name = nameCtrl.text.trim();
-              final qty = double.tryParse(qtyCtrl.text.trim()) ?? 1.0;
-              final unit =
-                  unitCtrl.text.trim().isEmpty ? 'قطعة' : unitCtrl.text.trim();
-
-              if (name.isEmpty) return;
-
-              setState(() {
-                _customItems.add(EtsawaqliCartItem(
-                  productId: 'custom_${DateTime.now().millisecondsSinceEpoch}',
-                  productName: name,
-                  category: 'أصناف خاصة',
-                  unit: unit,
-                  quantity: qty,
-                  unitPrice: 0.0, // سيتم حسابها بسعر السوق الفعلي
-                  userNotes: notesCtrl.text.trim(),
-                  isCustom: true,
-                ));
-              });
-
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  backgroundColor: const Color(0xFF16A34A),
-                  content: Text('تمت إضافة "$name" إلى سلة تسوقك بنجاح ✅',
-                      style: const TextStyle(fontFamily: 'Cairo')),
-                ),
-              );
-            },
-            child: const Text('إضافة للسلة',
-                style: TextStyle(
-                    fontFamily: 'Cairo', fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final uid = _auth.currentUser?.uid ?? '';
+    final uid = _currentUid;
 
     return Container(
       constraints: BoxConstraints(
@@ -328,84 +309,369 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet>
       ),
       child: Column(
         children: [
-          // مقبض النافذة
+          // مقبض النافذة العلوي
           Center(
             child: Container(
               margin: const EdgeInsets.only(top: 10, bottom: 6),
               width: 44,
               height: 4.5,
               decoration: BoxDecoration(
-                color:
-                    theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
           ),
 
-          // ترويسة خدمة إتسوقلي
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF16A34A).withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.shopping_basket_rounded,
-                      color: Color(0xFF16A34A), size: 24),
+          // المحتوى التفاعلي حسب الشاشة الحالية
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 250),
+              child: _buildCurrentViewContent(theme, uid),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCurrentViewContent(ThemeData theme, String uid) {
+    switch (_currentView) {
+      case 1:
+        return _buildShoppingListView(theme);
+      case 2:
+        return _buildOrdersHistoryView(theme, uid);
+      case 0:
+      default:
+        return _buildLandingView(theme, uid);
+    }
+  }
+
+  // ───────────────────────── 1. الشاشة الافتتاحية: نبذة وشرح + زران ─────────────────────────
+  Widget _buildLandingView(ThemeData theme, String uid) {
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Column(
+      children: [
+        // ترويسة الشاشة
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF16A34A).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
+                child: const Icon(
+                  Icons.shopping_basket_rounded,
+                  color: Color(0xFF16A34A),
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'خدمة إتسوقلي (تسوق أسواق القرية) 🧺',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15.5,
+                        fontFamily: 'Cairo',
+                      ),
+                    ),
+                    Text(
+                      'تسوق سوق الجمعة والأسواق المجاورة حتى باب منزلك',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey,
+                        fontFamily: 'Cairo',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close_rounded),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+        ),
+
+        const Divider(height: 1),
+
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // كارت النبذة التعريفية والشرح المنسق والحديث
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    gradient: LinearGradient(
+                      colors: isDark
+                          ? [
+                              const Color(0xFF14532D),
+                              const Color(0xFF0F172A),
+                            ]
+                          : [
+                              const Color(0xFFF0FDF4),
+                              const Color(0xFFDCFCE7),
+                            ],
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
+                    ),
+                    border: Border.all(
+                      color: const Color(0xFF16A34A).withValues(alpha: isDark ? 0.4 : 0.6),
+                      width: 1.5,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF16A34A).withValues(alpha: isDark ? 0.2 : 0.1),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'خدمة إتسوقلي (تسوق أسواق القرية) 🧺',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            fontFamily: 'Cairo'),
+                      Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF16A34A), Color(0xFF15803D)],
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF16A34A).withValues(alpha: 0.35),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.shopping_basket_rounded,
+                              color: Colors.white,
+                              size: 26,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'خدمة إتسوقلي — تسوق أسواق القرية والمراكز',
+                                  style: TextStyle(
+                                    fontFamily: 'Cairo',
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 14.5,
+                                  ),
+                                ),
+                                Text(
+                                  'خضار، فواكه، لحوم، أسماك وتموين طازج لباب بيتك',
+                                  style: TextStyle(
+                                    fontFamily: 'Cairo',
+                                    fontSize: 11,
+                                    color: Color(0xFF16A34A),
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
+
+                      const SizedBox(height: 12),
+
                       Text(
-                        'مندوبة التطبيق تتسوق لكِ من سوق الجمعة والأسواق المجاورة',
+                        'خدمتك المخصصة لتسوق الخضار والفواكه واللحوم والأسماك والدواجن والتموين الطازج من سوق الجمعة بأبودشيشة وأسواق المراكز المجاورة (بلقاس، المعصرة، الستاموني...). نوفر عليك عناء وتعب ومصاريف المشوار، مع انتقاء أجود البضائع الطازجة وتوصيلها حتى باب منزلك في مواعيد الأسواق أو فوراً، والدفع عند المعاينة والاستلام.',
                         style: TextStyle(
-                            fontSize: 11,
-                            color: theme.colorScheme.onSurfaceVariant,
-                            fontFamily: 'Cairo'),
+                          fontFamily: 'Cairo',
+                          fontSize: 12,
+                          height: 1.55,
+                          color: isDark ? Colors.grey.shade300 : const Color(0xFF14532D),
+                        ),
+                      ),
+
+                      const SizedBox(height: 14),
+
+                      // رقائق المزايا
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _buildLandingPill(
+                            icon: Icons.eco_rounded,
+                            title: 'أسعار السوق الحقيقية',
+                            subtitle: 'شراء بأسعار وتخفيضات السوق',
+                            color: const Color(0xFF16A34A),
+                            isDark: isDark,
+                          ),
+                          _buildLandingPill(
+                            icon: Icons.verified_rounded,
+                            title: 'تنقية وجودة ممتازة',
+                            subtitle: 'اختيار طازج ونضج يناسبك',
+                            color: const Color(0xFF2563EB),
+                            isDark: isDark,
+                          ),
+                          _buildLandingPill(
+                            icon: Icons.local_shipping_rounded,
+                            title: 'توصيل لباب بيتك',
+                            subtitle: 'استلام مريح دون تعب المشوار',
+                            color: const Color(0xFFD97706),
+                            isDark: isDark,
+                          ),
+                          _buildLandingPill(
+                            icon: Icons.payments_rounded,
+                            title: 'دفع عند الاستلام',
+                            subtitle: 'معاينة البضاعة والدفع كاش',
+                            color: const Color(0xFF7C3AED),
+                            isDark: isDark,
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.close_rounded),
-                  onPressed: () => Navigator.pop(context),
+
+                const SizedBox(height: 22),
+
+                // 1. زر قائمة المشتريات
+                FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF16A34A),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 2,
+                  ),
+                  onPressed: () => setState(() => _currentView = 1),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.add_shopping_cart_rounded, size: 22),
+                      SizedBox(width: 8),
+                      Text(
+                        'قائمة المشتريات 🧺',
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                // 2. زر سجل العمليات
+                StreamBuilder<List<EtsawaqliOrder>>(
+                  stream: uid.isNotEmpty ? _service.watchMyOrders(uid) : const Stream.empty(),
+                  builder: (context, snap) {
+                    final ordersCount = snap.data?.length ?? 0;
+                    final activeCount = snap.data?.where((o) => o.status == 'shopping' || o.status == 'delivering' || o.status == 'pending').length ?? 0;
+
+                    return OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF16A34A),
+                        side: const BorderSide(color: Color(0xFF16A34A), width: 1.5),
+                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      onPressed: () => setState(() => _currentView = 2),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.receipt_long_rounded, size: 22),
+                          const SizedBox(width: 8),
+                          Text(
+                            activeCount > 0
+                                ? 'سجل العمليات ($activeCount جاري 🧺)'
+                                : (ordersCount > 0 ? 'سجل العمليات ($ordersCount)' : 'سجل العمليات 📜'),
+                            style: const TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
           ),
+        ),
+      ],
+    );
+  }
 
-          TabBar(
-            controller: _tabController,
-            labelStyle: const TextStyle(
-                fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
-            tabs: const [
-              Tab(
-                  icon: Icon(Icons.add_shopping_cart_rounded, size: 18),
-                  text: 'التسوق وقائمة السلع'),
-              Tab(
-                  icon: Icon(Icons.receipt_rounded, size: 18),
-                  text: 'سجل فواتيري واشتراكاتي'),
-            ],
-          ),
-
+  Widget _buildLandingPill({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required bool isDark,
+  }) {
+    return Container(
+      width: (MediaQuery.of(context).size.width - 64) / 2,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: isDark ? 0.15 : 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: color.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 6),
           Expanded(
-            child: TabBarView(
-              controller: _tabController,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                _buildShoppingView(theme),
-                _buildMyInvoicesList(theme, uid),
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 9.5,
+                    color: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
+                  ),
+                ),
               ],
             ),
           ),
@@ -414,8 +680,8 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet>
     );
   }
 
-  // ───────────────────────── تبويب 1: اختيار السوق وقائمة السلع وفاتورة الكاشير ─────────────────────────
-  Widget _buildShoppingView(ThemeData theme) {
+  // ───────────────────────── 2. شاشة قائمة المشتريات واختيار السلع ─────────────────────────
+  Widget _buildShoppingListView(ThemeData theme) {
     return StreamBuilder<List<EtsawaqliMarket>>(
       stream: _service.watchActiveMarkets(),
       builder: (context, marketsSnap) {
@@ -425,388 +691,296 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet>
         return StreamBuilder<List<EtsawaqliProductItem>>(
           stream: _service.watchProducts(),
           builder: (context, productsSnap) {
-            final allProducts =
-                productsSnap.data ?? EtsawaqliService.defaultProducts;
+            final allProducts = productsSnap.data ?? EtsawaqliService.defaultProducts;
             final filteredProducts = _selectedCategory == 'الكل'
                 ? allProducts
-                : allProducts
-                    .where((p) => p.category == _selectedCategory)
-                    .toList();
+                : allProducts.where((p) => p.category == _selectedCategory).toList();
 
-            final cartCount =
-                _cartQuantities.values.where((q) => q > 0).length +
-                    _customItems.length;
+            final cartCount = _cartQuantities.values.where((q) => q > 0).length + _customItems.length;
             final subtotal = _calculateItemsSubtotal(allProducts);
 
             return Column(
               children: [
-                // 1. اختيار السوق المستهدف من القائمة المنسدلة
+                // ترويسة الشاشة مع زر رجوع
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF16A34A).withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                          color:
-                              const Color(0xFF16A34A).withValues(alpha: 0.3)),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.storefront_rounded,
-                            color: Color(0xFF16A34A), size: 20),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<EtsawaqliMarket>(
-                              value: _selectedMarket,
-                              isExpanded: true,
-                              items: markets.map((m) {
-                                return DropdownMenuItem<EtsawaqliMarket>(
-                                  value: m,
-                                  child: Text(
-                                    '${m.name} (${m.dayOfWeek})',
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontFamily: 'Cairo',
-                                        fontSize: 13),
-                                  ),
-                                );
-                              }).toList(),
-                              onChanged: (newMarket) {
-                                if (newMarket != null) {
-                                  setState(() => _selectedMarket = newMarket);
-                                }
-                              },
-                            ),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        tooltip: 'رجوع للرئيسية',
+                        icon: const Icon(Icons.arrow_forward_rounded),
+                        onPressed: () => setState(() => _currentView = 0),
+                      ),
+                      const Expanded(
+                        child: Text(
+                          'قائمة المشتريات 🧺',
+                          style: TextStyle(
+                            fontFamily: 'Cairo',
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                      if (cartCount > 0)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF16A34A),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '$cartCount صنف بالسلة',
+                            style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
                   ),
                 ),
 
-                // 2. زر إضافة صنف خاص وفلاتر التصنيفات الأفقية
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-                  child: Row(
+                const Divider(height: 1),
+
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(14, 10, 14, 30),
                     children: [
-                      OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(
-                              color: Color(0xFF16A34A), width: 1.2),
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          minimumSize: const Size(0, 32),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8)),
+                      // 1. اختيار السوق المستهدف
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF16A34A).withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFF16A34A).withValues(alpha: 0.25)),
                         ),
-                        onPressed: _showAddCustomItemDialog,
-                        icon: const Icon(Icons.add,
-                            size: 15, color: Color(0xFF16A34A)),
-                        label: const Text(
-                          '+ صنف خاص',
-                          style: TextStyle(
-                              fontFamily: 'Cairo',
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF16A34A)),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.storefront_rounded, size: 20, color: Color(0xFF16A34A)),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'سوق التسوق:',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, fontFamily: 'Cairo'),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  value: _selectedMarket?.id ?? markets.first.id,
+                                  isExpanded: true,
+                                  icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF16A34A)),
+                                  items: markets.map((m) {
+                                    return DropdownMenuItem<String>(
+                                      value: m.id,
+                                      child: Text(
+                                        '${m.name} (${m.dayOfWeek})',
+                                        style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
+                                      ),
+                                    );
+                                  }).toList(),
+                                  onChanged: (id) {
+                                    if (id == null) return;
+                                    setState(() {
+                                      _selectedMarket = markets.firstWhere((m) => m.id == id);
+                                    });
+                                  },
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: SizedBox(
-                          height: 36,
-                          child: ListView.separated(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: _categories.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(width: 6),
-                            itemBuilder: (context, i) {
-                              final cat = _categories[i];
-                              final isSel = cat == _selectedCategory;
-                              return ChoiceChip(
-                                label: Text(cat,
-                                    style: const TextStyle(
-                                        fontFamily: 'Cairo', fontSize: 11)),
+
+                      const SizedBox(height: 12),
+
+                      // 2. كارت إضافة صنف خاص ليس بالقوائم (يعامل تماماً كالبنود الأصلية)
+                      _buildAddCustomItemCard(theme),
+
+                      const SizedBox(height: 14),
+
+                      // 3. شريط تصفية التصنيفات
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: _categories.map((cat) {
+                            final isSel = _selectedCategory == cat;
+                            return Padding(
+                              padding: const EdgeInsets.only(left: 6),
+                              child: FilterChip(
+                                label: Text(cat, style: const TextStyle(fontFamily: 'Cairo', fontSize: 11)),
                                 selected: isSel,
-                                selectedColor: const Color(0xFF16A34A)
-                                    .withValues(alpha: 0.2),
-                                onSelected: (_) =>
-                                    setState(() => _selectedCategory = cat),
-                              );
-                            },
+                                onSelected: (_) => setState(() => _selectedCategory = cat),
+                                selectedColor: const Color(0xFF16A34A).withValues(alpha: 0.18),
+                                checkmarkColor: const Color(0xFF16A34A),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      // 4. الأصناف الخاصة المضافة (إن وُجدت) معروضة تماماً كالبنود
+                      if (_customItems.isNotEmpty) ...[
+                        const Row(
+                          children: [
+                            Icon(Icons.stars_rounded, size: 16, color: Color(0xFFD97706)),
+                            SizedBox(width: 4),
+                            Text(
+                              'أصنافي الخاصة المضافة (تعامل كبنود التطبيق):',
+                              style: TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFFD97706)),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        ..._customItems.asMap().entries.map((entry) {
+                          final idx = entry.key;
+                          final customItem = entry.value;
+                          return _buildCustomCartItemTile(theme, customItem, idx);
+                        }),
+                        const SizedBox(height: 10),
+                      ],
+
+                      // 5. قائمة السلع والبنود
+                      const Text(
+                        'سلع السوق المقترحة:',
+                        style: TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 6),
+                      ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: filteredProducts.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        itemBuilder: (context, i) {
+                          return _buildProductItemTile(theme, filteredProducts[i]);
+                        },
+                      ),
+
+                      const SizedBox(height: 18),
+
+                      // 6. سلة المشتريات وملخص الفاتورة
+                      if (cartCount > 0) ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF16A34A).withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: const Color(0xFF16A34A).withValues(alpha: 0.3)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'إجمالي السلع التقديري ($cartCount صنف):',
+                                    style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 12.5),
+                                  ),
+                                  Text(
+                                    subtotal > 0 ? '${subtotal.toStringAsFixed(0)} ج' : 'حسب سعر السوق الفعلي',
+                                    style: const TextStyle(
+                                      fontFamily: 'Cairo',
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 14,
+                                      color: Color(0xFF16A34A),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'رسوم التسوق: ${_selectedMarket?.serviceFee.toStringAsFixed(0) ?? '25'} ج • التوصيل: ${_selectedMarket?.deliveryFee.toStringAsFixed(0) ?? '15'} ج',
+                                style: const TextStyle(fontFamily: 'Cairo', fontSize: 10.5, color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+
+                      // 7. بيانات التوصيل الأساسية
+                      const Text(
+                        'بيانات التوصيل:',
+                        style: TextStyle(fontFamily: 'Cairo', fontSize: 13, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _nameCtrl,
+                        decoration: InputDecoration(
+                          labelText: 'اسم صاحب الطلب *',
+                          labelStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 12.5),
+                          prefixIcon: const Icon(Icons.person_outline, size: 20),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: _phoneCtrl,
+                        keyboardType: TextInputType.phone,
+                        decoration: InputDecoration(
+                          labelText: 'رقم الهاتف للتواصل *',
+                          labelStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 12.5),
+                          prefixIcon: const Icon(Icons.phone_outlined, size: 20),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: _addressCtrl,
+                        decoration: InputDecoration(
+                          labelText: 'عنوان أو مكان التوصيل بالقرية *',
+                          hintText: 'مثال: بجوار المسجد، منزل فلان...',
+                          labelStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 12.5),
+                          hintStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 11, color: Colors.grey),
+                          prefixIcon: const Icon(Icons.location_on_outlined, size: 20),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: _notesCtrl,
+                        decoration: InputDecoration(
+                          labelText: 'أي ملاحظات خاصة أو تفضيل للجودة (اختياري)',
+                          hintText: 'مثال: الطماطم جامدة للسلطة، الموز مستوي...',
+                          labelStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 12),
+                          hintStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 11, color: Colors.grey),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+
+                      const SizedBox(height: 18),
+
+                      // زر تأكيد وإرسال الطلب
+                      FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF16A34A),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                        onPressed: _isSubmitting ? null : () => _submitMarketOrder(allProducts),
+                        icon: _isSubmitting
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                              )
+                            : const Icon(Icons.send_rounded),
+                        label: const Text(
+                          'تأكيد وإرسال طلب التسوق 🧺',
+                          style: TextStyle(
+                            fontFamily: 'Cairo',
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14.5,
                           ),
                         ),
                       ),
                     ],
                   ),
                 ),
-                const Divider(height: 10),
-
-                // 3. عرض الأصناف الخاصة إذا أضاف المستخدم أي صنف
-                if (_customItems.isNotEmpty) ...[
-                  Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.amber.shade50,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.amber.shade300),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.stars_rounded,
-                                  size: 16, color: Colors.orange),
-                              const SizedBox(width: 6),
-                              Text(
-                                'أصنافك الخاصة المضافة (${_customItems.length}):',
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 11,
-                                    fontFamily: 'Cairo'),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Wrap(
-                            spacing: 6,
-                            runSpacing: 4,
-                            children: _customItems.map((ci) {
-                              return Chip(
-                                padding: EdgeInsets.zero,
-                                labelPadding:
-                                    const EdgeInsets.symmetric(horizontal: 6),
-                                label: Text(
-                                  '${ci.productName} (${ci.quantity.toStringAsFixed(0)} ${ci.unit})',
-                                  style: const TextStyle(
-                                      fontSize: 10.5, fontFamily: 'Cairo'),
-                                ),
-                                deleteIcon: const Icon(Icons.close, size: 14),
-                                onDeleted: () {
-                                  setState(() => _customItems.remove(ci));
-                                },
-                              );
-                            }).toList(),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                ],
-
-                // 4. قائمة السلع مع أزرار الزيادة والنقصان وتفضيلات الجودة
-                Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    itemCount: filteredProducts.length,
-                    itemBuilder: (context, idx) {
-                      final p = filteredProducts[idx];
-                      final qty = _cartQuantities[p.id] ?? 0.0;
-                      final selectedPref = _cartPreferences[p.id] ?? '';
-
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: BorderSide(
-                            color: qty > 0
-                                ? const Color(0xFF16A34A)
-                                : Colors.grey.withValues(alpha: 0.2),
-                            width: qty > 0 ? 1.5 : 1,
-                          ),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 8),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          p.name,
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 13,
-                                              fontFamily: 'Cairo'),
-                                        ),
-                                        Text(
-                                          '${p.estimatedPrice.toStringAsFixed(0)} ج / ${p.unit}',
-                                          style: const TextStyle(
-                                              fontSize: 11.5,
-                                              color: Color(0xFF16A34A),
-                                              fontWeight: FontWeight.bold,
-                                              fontFamily: 'Cairo'),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Row(
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(
-                                            Icons.remove_circle_outline,
-                                            color: Colors.red,
-                                            size: 22),
-                                        onPressed: qty > 0
-                                            ? () {
-                                                setState(() {
-                                                  if (qty <= 1.0) {
-                                                    _cartQuantities
-                                                        .remove(p.id);
-                                                    _cartPreferences
-                                                        .remove(p.id);
-                                                  } else {
-                                                    _cartQuantities[p.id] =
-                                                        qty - 1.0;
-                                                  }
-                                                });
-                                              }
-                                            : null,
-                                      ),
-                                      Text(
-                                        qty > 0
-                                            ? '${qty.toStringAsFixed(0)} ${p.unit}'
-                                            : '0',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 12,
-                                            fontFamily: 'Cairo'),
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(
-                                            Icons.add_circle_outline,
-                                            color: Color(0xFF16A34A),
-                                            size: 22),
-                                        onPressed: () {
-                                          setState(() {
-                                            _cartQuantities[p.id] = qty + 1.0;
-                                          });
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-
-                              // تفضيلات النضج والنوع عند اختيار السلعة
-                              if (qty > 0) ...[
-                                const Divider(height: 10),
-                                Row(
-                                  children: [
-                                    const Text('تفضيلك: ',
-                                        style: TextStyle(
-                                            fontSize: 10,
-                                            color: Colors.grey,
-                                            fontFamily: 'Cairo')),
-                                    Expanded(
-                                      child: SingleChildScrollView(
-                                        scrollDirection: Axis.horizontal,
-                                        child: Row(
-                                          children: _freshnessChips.map((chip) {
-                                            final isChipSel =
-                                                selectedPref == chip;
-                                            return Padding(
-                                              padding: const EdgeInsets.only(
-                                                  left: 4),
-                                              child: ChoiceChip(
-                                                label: Text(chip,
-                                                    style: const TextStyle(
-                                                        fontFamily: 'Cairo',
-                                                        fontSize: 9.5)),
-                                                selected: isChipSel,
-                                                onSelected: (sel) {
-                                                  setState(() {
-                                                    _cartPreferences[p.id] =
-                                                        sel ? chip : '';
-                                                  });
-                                                },
-                                              ),
-                                            );
-                                          }).toList(),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-
-                // 5. الشريط السفلي لعرض الفاتورة وإتمام الاشتراك
-                if (cartCount > 0)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surface,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.08),
-                          blurRadius: 8,
-                          offset: const Offset(0, -2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                '$cartCount أصناف مختارة • ${subtotal.toStringAsFixed(0)} ج',
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                    fontFamily: 'Cairo'),
-                              ),
-                              Text(
-                                '+ رسوم خدمة وتوصيل (${(_selectedMarket?.serviceFee ?? 25).toStringAsFixed(0)} + ${(_selectedMarket?.deliveryFee ?? 15).toStringAsFixed(0)} ج)',
-                                style: TextStyle(
-                                    fontSize: 10,
-                                    color: theme.colorScheme.onSurfaceVariant,
-                                    fontFamily: 'Cairo'),
-                              ),
-                            ],
-                          ),
-                        ),
-                        FilledButton.icon(
-                          style: FilledButton.styleFrom(
-                              backgroundColor: const Color(0xFF16A34A)),
-                          onPressed: () =>
-                              _openCashierReceiptDialog(context, allProducts),
-                          icon:
-                              const Icon(Icons.receipt_long_rounded, size: 18),
-                          label: const Text('معاينة فاتورة الكاشير 🧾',
-                              style: TextStyle(
-                                  fontFamily: 'Cairo',
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12)),
-                        ),
-                      ],
-                    ),
-                  ),
               ],
             );
           },
@@ -815,611 +989,915 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet>
     );
   }
 
-  // ───────────────────────── نافذة فاتورة كاشير السوبر ماركت ─────────────────────────
-  void _openCashierReceiptDialog(
-      BuildContext context, List<EtsawaqliProductItem> allProducts) {
-    final cartItems = _buildCartItems(allProducts);
-    final market = _selectedMarket ?? EtsawaqliService.defaultMarkets.first;
-    final subtotal = _calculateItemsSubtotal(allProducts);
-    final total = subtotal + market.serviceFee + market.deliveryFee;
-    bool isRecurringWeekly = false;
+  // كارت إضافة صنف ليس بالقوائم
+  Widget _buildAddCustomItemCard(ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF16A34A).withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.add_task_rounded, size: 18, color: Color(0xFF16A34A)),
+              SizedBox(width: 6),
+              Text(
+                'إضافة صنف خاص ليس بالقوائم (يُعامل كبنود التطبيق):',
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                  color: Color(0xFF16A34A),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                flex: 5,
+                child: TextField(
+                  controller: _customItemNameCtrl,
+                  decoration: InputDecoration(
+                    hintText: 'اسم الصنف (مثال: نعناع، ملوخية، ليمون...)',
+                    hintStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 11, color: Colors.grey),
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              // اختيار الوحدة
+              Container(
+                height: 42,
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.grey.withValues(alpha: 0.4)),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _customItemUnit,
+                    items: _units.map((u) {
+                      return DropdownMenuItem(
+                        value: u,
+                        child: Text(u, style: const TextStyle(fontFamily: 'Cairo', fontSize: 11)),
+                      );
+                    }).toList(),
+                    onChanged: (u) {
+                      if (u != null) setState(() => _customItemUnit = u);
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Text('الكمية:', style: TextStyle(fontFamily: 'Cairo', fontSize: 11.5)),
+              const SizedBox(width: 8),
+              IconButton(
+                icon: const Icon(Icons.remove_circle_outline, color: Colors.red, size: 22),
+                onPressed: () {
+                  if (_customItemQty > 0.5) {
+                    setState(() => _customItemQty -= 0.5);
+                  }
+                },
+              ),
+              Text(
+                _customItemQty.toStringAsFixed(1),
+                style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+              IconButton(
+                icon: const Icon(Icons.add_circle_outline, color: Color(0xFF16A34A), size: 22),
+                onPressed: () => setState(() => _customItemQty += 0.5),
+              ),
+              const Spacer(),
+              FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF16A34A),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  minimumSize: const Size(0, 36),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                onPressed: _addCustomItemDirectly,
+                icon: const Icon(Icons.add, size: 16),
+                label: const Text(
+                  'إضافة للقائمة ➕',
+                  style: TextStyle(fontFamily: 'Cairo', fontSize: 11.5, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // عرض الصنف المخصص كبند تماماً مثل بنود التطبيق
+  Widget _buildCustomCartItemTile(ThemeData theme, EtsawaqliCartItem item, int index) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFBEB),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFFDE68A)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: const Color(0xFFD97706).withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.stars_rounded, color: Color(0xFFD97706), size: 20),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.productName,
+                  style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 12.5),
+                ),
+                Text(
+                  'صنف خاص • ${item.quantity} ${item.unit} (سعر السوق الفعلي)',
+                  style: const TextStyle(fontFamily: 'Cairo', fontSize: 10, color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.remove_circle_outline, size: 20, color: Colors.grey),
+                onPressed: () {
+                  if (item.quantity > 0.5) {
+                    setState(() {
+                      _customItems[index] = EtsawaqliCartItem(
+                        productId: item.productId,
+                        productName: item.productName,
+                        category: item.category,
+                        unit: item.unit,
+                        quantity: item.quantity - 0.5,
+                        unitPrice: item.unitPrice,
+                        isCustom: true,
+                      );
+                    });
+                  } else {
+                    setState(() => _customItems.removeAt(index));
+                  }
+                },
+              ),
+              Text(
+                item.quantity.toStringAsFixed(1),
+                style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 12),
+              ),
+              IconButton(
+                icon: const Icon(Icons.add_circle_outline, size: 20, color: Color(0xFF16A34A)),
+                onPressed: () {
+                  setState(() {
+                    _customItems[index] = EtsawaqliCartItem(
+                      productId: item.productId,
+                      productName: item.productName,
+                      category: item.category,
+                      unit: item.unit,
+                      quantity: item.quantity + 0.5,
+                      unitPrice: item.unitPrice,
+                      isCustom: true,
+                    );
+                  });
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                onPressed: () => setState(() => _customItems.removeAt(index)),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // عرض صنف عادي من القائمة
+  Widget _buildProductItemTile(ThemeData theme, EtsawaqliProductItem product) {
+    final qty = _cartQuantities[product.id] ?? 0.0;
+    final isSelected = qty > 0;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: isSelected ? const Color(0xFF16A34A).withValues(alpha: 0.06) : theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isSelected ? const Color(0xFF16A34A) : Colors.grey.withValues(alpha: 0.25),
+          width: isSelected ? 1.5 : 1.0,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: const Color(0xFF16A34A).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.shopping_bag_outlined, color: Color(0xFF16A34A), size: 18),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  product.name,
+                  style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 12.5),
+                ),
+                Text(
+                  'تقريباً ${product.estimatedPrice.toStringAsFixed(0)} ج / ${product.unit}',
+                  style: const TextStyle(fontFamily: 'Cairo', fontSize: 10.5, color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+          Row(
+            children: [
+              if (qty > 0) ...[
+                IconButton(
+                  icon: const Icon(Icons.remove_circle_outline, color: Colors.red, size: 20),
+                  onPressed: () {
+                    setState(() {
+                      if (qty <= 0.5) {
+                        _cartQuantities.remove(product.id);
+                      } else {
+                        _cartQuantities[product.id] = qty - 0.5;
+                      }
+                    });
+                  },
+                ),
+                Text(
+                  qty.toStringAsFixed(qty.truncateToDouble() == qty ? 0 : 1),
+                  style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+              ],
+              IconButton(
+                icon: const Icon(Icons.add_circle, color: Color(0xFF16A34A), size: 24),
+                onPressed: () {
+                  setState(() {
+                    _cartQuantities[product.id] = qty + (product.unit == 'حبة / رأس' ? 1.0 : 0.5);
+                  });
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ───────────────────────── 3. شاشة سجل العمليات (منسقة مثل إشتريلي) ─────────────────────────
+  Widget _buildOrdersHistoryView(ThemeData theme, String uid) {
+    if (uid.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.lock_outline_rounded, size: 48, color: Colors.grey),
+            const SizedBox(height: 12),
+            const Text('يرجى تسجيل الدخول أولاً لعرض سجل العمليات', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            FilledButton.tonal(
+              onPressed: () => setState(() => _currentView = 0),
+              child: const Text('رجوع للرئيسية', style: TextStyle(fontFamily: 'Cairo')),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        // ترويسة سجل العمليات مع زر رجوع وزر تسوق جديد
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: Row(
+            children: [
+              IconButton(
+                tooltip: 'رجوع للرئيسية',
+                icon: const Icon(Icons.arrow_forward_rounded),
+                onPressed: () => setState(() => _currentView = 0),
+              ),
+              const Expanded(
+                child: Text(
+                  'سجل العمليات 📜',
+                  style: TextStyle(
+                    fontFamily: 'Cairo',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: () => setState(() => _currentView = 1),
+                icon: const Icon(Icons.add, size: 16),
+                label: const Text(
+                  'تسوق جديد',
+                  style: TextStyle(fontFamily: 'Cairo', fontSize: 11.5, fontWeight: FontWeight.bold),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close_rounded),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+        ),
+
+        const Divider(height: 1),
+
+        Expanded(
+          child: StreamBuilder<List<EtsawaqliOrder>>(
+            stream: _service.watchMyOrders(uid),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              final orders = snapshot.data ?? [];
+              if (orders.isEmpty) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.receipt_long_outlined, size: 54, color: Colors.grey),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'ليس لديك أي عمليات تسوق سابقة',
+                          style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'اختر الأصناف والسلع التي ترغب بها ومندوبة القرية ستتسوق لك يوم السوق.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontFamily: 'Cairo', fontSize: 11, color: Colors.grey),
+                        ),
+                        const SizedBox(height: 16),
+                        FilledButton.icon(
+                          style: FilledButton.styleFrom(backgroundColor: const Color(0xFF16A34A)),
+                          onPressed: () => setState(() => _currentView = 1),
+                          icon: const Icon(Icons.add_shopping_cart_rounded, size: 18),
+                          label: const Text('ابدأ أول تسوق الآن 🧺', style: TextStyle(fontFamily: 'Cairo')),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              // قائمة كروت العمليات الملخصة
+              return ListView.separated(
+                padding: const EdgeInsets.all(14),
+                itemCount: orders.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  return _buildOrderSummaryCard(theme, orders[index]);
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// كارت العملية الموجز والمرتب:
+  /// يحتوي فقط على: (حالة العملية - تاريخ العملية - رقم العملية - مبلغ العملية)
+  Widget _buildOrderSummaryCard(ThemeData theme, EtsawaqliOrder order) {
+    final isCompleted = order.status == 'completed';
+    final isCancelled = order.status == 'cancelled';
+    final isInProgress = order.status == 'shopping' || order.status == 'delivering';
+
+    final Color statusColor = isCompleted
+        ? const Color(0xFF16A34A)
+        : (isCancelled
+            ? Colors.red
+            : (isInProgress ? const Color(0xFF2563EB) : const Color(0xFFD97706)));
+
+    final String statusLabel = isCompleted
+        ? 'تم التسليم بنجاح ✅'
+        : (isCancelled
+            ? 'ملغي ❌'
+            : (order.status == 'delivering'
+                ? 'في الطريق للتوصيل 🚚'
+                : (order.status == 'shopping' ? 'جاري التسوق بالسوق 🧺' : 'بانتظار موعد السوق ⏳')));
+
+    final String priceText = order.totalAmount > 0
+        ? '${order.totalAmount.toStringAsFixed(0)} ج'
+        : 'حسب فاتورة الكاشير 🧾';
+
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
+      elevation: isInProgress ? 2 : 1,
+      child: InkWell(
+        onTap: () => _showOrderDetailSheet(context, theme, order),
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: statusColor.withValues(alpha: isInProgress ? 0.6 : 0.3),
+              width: isInProgress ? 1.5 : 1.0,
+            ),
+          ),
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 1. رقم العملية وحالة العملية
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.tag_rounded, size: 16, color: statusColor),
+                      const SizedBox(width: 4),
+                      Text(
+                        order.invoiceNumber,
+                        style: const TextStyle(
+                          fontFamily: 'Cairo',
+                          fontWeight: FontWeight.w900,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      statusLabel,
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: statusColor,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 10),
+
+              // 2. تاريخ العملية ومبلغ العملية
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.calendar_today_outlined, size: 14, color: Colors.grey),
+                      const SizedBox(width: 6),
+                      Text(
+                        _formatDate(order.createdAt),
+                        style: const TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 11,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      const Icon(Icons.payments_outlined, size: 15, color: Color(0xFF16A34A)),
+                      const SizedBox(width: 4),
+                      Text(
+                        priceText,
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: order.totalAmount > 0 ? const Color(0xFF16A34A) : Colors.blue.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 10),
+              const Divider(height: 1),
+              const SizedBox(height: 8),
+
+              // 3. ملخص الأصناف وتلميح النقر
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${order.marketName} • ${order.items.length} صنف',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 11,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  const Row(
+                    children: [
+                      Text(
+                        'تفاصيل العملية 👈',
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF16A34A),
+                        ),
+                      ),
+                      Icon(Icons.chevron_left_rounded, size: 16, color: Color(0xFF16A34A)),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ───────────────────────── 4. شيت تفاصيل العملية بالكامل (بدون كود التسليم) ─────────────────────────
+  void _showOrderDetailSheet(BuildContext context, ThemeData theme, EtsawaqliOrder order) {
+    final isCancelled = order.status == 'cancelled';
+    final isInProgress = order.status == 'shopping' || order.status == 'delivering' || order.status == 'pending';
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setModalState) {
-          return Container(
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(ctx).size.height * 0.9,
-            ),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-            ),
-            padding: const EdgeInsets.all(18),
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // شارة رأس الفاتورة
-                  Center(
-                    child: Column(
-                      children: [
-                        const Icon(Icons.receipt_rounded,
-                            size: 36, color: Color(0xFF16A34A)),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'سوق أبودشيشة والقرى المجاورة',
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                              fontFamily: 'Cairo',
-                              color: Colors.black87),
+      builder: (ctx) {
+        return Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(ctx).size.height * 0.88,
+          ),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 10, bottom: 6),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    const Icon(Icons.receipt_long_rounded, color: Color(0xFF16A34A), size: 24),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'تفاصيل العملية (${order.invoiceNumber})',
+                        style: const TextStyle(
+                          fontFamily: 'Cairo',
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14.5,
                         ),
-                        Text(
-                          'فاتورة كاشير تسوق أسبوعية • ${market.name}',
-                          style: const TextStyle(
-                              fontSize: 12,
-                              color: Colors.black54,
-                              fontFamily: 'Cairo'),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
+              ),
+
+              const Divider(height: 1),
+
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // مؤشر تتبع المراحل
+                      if (!isCancelled) ...[
+                        _buildOrderStepper(order),
+                        const SizedBox(height: 16),
+                      ],
+
+                      // كارت السوق وموعده
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF16A34A).withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFF16A34A).withValues(alpha: 0.25)),
                         ),
-                        const Text(
-                          '- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -',
-                          style:
-                              TextStyle(color: Colors.grey, letterSpacing: 2),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.storefront_rounded, size: 20, color: Color(0xFF16A34A)),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                '${order.marketName} • يوم ${order.marketDay}',
+                                style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 12),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      // قائمة الأصناف المشتراة
+                      const Text(
+                        'الأصناف والسلع المطلوبة:',
+                        style: TextStyle(fontFamily: 'Cairo', fontSize: 12.5, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          children: [
+                            for (final item in order.items)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 4),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        '• ${item.productName} (${item.quantity} ${item.unit})',
+                                        style: const TextStyle(fontFamily: 'Cairo', fontSize: 11.5),
+                                      ),
+                                    ),
+                                    Text(
+                                      item.totalPrice > 0 ? '${item.totalPrice.toStringAsFixed(0)} ج' : 'سعر السوق',
+                                      style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, fontWeight: FontWeight.bold),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+
+                      // بيانات المندوبة إن وجدت
+                      if (order.shopperPhone.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF16A34A).withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFF16A34A).withValues(alpha: 0.25)),
+                          ),
+                          child: Row(
+                            children: [
+                              const CircleAvatar(
+                                radius: 18,
+                                backgroundColor: Color(0xFF16A34A),
+                                child: Icon(Icons.person_pin_circle_rounded, color: Colors.white, size: 20),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'المندوبة: ${order.shopperName.isNotEmpty ? order.shopperName : 'مندوبة القرية'}',
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11.5, fontFamily: 'Cairo'),
+                                    ),
+                                    Text(order.shopperPhone, style: const TextStyle(fontSize: 10.5, color: Colors.grey)),
+                                  ],
+                                ),
+                              ),
+                              IconButton(
+                                tooltip: 'اتصال هاتفي',
+                                icon: const Icon(Icons.phone_in_talk_rounded, color: Color(0xFF16A34A), size: 20),
+                                onPressed: () => launchPhoneCall(order.shopperPhone),
+                              ),
+                              IconButton(
+                                tooltip: 'واتساب',
+                                icon: const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF16A34A), size: 20),
+                                onPressed: () {
+                                  final waUrl = egyptianWhatsAppUrl(order.shopperPhone);
+                                  if (waUrl != null) launchWhatsAppUrl(waUrl);
+                                },
+                              ),
+                            ],
+                          ),
                         ),
                       ],
-                    ),
-                  ),
 
-                  // جدول الأصناف
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                            flex: 3,
-                            child: Text('السلعة',
-                                style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 11,
-                                    fontFamily: 'Cairo',
-                                    color: Colors.black87))),
-                        Expanded(
-                            child: Text('الكمية',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 11,
-                                    fontFamily: 'Cairo',
-                                    color: Colors.black87))),
-                        Expanded(
-                            child: Text('السعر',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 11,
-                                    fontFamily: 'Cairo',
-                                    color: Colors.black87))),
-                        Expanded(
-                            child: Text('الإجمالي',
-                                textAlign: TextAlign.left,
-                                style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 11,
-                                    fontFamily: 'Cairo',
-                                    color: Colors.black87))),
-                      ],
-                    ),
-                  ),
-                  const Divider(color: Colors.black26),
+                      const SizedBox(height: 12),
 
-                  for (final item in cartItems)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 3),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            flex: 3,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                      // الحساب المالي
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(item.productName,
-                                    style: const TextStyle(
-                                        fontSize: 11.5,
-                                        fontFamily: 'Cairo',
-                                        color: Colors.black87)),
-                                if (item.preference.isNotEmpty)
-                                  Text('تفضيل: ${item.preference}',
-                                      style: const TextStyle(
-                                          fontSize: 9.5,
-                                          color: Color(0xFF16A34A),
-                                          fontFamily: 'Cairo')),
+                                const Text('إجمالي السلع التقديري:', style: TextStyle(fontSize: 11.5, fontFamily: 'Cairo')),
+                                Text('${order.itemsSubtotal.toStringAsFixed(0)} ج', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, fontFamily: 'Cairo')),
                               ],
                             ),
+                            const SizedBox(height: 4),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text('رسوم التسوق:', style: TextStyle(fontSize: 11.5, fontFamily: 'Cairo')),
+                                Text('${order.serviceFee.toStringAsFixed(0)} ج', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, fontFamily: 'Cairo')),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text('مصاريف التوصيل:', style: TextStyle(fontSize: 11.5, fontFamily: 'Cairo')),
+                                Text('${order.deliveryFee.toStringAsFixed(0)} ج', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, fontFamily: 'Cairo')),
+                              ],
+                            ),
+                            const Divider(height: 12),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text('الإجمالي المستحق عند الاستلام:', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, fontFamily: 'Cairo')),
+                                Text(
+                                  '${order.totalAmount.toStringAsFixed(0)} ج',
+                                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF16A34A), fontFamily: 'Cairo'),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 14),
+
+                      // زر طباعة ومشاركة فاتورة كاشير الطلب
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        onPressed: () => CommercialReceiptDialog.showEtsawaqliReceipt(
+                          context,
+                          order: order,
+                        ),
+                        icon: const Icon(Icons.print_rounded, size: 18, color: Color(0xFF16A34A)),
+                        label: const Text(
+                          'طباعة ومشاركة فاتورة الكاشير 🖨️',
+                          style: TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+
+                      if (isInProgress) ...[
+                        const SizedBox(height: 6),
+                        Center(
+                          child: TextButton.icon(
+                            style: TextButton.styleFrom(foregroundColor: Colors.red),
+                            icon: const Icon(Icons.cancel_outlined, size: 16),
+                            label: const Text('إلغاء الطلب', style: TextStyle(fontFamily: 'Cairo', fontSize: 11.5)),
+                            onPressed: () async {
+                              Navigator.pop(ctx);
+                              await _confirmCancelOrder(order);
+                            },
                           ),
-                          Expanded(
-                              child: Text(
-                                  '${item.quantity.toStringAsFixed(0)} ${item.unit}',
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                      fontSize: 11,
-                                      fontFamily: 'Cairo',
-                                      color: Colors.black87))),
-                          Expanded(
-                              child: Text(
-                                  item.isCustom
-                                      ? 'حسب السوق'
-                                      : '${item.unitPrice.toStringAsFixed(0)} ج',
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                      fontSize: 11,
-                                      fontFamily: 'Cairo',
-                                      color: Colors.black87))),
-                          Expanded(
-                              child: Text(
-                                  item.isCustom
-                                      ? 'حسب الفاتورة'
-                                      : '${item.totalPrice.toStringAsFixed(0)} ج',
-                                  textAlign: TextAlign.left,
-                                  style: const TextStyle(
-                                      fontSize: 11.5,
-                                      fontWeight: FontWeight.bold,
-                                      fontFamily: 'Cairo',
-                                      color: Colors.black87))),
-                        ],
-                      ),
-                    ),
-
-                  const Text(
-                    '- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -',
-                    style: TextStyle(color: Colors.grey, letterSpacing: 2),
-                    textAlign: TextAlign.center,
-                  ),
-
-                  // ملخص الحساب
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('مجموع السلع التقديري:',
-                          style: TextStyle(
-                              fontSize: 12,
-                              fontFamily: 'Cairo',
-                              color: Colors.black87)),
-                      Text('${subtotal.toStringAsFixed(0)} ج',
-                          style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Cairo',
-                              color: Colors.black87)),
+                        ),
+                      ],
                     ],
                   ),
-                  const SizedBox(height: 3),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('رسوم خدمة تسوق المندوبة:',
-                          style: TextStyle(
-                              fontSize: 12,
-                              fontFamily: 'Cairo',
-                              color: Colors.black87)),
-                      Text('${market.serviceFee.toStringAsFixed(0)} ج',
-                          style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Cairo',
-                              color: Colors.black87)),
-                    ],
-                  ),
-                  const SizedBox(height: 3),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('أجرة التوصيل لباب بيتك:',
-                          style: TextStyle(
-                              fontSize: 12,
-                              fontFamily: 'Cairo',
-                              color: Colors.black87)),
-                      Text('${market.deliveryFee.toStringAsFixed(0)} ج',
-                          style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Cairo',
-                              color: Colors.black87)),
-                    ],
-                  ),
-                  const Divider(color: Colors.black45, thickness: 1.2),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('الإجمالي الكلي للفاتورة:',
-                          style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w900,
-                              fontFamily: 'Cairo',
-                              color: Colors.black)),
-                      Text('${total.toStringAsFixed(0)} ج.م',
-                          style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF16A34A),
-                              fontFamily: 'Cairo')),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-
-                  // اشتراك دوري أسبوعي
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('تفعيل الاشتراك الأسبوعي الدوري 🔄',
-                        style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'Cairo')),
-                    subtitle: const Text(
-                        'تكرار هذا الطلب تلقائياً كل أسبوع في نفس يوم السوق',
-                        style: TextStyle(
-                            fontSize: 10.5,
-                            color: Colors.grey,
-                            fontFamily: 'Cairo')),
-                    value: isRecurringWeekly,
-                    activeThumbColor: const Color(0xFF16A34A),
-                    onChanged: (val) {
-                      setModalState(() => isRecurringWeekly = val);
-                    },
-                  ),
-                  const SizedBox(height: 8),
-
-                  // نص الملاحظة الإلزامية بالخط الواضح
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFFBEB),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                          color:
-                              const Color(0xFFF59E0B).withValues(alpha: 0.4)),
-                    ),
-                    child: const Text(
-                      EtsawaqliOrder.marketNoticeText,
-                      style: TextStyle(
-                        fontSize: 10.5,
-                        color: Color(0xFF92400E),
-                        fontFamily: 'Cairo',
-                        height: 1.45,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-
-                  // حقل العنوان
-                  TextField(
-                    controller: _addressCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'عنوان أو مكان التوصيل بالقرية *',
-                      labelStyle: TextStyle(fontFamily: 'Cairo', fontSize: 12),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-
-                  FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF16A34A),
-                      padding: const EdgeInsets.symmetric(vertical: 13),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                    onPressed: _isSubmitting
-                        ? null
-                        : () async {
-                            Navigator.pop(ctx);
-                            await _submitMarketOrder(allProducts,
-                                isRecurringWeekly: isRecurringWeekly);
-                          },
-                    icon: const Icon(Icons.check_circle_rounded),
-                    label: const Text('تأكيد الاشتراك واعتماد الفاتورة 🚀',
-                        style: TextStyle(
-                            fontFamily: 'Cairo',
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13)),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  // ───────────────────────── تبويب 2: سجل فواتيري واشتراكاتي ─────────────────────────
-  Widget _buildMyInvoicesList(ThemeData theme, String uid) {
-    if (uid.isEmpty) {
-      return const Center(
-          child: Text('يرجى تسجيل الدخول أولاً لعرض فواتيرك',
-              style: TextStyle(fontFamily: 'Cairo')));
-    }
-
-    return StreamBuilder<List<EtsawaqliOrder>>(
-      stream: _service.watchMyOrders(uid),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        final orders = snapshot.data ?? [];
-        if (orders.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.shopping_basket_outlined,
-                    size: 54, color: Colors.grey),
-                const SizedBox(height: 12),
-                const Text('ليس لديك أي فواتير تسوق سابقة في إتسوقلي',
-                    style: TextStyle(fontFamily: 'Cairo', color: Colors.grey)),
-                const SizedBox(height: 12),
-                FilledButton.tonal(
-                  onPressed: () => _tabController.animateTo(0),
-                  child: const Text('تسوق الآن من السوق الأسبوعي 🧺',
-                      style: TextStyle(fontFamily: 'Cairo')),
                 ),
-              ],
-            ),
-          );
-        }
-
-        return ListView.separated(
-          padding: const EdgeInsets.all(14),
-          itemCount: orders.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
-          itemBuilder: (context, i) => _buildInvoiceCard(theme, orders[i]),
+              ),
+            ],
+          ),
         );
       },
     );
   }
 
-  Widget _buildInvoiceCard(ThemeData theme, EtsawaqliOrder order) {
-    return Card(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: order.status == 'completed'
-              ? const Color(0xFF16A34A)
-              : const Color(0xFF16A34A).withValues(alpha: 0.35),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  order.invoiceNumber,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                      fontFamily: 'Cairo'),
-                ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF16A34A).withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    order.statusArabic,
-                    style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF16A34A),
-                        fontFamily: 'Cairo'),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Text(
-                  'السوق: ${order.marketName} (${order.marketDay})',
-                  style: TextStyle(
-                      fontSize: 11.5,
-                      color: theme.colorScheme.onSurfaceVariant,
-                      fontFamily: 'Cairo'),
-                ),
-                if (order.isRecurringWeekly) ...[
-                  const Spacer(),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: const Text('اشتراك دوري 🔄',
-                        style: TextStyle(
-                            fontSize: 9.5,
-                            color: Colors.blue,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'Cairo')),
-                  ),
-                ],
-              ],
-            ),
-            const Divider(height: 16),
+  Widget _buildOrderStepper(EtsawaqliOrder order) {
+    int step = 1;
+    if (order.status == 'shopping') step = 2;
+    if (order.status == 'delivering') step = 3;
+    if (order.status == 'completed') step = 4;
 
-            // أصناف الفاتورة
-            for (final item in order.items)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                        '• ${item.productName} (${item.quantity.toStringAsFixed(0)} ${item.unit})',
-                        style:
-                            const TextStyle(fontSize: 12, fontFamily: 'Cairo')),
-                    Text(
-                        item.isCustom
-                            ? 'حسب الفاتورة'
-                            : '${item.totalPrice.toStringAsFixed(0)} ج',
-                        style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'Cairo')),
-                  ],
-                ),
-              ),
+    return Row(
+      children: [
+        _buildStepNode(1, 'استلام الطلب 📝', true),
+        _buildStepDivider(step >= 2),
+        _buildStepNode(2, 'جاري التسوق 🧺', step >= 2),
+        _buildStepDivider(step >= 3),
+        _buildStepNode(3, 'في الطريق 🚚', step >= 3),
+        _buildStepDivider(step >= 4),
+        _buildStepNode(4, 'تم التسليم ✅', step >= 4),
+      ],
+    );
+  }
 
-            const Divider(height: 14),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('إجمالي الفاتورة بالتوصيل:',
-                    style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Cairo')),
-                Text(
-                  '${order.totalAmount.toStringAsFixed(0)} ج',
-                  style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w900,
-                      color: Color(0xFF16A34A),
-                      fontFamily: 'Cairo'),
-                ),
-              ],
+  Widget _buildStepNode(int index, String label, bool isDone) {
+    return Expanded(
+      child: Column(
+        children: [
+          CircleAvatar(
+            radius: 11,
+            backgroundColor: isDone ? const Color(0xFF16A34A) : Colors.grey.shade300,
+            child: Icon(
+              isDone ? Icons.check : Icons.circle,
+              color: Colors.white,
+              size: 13,
             ),
-            const SizedBox(height: 10),
-
-            // كود الاستلام للمندوبة
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFFBEB),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                    color: const Color(0xFFD97706).withValues(alpha: 0.5)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.vpn_key_rounded,
-                      color: Color(0xFFD97706), size: 18),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('كود استلام الطلب من المندوبة:',
-                            style: TextStyle(
-                                fontSize: 10,
-                                color: Color(0xFF92400E),
-                                fontFamily: 'Cairo')),
-                        Text(
-                          order.claimCode,
-                          style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 4,
-                              color: Color(0xFFB45309)),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 9,
+              fontWeight: isDone ? FontWeight.bold : FontWeight.normal,
+              color: isDone ? const Color(0xFF16A34A) : Colors.grey,
+              fontFamily: 'Cairo',
             ),
-            const SizedBox(height: 8),
-
-            // تفاصيل المندوبة المكلفة إن وجدت
-            if (order.shopperPhone.isNotEmpty) ...[
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF16A34A).withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                      color: const Color(0xFF16A34A).withValues(alpha: 0.25)),
-                ),
-                child: Row(
-                  children: [
-                    const CircleAvatar(
-                      radius: 15,
-                      backgroundColor: Color(0xFF16A34A),
-                      child: Icon(Icons.person, color: Colors.white, size: 18),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                              'المندوبة: ${order.shopperName.isNotEmpty ? order.shopperName : "مندوبة التسوق"}',
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 11,
-                                  fontFamily: 'Cairo')),
-                          Text(order.shopperPhone,
-                              style: const TextStyle(
-                                  fontSize: 10, color: Colors.grey)),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: 'اتصال هاتفي',
-                      icon: const Icon(Icons.phone_in_talk,
-                          color: Color(0xFF16A34A), size: 18),
-                      onPressed: () => launchPhoneCall(order.shopperPhone),
-                    ),
-                    IconButton(
-                      tooltip: 'واتساب',
-                      icon: const Icon(Icons.chat_bubble_outline,
-                          color: Color(0xFF16A34A), size: 18),
-                      onPressed: () {
-                        final waUrl = egyptianWhatsAppUrl(order.shopperPhone);
-                        if (waUrl != null) launchWhatsAppUrl(waUrl);
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 8),
-            ],
-
-            OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
-              ),
-              onPressed: () => CommercialReceiptDialog.showEtsawaqliReceipt(
-                context,
-                order: order,
-              ),
-              icon: const Icon(Icons.print_rounded,
-                  size: 16, color: Color(0xFF16A34A)),
-              label: const Text(
-                'طباعة ومشاركة فاتورة الكاشير 🖨️',
-                style: TextStyle(
-                    fontFamily: 'Cairo',
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
+  }
+
+  Widget _buildStepDivider(bool isDone) {
+    return Container(
+      width: 16,
+      height: 2,
+      margin: const EdgeInsets.only(bottom: 16),
+      color: isDone ? const Color(0xFF16A34A) : Colors.grey.shade300,
+    );
+  }
+
+  Future<void> _confirmCancelOrder(EtsawaqliOrder order) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('إلغاء طلب التسوق', style: TextStyle(fontFamily: 'Cairo')),
+        content: const Text('هل أنت متأكد من رغبتك في إلغاء هذا الطلب؟', style: TextStyle(fontFamily: 'Cairo')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('تراجع')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('تأكيد الإلغاء', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (ok == true && mounted) {
+      await _service.cancelOrder(order.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تم إلغاء الطلب بنجاح', style: TextStyle(fontFamily: 'Cairo'))),
+        );
+      }
+    }
   }
 }

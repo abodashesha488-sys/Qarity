@@ -215,8 +215,6 @@ class CommercialReceiptDialog {
       ..writeln('---------------------------------')
       ..writeln('▫️ المبلغ الإجمالي للفاتورة: ${order.totalAmount.toStringAsFixed(0)} ج')
       ..writeln('---------------------------------')
-      ..writeln('🔑 كود الاستلام السري: [ ${order.claimCode} ]')
-      ..writeln('---------------------------------')
       ..writeln('📌 ملاحظة هامة:')
       ..writeln('"${order.marketNotice}"')
       ..writeln('═════════════════════════════════');
@@ -279,8 +277,6 @@ class CommercialReceiptDialog {
           _buildInfoRow('مصاريف التوصيل:', '${order.deliveryFee.toStringAsFixed(0)} ج'),
           const Divider(height: 16),
           _buildTotalRow('الإجمالي المستحق:', '${order.totalAmount.toStringAsFixed(0)} جنيه', isHighlight: true),
-          const SizedBox(height: 12),
-          _buildClaimCodeBox(order.claimCode, order.status == 'completed'),
           const SizedBox(height: 12),
           // الملاحظة الإلزامية للمستهلك
           Container(

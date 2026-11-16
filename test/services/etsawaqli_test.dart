@@ -1,6 +1,9 @@
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:qurity/models/etsawaqli_model.dart';
 import 'package:qurity/services/etsawaqli_service.dart';
+import 'package:qurity/widgets/etsawaqli_market_sheet.dart';
 
 void main() {
   group('Etsawaqli Models Tests', () {
@@ -131,6 +134,137 @@ void main() {
         expect(numVal, isNotNull);
         expect(numVal! >= 1000 && numVal <= 9999, isTrue);
       }
+    });
+  });
+
+  group('EtsawaqliMarketSheet UI & Workflow Tests', () {
+    testWidgets('renders landing view with intro hero card and two main buttons', (tester) async {
+      final fakeFirestore = FakeFirebaseFirestore();
+      final etsawaqliService = EtsawaqliService(firestore: fakeFirestore);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: EtsawaqliMarketSheet(
+              service: etsawaqliService,
+              currentUserId: 'user_test_123',
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('خدمة إتسوقلي (تسوق أسواق القرية) 🧺'), findsOneWidget);
+      expect(find.text('تسوق سوق الجمعة والأسواق المجاورة حتى باب منزلك'), findsOneWidget);
+      expect(find.text('قائمة المشتريات 🧺'), findsOneWidget);
+      expect(find.text('سجل العمليات 📜'), findsOneWidget);
+    });
+
+    testWidgets('navigates to shopping list view, adds custom item and displays it as standard item with controls', (tester) async {
+      final fakeFirestore = FakeFirebaseFirestore();
+      final etsawaqliService = EtsawaqliService(firestore: fakeFirestore);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: EtsawaqliMarketSheet(
+              service: etsawaqliService,
+              currentUserId: 'user_test_123',
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // النقر على زر قائمة المشتريات 🧺
+      await tester.ensureVisible(find.text('قائمة المشتريات 🧺'));
+      await tester.tap(find.text('قائمة المشتريات 🧺'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('إضافة صنف خاص ليس بالقوائم (يُعامل كبنود التطبيق):'), findsOneWidget);
+
+      // إدخال بيانات الصنف الخاص
+      await tester.enterText(
+        find.widgetWithText(TextField, 'اسم الصنف (مثال: نعناع، ملوخية، ليمون...)'),
+        'جبنة قريش فلاحي',
+      );
+
+      // النقر على زر الإضافة للقائمة
+      await tester.ensureVisible(find.text('إضافة للقائمة ➕'));
+      await tester.tap(find.text('إضافة للقائمة ➕'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // التأكد من ظهور الصنف الخاص في القائمة ومعاملته مثل باقي بنود التطبيق
+      expect(find.text('جبنة قريش فلاحي'), findsOneWidget);
+      expect(find.text('صنف خاص • 1.0 كيلو (سعر السوق الفعلي)'), findsOneWidget);
+    });
+
+    testWidgets('navigates to order history view and renders summary card, detail sheet opens without claim code', (tester) async {
+      final fakeFirestore = FakeFirebaseFirestore();
+      final etsawaqliService = EtsawaqliService(firestore: fakeFirestore);
+
+      await fakeFirestore.collection('etsawaqli_orders').doc('ord_test_1').set({
+        'invoiceNumber': 'TS-20261117-9999',
+        'userId': 'user_test_123',
+        'userName': 'أم محمد',
+        'userPhone': '01055554444',
+        'marketId': 'market_friday_abudshisha',
+        'marketName': 'سوق الجمعة (أبودشيشة)',
+        'marketDay': 'الجمعة',
+        'items': [
+          {
+            'productId': 'veg_tomato',
+            'productName': 'طماطم بلدي',
+            'category': 'خضروات',
+            'unit': 'كيلو',
+            'quantity': 2,
+            'unitPrice': 15.0,
+            'isCustom': false,
+          }
+        ],
+        'itemsSubtotal': 30.0,
+        'serviceFee': 20.0,
+        'deliveryFee': 10.0,
+        'totalAmount': 60.0,
+        'claimCode': '8392',
+        'deliveryAddress': 'شارع داير الناحية',
+        'status': 'shopping',
+        'createdAt': DateTime.now().toIso8601String(),
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: EtsawaqliMarketSheet(
+              initialView: 2,
+              service: etsawaqliService,
+              currentUserId: 'user_test_123',
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('سجل العمليات 📜'), findsOneWidget);
+      expect(find.text('TS-20261117-9999'), findsOneWidget);
+      expect(find.text('جاري التسوق بالسوق 🧺'), findsOneWidget);
+      expect(find.text('60 ج'), findsOneWidget);
+
+      // النقر على الكارت لفتح تفاصيل العملية
+      await tester.tap(find.text('TS-20261117-9999'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('تفاصيل العملية (TS-20261117-9999)'), findsOneWidget);
+      expect(find.text('الأصناف والسلع المطلوبة:'), findsOneWidget);
+      // التأكد من عدم عرض كود التسليم في الفاتورة والتفاصيل
+      expect(find.text('كود الاستلام السري'), findsNothing);
+      expect(find.text('8392'), findsNothing);
     });
   });
 }
