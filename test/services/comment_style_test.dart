@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:qurity/core/constants/app_colors.dart';
 import 'package:qurity/core/theme/app_theme.dart';
@@ -23,6 +24,16 @@ Future<BuildContext> _contextUnder(WidgetTester tester, ThemeData theme) async {
 /// عقد التنسيق الموحّد للتعليقات: كل مواضع التعليقات في التطبيق تستخدم
 /// CommentStyle وحدها، فلا يعود موضع إلى خط صغير بألوان مختلفة.
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUpAll(() {
+    const MethodChannel channel = MethodChannel('plugins.flutter.io/path_provider');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
+      return '.';
+    });
+  });
+
   const commentFiles = [
     'lib/features/news/view.dart',
     'lib/features/forum/post_detail.dart',
@@ -83,7 +94,7 @@ void main() {
     }
   });
 
-  test('لا صورة تُحمّل من رابط فارغ', () {
+  testWidgets('لا صورة تُحمّل من رابط فارغ', (tester) async {
     expect(CommentStyle.photoProvider(null), isNull);
     expect(CommentStyle.photoProvider('   '), isNull);
     expect(CommentStyle.photoProvider('https://cdn.test/a.jpg'), isNotNull);

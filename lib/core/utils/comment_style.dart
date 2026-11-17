@@ -35,6 +35,10 @@ class CommentStyle {
   static ImageProvider? photoProvider(String? url) {
     final trimmed = (url ?? '').trim();
     if (trimmed.isEmpty) return null;
-    return AppImageCache.provider(trimmed);
+    try {
+      return AppImageCache.provider(trimmed);
+    } catch (_) {
+      return null;
+    }
   }
 }
