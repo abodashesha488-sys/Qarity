@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/utils/app_image_cache.dart';
 import '../../core/utils/launch_link.dart';
@@ -381,9 +382,43 @@ class _GroupDealsAdminScreenState extends State<GroupDealsAdminScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'قائمة المشتركين (${participants.length})',
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
+                    Row(
+                      children: [
+                        Text(
+                          'قائمة المشتركين (${participants.length})',
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
+                        ),
+                        if (participants.isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          InkWell(
+                            onTap: () => _exportParticipantsManifest(activeDeal, participants),
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF2563EB).withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.print_outlined, size: 13, color: Color(0xFF2563EB)),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'كشف الحجز 📋',
+                                    style: TextStyle(
+                                      fontFamily: 'Cairo',
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF2563EB),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     Text(
                       'مؤكد: ${finSummary.confirmedCount} • معلق: ${finSummary.unconfirmedCount}',
@@ -409,6 +444,87 @@ class _GroupDealsAdminScreenState extends State<GroupDealsAdminScreen> {
           },
         );
       },
+    );
+  }
+
+  void _exportParticipantsManifest(GroupDealModel deal, List<DealParticipantModel> participants) {
+    final buffer = StringBuffer()
+      ..writeln('📋 كشف حجز صفقة: ${deal.title}')
+      ..writeln('▫️ الحصة: ${deal.dealPrice.toStringAsFixed(0)} ج / ${deal.unitName} (وفر ${deal.discountPercentage}%)')
+      ..writeln('▫️ إجمالي الحصص المطلوبة: ${deal.confirmedCount} من ${deal.targetCount}')
+      ..writeln('▫️ تاريخ الكشف: ${DateTime.now().year}/${DateTime.now().month}/${DateTime.now().day}')
+      ..writeln('══════════════════════════════');
+
+    for (int i = 0; i < participants.length; i++) {
+      final p = participants[i];
+      final isHome = p.deliveryOption == 'home';
+      final delivery = isHome ? 'توصيل منزلي (${p.deliveryAddress})' : 'استلام مقر القرية (مجاناً)';
+      final totalAmount = (deal.dealPrice * p.quantity) + p.deliveryFee;
+      final status = p.isDelivered
+          ? 'تم التسليم بنجاح ✅'
+          : (p.isConfirmedByAdmin ? 'حجز مؤكد ✅' : 'بانتظار التأكيد ⏳');
+      buffer
+        ..writeln('${i + 1}- ${p.userName} | 📞 ${p.userPhone}')
+        ..writeln('   • الحصص: ${p.quantity} ${deal.unitName} | المبلغ: ${totalAmount.toStringAsFixed(0)} ج')
+        ..writeln('   • الاستلام: $delivery')
+        ..writeln('   • الحالة: $status (كود: ${p.claimCode})')
+        ..writeln('------------------------------');
+    }
+
+    final text = buffer.toString();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.assignment_turned_in_rounded, color: Color(0xFF2563EB)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'كشف مشتركين: ${deal.title}',
+                style: const TextStyle(fontFamily: 'Cairo', fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: SelectableText(
+              text,
+              style: const TextStyle(fontFamily: 'Cairo', fontSize: 11.5, height: 1.5),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton.icon(
+            icon: const Icon(Icons.copy_rounded, size: 16),
+            label: const Text('نسخ للحافظة 📋', style: TextStyle(fontFamily: 'Cairo')),
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: text));
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('تم نسخ كشف الحجز للحافظة بنجاح 📋', style: TextStyle(fontFamily: 'Cairo')),
+                ),
+              );
+            },
+          ),
+          FilledButton.icon(
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF16A34A)),
+            icon: const Icon(Icons.share_rounded, size: 16),
+            label: const Text('مشاركة الكشف 📲', style: TextStyle(fontFamily: 'Cairo')),
+            onPressed: () {
+              Navigator.pop(ctx);
+              ShareService.shareText(
+                title: 'كشف حجز صفقة: ${deal.title}',
+                body: text,
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 

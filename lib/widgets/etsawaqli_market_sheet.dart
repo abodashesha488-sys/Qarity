@@ -49,6 +49,8 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
   final TextEditingController _phoneCtrl = TextEditingController();
   final TextEditingController _addressCtrl = TextEditingController();
   final TextEditingController _notesCtrl = TextEditingController();
+  final TextEditingController _searchCtrl = TextEditingController();
+  String _searchQuery = '';
 
   // إدخال صنف خاص ليس بالقوائم
   final TextEditingController _customItemNameCtrl = TextEditingController();
@@ -114,6 +116,7 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
     _addressCtrl.dispose();
     _notesCtrl.dispose();
     _customItemNameCtrl.dispose();
+    _searchCtrl.dispose();
     super.dispose();
   }
 
@@ -192,6 +195,35 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
       SnackBar(
         backgroundColor: const Color(0xFF16A34A),
         content: Text('تمت إضافة "$name" إلى قائمة مشترياتك بنجاح ✅', style: const TextStyle(fontFamily: 'Cairo')),
+      ),
+    );
+  }
+
+  void _reorderPrevious(EtsawaqliOrder order) {
+    setState(() {
+      for (final item in order.items) {
+        if (item.isCustom) {
+          final exists = _customItems.any((c) => c.productName == item.productName);
+          if (!exists) {
+            _customItems.add(item);
+          }
+        } else {
+          _cartQuantities[item.productId] = item.quantity;
+        }
+      }
+      if (order.deliveryAddress.isNotEmpty) {
+        _addressCtrl.text = order.deliveryAddress;
+      }
+      _currentView = 1;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        backgroundColor: Color(0xFF16A34A),
+        content: Text(
+          'تم نسخ أصناف الشروة إلى سلة المشتريات بنجاح 🧺',
+          style: TextStyle(fontFamily: 'Cairo'),
+        ),
       ),
     );
   }
@@ -692,9 +724,16 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
           stream: _service.watchProducts(),
           builder: (context, productsSnap) {
             final allProducts = productsSnap.data ?? EtsawaqliService.defaultProducts;
-            final filteredProducts = _selectedCategory == 'الكل'
+            var filteredProducts = _selectedCategory == 'الكل'
                 ? allProducts
                 : allProducts.where((p) => p.category == _selectedCategory).toList();
+            if (_searchQuery.isNotEmpty) {
+              filteredProducts = filteredProducts.where((p) {
+                final matchName = p.name.toLowerCase().contains(_searchQuery.toLowerCase());
+                final matchCat = p.category.toLowerCase().contains(_searchQuery.toLowerCase());
+                return matchName || matchCat;
+              }).toList();
+            }
 
             final cartCount = _cartQuantities.values.where((q) => q > 0).length + _customItems.length;
             final subtotal = _calculateItemsSubtotal(allProducts);
@@ -797,9 +836,39 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                       // 2. كارت إضافة صنف خاص ليس بالقوائم (يعامل تماماً كالبنود الأصلية)
                       _buildAddCustomItemCard(theme),
 
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 12),
 
-                      // 3. شريط تصفية التصنيفات
+                      // 3. شريط البحث السريع عن السلع
+                      TextField(
+                        controller: _searchCtrl,
+                        onChanged: (q) => setState(() => _searchQuery = q.trim()),
+                        decoration: InputDecoration(
+                          hintText: 'ابحث عن سلعة (طماطم، خيار، لحم، فراخ، سمك...)...',
+                          hintStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 11.5, color: Colors.grey),
+                          prefixIcon: const Icon(Icons.search_rounded, size: 20, color: Color(0xFF16A34A)),
+                          suffixIcon: _searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear_rounded, size: 18),
+                                  onPressed: () {
+                                    _searchCtrl.clear();
+                                    setState(() => _searchQuery = '');
+                                  },
+                                )
+                              : null,
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          filled: true,
+                          fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      // 4. شريط تصفية التصنيفات
                       SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
                         child: Row(
@@ -821,7 +890,7 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
 
                       const SizedBox(height: 10),
 
-                      // 4. الأصناف الخاصة المضافة (إن وُجدت) معروضة تماماً كالبنود
+                      // 5. الأصناف الخاصة المضافة (إن وُجدت) معروضة تماماً كالبنود
                       if (_customItems.isNotEmpty) ...[
                         const Row(
                           children: [
@@ -842,21 +911,48 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                         const SizedBox(height: 10),
                       ],
 
-                      // 5. قائمة السلع والبنود
-                      const Text(
-                        'سلع السوق المقترحة:',
-                        style: TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.bold),
+                      // 6. قائمة السلع والبنود
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'سلع السوق المقترحة:',
+                            style: TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.bold),
+                          ),
+                          if (_searchQuery.isNotEmpty)
+                            Text(
+                              'نتائج البحث: ${filteredProducts.length}',
+                              style: const TextStyle(fontFamily: 'Cairo', fontSize: 10.5, color: Color(0xFF16A34A), fontWeight: FontWeight.bold),
+                            ),
+                        ],
                       ),
                       const SizedBox(height: 6),
-                      ListView.separated(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: filteredProducts.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 8),
-                        itemBuilder: (context, i) {
-                          return _buildProductItemTile(theme, filteredProducts[i]);
-                        },
-                      ),
+                      if (filteredProducts.isEmpty)
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            _searchQuery.isNotEmpty
+                                ? 'لم يتم العثور على سلع تطابق "$_searchQuery" — يمكنك إضافتها مباشرة كصنف خاص بالأعلى ☝️'
+                                : 'لا توجد سلع مسجلة في هذا التصنيف حالياً',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, color: Colors.grey),
+                          ),
+                        )
+                      else
+                        ListView.separated(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: filteredProducts.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 8),
+                          itemBuilder: (context, i) {
+                            return _buildProductItemTile(theme, filteredProducts[i]);
+                          },
+                        ),
 
                       const SizedBox(height: 18),
 
@@ -1523,18 +1619,51 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                     ),
                   ),
                   const SizedBox(width: 6),
-                  const Row(
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        'تفاصيل العملية 👈',
-                        style: TextStyle(
-                          fontFamily: 'Cairo',
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF16A34A),
+                      InkWell(
+                        onTap: () => _reorderPrevious(order),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF16A34A).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.replay_rounded, size: 13, color: Color(0xFF16A34A)),
+                              SizedBox(width: 3),
+                              Text(
+                                'إعادة الشروة 🔄',
+                                style: TextStyle(
+                                  fontFamily: 'Cairo',
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF16A34A),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                      Icon(Icons.chevron_left_rounded, size: 16, color: Color(0xFF16A34A)),
+                      const SizedBox(width: 8),
+                      const Row(
+                        children: [
+                          Text(
+                            'تفاصيل العملية 👈',
+                            style: TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF16A34A),
+                            ),
+                          ),
+                          Icon(Icons.chevron_left_rounded, size: 16, color: Color(0xFF16A34A)),
+                        ],
+                      ),
                     ],
                   ),
                 ],
@@ -1775,6 +1904,26 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                       ),
 
                       const SizedBox(height: 14),
+
+                      // زر إعادة طلب نفس الشروة بنقرة واحدة
+                      FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF16A34A),
+                          padding: const EdgeInsets.symmetric(vertical: 11),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          _reorderPrevious(order);
+                        },
+                        icon: const Icon(Icons.replay_rounded, size: 19),
+                        label: const Text(
+                          'إعادة طلب نفس الشروة 🔄',
+                          style: TextStyle(fontFamily: 'Cairo', fontSize: 13, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+
+                      const SizedBox(height: 10),
 
                       // زر طباعة ومشاركة فاتورة كاشير الطلب
                       OutlinedButton.icon(

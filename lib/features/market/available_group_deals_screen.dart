@@ -623,29 +623,45 @@ class _AvailableGroupDealsScreenState extends State<AvailableGroupDealsScreen> {
                     ),
                   ),
                   const Spacer(),
-                  // عداد الوقت التنازلي
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.timer_outlined, size: 13, color: Color(0xFFD97706)),
-                        const SizedBox(width: 4),
-                        Text(
-                          countdown,
-                          style: const TextStyle(
-                            fontFamily: 'Cairo',
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFFD97706),
-                          ),
+                  // عداد الوقت التنازلي التفاعلي
+                  Builder(
+                    builder: (context) {
+                      final diff = deal.endTime.difference(DateTime.now());
+                      final isUrgent = diff.inHours < 24 && !diff.isNegative;
+
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: isUrgent
+                              ? const Color(0xFFDC2626).withValues(alpha: 0.12)
+                              : Colors.grey.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: isUrgent
+                              ? Border.all(color: const Color(0xFFDC2626).withValues(alpha: 0.4))
+                              : null,
                         ),
-                      ],
-                    ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              isUrgent ? Icons.local_fire_department_rounded : Icons.timer_outlined,
+                              size: 13,
+                              color: isUrgent ? const Color(0xFFDC2626) : const Color(0xFFD97706),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              isUrgent ? 'ينتهي قريباً: $countdown' : countdown,
+                              style: TextStyle(
+                                fontFamily: 'Cairo',
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.bold,
+                                color: isUrgent ? const Color(0xFFDC2626) : const Color(0xFFD97706),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(width: 6),
                   // نسبة الخصم

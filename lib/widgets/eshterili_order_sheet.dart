@@ -108,6 +108,26 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
     return '$d/$m/$y • $h:$min $period';
   }
 
+  void _reorderPrevious(EshteriliOrder order) {
+    setState(() {
+      _itemsCtrl.text = order.itemsDescription;
+      if (order.deliveryAddress.isNotEmpty) {
+        _addressCtrl.text = order.deliveryAddress;
+      }
+      _currentView = 1;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        backgroundColor: Color(0xFF2563EB),
+        content: Text(
+          'تم نسخ طلبك السابق إلى استمارة الشراء بنجاح 📝',
+          style: TextStyle(fontFamily: 'Cairo'),
+        ),
+      ),
+    );
+  }
+
   Future<void> _submitOrder() async {
     final uid = _currentUid;
     if (uid.isEmpty) {
@@ -1143,19 +1163,52 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                     ),
                   ),
                   const SizedBox(width: 6),
-                  const Row(
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        'تفاصيل العملية 👈',
-                        style: TextStyle(
-                          fontFamily: 'Cairo',
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF2563EB),
+                      InkWell(
+                        onTap: () => _reorderPrevious(order),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF2563EB).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.replay_rounded, size: 13, color: Color(0xFF2563EB)),
+                              SizedBox(width: 3),
+                              Text(
+                                'إعادة الطلب 🔄',
+                                style: TextStyle(
+                                  fontFamily: 'Cairo',
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF2563EB),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                      Icon(Icons.chevron_left_rounded,
-                          size: 16, color: Color(0xFF2563EB)),
+                      const SizedBox(width: 8),
+                      const Row(
+                        children: [
+                          Text(
+                            'تفاصيل العملية 👈',
+                            style: TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF2563EB),
+                            ),
+                          ),
+                          Icon(Icons.chevron_left_rounded,
+                              size: 16, color: Color(0xFF2563EB)),
+                        ],
+                      ),
                     ],
                   ),
                 ],
@@ -1615,6 +1668,64 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                       ],
 
                       const SizedBox(height: 14),
+
+                      // زر إعادة طلب نفس الاحتياجات بنقرة واحدة
+                      FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF2563EB),
+                          padding: const EdgeInsets.symmetric(vertical: 11),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10)),
+                        ),
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          _reorderPrevious(order);
+                        },
+                        icon: const Icon(Icons.replay_rounded, size: 18),
+                        label: const Text(
+                          'إعادة طلب نفس الاحتياجات بنقرة واحدة 🔄',
+                          style: TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.bold),
+                        ),
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      // زر محادثة واتساب المباشرة
+                      FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF16A34A),
+                          padding: const EdgeInsets.symmetric(vertical: 11),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10)),
+                        ),
+                        onPressed: () {
+                          final phone = order.assignedAgentPhone.isNotEmpty
+                              ? order.assignedAgentPhone
+                              : '01061730076';
+                          final text =
+                              'السلام عليكم، بخصوص طلبي في خدمة إشتريلي رقم (${order.orderNumber})...';
+                          final wa = egyptianWhatsAppUrl(phone);
+                          if (wa != null) {
+                            launchWhatsAppUrl(
+                                '$wa?text=${Uri.encodeComponent(text)}');
+                          }
+                        },
+                        icon: const Icon(Icons.chat_bubble_rounded, size: 18),
+                        label: Text(
+                          order.assignedAgentPhone.isNotEmpty
+                              ? 'محادثة المندوب (${order.assignedAgentName.isNotEmpty ? order.assignedAgentName : 'مندوب القرية'}) واتساب 💬'
+                              : 'تواصل واتساب مع إدارة التوصيل 💬',
+                          style: const TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold),
+                        ),
+                      ),
+
+                      const SizedBox(height: 8),
 
                       // زر طباعة ومشاركة الفاتورة
                       OutlinedButton.icon(
