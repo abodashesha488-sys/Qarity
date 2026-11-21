@@ -533,7 +533,6 @@ class _GroupDealHomeCardState extends State<GroupDealHomeCard> {
                             border: Border.all(
                               color: const Color(0xFFF59E0B)
                                   .withValues(alpha: 0.4),
-                              width: 1,
                             ),
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -896,7 +895,6 @@ class _GroupDealHomeCardState extends State<GroupDealHomeCard> {
                           border: Border.all(
                             color:
                                 const Color(0xFF2563EB).withValues(alpha: 0.4),
-                            width: 1,
                           ),
                         ),
                         child: const Row(
@@ -1068,7 +1066,6 @@ class _GroupDealHomeCardState extends State<GroupDealHomeCard> {
                           border: Border.all(
                             color:
                                 const Color(0xFF16A34A).withValues(alpha: 0.4),
-                            width: 1,
                           ),
                         ),
                         child: const Row(
