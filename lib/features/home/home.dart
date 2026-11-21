@@ -1685,12 +1685,46 @@ class _HomeFooter extends StatelessWidget {
 }
 
 // ── مؤشرات الإحصائيات في الهيدر (المتواجدون حالياً 🟢 وإجمالي المسجلين 🔴) ──
+// حصرية بالكامل للمدير العام (admin) والأدمن المساعد (assistant_admin) فقط لا غير
 
-class _HeaderStatsButtons extends StatelessWidget {
+class _HeaderStatsButtons extends StatefulWidget {
   const _HeaderStatsButtons();
 
   @override
+  State<_HeaderStatsButtons> createState() => _HeaderStatsButtonsState();
+}
+
+class _HeaderStatsButtonsState extends State<_HeaderStatsButtons> {
+  bool _canViewStats = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkPermission();
+  }
+
+  Future<void> _checkPermission() async {
+    final uid = UserService().currentUserId;
+    if (uid == null || uid.isEmpty) return;
+
+    // فحص الكاش السريع من ملف المستخدم أولاً
+    final user = await UserService().getUser(uid);
+    final role = user?.role;
+    if (role == 'admin' || role == 'assistant_admin') {
+      if (mounted) setState(() => _canViewStats = true);
+      return;
+    }
+    final isAdmin = await AdminService().isAdminUser(uid);
+    if (mounted && isAdmin) {
+      setState(() => _canViewStats = true);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // تظهر فقط وحصرياً للمدير العام والأدمن المساعد
+    if (!_canViewStats) return const SizedBox.shrink();
+
     return const OverflowBox(
       minHeight: 0,
       maxHeight: 120,
@@ -1925,158 +1959,21 @@ class _PulsingDotState extends State<_PulsingDot>
 Future<void> _handleOnlineHeaderTap(BuildContext context, int count) async {
   HapticFeedback.lightImpact();
   final uid = UserService().currentUserId;
-  bool isGeneralAdmin = false;
+  bool isAuthorizedAdmin = false;
   if (uid != null && uid.isNotEmpty) {
     // فحص الكاش السريع أولاً ثم التحقق الأمني
     final cachedUser = await UserService().getUser(uid);
-    if (cachedUser?.role == 'admin') {
-      isGeneralAdmin = true;
+    final role = cachedUser?.role;
+    if (role == 'admin' || role == 'assistant_admin') {
+      isAuthorizedAdmin = true;
     } else {
-      isGeneralAdmin = await AdminService().isGeneralAdminUser(uid);
+      isAuthorizedAdmin = await AdminService().isAdminUser(uid);
     }
   }
   if (!context.mounted) return;
-  if (isGeneralAdmin) {
+  if (isAuthorizedAdmin) {
     _showOnlineUsersAdminSheet(context);
-  } else {
-    _showOnlineUsersDetails(context, count);
   }
-}
-
-void _showOnlineUsersDetails(BuildContext context, int count) {
-  HapticFeedback.lightImpact();
-  showModalBottomSheet<void>(
-    context: context,
-    backgroundColor: Colors.transparent,
-    builder: (ctx) {
-      final theme = Theme.of(ctx);
-      final isDark = theme.brightness == Brightness.dark;
-      return Container(
-        padding: const EdgeInsets.fromLTRB(24, 18, 24, 28),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1E222A) : Colors.white,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.25),
-              blurRadius: 20,
-              offset: const Offset(0, -4),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 44,
-              height: 4.5,
-              decoration: BoxDecoration(
-                color: isDark ? Colors.white24 : Colors.black12,
-                borderRadius: BorderRadius.circular(3),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2ECC71).withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.sensors_rounded,
-                    color: Color(0xFF2ECC71),
-                    size: 28,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'المتواجدون الآن بالتطبيق',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      'رصد حيّ ولحظي للنشاط',
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        color: isDark ? Colors.white60 : Colors.black54,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 18),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              decoration: BoxDecoration(
-                color: const Color(0xFF2ECC71).withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: const Color(0xFF2ECC71).withValues(alpha: 0.25),
-                ),
-              ),
-              child: Row(
-                children: [
-                  const _PulsingDot(color: Color(0xFF00E676), size: 10),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'يوجد حالياً $count مستخدم يتصفحون تطبيق قرية أبوديشيشة في هذه اللحظة.',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'تتغير هذه القيمة تلقائياً وفورياً عند دخول أهالي القرية والزوار إلى التطبيق أو مغادرتهم.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12.5,
-                color: isDark ? Colors.white60 : Colors.black54,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text(
-                  'حسناً',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    },
-  );
 }
 
 void _showOnlineUsersAdminSheet(BuildContext context) {

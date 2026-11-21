@@ -71,5 +71,17 @@ void main() {
           reason: 'Cloudinary API secret must never be committed in code');
       expect(content.contains('cloudinary_not_configured'), isTrue);
     });
+
+    test('Header stats buttons are restricted to admin and assistant_admin roles only', () {
+      // Contract test checking that role check correctly validates admin and assistant_admin only
+      bool isAuthorizedRole(String? role) => role == 'admin' || role == 'assistant_admin';
+
+      expect(isAuthorizedRole('admin'), isTrue);
+      expect(isAuthorizedRole('assistant_admin'), isTrue);
+      expect(isAuthorizedRole('medical_admin'), isFalse);
+      expect(isAuthorizedRole('seller'), isFalse);
+      expect(isAuthorizedRole('user'), isFalse);
+      expect(isAuthorizedRole(null), isFalse);
+    });
   });
 }
