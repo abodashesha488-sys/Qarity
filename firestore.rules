@@ -153,13 +153,30 @@ service cloud.firestore {
     match /app_stats/{statId} {
       // إحصائيات عامة للقراءة للجميع (إجمالي المسجلين، عدادات عامة)
       allow read: if true;
-      allow write: if isSignedIn();
+      // المدير يملك الكتابة الكاملة، والمستخدم المسجل يقتصر على تحديث حقول العداد فقط في users_stats
+      allow create: if isAdmin()
+                    || (isSignedIn() && statId == 'users_stats'
+                        && request.resource.data.keys().hasOnly(['totalUsers', 'updatedAt']));
+      allow update: if isAdmin()
+                    || (isSignedIn() && statId == 'users_stats'
+                        && request.resource.data.diff(resource.data).affectedKeys()
+                             .hasOnly(['totalUsers', 'updatedAt']));
+      allow delete: if isAdmin();
     }
 
     match /app_presence/{sessionId} {
       // رصد التواجد اللحظي للمتصلين (أعضاء وزوار)
       allow read: if true;
-      allow create, update, delete: if true;
+      // الإنشاء والتحديث لصاحب الجلسة فقط، مع حماية دور المشرف من الانتحال
+      allow create, update: if ((isSignedIn() && request.auth.uid == sessionId)
+                                || (!isSignedIn() && sessionId.matches('^guest_.*')))
+                            && (!('userRole' in request.resource.data)
+                                || (isSignedIn() && request.resource.data.userRole == me().data.role)
+                                || (!isSignedIn() && (request.resource.data.userRole == 'guest' || request.resource.data.userRole == null)));
+      // الحذف لصاحب الجلسة أو للأدمن
+      allow delete: if (isSignedIn() && request.auth.uid == sessionId)
+                    || (!isSignedIn() && sessionId.matches('^guest_.*'))
+                    || isAdmin();
     }
 
     // ───────────────────────── الأخبار ─────────────────────────

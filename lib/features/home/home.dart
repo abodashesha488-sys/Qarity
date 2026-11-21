@@ -367,18 +367,12 @@ class _HomeContentState extends State<HomeContent> {
   // منتجات الرئيسية تعرض الخصم من نفس الوثيقة التي لا تتغيّر عند انتهاء العرض،
   // فنبض الدقيقة يعيد الرسم فقط ليختفي الشارة والسعر المخفّض تلقائيًا.
   Timer? _offerTicker;
-  Timer? _prayerAlertTicker;
-  String? _dismissedPrayerKey;
   bool _dismissedSeasonalGreeting = false;
 
   @override
   void initState() {
     super.initState();
     _offerTicker = Timer.periodic(const Duration(minutes: 1), (_) {
-      if (mounted) setState(() {});
-    });
-    // فحص وقت الصلاة الفعلي كل ثانية لمن هو فاتح للتطبيق أثناء دخول الوقت
-    _prayerAlertTicker = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() {});
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -389,7 +383,6 @@ class _HomeContentState extends State<HomeContent> {
   @override
   void dispose() {
     _offerTicker?.cancel();
-    _prayerAlertTicker?.cancel();
     super.dispose();
   }
 
@@ -418,21 +411,7 @@ class _HomeContentState extends State<HomeContent> {
   @override
   Widget build(BuildContext context) {
     final now = WeatherService.villageNow();
-    final schedule = PrayerTimesService.calculate(date: now);
-    final activePrayer = schedule.getCurrentActivePrayer(now);
     final seasonalGreeting = IslamicCalendarHelper.getSeasonalGreeting(now);
-
-    Widget? prayerAlertBanner;
-    if (activePrayer != null) {
-      final prayerKey =
-          '${activePrayer.name}_${now.year}_${now.month}_${now.day}_${activePrayer.time.hour}_${activePrayer.time.minute}';
-      if (_dismissedPrayerKey != prayerKey) {
-        prayerAlertBanner = _VillagePrayerAlertBanner(
-          prayer: activePrayer,
-          onClose: () => setState(() => _dismissedPrayerKey = prayerKey),
-        );
-      }
-    }
 
     Widget? greetingBanner;
     if (seasonalGreeting != null && !_dismissedSeasonalGreeting) {
@@ -445,7 +424,7 @@ class _HomeContentState extends State<HomeContent> {
     return Column(
       children: [
         const _HeroHeader(),
-        if (prayerAlertBanner != null) prayerAlertBanner,
+        const _VillagePrayerAlertSection(),
         if (greetingBanner != null) greetingBanner,
         const AlertWisdomBar(),
         const GroupDealHomeCard(),
@@ -1350,6 +1329,54 @@ class _VillageNextPrayerPillState extends State<_VillageNextPrayerPill>
           color: Colors.white70,
         ),
       ],
+    );
+  }
+}
+
+// ═══════════════ قسم تنبيه حان موعد الصلاة والعيد (معزول الفحص لتجنب إعادة بناء الصفحة) ═══════════════
+class _VillagePrayerAlertSection extends StatefulWidget {
+  const _VillagePrayerAlertSection();
+
+  @override
+  State<_VillagePrayerAlertSection> createState() =>
+      _VillagePrayerAlertSectionState();
+}
+
+class _VillagePrayerAlertSectionState
+    extends State<_VillagePrayerAlertSection> {
+  Timer? _ticker;
+  String? _dismissedPrayerKey;
+
+  @override
+  void initState() {
+    super.initState();
+    // فحص موضعي معزول كل 15 ثانية دون التأثير على أداء باقي عناصر الصفحة الرئيسية
+    _ticker = Timer.periodic(const Duration(seconds: 15), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final now = WeatherService.villageNow();
+    final schedule = PrayerTimesService.calculate(date: now);
+    final activePrayer = schedule.getCurrentActivePrayer(now);
+
+    if (activePrayer == null) return const SizedBox.shrink();
+
+    final prayerKey =
+        '${activePrayer.name}_${now.year}_${now.month}_${now.day}_${activePrayer.time.hour}_${activePrayer.time.minute}';
+    if (_dismissedPrayerKey == prayerKey) return const SizedBox.shrink();
+
+    return _VillagePrayerAlertBanner(
+      prayer: activePrayer,
+      onClose: () => setState(() => _dismissedPrayerKey = prayerKey),
     );
   }
 }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../core/utils/app_image_cache.dart';
 import '../core/utils/contact_links.dart';
 import '../core/utils/launch_link.dart';
+import '../core/utils/phone_validator.dart';
 import '../features/village/village_content_admin.dart';
 import '../models/eshterili_model.dart';
 import '../services/eshterili_service.dart';
@@ -47,7 +48,8 @@ class EshteriliOrderSheet extends StatefulWidget {
 class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
   late final EshteriliService _service;
 
-  late int _currentView; // 0: نبذة وأزرار رئيسية, 1: طلب جديد مبسط, 2: متابعة طلباتي
+  late int
+      _currentView; // 0: نبذة وأزرار رئيسية, 1: طلب جديد مبسط, 2: متابعة طلباتي
   final TextEditingController _itemsCtrl = TextEditingController();
   final TextEditingController _nameCtrl = TextEditingController();
   final TextEditingController _phoneCtrl = TextEditingController();
@@ -165,10 +167,11 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
     }
 
     final phone = _phoneCtrl.text.trim();
-    if (phone.isEmpty) {
+    if (phone.isEmpty || !PhoneValidator.isValidEgyptianPhone(phone)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('يرجى إدخال رقم الهاتف للتواصل',
+          content: Text(
+              'يرجى إدخال رقم محمول مصري صحيح (11 رقماً يبدأ بـ 010 أو 011 أو 012 أو 015)',
               style: TextStyle(fontFamily: 'Cairo')),
         ),
       );
@@ -191,7 +194,7 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
       await _service.createOrder(
         userId: uid,
         userName: name,
-        userPhone: phone,
+        userPhone: PhoneValidator.normalize(phone) ?? phone,
         itemsDescription: items.isNotEmpty ? items : 'طلب شراء مرفق بالصورة 📸',
         estimatedBudget: 0.0,
         storeOrArea: 'حسب الأنسب للمندوب',
@@ -1170,15 +1173,18 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                         onTap: () => _reorderPrevious(order),
                         borderRadius: BorderRadius.circular(8),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 7, vertical: 3),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF2563EB).withValues(alpha: 0.12),
+                            color:
+                                const Color(0xFF2563EB).withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.replay_rounded, size: 13, color: Color(0xFF2563EB)),
+                              Icon(Icons.replay_rounded,
+                                  size: 13, color: Color(0xFF2563EB)),
                               SizedBox(width: 3),
                               Text(
                                 'إعادة الطلب 🔄',

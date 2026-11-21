@@ -127,9 +127,13 @@ export default async function handler(req, res) {
     }
 
     try {
-      const cloudName = process.env.CLOUDINARY_CLOUD_NAME || 'ygfhtwug';
-      const apiKey = process.env.CLOUDINARY_API_KEY || '686447129682517';
-      const apiSecret = process.env.CLOUDINARY_API_SECRET || 'OjJA1hedgYv_idsy5jGpFoD6V3s';
+      const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+      const apiKey = process.env.CLOUDINARY_API_KEY;
+      const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+      if (!cloudName || !apiKey || !apiSecret) {
+        return res.status(500).json({ error: 'cloudinary_not_configured' });
+      }
 
       const timestamp = Math.round(Date.now() / 1000);
       const strToSign = `public_id=${publicId}&timestamp=${timestamp}${apiSecret}`;

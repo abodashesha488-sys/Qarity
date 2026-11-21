@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../core/utils/contact_links.dart';
 import '../core/utils/launch_link.dart';
+import '../core/utils/phone_validator.dart';
 import '../models/etsawaqli_model.dart';
 import '../services/etsawaqli_service.dart';
 import '../services/user_service.dart';
@@ -258,9 +259,12 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
     }
 
     final phone = _phoneCtrl.text.trim();
-    if (phone.isEmpty) {
+    if (phone.isEmpty || !PhoneValidator.isValidEgyptianPhone(phone)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('يرجى إدخال رقم الهاتف للتواصل', style: TextStyle(fontFamily: 'Cairo'))),
+        const SnackBar(
+            content: Text(
+                'يرجى إدخال رقم محمول مصري صحيح (11 رقماً يبدأ بـ 010 أو 011 أو 012 أو 015)',
+                style: TextStyle(fontFamily: 'Cairo'))),
       );
       return;
     }
@@ -281,7 +285,7 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
       await _service.createOrder(
         userId: uid,
         userName: name,
-        userPhone: phone,
+        userPhone: PhoneValidator.normalize(phone) ?? phone,
         marketId: market.id,
         marketName: market.name,
         marketDay: market.dayOfWeek,

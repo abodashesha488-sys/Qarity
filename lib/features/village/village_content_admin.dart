@@ -47,13 +47,13 @@ InputDecoration vdec(String hint, {String? label}) => InputDecoration(
           borderSide: const BorderSide(color: Colors.black12)),
     );
 
-/// اختيار صورة ورفعها على ImgBB — يعيد الرابط أو null.
+/// اختيار صورة ورفعها على Cloudinary/ImgBB — يعيد الرابط أو null.
 Future<String?> pickAndUploadImage(BuildContext context,
-    {String? current}) async {
+    {String? current, ImageSource source = ImageSource.gallery}) async {
   final picker = ImagePicker();
   try {
     final x = await picker.pickImage(
-        source: ImageSource.gallery, maxWidth: 1400, imageQuality: 86);
+        source: source, maxWidth: 1280, maxHeight: 1280, imageQuality: 82);
     if (x == null) return current;
     if (!context.mounted) return current;
     final dlg = showDialog<String>(

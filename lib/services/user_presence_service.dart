@@ -21,12 +21,16 @@ class UserPresenceService with WidgetsBindingObserver {
         _authInstance = auth;
 
   static UserPresenceService? _instance;
-  static UserPresenceService get instance => _instance ??= UserPresenceService._();
+  static UserPresenceService get instance =>
+      _instance ??= UserPresenceService._();
 
   /// للاختبارات فقط: إمكانية تعيين كائن مخصص
   @visibleForTesting
   static void setMockInstance(UserPresenceService service) {
     _instance = service;
+    service._sharedOnlineUsersStream = null;
+    service._sharedOnlineUsersListStream = null;
+    service._sharedTotalUsersStream = null;
   }
 
   final FirebaseFirestore? _firestoreInstance;
@@ -51,6 +55,10 @@ class UserPresenceService with WidgetsBindingObserver {
   String? _cachedUserName;
   String? _cachedUserPhoto;
   String? _cachedUserRole;
+
+  Stream<int>? _sharedOnlineUsersStream;
+  Stream<List<OnlineUserInfo>>? _sharedOnlineUsersListStream;
+  Stream<int>? _sharedTotalUsersStream;
 
   String? get currentSessionId => _sessionId;
   bool get isOnline => _isOnline;
@@ -145,7 +153,8 @@ class UserPresenceService with WidgetsBindingObserver {
       final prefs = await SharedPreferences.getInstance();
       var id = prefs.getString(_prefGuestKey);
       if (id == null || id.isEmpty) {
-        id = 'guest_${DateTime.now().millisecondsSinceEpoch}_${(1000 + (DateTime.now().microsecond % 9000))}';
+        id =
+            'guest_${DateTime.now().millisecondsSinceEpoch}_${(1000 + (DateTime.now().microsecond % 9000))}';
         await prefs.setString(_prefGuestKey, id);
       }
       return id;
@@ -156,8 +165,8 @@ class UserPresenceService with WidgetsBindingObserver {
 
   void _startHeartbeatTimer() {
     _heartbeatTimer?.cancel();
-    // إرسال نبضة خفيفة كل دقيقتين طالما التطبيق نشط
-    _heartbeatTimer = Timer.periodic(const Duration(minutes: 2), (_) {
+    // إرسال نبضة خفيفة كل 3 دقائق طالما التطبيق نشط لترشيد عمليات الكتابة في Firestore
+    _heartbeatTimer = Timer.periodic(const Duration(minutes: 3), (_) {
       if (_isOnline) {
         _writePresence(isOnline: true);
       }
@@ -248,7 +257,13 @@ class UserPresenceService with WidgetsBindingObserver {
   /// دفق لحظي لعدد المستخدمين المتواجدين حالياً (النقطة الخضراء)
   ///
   /// يقوم بفلترة الجلسات النشطة والتأكد من أنها متصلة وحدثت خلال الـ 5 دقائق الأخيرة.
+  /// ومُميَّز ببث موحّد (Shared Broadcast Stream) لتجنب تكرار الاتصالات بـ Firestore عبر الشاشات المختلفة.
   Stream<int> get onlineUsersStream {
+    return _sharedOnlineUsersStream ??=
+        _buildOnlineUsersStream().distinct().asBroadcastStream();
+  }
+
+  Stream<int> _buildOnlineUsersStream() {
     try {
       return _firestore
           .collection('app_presence')
@@ -285,6 +300,11 @@ class UserPresenceService with WidgetsBindingObserver {
 
   /// دفق تفصيلي لقائمة المستخدمين المتواجدين حالياً (مخصص للأدمن العام لعرض الأسماء والصور)
   Stream<List<OnlineUserInfo>> get onlineUsersListStream {
+    return _sharedOnlineUsersListStream ??=
+        _buildOnlineUsersListStream().asBroadcastStream();
+  }
+
+  Stream<List<OnlineUserInfo>> _buildOnlineUsersListStream() {
     try {
       return _firestore
           .collection('app_presence')
@@ -349,6 +369,11 @@ class UserPresenceService with WidgetsBindingObserver {
 
   /// دفق حي لإجمالي المستخدمين المسجلين رسمياً في التطبيق (النقطة الحمراء)
   Stream<int> get totalUsersStream {
+    return _sharedTotalUsersStream ??=
+        _buildTotalUsersStream().distinct().asBroadcastStream();
+  }
+
+  Stream<int> _buildTotalUsersStream() {
     try {
       return _firestore
           .collection('app_stats')

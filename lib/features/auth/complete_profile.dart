@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/utils/phone_validator.dart';
 import '../../models/data_models.dart';
 import '../../routes/app_routes.dart';
 import '../../services/image_upload_service.dart';
@@ -129,6 +130,16 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       );
       return;
     }
+    if (!PhoneValidator.isValidEgyptianPhone(phone)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(
+                'يرجى إدخال رقم محمول مصري صحيح (11 رقماً يبدأ بـ 010 أو 011 أو 012 أو 015)',
+                style: TextStyle(color: AppColors.onWarning)),
+            backgroundColor: AppColors.warning),
+      );
+      return;
+    }
     if (_gender == null) {
       setState(() => _genderError = 'يجب اختيار النوع (ذكر أو أنثى) للمتابعة');
       return;
@@ -149,7 +160,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
         email: _user?.email ?? '',
         photoUrl: newPhotoUrl,
         joinDate: _user?.joinDate ?? now,
-        phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
+        phone: PhoneValidator.normalize(_phoneController.text.trim()),
         gender: _gender!,
       );
 
@@ -354,7 +365,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                           focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.6))),
                           prefixIcon: Icon(Icons.phone_rounded, color: theme.colorScheme.primary),
                         ),
-                        validator: (value) => value == null || value.trim().isEmpty ? 'رقم الهاتف مطلوب' : null,
+                        validator: (value) => PhoneValidator.validate(value),
                       ),
                       const SizedBox(height: 16),
                       GenderSelector(

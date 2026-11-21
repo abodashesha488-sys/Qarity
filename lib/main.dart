@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, PlatformDispatcher;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -22,6 +22,17 @@ import 'widgets/promo_host.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // معالجة مركزية لكافة الأخطاء والاستثناءات غير المتوقعة لتفادي الانهيار المفاجئ
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    debugPrint('[Qarity Error] Flutter: ${details.exceptionAsString()}');
+  };
+  PlatformDispatcher.instance.onError = (error, stack) {
+    debugPrint('[Qarity Error] Platform: $error\n$stack');
+    return true;
+  };
+
   try {
     await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform);
