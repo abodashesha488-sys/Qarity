@@ -22,6 +22,7 @@ class EtsawaqliMarketSheet extends StatefulWidget {
     this.service,
     this.userService,
     this.currentUserId,
+    this.initialExpandIntro = false,
   });
 
   /// 0: شاشة التفاصيل والنبذة التعريفية (الافتراضية)
@@ -38,6 +39,9 @@ class EtsawaqliMarketSheet extends StatefulWidget {
   /// معرف المستخدم الحالي (تسمح بالحقن للاختبارات)
   final String? currentUserId;
 
+  /// حالة فتح كارت النبذة التعريفية افتراضياً (افتراضياً مطوي لتوفير المساحة)
+  final bool initialExpandIntro;
+
   @override
   State<EtsawaqliMarketSheet> createState() => _EtsawaqliMarketSheetState();
 }
@@ -46,6 +50,7 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
   late final EtsawaqliService _service;
 
   late int _currentView; // 0: نبذة وأزرار رئيسية, 1: قائمة المشتريات, 2: سجل العمليات
+  late bool _isIntroExpanded;
   final TextEditingController _nameCtrl = TextEditingController();
   final TextEditingController _phoneCtrl = TextEditingController();
   final TextEditingController _addressCtrl = TextEditingController();
@@ -94,6 +99,7 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
     super.initState();
     _service = widget.service ?? EtsawaqliService();
     _currentView = widget.initialView;
+    _isIntroExpanded = widget.initialExpandIntro;
     _initUserData();
   }
 
@@ -445,141 +451,206 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // كارت النبذة التعريفية والشرح المنسق والحديث
-                Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    gradient: LinearGradient(
-                      colors: isDark
-                          ? [
-                              const Color(0xFF14532D),
-                              const Color(0xFF0F172A),
-                            ]
-                          : [
-                              const Color(0xFFF0FDF4),
-                              const Color(0xFFDCFCE7),
-                            ],
-                      begin: Alignment.topRight,
-                      end: Alignment.bottomLeft,
-                    ),
-                    border: Border.all(
-                      color: const Color(0xFF16A34A).withValues(alpha: isDark ? 0.4 : 0.6),
-                      width: 1.5,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF16A34A).withValues(alpha: isDark ? 0.2 : 0.1),
-                        blurRadius: 16,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF16A34A), Color(0xFF15803D)],
-                              ),
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFF16A34A).withValues(alpha: 0.35),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 3),
-                                ),
+                // كارت النبذة التعريفية والشرح المنسق والحديث (قابل للطي لتوفير المساحة)
+                Material(
+                  color: Colors.transparent,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 280),
+                    curve: Curves.easeInOutCubic,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(18),
+                      gradient: LinearGradient(
+                        colors: isDark
+                            ? [
+                                const Color(0xFF14532D),
+                                const Color(0xFF0F172A),
+                              ]
+                            : [
+                                const Color(0xFFF0FDF4),
+                                const Color(0xFFDCFCE7),
                               ],
-                            ),
-                            child: const Icon(
-                              Icons.shopping_basket_rounded,
-                              color: Colors.white,
-                              size: 26,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          const Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                        begin: Alignment.topRight,
+                        end: Alignment.bottomLeft,
+                      ),
+                      border: Border.all(
+                        color: const Color(0xFF16A34A).withValues(alpha: isDark ? 0.4 : 0.6),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF16A34A).withValues(alpha: isDark ? 0.2 : 0.1),
+                          blurRadius: 14,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(18),
+                      onTap: () => setState(() => _isIntroExpanded = !_isIntroExpanded),
+                      child: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // الرأس الدائم مع زر التبديل القابل للطي
+                            Row(
                               children: [
-                                Text(
-                                  'خدمة إتسوقلي — تسوق أسواق القرية والمراكز',
-                                  style: TextStyle(
-                                    fontFamily: 'Cairo',
-                                    fontWeight: FontWeight.w900,
-                                    fontSize: 14.5,
+                                Container(
+                                  width: 42,
+                                  height: 42,
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [Color(0xFF16A34A), Color(0xFF15803D)],
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(0xFF16A34A).withValues(alpha: 0.35),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Icon(
+                                    Icons.shopping_basket_rounded,
+                                    color: Colors.white,
+                                    size: 24,
                                   ),
                                 ),
-                                Text(
-                                  'خضار، فواكه، لحوم، أسماك وتموين طازج لباب بيتك',
-                                  style: TextStyle(
-                                    fontFamily: 'Cairo',
-                                    fontSize: 11,
-                                    color: Color(0xFF16A34A),
-                                    fontWeight: FontWeight.w700,
+                                const SizedBox(width: 10),
+                                const Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'خدمة إتسوقلي — تسوق أسواق القرية والمراكز',
+                                        style: TextStyle(
+                                          fontFamily: 'Cairo',
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 13.5,
+                                        ),
+                                      ),
+                                      Text(
+                                        'خضار، فواكه، لحوم، أسماك وتموين طازج لباب بيتك',
+                                        style: TextStyle(
+                                          fontFamily: 'Cairo',
+                                          fontSize: 10.5,
+                                          color: Color(0xFF16A34A),
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                // كبسولة إشارة الفتح والطي
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF16A34A).withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: const Color(0xFF16A34A).withValues(alpha: 0.35),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        _isIntroExpanded ? 'طي' : 'تفاصيل',
+                                        style: const TextStyle(
+                                          fontFamily: 'Cairo',
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w900,
+                                          color: Color(0xFF16A34A),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 2),
+                                      Icon(
+                                        _isIntroExpanded
+                                            ? Icons.keyboard_arrow_up_rounded
+                                            : Icons.keyboard_arrow_down_rounded,
+                                        size: 16,
+                                        color: const Color(0xFF16A34A),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
                             ),
-                          ),
-                        ],
-                      ),
 
-                      const SizedBox(height: 12),
+                            // المحتوى القابل للطي
+                            AnimatedCrossFade(
+                              firstChild: const SizedBox(width: double.infinity, height: 0),
+                              secondChild: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const SizedBox(height: 10),
+                                  Divider(
+                                    color: const Color(0xFF16A34A).withValues(alpha: 0.25),
+                                    height: 1,
+                                  ),
+                                  const SizedBox(height: 10),
 
-                      Text(
-                        'خدمتك المخصصة لتسوق الخضار والفواكه واللحوم والأسماك والدواجن والتموين الطازج من سوق الجمعة بأبودشيشة وأسواق المراكز المجاورة (بلقاس، المعصرة، الستاموني...). نوفر عليك عناء وتعب ومصاريف المشوار، مع انتقاء أجود البضائع الطازجة وتوصيلها حتى باب منزلك في مواعيد الأسواق أو فوراً، والدفع عند المعاينة والاستلام.',
-                        style: TextStyle(
-                          fontFamily: 'Cairo',
-                          fontSize: 12,
-                          height: 1.55,
-                          color: isDark ? Colors.grey.shade300 : const Color(0xFF14532D),
+                                  // الفقرة التعريفية المنسقة
+                                  Text(
+                                    'خدمتك المخصصة لتسوق الخضار والفواكه واللحوم والأسماك والدواجن والتموين الطازج من سوق الجمعة بأبودشيشة وأسواق المراكز المجاورة (بلقاس، المعصرة، الستاموني...). نوفر عليك عناء وتعب ومصاريف المشوار، مع انتقاء أجود البضائع الطازجة وتوصيلها حتى باب منزلك في مواعيد الأسواق أو فوراً، والدفع عند المعاينة والاستلام.',
+                                    style: TextStyle(
+                                      fontFamily: 'Cairo',
+                                      fontSize: 11.5,
+                                      height: 1.5,
+                                      color: isDark ? Colors.grey.shade300 : const Color(0xFF14532D),
+                                    ),
+                                  ),
+
+                                  const SizedBox(height: 12),
+
+                                  // رقائق المزايا
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: [
+                                      _buildLandingPill(
+                                        icon: Icons.eco_rounded,
+                                        title: 'أسعار السوق الحقيقية',
+                                        subtitle: 'شراء بأسعار وتخفيضات السوق',
+                                        color: const Color(0xFF16A34A),
+                                        isDark: isDark,
+                                      ),
+                                      _buildLandingPill(
+                                        icon: Icons.verified_rounded,
+                                        title: 'تنقية وجودة ممتازة',
+                                        subtitle: 'اختيار طازج ونضج يناسبك',
+                                        color: const Color(0xFF2563EB),
+                                        isDark: isDark,
+                                      ),
+                                      _buildLandingPill(
+                                        icon: Icons.local_shipping_rounded,
+                                        title: 'توصيل لباب بيتك',
+                                        subtitle: 'استلام مريح دون تعب المشوار',
+                                        color: const Color(0xFFD97706),
+                                        isDark: isDark,
+                                      ),
+                                      _buildLandingPill(
+                                        icon: Icons.payments_rounded,
+                                        title: 'دفع عند الاستلام',
+                                        subtitle: 'معاينة البضاعة والدفع كاش',
+                                        color: const Color(0xFF7C3AED),
+                                        isDark: isDark,
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              crossFadeState: _isIntroExpanded
+                                  ? CrossFadeState.showSecond
+                                  : CrossFadeState.showFirst,
+                              duration: const Duration(milliseconds: 280),
+                            ),
+                          ],
                         ),
                       ),
-
-                      const SizedBox(height: 14),
-
-                      // رقائق المزايا
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          _buildLandingPill(
-                            icon: Icons.eco_rounded,
-                            title: 'أسعار السوق الحقيقية',
-                            subtitle: 'شراء بأسعار وتخفيضات السوق',
-                            color: const Color(0xFF16A34A),
-                            isDark: isDark,
-                          ),
-                          _buildLandingPill(
-                            icon: Icons.verified_rounded,
-                            title: 'تنقية وجودة ممتازة',
-                            subtitle: 'اختيار طازج ونضج يناسبك',
-                            color: const Color(0xFF2563EB),
-                            isDark: isDark,
-                          ),
-                          _buildLandingPill(
-                            icon: Icons.local_shipping_rounded,
-                            title: 'توصيل لباب بيتك',
-                            subtitle: 'استلام مريح دون تعب المشوار',
-                            color: const Color(0xFFD97706),
-                            isDark: isDark,
-                          ),
-                          _buildLandingPill(
-                            icon: Icons.payments_rounded,
-                            title: 'دفع عند الاستلام',
-                            subtitle: 'معاينة البضاعة والدفع كاش',
-                            color: const Color(0xFF7C3AED),
-                            isDark: isDark,
-                          ),
-                        ],
-                      ),
-                    ],
+                    ),
                   ),
                 ),
 
