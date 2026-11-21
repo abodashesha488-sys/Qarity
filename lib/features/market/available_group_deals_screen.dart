@@ -18,6 +18,7 @@ class AvailableGroupDealsScreen extends StatefulWidget {
     super.key,
     this.initialHighlightDealId,
     this.service,
+    this.initialExpandIntro = false,
   });
 
   /// معرف الصفقة المراد تمييزها أو فتحها عند الدخول
@@ -26,41 +27,24 @@ class AvailableGroupDealsScreen extends StatefulWidget {
   /// خدمة الصفقات (تسمح بالحقن للاختبارات)
   final GroupDealService? service;
 
+  /// حالة فتح كارت النبذة التعريفية افتراضياً (افتراضياً مطوي لتوفير المساحة)
+  final bool initialExpandIntro;
+
   @override
   State<AvailableGroupDealsScreen> createState() => _AvailableGroupDealsScreenState();
 }
 
 class _AvailableGroupDealsScreenState extends State<AvailableGroupDealsScreen> {
   late final GroupDealService _service;
-  Timer? _countdownTimer;
   String _selectedCategory = 'الكل';
   int _activeTab = 0; // 0: الصفقات المتاحة حالياً, 1: الصفقات المنفذة السابقة
+  late bool _isIntroExpanded;
 
   @override
   void initState() {
     super.initState();
     _service = widget.service ?? GroupDealService();
-    // مؤقت حي لتحديث العدادات الزمنية التنازلية كل ثانية
-    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() {});
-    });
-  }
-
-  @override
-  void dispose() {
-    _countdownTimer?.cancel();
-    super.dispose();
-  }
-
-  String _formatCountdown(DateTime endTime) {
-    final diff = endTime.difference(DateTime.now());
-    if (diff.isNegative) return 'انتهى الوقت';
-    final days = diff.inDays;
-    final hours = diff.inHours % 24;
-    final minutes = diff.inMinutes % 60;
-    final seconds = diff.inSeconds % 60;
-    if (days > 0) return '$days يوم و $hours س';
-    return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    _isIntroExpanded = widget.initialExpandIntro;
   }
 
   void _openDealDetails(BuildContext context, GroupDealModel deal) {
@@ -154,7 +138,7 @@ class _AvailableGroupDealsScreenState extends State<AvailableGroupDealsScreen> {
     );
   }
 
-  // ───────────────────────── 1. النبذة التعريفية الراقية ─────────────────────────
+  // ───────────────────────── 1. النبذة التعريفية الراقية القابلة للطي ─────────────────────────
   Widget _buildIntroHeroCard(
     BuildContext context,
     ThemeData theme,
@@ -162,173 +146,236 @@ class _AvailableGroupDealsScreenState extends State<AvailableGroupDealsScreen> {
   ) {
     final isDark = theme.brightness == Brightness.dark;
 
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        gradient: LinearGradient(
-          colors: isDark
-              ? [
-                  const Color(0xFF451A03),
-                  const Color(0xFF1E293B),
-                ]
-              : [
-                  const Color(0xFFFFFBEB),
-                  const Color(0xFFFEF3C7),
-                ],
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
-        ),
-        border: Border.all(
-          color: const Color(0xFFD97706).withValues(alpha: isDark ? 0.4 : 0.6),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFD97706).withValues(alpha: isDark ? 0.2 : 0.1),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // الرأس والشارة
-          Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFD97706), Color(0xFFB45309)],
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFFD97706).withValues(alpha: 0.35),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
-                    ),
+    return Material(
+      color: Colors.transparent,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeInOutCubic,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          gradient: LinearGradient(
+            colors: isDark
+                ? [
+                    const Color(0xFF381502),
+                    const Color(0xFF1E1308),
+                  ]
+                : [
+                    const Color(0xFFFFFBEB),
+                    const Color(0xFFFEF3C7),
                   ],
-                ),
-                child: const Icon(
-                  Icons.groups_rounded,
-                  color: Colors.white,
-                  size: 26,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'مبادرة صفقات القرية بسعر الجملة والتكلفة',
-                      style: TextStyle(
-                        fontFamily: 'Cairo',
-                        fontWeight: FontWeight.w900,
-                        fontSize: 14.5,
-                      ),
-                    ),
-                    Text(
-                      'قوة الشراء الجماعي لخدمة أهالي قرية أبودشيشة',
-                      style: TextStyle(
-                        fontFamily: 'Cairo',
-                        fontSize: 11,
-                        color: Color(0xFFD97706),
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            begin: Alignment.topRight,
+            end: Alignment.bottomLeft,
           ),
-
-          const SizedBox(height: 12),
-
-          // الفقرة التعريفية المختصرة والواضحة
-          Text(
-            'مبادرة مجتمعية تنظمها القرية للتفاوض والتعاقد المباشر مع كبار الموردين والمصانع على سلع تموينية وغذائية أساسية عالية الجودة، لتصل لكل بيت بالقرية بسعر التكلفة الحقيقي بدون أي وسيط تجاري أو هوامش ربح، مع توفير مالي حقيقي لكل أسرة.',
-            style: TextStyle(
-              fontFamily: 'Cairo',
-              fontSize: 12,
-              height: 1.55,
-              color: isDark ? Colors.grey.shade300 : const Color(0xFF451A03),
-            ),
+          border: Border.all(
+            color: const Color(0xFFD97706).withValues(alpha: isDark ? 0.4 : 0.6),
+            width: 1.5,
           ),
-
-          const SizedBox(height: 14),
-
-          // شبكة مميزات الخدمة الأربعة (Modern Feature Pills)
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _buildFeaturePill(
-                icon: Icons.price_check_rounded,
-                title: 'سعر جملة وتكلفة',
-                subtitle: 'وفر يصل إلى 35%',
-                color: const Color(0xFFD97706),
-                isDark: isDark,
-              ),
-              _buildFeaturePill(
-                icon: Icons.how_to_reg_rounded,
-                title: 'حجز مجاني بدون عربون',
-                subtitle: 'الدفع عند الاستلام',
-                color: const Color(0xFF16A34A),
-                isDark: isDark,
-              ),
-              _buildFeaturePill(
-                icon: Icons.local_shipping_rounded,
-                title: 'استلام مقر أو منزلي',
-                subtitle: 'مقر مجاناً / بيت +10ج',
-                color: const Color(0xFF2563EB),
-                isDark: isDark,
-              ),
-              _buildFeaturePill(
-                icon: Icons.verified_user_rounded,
-                title: 'جودة ومعاينة مسبقة',
-                subtitle: 'حق الفحص قبل الدفع',
-                color: const Color(0xFF7C3AED),
-                isDark: isDark,
-              ),
-            ],
-          ),
-
-          if (activeDeals.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: const Color(0xFF16A34A).withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: const Color(0xFF16A34A).withValues(alpha: 0.3),
-                ),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.flash_on_rounded, size: 16, color: Color(0xFF16A34A)),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      'يوجد حالياً ${activeDeals.length} صفقة جارية ومتاحة للحجز الفوري — لا تفوت الفرصة!',
-                      style: const TextStyle(
-                        fontFamily: 'Cairo',
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF16A34A),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFD97706).withValues(alpha: isDark ? 0.2 : 0.1),
+              blurRadius: 14,
+              offset: const Offset(0, 4),
             ),
           ],
-        ],
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: () => setState(() => _isIntroExpanded = !_isIntroExpanded),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // الرأس الدائم مع زر التبديل القابل للطي
+                Row(
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFD97706), Color(0xFFB45309)],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFD97706).withValues(alpha: 0.35),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.groups_rounded,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'مبادرة صفقات القرية بسعر الجملة والتكلفة',
+                            style: TextStyle(
+                              fontFamily: 'Cairo',
+                              fontWeight: FontWeight.w900,
+                              fontSize: 13.5,
+                            ),
+                          ),
+                          Text(
+                            'قوة الشراء الجماعي لخدمة أهالي قرية أبودشيشة',
+                            style: TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 10.5,
+                              color: Color(0xFFD97706),
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // كبسولة إشارة الفتح والطي
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFD97706).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: const Color(0xFFD97706).withValues(alpha: 0.35),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            _isIntroExpanded ? 'طي' : 'تفاصيل',
+                            style: const TextStyle(
+                              fontFamily: 'Cairo',
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFFD97706),
+                            ),
+                          ),
+                          const SizedBox(width: 2),
+                          Icon(
+                            _isIntroExpanded
+                                ? Icons.keyboard_arrow_up_rounded
+                                : Icons.keyboard_arrow_down_rounded,
+                            size: 16,
+                            color: const Color(0xFFD97706),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+
+                // المحتوى القابل للطي
+                AnimatedCrossFade(
+                  firstChild: const SizedBox(width: double.infinity, height: 0),
+                  secondChild: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 10),
+                      Divider(
+                        color: const Color(0xFFD97706).withValues(alpha: 0.25),
+                        height: 1,
+                      ),
+                      const SizedBox(height: 10),
+
+                      // الفقرة التعريفية المنسقة
+                      Text(
+                        'مبادرة مجتمعية تنظمها القرية للتفاوض والتعاقد المباشر مع كبار الموردين والمصانع على سلع تموينية وغذائية أساسية عالية الجودة، لتصل لكل بيت بالقرية بسعر التكلفة الحقيقي بدون أي وسيط تجاري أو هوامش ربح، مع توفير مالي حقيقي لكل أسرة.',
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 11.5,
+                          height: 1.5,
+                          color: isDark ? Colors.grey.shade300 : const Color(0xFF451A03),
+                        ),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      // شبكة مميزات الخدمة الأربعة
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _buildFeaturePill(
+                            icon: Icons.price_check_rounded,
+                            title: 'سعر جملة وتكلفة',
+                            subtitle: 'وفر يصل إلى 35%',
+                            color: const Color(0xFFD97706),
+                            isDark: isDark,
+                          ),
+                          _buildFeaturePill(
+                            icon: Icons.how_to_reg_rounded,
+                            title: 'حجز مجاني بدون عربون',
+                            subtitle: 'الدفع عند الاستلام',
+                            color: const Color(0xFF16A34A),
+                            isDark: isDark,
+                          ),
+                          _buildFeaturePill(
+                            icon: Icons.local_shipping_rounded,
+                            title: 'استلام مقر أو منزلي',
+                            subtitle: 'مقر مجاناً / بيت +10ج',
+                            color: const Color(0xFF2563EB),
+                            isDark: isDark,
+                          ),
+                          _buildFeaturePill(
+                            icon: Icons.verified_user_rounded,
+                            title: 'جودة ومعاينة مسبقة',
+                            subtitle: 'حق الفحص قبل الدفع',
+                            color: const Color(0xFF7C3AED),
+                            isDark: isDark,
+                          ),
+                        ],
+                      ),
+
+                      if (activeDeals.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF16A34A).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: const Color(0xFF16A34A).withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.flash_on_rounded, size: 16, color: Color(0xFF16A34A)),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  'يوجد حالياً ${activeDeals.length} صفقة جارية ومتاحة للحجز الفوري — لا تفوت الفرصة!',
+                                  style: const TextStyle(
+                                    fontFamily: 'Cairo',
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF16A34A),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  crossFadeState: _isIntroExpanded
+                      ? CrossFadeState.showSecond
+                      : CrossFadeState.showFirst,
+                  duration: const Duration(milliseconds: 280),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -577,7 +624,6 @@ class _AvailableGroupDealsScreenState extends State<AvailableGroupDealsScreen> {
     ThemeData theme,
     GroupDealModel deal,
   ) {
-    final countdown = _formatCountdown(deal.endTime);
     final isHighlighted = widget.initialHighlightDealId == deal.id;
 
     return Material(
@@ -623,46 +669,8 @@ class _AvailableGroupDealsScreenState extends State<AvailableGroupDealsScreen> {
                     ),
                   ),
                   const Spacer(),
-                  // عداد الوقت التنازلي التفاعلي
-                  Builder(
-                    builder: (context) {
-                      final diff = deal.endTime.difference(DateTime.now());
-                      final isUrgent = diff.inHours < 24 && !diff.isNegative;
-
-                      return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: isUrgent
-                              ? const Color(0xFFDC2626).withValues(alpha: 0.12)
-                              : Colors.grey.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: isUrgent
-                              ? Border.all(color: const Color(0xFFDC2626).withValues(alpha: 0.4))
-                              : null,
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              isUrgent ? Icons.local_fire_department_rounded : Icons.timer_outlined,
-                              size: 13,
-                              color: isUrgent ? const Color(0xFFDC2626) : const Color(0xFFD97706),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              isUrgent ? 'ينتهي قريباً: $countdown' : countdown,
-                              style: TextStyle(
-                                fontFamily: 'Cairo',
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.bold,
-                                color: isUrgent ? const Color(0xFFDC2626) : const Color(0xFFD97706),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
+                  // عداد الوقت التنازلي التفاعلي المخصص
+                  _DealCountdownWidget(endTime: deal.endTime),
                   const SizedBox(width: 6),
                   // نسبة الخصم
                   Container(
@@ -700,15 +708,20 @@ class _AvailableGroupDealsScreenState extends State<AvailableGroupDealsScreen> {
                       height: 82,
                       color: theme.colorScheme.surfaceContainerHighest,
                       child: deal.primaryImage.isNotEmpty
-                          ? AppImageCache.image(
-                              url: deal.primaryImage,
-                              width: 82,
-                              height: 82,
-                              fit: BoxFit.cover,
-                              errorWidget: (_, __, ___) => const Icon(
-                                Icons.inventory_2_outlined,
-                                size: 36,
-                                color: Color(0xFFD97706),
+                          ? KeyedSubtree(
+                              key: ValueKey<String>('active_deal_img_${deal.id}'),
+                              child: AppImageCache.image(
+                                url: deal.primaryImage,
+                                width: 82,
+                                height: 82,
+                                fit: BoxFit.cover,
+                                fadeInDuration: Duration.zero,
+                                fadeOutDuration: Duration.zero,
+                                errorWidget: (_, __, ___) => const Icon(
+                                  Icons.inventory_2_outlined,
+                                  size: 36,
+                                  color: Color(0xFFD97706),
+                                ),
                               ),
                             )
                           : const Icon(
@@ -956,11 +969,16 @@ class _AvailableGroupDealsScreenState extends State<AvailableGroupDealsScreen> {
                       height: 60,
                       color: theme.colorScheme.surfaceContainerHighest,
                       child: deal.primaryImage.isNotEmpty
-                          ? AppImageCache.image(
-                              url: deal.primaryImage,
-                              width: 60,
-                              height: 60,
-                              fit: BoxFit.cover,
+                          ? KeyedSubtree(
+                              key: ValueKey<String>('exec_deal_img_${deal.id}'),
+                              child: AppImageCache.image(
+                                url: deal.primaryImage,
+                                width: 60,
+                                height: 60,
+                                fit: BoxFit.cover,
+                                fadeInDuration: Duration.zero,
+                                fadeOutDuration: Duration.zero,
+                              ),
                             )
                           : const Icon(Icons.check_circle_outline, color: Color(0xFF16A34A)),
                     ),
@@ -1073,3 +1091,83 @@ class _AvailableGroupDealsScreenState extends State<AvailableGroupDealsScreen> {
     );
   }
 }
+
+/// ودجت عداد تنازلي ذاتي التحديث لا يتسبب في إعادة بناء الشاشة أو وميض صور الصفقات
+class _DealCountdownWidget extends StatefulWidget {
+  const _DealCountdownWidget({required this.endTime});
+
+  final DateTime endTime;
+
+  @override
+  State<_DealCountdownWidget> createState() => _DealCountdownWidgetState();
+}
+
+class _DealCountdownWidgetState extends State<_DealCountdownWidget> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  String _format(DateTime endTime) {
+    final diff = endTime.difference(DateTime.now());
+    if (diff.isNegative) return 'انتهى الوقت';
+    final days = diff.inDays;
+    final hours = diff.inHours % 24;
+    final minutes = diff.inMinutes % 60;
+    final seconds = diff.inSeconds % 60;
+    if (days > 0) return '$days يوم و $hours س';
+    return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final diff = widget.endTime.difference(DateTime.now());
+    final isUrgent = diff.inHours < 24 && !diff.isNegative;
+    final countdown = _format(widget.endTime);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: isUrgent
+            ? const Color(0xFFDC2626).withValues(alpha: 0.12)
+            : Colors.grey.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: isUrgent
+            ? Border.all(color: const Color(0xFFDC2626).withValues(alpha: 0.4))
+            : null,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isUrgent ? Icons.local_fire_department_rounded : Icons.timer_outlined,
+            size: 13,
+            color: isUrgent ? const Color(0xFFDC2626) : const Color(0xFFD97706),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            isUrgent ? 'ينتهي قريباً: $countdown' : countdown,
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              fontSize: 10.5,
+              fontWeight: FontWeight.bold,
+              color: isUrgent ? const Color(0xFFDC2626) : const Color(0xFFD97706),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
