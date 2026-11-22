@@ -7,6 +7,8 @@ import '../../core/utils/contact_links.dart';
 import '../../core/utils/launch_link.dart';
 import '../../models/service_provider_model.dart';
 import '../../routes/app_routes.dart';
+import '../../widgets/eshterili_order_sheet.dart';
+import '../../widgets/etsawaqli_market_sheet.dart';
 import '../../widgets/qurity_app_bar.dart';
 import '../../widgets/whatsapp_mark.dart';
 
@@ -273,8 +275,9 @@ class _AboutScreenState extends State<AboutScreen> {
           ),
           const SizedBox(height: 14),
           const Text(
-            'منصة الخدمات الرقمية للقرية: تاريخ القرية , الأخبار والسوق وحوارات المندرةوالخدمات الطبية والتعليمية '
-            'والترفيهية للأطفال — في مكان واحد وبالعربية.',
+            'منصة الخدمات الرقمية للقرية: تاريخ القرية، الأخبار والسوق، صفقات اليوم بسعر التكلفة والجملة، '
+            'مندوب الشراء السريع (إشتريلي)، وتسوق الأسواق (إتسوقلي)، وحوارات المندرة والخدمات الطبية '
+            'والتعليمية والزراعية وركن الأطفال — في مكان واحد وبالعربية.',
             textAlign: TextAlign.center,
             style: TextStyle(
                 color: Colors.white,
@@ -507,6 +510,12 @@ class _AboutScreenState extends State<AboutScreen> {
           Icons.chat_bubble_rounded, Color(0xFF6A1B9A)),
       _AppSection(AppRoutes.marketTabs, 'سوق القرية', Icons.storefront_rounded,
           Color(0xFFEF6C00)),
+      _AppSection(AppRoutes.groupDeals, 'صفقات اليوم',
+          Icons.local_fire_department_rounded, Color(0xFFD97706)),
+      _AppSection(AppRoutes.eshterili, 'خدمة إشتريلي',
+          Icons.delivery_dining_rounded, Color(0xFF2563EB)),
+      _AppSection(AppRoutes.etsawaqli, 'خدمة إتسوقلي',
+          Icons.shopping_basket_rounded, Color(0xFF16A34A)),
       _AppSection(AppRoutes.techniciansDirectory, 'فنيين القرية',
           Icons.plumbing_rounded, Color(0xFF455A64)),
       _AppSection(AppRoutes.legalAdvisor, 'مستشار القرية', Icons.gavel_rounded,
@@ -550,7 +559,25 @@ class _AboutScreenState extends State<AboutScreen> {
         return InkWell(
           key: Key('about-section-${section.route}'),
           borderRadius: BorderRadius.circular(16),
-          onTap: () => Navigator.pushNamed(context, section.route),
+          onTap: () {
+            if (section.route == AppRoutes.eshterili) {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (_) => const EshteriliOrderSheet(),
+              );
+            } else if (section.route == AppRoutes.etsawaqli) {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (_) => const EtsawaqliMarketSheet(),
+              );
+            } else {
+              Navigator.pushNamed(context, section.route);
+            }
+          },
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
@@ -602,6 +629,26 @@ class _AboutScreenState extends State<AboutScreen> {
 
   Widget _changelogCard(ThemeData theme) {
     final additions = <(IconData, String, Color)>[
+      (
+        Icons.local_fire_department_rounded,
+        'صفقات اليوم بسعر الجملة: مبادرة الشراء الجماعي لأهالي القرية بأسعار التكلفة بدون أي هامش ربحي، مع حجز فوري واختيار الاستلام من المقر مجاناً أو التوصيل المنزلي.',
+        const Color(0xFFD97706)
+      ),
+      (
+        Icons.delivery_dining_rounded,
+        'خدمة «إشتريلي» (مندوب القرية): شراء فوري وتوصيل سريع للطلبات والروشتات دون انتظار تسعير مع إرفاق فاتورة المحل الأصلية وتتبع مراحل التنفيذ.',
+        const Color(0xFF2563EB)
+      ),
+      (
+        Icons.shopping_basket_rounded,
+        'خدمة «إتسوقلي» (تسوق الأسواق): تسوق سوق الجمعة وأسواق القرى والمراكز المجاورة (بلقاس والمعصرة والستاموني) بسلة ذكية وأصناف خاصة واشتراكات أسبوعية.',
+        const Color(0xFF16A34A)
+      ),
+      (
+        Icons.auto_awesome_motion_rounded,
+        'كارت الخدمات التفاعلي بالرئيسية: كارت متطور بتناوب تلقائي للخدمات، مع إمكانية طي كروت الشرح في صفحات الخدمات لتوفير المساحة وسرعة الطلب.',
+        const Color(0xFF00897B)
+      ),
       (
         Icons.agriculture_rounded,
         'بوابة «خدمات المزارع»: مواعيد الزراعة والري والمحاصيل والاستشارات الزراعية المخصصة.',

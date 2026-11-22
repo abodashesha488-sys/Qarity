@@ -20,6 +20,8 @@ import '../../services/cache_service.dart';
 import '../../services/medical_service.dart';
 import '../../services/service_provider_service.dart';
 import '../../services/shop_service.dart';
+import '../../widgets/eshterili_order_sheet.dart';
+import '../../widgets/etsawaqli_market_sheet.dart';
 import '../market/market_tabs_screen.dart';
 
 enum SearchCategoryFilter {
@@ -110,6 +112,9 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
   List<GlobalSearchResultItem> _results = [];
 
   static const List<String> _popularSuggestions = [
+    'صفقة اليوم',
+    'إشتريلي',
+    'إتسوقلي',
     'دكتور أطفال',
     'صيدلية',
     'عمال ومعدات',
@@ -430,6 +435,58 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
     }
 
     final list = <GlobalSearchResultItem>[];
+
+    // خدمات ومبادرات القرية التجارية (صفقات اليوم / إشتريلي / إتسوقلي)
+    if (_selectedFilter == SearchCategoryFilter.all ||
+        _selectedFilter == SearchCategoryFilter.market) {
+      if (_matches('صفقة اليوم صفقات الشراء الجماعي تخفيضات جملة وتكلفة عروض', q) ||
+          _matches('شراء جماعي حجز حصص', q)) {
+        list.add(const GlobalSearchResultItem(
+          title: 'صفقات اليوم بسعر الجملة والتكلفة',
+          subtitle: 'مبادرة الشراء الجماعي لأهالي القرية بأسعار التكلفة ودون أرباح',
+          category: 'مبادرات القرية',
+          icon: Icons.local_fire_department_rounded,
+          accentColor: Color(0xFFD97706),
+          route: AppRoutes.groupDeals,
+        ));
+      }
+      if (_matches('اشتريلي إشتريلي طلب شراء مندوب توصيل سريع روشتة صيدلية', q) ||
+          _matches('مندوب القرية توصيل طلبات', q)) {
+        list.add(GlobalSearchResultItem(
+          title: 'خدمة إشتريلي (مندوب القرية السريع)',
+          subtitle: 'شراء وتوصيل فوري لكافة احتياجاتك مع فاتورة المحل الأصلية الورقية',
+          category: 'خدمات التوصيل',
+          icon: Icons.delivery_dining_rounded,
+          accentColor: const Color(0xFF2563EB),
+          onTapCustom: () {
+            showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: Colors.transparent,
+              builder: (_) => const EshteriliOrderSheet(),
+            );
+          },
+        ));
+      }
+      if (_matches('اتسوقلي إتسوقلي تسوق سوق الجمعة المعصرة بلقاس خضار فاكهة طلبات اسبوعية', q) ||
+          _matches('تسوق الأسواق اسواق', q)) {
+        list.add(GlobalSearchResultItem(
+          title: 'خدمة إتسوقلي (تسوق أسواق القرية والمجاورة)',
+          subtitle: 'تسوق طلبات سوق الجمعة والأسواق المجاورة بأمانة واشتراكات دورية',
+          category: 'خدمات التسوق',
+          icon: Icons.shopping_basket_rounded,
+          accentColor: const Color(0xFF16A34A),
+          onTapCustom: () {
+            showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: Colors.transparent,
+              builder: (_) => const EtsawaqliMarketSheet(),
+            );
+          },
+        ));
+      }
+    }
 
     // 1. دليل الهاتف وأرقام الطوارئ
     if (_selectedFilter == SearchCategoryFilter.all ||

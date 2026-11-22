@@ -26,6 +26,8 @@ import '../../services/user_service.dart';
 import '../../services/weather_service.dart';
 import '../../widgets/alert_wisdom_bar.dart';
 import '../../widgets/common_appbar_actions.dart';
+import '../../widgets/eshterili_order_sheet.dart';
+import '../../widgets/etsawaqli_market_sheet.dart';
 import '../../widgets/group_deal_home_card.dart';
 import '../../widgets/offline_stream_builder.dart';
 import '../../widgets/qurity_logo.dart';
@@ -250,6 +252,42 @@ class HomeDrawer extends StatelessWidget {
                 AppRoutes.forumPosts),
             _buildDrawerItem(context, 'سوق القرية', Icons.storefront_rounded,
                 AppRoutes.marketProducts),
+            _buildDrawerItem(context, 'صفقات اليوم بسعر الجملة',
+                Icons.local_fire_department_rounded, AppRoutes.groupDeals),
+            ListTile(
+              leading: const Icon(Icons.delivery_dining_rounded,
+                  color: Color(0xFF2563EB)),
+              title: const Text('إشتريلي (مندوب القرية)',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              onTap: () {
+                Navigator.pop(context);
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (_) => const EshteriliOrderSheet(),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.shopping_basket_rounded,
+                  color: Color(0xFF16A34A)),
+              title: const Text('إتسوقلي (تسوق الأسواق)',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              onTap: () {
+                Navigator.pop(context);
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (_) => const EtsawaqliMarketSheet(),
+                );
+              },
+            ),
             _buildDrawerItem(context, 'فنيين القرية', Icons.plumbing_rounded,
                 AppRoutes.techniciansDirectory),
             _buildDrawerItem(context, 'مستشار القرية', Icons.gavel_rounded,

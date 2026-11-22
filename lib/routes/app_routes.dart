@@ -87,6 +87,8 @@ import '../features/village/village_profile_screen.dart';
 import '../features/weather/weather_detail_screen.dart';
 import '../models/service_provider_model.dart';
 import '../services/admin_service.dart';
+import '../widgets/eshterili_order_sheet.dart';
+import '../widgets/etsawaqli_market_sheet.dart';
 
 /// 🛣️ Qarity App Routes
 /// 
@@ -138,7 +140,9 @@ class AppRoutes {
   static const String adminAllUsers = '/admin/all-users';
   static const String adminGroupDeals = '/admin/group-deals';
   static const String groupDeals = '/group-deals';
-static const String marketProducts = '/market';
+  static const String eshterili = '/eshterili';
+  static const String etsawaqli = '/etsawaqli';
+  static const String marketProducts = '/market';
   static const String marketAdd = '/market/add';
   static const String marketProductDetail = '/market/product';
   static const String marketSellerDetail = '/market/seller';
@@ -283,6 +287,13 @@ obituariesAdd: (_) => const AddObituaryScreen(),
     weather: (_ ) => const WeatherDetailScreen(),
     children: (_ ) => const ChildrenScreen(),
     globalSearch: (_ ) => const GlobalSearchScreen(),
+    groupDeals: (_) => const AvailableGroupDealsScreen(),
+    eshterili: (_) => const Scaffold(
+      body: SafeArea(child: EshteriliOrderSheet()),
+    ),
+    etsawaqli: (_) => const Scaffold(
+      body: SafeArea(child: EtsawaqliMarketSheet()),
+    ),
   };
 
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
@@ -326,6 +337,22 @@ obituariesAdd: (_) => const AddObituaryScreen(),
       final initialDealId = args['initialDealId'] as String?;
       return _buildSlideRoute(
         (_) => AvailableGroupDealsScreen(initialHighlightDealId: initialDealId),
+        settings,
+      );
+    }
+    if (settings.name == eshterili) {
+      return _buildSlideRoute(
+        (_) => const Scaffold(
+          body: SafeArea(child: EshteriliOrderSheet()),
+        ),
+        settings,
+      );
+    }
+    if (settings.name == etsawaqli) {
+      return _buildSlideRoute(
+        (_) => const Scaffold(
+          body: SafeArea(child: EtsawaqliMarketSheet()),
+        ),
         settings,
       );
     }
