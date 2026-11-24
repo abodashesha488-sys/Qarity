@@ -6,6 +6,7 @@ import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/app_image_cache.dart';
 import '../../core/utils/comment_style.dart';
+import '../../core/utils/comment_thread_helper.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/utils/launch_link.dart';
 import '../../core/widgets/shared_cards.dart';
@@ -238,7 +239,8 @@ class MedDetailHeader extends StatelessWidget {
         child: Center(
           child: Padding(
             padding: const EdgeInsets.only(top: 24),
-            child: Icon(icon, size: 72, color: Colors.white.withValues(alpha: 0.55)),
+            child: Icon(icon,
+                size: 72, color: Colors.white.withValues(alpha: 0.55)),
           ),
         ),
       );
@@ -278,9 +280,11 @@ class _VillageClinicDetailScreenState extends State<VillageClinicDetailScreen> {
   @override
   void initState() {
     super.initState();
-    if (_currentUid.isNotEmpty) { AdminService().isAdminUser(_currentUid).then((val) {
-      if (mounted) setState(() => _canModerate = val);
-    }); }
+    if (_currentUid.isNotEmpty) {
+      AdminService().isAdminUser(_currentUid).then((val) {
+        if (mounted) setState(() => _canModerate = val);
+      });
+    }
   }
 
   @override
@@ -309,7 +313,8 @@ class _VillageClinicDetailScreenState extends State<VillageClinicDetailScreen> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('تعذّر حفظ التعديل — تحقّق من الصلاحيات أو من الاتصال')));
+          content:
+              Text('تعذّر حفظ التعديل — تحقّق من الصلاحيات أو من الاتصال')));
     }
   }
 
@@ -419,10 +424,13 @@ class _VillageClinicDetailScreenState extends State<VillageClinicDetailScreen> {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.star_rounded, color: Colors.amber, size: 22),
+                      const Icon(Icons.star_rounded,
+                          color: Colors.amber, size: 22),
                       const SizedBox(width: 4),
                       Text(
-                        clinic.rating > 0 ? clinic.rating.toStringAsFixed(1) : 'لا تقييم بعد',
+                        clinic.rating > 0
+                            ? clinic.rating.toStringAsFixed(1)
+                            : 'لا تقييم بعد',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -432,7 +440,9 @@ class _VillageClinicDetailScreenState extends State<VillageClinicDetailScreen> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    clinic.ratingCount > 0 ? '(${clinic.ratingCount} تقييم)' : 'كن أول من يقيّم العيادة',
+                    clinic.ratingCount > 0
+                        ? '(${clinic.ratingCount} تقييم)'
+                        : 'كن أول من يقيّم العيادة',
                     style: TextStyle(
                       fontSize: 11,
                       color: theme.colorScheme.onSurfaceVariant,
@@ -449,7 +459,9 @@ class _VillageClinicDetailScreenState extends State<VillageClinicDetailScreen> {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          myRating > 0 ? 'تقييمك: ${myRating.toInt()} نجوم' : 'قيّم هذه العيادة',
+                          myRating > 0
+                              ? 'تقييمك: ${myRating.toInt()} نجوم'
+                              : 'قيّم هذه العيادة',
                           style: const TextStyle(
                             fontSize: 11.5,
                             fontWeight: FontWeight.w700,
@@ -480,7 +492,8 @@ class _VillageClinicDetailScreenState extends State<VillageClinicDetailScreen> {
                             } catch (_) {
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('تعذر حفظ التقييم')),
+                                  const SnackBar(
+                                      content: Text('تعذر حفظ التقييم')),
                                 );
                               }
                             }
@@ -508,82 +521,85 @@ class _VillageClinicDetailScreenState extends State<VillageClinicDetailScreen> {
         children: [
           _buildRatingBar(theme, clinic),
           StreamBuilder<QuerySnapshot>(
-        stream: _service.getCommentsStream(clinic.id),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting &&
-              !snapshot.hasData) {
-            return const Padding(
-              padding: EdgeInsets.symmetric(vertical: 20),
-              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-            );
-          }
-          final comments = snapshot.data?.docs ?? const [];
-          if (comments.isEmpty) {
-            return const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
-              child: EmptyContentState(
-                icon: Icons.chat_bubble_outline_rounded,
-                message: 'لا توجد تعليقات بعد — شاركنا رأيك أو استفسارك عن العيادة.',
-              ),
-            );
-          }
-          return ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: comments.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 6),
-            itemBuilder: (context, index) {
-              final doc = comments[index];
-              final data =
-                  doc.data() as Map<String, dynamic>? ?? <String, dynamic>{};
-              final photo = (data['userPhotoUrl'] as String? ?? '').trim();
-              final commentText = data['text'] as String? ?? '';
-              final commentAuthor = (data['userId'] as String? ?? '').trim();
-              final createdAt = (data['createdAt'] as Timestamp?)?.toDate();
-              final updatedAt = (data['updatedAt'] as Timestamp?)?.toDate();
-              final likes = (data['likes'] as num?)?.toInt() ?? 0;
-              final likedBy = (data['likedBy'] as List?)
-                      ?.map((e) => e.toString())
-                      .toList() ??
-                  <String>[];
-              final parentId = data['parentId'] as String?;
-              final replyToUser = data['replyToUser'] as String?;
+            stream: _service.getCommentsStream(clinic.id),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting &&
+                  !snapshot.hasData) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20),
+                  child:
+                      Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                );
+              }
+              final rawComments = snapshot.data?.docs ?? const [];
+              if (rawComments.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: EmptyContentState(
+                    icon: Icons.chat_bubble_outline_rounded,
+                    message:
+                        'لا توجد تعليقات بعد — شاركنا رأيك أو استفسارك عن العيادة.',
+                  ),
+                );
+              }
+              final comments = CommentThreadHelper.orderDocs(rawComments);
+              return ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: comments.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 6),
+                itemBuilder: (context, index) {
+                  final doc = comments[index];
+                  final data = doc.data() as Map<String, dynamic>? ??
+                      <String, dynamic>{};
+                  final photo = (data['userPhotoUrl'] as String? ?? '').trim();
+                  final commentText = data['text'] as String? ?? '';
+                  final commentAuthor =
+                      (data['userId'] as String? ?? '').trim();
+                  final createdAt = (data['createdAt'] as Timestamp?)?.toDate();
+                  final updatedAt = (data['updatedAt'] as Timestamp?)?.toDate();
+                  final likes = (data['likes'] as num?)?.toInt() ?? 0;
+                  final likedBy = (data['likedBy'] as List?)
+                          ?.map((e) => e.toString())
+                          .toList() ??
+                      <String>[];
+                  final parentId = data['parentId'] as String?;
+                  final replyToUser = data['replyToUser'] as String?;
 
-              return FacebookCommentTile(
-                key: ValueKey('clinic-comment-${doc.id}'),
-                avatarRadius: CommentStyle.avatarRadius,
-                textStyle: CommentStyle.body(context),
-                commentId: doc.id,
-                authorId: commentAuthor,
-                authorName: data['userName'] as String? ?? 'مستخدم',
-                authorPhotoUrl: photo,
-                text: commentText,
-                createdAt: createdAt,
-                updatedAt: updatedAt,
-                likes: likes,
-                likedBy: likedBy,
-                parentId: parentId,
-                replyToUser: replyToUser,
-                currentUserId: _currentUid,
-                isAdmin: _canModerate,
-                onLike: () =>
-                    _service.toggleCommentLike(clinic.id, doc.id, _currentUid),
-                onReply: () {
-                  setState(() {
-                    _replyToCommentId = doc.id;
-                    _replyToAuthorName =
-                        data['userName'] as String? ?? 'مستخدم';
-                  });
+                  return FacebookCommentTile(
+                    key: ValueKey('clinic-comment-${doc.id}'),
+                    avatarRadius: CommentStyle.avatarRadius,
+                    textStyle: CommentStyle.body(context),
+                    commentId: doc.id,
+                    authorId: commentAuthor,
+                    authorName: data['userName'] as String? ?? 'مستخدم',
+                    authorPhotoUrl: photo,
+                    text: commentText,
+                    createdAt: createdAt,
+                    updatedAt: updatedAt,
+                    likes: likes,
+                    likedBy: likedBy,
+                    parentId: parentId,
+                    replyToUser: replyToUser,
+                    currentUserId: _currentUid,
+                    isAdmin: _canModerate,
+                    onLike: () => _service.toggleCommentLike(
+                        clinic.id, doc.id, _currentUid),
+                    onReply: () {
+                      setState(() {
+                        _replyToCommentId = doc.id;
+                        _replyToAuthorName =
+                            data['userName'] as String? ?? 'مستخدم';
+                      });
+                    },
+                    onEdit: (newText) =>
+                        _service.editComment(clinic.id, doc.id, newText),
+                    onDelete: () => _deleteComment(clinic, doc.id, commentText),
+                  );
                 },
-                onEdit: (newText) =>
-                    _service.editComment(clinic.id, doc.id, newText),
-                onDelete: () =>
-                    _deleteComment(clinic, doc.id, commentText),
               );
             },
-          );
-        },
-      ),
+          ),
         ],
       ),
     );
@@ -654,7 +670,8 @@ class _VillageClinicDetailScreenState extends State<VillageClinicDetailScreen> {
                       _replyToCommentId = null;
                       _replyToAuthorName = null;
                     }),
-                    child: const Icon(Icons.close_rounded, size: 16, color: _teal),
+                    child:
+                        const Icon(Icons.close_rounded, size: 16, color: _teal),
                   ),
                 ],
               ),
@@ -706,7 +723,8 @@ class _VillageClinicDetailScreenState extends State<VillageClinicDetailScreen> {
                           color: Colors.white,
                         ),
                       )
-                    : const Icon(Icons.send_rounded, size: 18, color: Colors.white),
+                    : const Icon(Icons.send_rounded,
+                        size: 18, color: Colors.white),
                 onPressed: _isPostingComment ? null : () => _addComment(clinic),
               ),
             ],
@@ -721,7 +739,7 @@ class _VillageClinicDetailScreenState extends State<VillageClinicDetailScreen> {
     final theme = Theme.of(context);
     final clinic = _saved ??
         ModalRoute.of(context)!.settings.arguments as VillageClinic? ??
-            const VillageClinic(id: '', name: '');
+        const VillageClinic(id: '', name: '');
     final ownerRow = _ownerActions(clinic);
     final isOpen = clinic.isCurrentlyOpen;
 
@@ -741,7 +759,8 @@ class _VillageClinicDetailScreenState extends State<VillageClinicDetailScreen> {
               specialty: clinic.specialty,
               phone: clinic.phone,
               address: clinic.address,
-              workingHours: '${clinic.workDaysSummary} • ${clinic.shiftsSummary}',
+              workingHours:
+                  '${clinic.workDaysSummary} • ${clinic.shiftsSummary}',
               imageUrl: clinic.imageUrl,
             ),
           ),
@@ -755,8 +774,8 @@ class _VillageClinicDetailScreenState extends State<VillageClinicDetailScreen> {
                     children: [
                       Expanded(
                         child: Text(clinic.name,
-                            style: theme.textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.w900)),
+                            style: theme.textTheme.headlineSmall
+                                ?.copyWith(fontWeight: FontWeight.w900)),
                       ),
                       const SizedBox(width: 8),
                       // الشارة الحية اللحظية
@@ -833,7 +852,9 @@ class _VillageClinicDetailScreenState extends State<VillageClinicDetailScreen> {
                         MedInfoRow(
                             icon: Icons.fiber_manual_record_rounded,
                             label: 'حالة العيادة',
-                            value: isOpen ? 'مفتوحة الآن وتستقبل المراجعين' : 'مغلقة الآن'),
+                            value: isOpen
+                                ? 'مفتوحة الآن وتستقبل المراجعين'
+                                : 'مغلقة الآن'),
                         if (clinic.ownerName.isNotEmpty)
                           MedInfoRow(
                               icon: Icons.person_rounded,
@@ -865,19 +886,25 @@ class _VillageClinicDetailScreenState extends State<VillageClinicDetailScreen> {
                           label: 'أيام العمل',
                           value: clinic.workDaysSummary,
                         ),
-                        if (clinic.hasMorningShift && clinic.morningStart.isNotEmpty)
+                        if (clinic.hasMorningShift &&
+                            clinic.morningStart.isNotEmpty)
                           MedInfoRow(
                             icon: Icons.wb_sunny_rounded,
                             label: 'الفترة الصباحية',
-                            value: 'من ${clinic.formattedMorningStart} إلى ${clinic.formattedMorningEnd}',
+                            value:
+                                'من ${clinic.formattedMorningStart} إلى ${clinic.formattedMorningEnd}',
                           ),
-                        if (clinic.hasEveningShift && clinic.eveningStart.isNotEmpty)
+                        if (clinic.hasEveningShift &&
+                            clinic.eveningStart.isNotEmpty)
                           MedInfoRow(
                             icon: Icons.nights_stay_rounded,
                             label: 'الفترة المسائية',
-                            value: 'من ${clinic.formattedEveningStart} إلى ${clinic.formattedEveningEnd}',
+                            value:
+                                'من ${clinic.formattedEveningStart} إلى ${clinic.formattedEveningEnd}',
                           ),
-                        if (!clinic.hasMorningShift && !clinic.hasEveningShift && clinic.workingHours.isNotEmpty)
+                        if (!clinic.hasMorningShift &&
+                            !clinic.hasEveningShift &&
+                            clinic.workingHours.isNotEmpty)
                           MedInfoRow(
                             icon: Icons.access_time_rounded,
                             label: 'المواعيد العامة',
@@ -902,7 +929,8 @@ class _VillageClinicDetailScreenState extends State<VillageClinicDetailScreen> {
                     MedSection(
                       title: 'صور العيادة',
                       accent: _teal,
-                      child: ImageGalleryWrap(urls: clinic.imageUrls, tileWidth: 180),
+                      child: ImageGalleryWrap(
+                          urls: clinic.imageUrls, tileWidth: 180),
                     ),
                   ],
                   const SizedBox(height: 18),
@@ -982,7 +1010,8 @@ class _PharmacyDetailScreenState extends State<PharmacyDetailScreen> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('تعذّر حفظ التعديل — تحقّق من الصلاحيات أو من الاتصال')));
+          content:
+              Text('تعذّر حفظ التعديل — تحقّق من الصلاحيات أو من الاتصال')));
     }
   }
 
@@ -1016,7 +1045,7 @@ class _PharmacyDetailScreenState extends State<PharmacyDetailScreen> {
     final theme = Theme.of(context);
     final pharmacy = _saved ??
         ModalRoute.of(context)!.settings.arguments as Pharmacy? ??
-            const Pharmacy(id: '', name: '');
+        const Pharmacy(id: '', name: '');
     final ownerRow = _ownerActions(pharmacy);
 
     return Scaffold(
@@ -1053,8 +1082,8 @@ class _PharmacyDetailScreenState extends State<PharmacyDetailScreen> {
                     children: [
                       Expanded(
                         child: Text(pharmacy.name,
-                            style: theme.textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.w900)),
+                            style: theme.textTheme.headlineSmall
+                                ?.copyWith(fontWeight: FontWeight.w900)),
                       ),
                       if (pharmacy.is24Hours)
                         Container(
@@ -1121,7 +1150,8 @@ class _PharmacyDetailScreenState extends State<PharmacyDetailScreen> {
                     MedSection(
                       title: 'صور الصيدلية',
                       accent: _green,
-                      child: ImageGalleryWrap(urls: pharmacy.imageUrls, tileWidth: 180),
+                      child: ImageGalleryWrap(
+                          urls: pharmacy.imageUrls, tileWidth: 180),
                     ),
                   ],
                   const SizedBox(height: 22),
@@ -1197,7 +1227,8 @@ class _MedicalLabDetailScreenState extends State<MedicalLabDetailScreen> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('تعذّر حفظ التعديل — تحقّق من الصلاحيات أو من الاتصال')));
+          content:
+              Text('تعذّر حفظ التعديل — تحقّق من الصلاحيات أو من الاتصال')));
     }
   }
 
@@ -1231,7 +1262,7 @@ class _MedicalLabDetailScreenState extends State<MedicalLabDetailScreen> {
     final theme = Theme.of(context);
     final lab = _saved ??
         ModalRoute.of(context)?.settings.arguments as MedicalLab? ??
-            const MedicalLab(id: '', name: '');
+        const MedicalLab(id: '', name: '');
     final ownerRow = _ownerActions(lab);
 
     return Scaffold(
@@ -1246,11 +1277,9 @@ class _MedicalLabDetailScreenState extends State<MedicalLabDetailScreen> {
             onShare: () => ShareService.shareText(
                 title: '🧪 ${lab.name}',
                 body: [
-                  if (lab.category.isNotEmpty)
-                    'نوع التحاليل: ${lab.category}',
+                  if (lab.category.isNotEmpty) 'نوع التحاليل: ${lab.category}',
                   if (lab.homeCollection) '✅ يتوفر سحب عينة بالمنزل',
-                  if (lab.ownerName.isNotEmpty)
-                    'المسؤول: ${lab.ownerName}',
+                  if (lab.ownerName.isNotEmpty) 'المسؤول: ${lab.ownerName}',
                   if (lab.workingHours.isNotEmpty)
                     'المواعيد: ${lab.workingHours}',
                   if (lab.address.isNotEmpty) 'العنوان: ${lab.address}',
@@ -1342,7 +1371,8 @@ class _MedicalLabDetailScreenState extends State<MedicalLabDetailScreen> {
                     MedSection(
                       title: 'صور المعمل',
                       accent: _purple,
-                      child: ImageGalleryWrap(urls: lab.imageUrls, tileWidth: 180),
+                      child:
+                          ImageGalleryWrap(urls: lab.imageUrls, tileWidth: 180),
                     ),
                   ],
                   const SizedBox(height: 22),
@@ -1350,8 +1380,7 @@ class _MedicalLabDetailScreenState extends State<MedicalLabDetailScreen> {
                     FilledButton.icon(
                       style: FilledButton.styleFrom(
                           backgroundColor: _purple,
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 16)),
+                          padding: const EdgeInsets.symmetric(vertical: 16)),
                       onPressed: () async {
                         final error = await launchPhoneCall(lab.phone);
                         if (error != null) {

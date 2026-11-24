@@ -1308,20 +1308,26 @@ class _GroupDealsAdminScreenState extends State<GroupDealsAdminScreen> {
   }
 
   Widget _buildOrderFinSnippet(String label, String value, {bool isBold = false}) {
-    return Column(
-      children: [
-        Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey, fontFamily: 'Cairo')),
-        const SizedBox(height: 2),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: isBold ? 13 : 11.5,
-            fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
-            color: isBold ? const Color(0xFF16A34A) : Colors.black87,
-            fontFamily: 'Cairo',
+    return Builder(
+      builder: (context) => Column(
+        children: [
+          Text(label,
+              style: TextStyle(
+                  fontSize: 10,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant)),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: isBold ? 13 : 11.5,
+              fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
+              color: isBold
+                  ? const Color(0xFF16A34A)
+                  : Theme.of(context).colorScheme.onSurface,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -2631,7 +2637,7 @@ class _GroupDealsAdminScreenState extends State<GroupDealsAdminScreen> {
                                     children: [
                                       _buildFinancialMetricCol('إجمالي المبيعات', '${totalGoods.toStringAsFixed(0)} ج', const Color(0xFF2563EB)),
                                       _buildFinancialMetricCol('وفر أهالي القرية 🎉', '${totalSavings.toStringAsFixed(0)} ج', const Color(0xFFD97706)),
-                                      _buildFinancialMetricCol('العمليات المنفذة', '$totalOrders طلب', Colors.black87),
+                                      _buildFinancialMetricCol('العمليات المنفذة', '$totalOrders طلب', Theme.of(context).colorScheme.onSurface),
                                     ],
                                   ),
                                 ],

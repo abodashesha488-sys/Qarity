@@ -5,6 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../core/utils/app_image_cache.dart';
 import '../../core/utils/comment_style.dart';
+import '../../core/utils/comment_thread_helper.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/utils/role_style.dart';
 import '../../core/widgets/shared_cards.dart';
@@ -918,13 +919,14 @@ class _CommentsSheetState extends State<CommentsSheet> {
                     ),
                   );
                 }
-                final comments = snapshot.data?.docs ?? const [];
-                if (comments.isEmpty) {
+                final rawComments = snapshot.data?.docs ?? const [];
+                if (rawComments.isEmpty) {
                   return const EmptyContentState(
                     icon: Icons.chat_bubble_outline_rounded,
                     message: 'لا توجد تعليقات بعد',
                   );
                 }
+                final comments = CommentThreadHelper.orderDocs(rawComments);
                 return ListView.separated(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   itemCount: comments.length,

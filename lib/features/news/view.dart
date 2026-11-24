@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/app_image_cache.dart';
 import '../../core/utils/comment_style.dart';
+import '../../core/utils/comment_thread_helper.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/utils/relative_time.dart';
 import '../../core/utils/role_style.dart';
@@ -542,14 +543,16 @@ class _NewsViewScreenState extends State<NewsViewScreen> {
                 padding: EdgeInsets.symmetric(vertical: 24),
                 child: EmptyContentState(icon: Icons.chat_bubble_outline_rounded, message: 'لا توجد تعليقات بعد'),
               )
-            else
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: count,
-                separatorBuilder: (_, __) => const SizedBox(height: 6),
-                itemBuilder: (context, index) {
-                  final doc = snapshot.data!.docs[index];
+            else ...[
+              Builder(builder: (context) {
+                final comments = CommentThreadHelper.orderDocs(snapshot.data!.docs);
+                return ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: comments.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 6),
+                  itemBuilder: (context, index) {
+                    final doc = comments[index];
                   final data = doc.data() as Map<String, dynamic>? ?? <String, dynamic>{};
                   final photo = (data['userPhotoUrl'] as String? ?? '').trim();
                   final commentText = data['text'] as String? ?? '';
@@ -594,7 +597,9 @@ class _NewsViewScreenState extends State<NewsViewScreen> {
                     onDelete: () => _deleteComment(item, doc.id, commentText),
                   );
                 },
-              ),
+              );
+              }),
+            ],
           ],
         );
       },

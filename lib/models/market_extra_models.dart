@@ -202,6 +202,11 @@ class BuyRequestComment {
   final String? userSellerType;
   final String text;
   final DateTime? createdAt;
+  final DateTime? updatedAt;
+  final int likes;
+  final List<String> likedBy;
+  final String? parentId;
+  final String? replyToUser;
 
   const BuyRequestComment({
     required this.id,
@@ -213,6 +218,11 @@ class BuyRequestComment {
     this.userSellerType,
     required this.text,
     this.createdAt,
+    this.updatedAt,
+    this.likes = 0,
+    this.likedBy = const [],
+    this.parentId,
+    this.replyToUser,
   });
 
   factory BuyRequestComment.fromJson(
@@ -229,6 +239,14 @@ class BuyRequestComment {
       userSellerType: json['userSellerType'] as String?,
       text: json['text'] as String? ?? '',
       createdAt: json['createdAt'] != null ? tsOrNow(json['createdAt']) : null,
+      updatedAt: json['updatedAt'] != null ? tsOrNow(json['updatedAt']) : null,
+      likes: (json['likes'] as num?)?.toInt() ?? 0,
+      likedBy: (json['likedBy'] as List?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
+      parentId: json['parentId'] as String?,
+      replyToUser: json['replyToUser'] as String?,
     );
   }
 
@@ -240,6 +258,11 @@ class BuyRequestComment {
         if (userRole != null) 'userRole': userRole,
         if (userSellerType != null) 'userSellerType': userSellerType,
         'text': text,
+        if (parentId != null && parentId!.isNotEmpty) 'parentId': parentId,
+        if (replyToUser != null && replyToUser!.isNotEmpty)
+          'replyToUser': replyToUser,
+        'likes': likes,
+        'likedBy': likedBy,
         'createdAt': createdAt != null
             ? Timestamp.fromDate(createdAt!)
             : FieldValue.serverTimestamp(),

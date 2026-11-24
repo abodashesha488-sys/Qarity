@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/app_image_cache.dart';
 import '../../core/utils/comment_style.dart';
+import '../../core/utils/comment_thread_helper.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/utils/role_style.dart';
 import '../../core/widgets/shared_cards.dart';
@@ -499,13 +500,14 @@ class _ForumPostDetailScreenState extends State<ForumPostDetailScreen> {
             ),
           );
         }
-        final comments = snapshot.data?.docs ?? const [];
-        if (comments.isEmpty) {
+        final rawComments = snapshot.data?.docs ?? const [];
+        if (rawComments.isEmpty) {
           return const Padding(
             padding: EdgeInsets.symmetric(vertical: 24),
             child: EmptyContentState(icon: Icons.chat_bubble_outline_rounded, message: 'لا توجد تعليقات بعد'),
           );
         }
+        final comments = CommentThreadHelper.orderDocs(rawComments);
         return ListView.separated(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),

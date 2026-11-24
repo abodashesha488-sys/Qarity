@@ -526,8 +526,8 @@ class _BuyRequestsTabState extends State<_BuyRequestsTab> {
                           padding: EdgeInsets.zero,
                           iconSize: 18,
                           tooltip: 'مشاركة',
-                          icon: const Icon(Icons.share_outlined,
-                              color: Colors.black54),
+                          icon: Icon(Icons.share_outlined,
+                              color: theme.colorScheme.onSurfaceVariant),
                           onPressed: () => ShareService.shareText(
                             title: '🔍 مطلوب: ${r.title}',
                             body: [
@@ -541,8 +541,8 @@ class _BuyRequestsTabState extends State<_BuyRequestsTab> {
                           ),
                         ),
                         const SizedBox(width: 4),
-                        const Icon(Icons.keyboard_arrow_down_rounded,
-                            size: 18, color: Colors.black38),
+                        Icon(Icons.keyboard_arrow_down_rounded,
+                            size: 18, color: theme.colorScheme.onSurfaceVariant),
                       ],
                     ),
                   ],
@@ -691,6 +691,8 @@ class _BuyRequestDetailPageState extends State<_BuyRequestDetailPage> {
   bool _isSending = false;
   bool _isAdmin = false;
   UserModel? _currentUserModel;
+  String? _replyToCommentId;
+  String? _replyToAuthorName;
 
   @override
   void initState() {
@@ -751,9 +753,17 @@ class _BuyRequestDetailPageState extends State<_BuyRequestDetailPage> {
         userPhotoUrl: photo,
         userRole: _currentUserModel?.role,
         userSellerType: _currentUserModel?.sellerType?.name,
+        parentId: _replyToCommentId,
+        replyToUser: _replyToAuthorName,
       );
       _commentCtrl.clear();
       _commentFocus.unfocus();
+      if (_replyToCommentId != null && mounted) {
+        setState(() {
+          _replyToCommentId = null;
+          _replyToAuthorName = null;
+        });
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -949,7 +959,7 @@ class _BuyRequestDetailPageState extends State<_BuyRequestDetailPage> {
                             icon: Icons.schedule_rounded,
                             label: 'تاريخ النشر',
                             value: _agoLabel(r.createdAt),
-                            color: Colors.black45),
+                            color: theme.colorScheme.onSurfaceVariant),
                         if (r.contactPhone.isNotEmpty)
                           _DetailRow(
                               icon: Icons.phone_rounded,
@@ -1131,122 +1141,79 @@ class _BuyRequestDetailPageState extends State<_BuyRequestDetailPage> {
                                   .withValues(alpha: 0.3),
                               borderRadius: BorderRadius.circular(16),
                             ),
-                            child: const Center(
+                            child: Center(
                               child: Column(
                                 children: [
                                   Icon(Icons.chat_bubble_outline_rounded,
-                                      size: 32, color: Colors.black26),
-                                  SizedBox(height: 8),
+                                      size: 32,
+                                      color: theme.colorScheme.onSurfaceVariant
+                                          .withValues(alpha: 0.5)),
+                                  const SizedBox(height: 8),
                                   Text(
                                     'لا توجد تعليقات أو عروض بعد.\nهل لديك ما يطلبه صاحب المنشور؟ اكتب له أدناه!',
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
                                         fontSize: 12.5,
                                         height: 1.5,
-                                        color: Colors.black54),
+                                        color:
+                                            theme.colorScheme.onSurfaceVariant),
                                   ),
                                 ],
                               ),
                             ),
                           )
-                        else
-                          ListView.separated(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: comments.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 10),
-                            itemBuilder: (ctx, idx) {
-                              final c = comments[idx];
-                              final canDelete =
-                                  (uid != null && c.userId == uid) ||
-                                      _isAdmin;
-                              return Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: theme.colorScheme.surface,
-                                  borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(
-                                    color: theme.colorScheme.outlineVariant
-                                        .withValues(alpha: 0.4),
-                                  ),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        CircleAvatar(
-                                          radius: 14,
-                                          backgroundColor: _buyAccent
-                                              .withValues(alpha: 0.1),
-                                          backgroundImage: c
-                                                  .userPhotoUrl.isNotEmpty
-                                              ? AppImageCache.provider(
-                                                  c.userPhotoUrl)
-                                              : null,
-                                          child: c.userPhotoUrl.isEmpty
-                                              ? const Icon(
-                                                  Icons.person_rounded,
-                                                  size: 16,
-                                                  color: _buyAccent)
-                                              : null,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              RoleNameText(
-                                                name: c.userName,
-                                                role: c.userRole,
-                                                sellerType: c.userSellerType,
-                                                style: const TextStyle(
-                                                    fontWeight:
-                                                        FontWeight.w800,
-                                                    fontSize: 12.5),
-                                                iconSize: 12,
-                                              ),
-                                              Text(
-                                                _agoLabel(c.createdAt),
-                                                style: TextStyle(
-                                                  fontSize: 10,
-                                                  color: theme.colorScheme
-                                                      .onSurfaceVariant,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        if (canDelete)
-                                          IconButton(
-                                            visualDensity:
-                                                VisualDensity.compact,
-                                            icon: const Icon(
-                                                Icons.delete_outline_rounded,
-                                                size: 17,
-                                                color: Colors.redAccent),
-                                            tooltip: 'حذف التعليق',
-                                            onPressed: () =>
-                                                _deleteComment(c.id),
-                                          ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 7),
-                                    Padding(
-                                      padding: const EdgeInsets.only(right: 36),
-                                      child: Text(
-                                        c.text,
-                                        style: const TextStyle(
-                                            fontSize: 13, height: 1.45),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
+                        else ...[
+                          Builder(builder: (context) {
+                            final threaded = CommentThreadHelper.orderThreaded<
+                                BuyRequestComment>(
+                              comments,
+                              idOf: (c) => c.id,
+                              parentIdOf: (c) => c.parentId,
+                              createdAtOf: (c) => c.createdAt,
+                            );
+                            return ListView.separated(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: threaded.length,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: 6),
+                              itemBuilder: (ctx, idx) {
+                                final c = threaded[idx];
+                                return FacebookCommentTile(
+                                  avatarRadius: CommentStyle.avatarRadius,
+                                  textStyle: CommentStyle.body(context),
+                                  commentId: c.id,
+                                  authorId: c.userId,
+                                  authorName: c.userName,
+                                  authorPhotoUrl: c.userPhotoUrl,
+                                  text: c.text,
+                                  createdAt: c.createdAt,
+                                  updatedAt: c.updatedAt,
+                                  likes: c.likes,
+                                  likedBy: c.likedBy,
+                                  parentId: c.parentId,
+                                  replyToUser: c.replyToUser,
+                                  currentUserId: uid ?? '',
+                                  isAdmin: _isAdmin,
+                                  onLike: uid == null
+                                      ? null
+                                      : () => widget.service.toggleCommentLike(
+                                          r.id, c.id, uid),
+                                  onReply: () {
+                                    setState(() {
+                                      _replyToCommentId = c.id;
+                                      _replyToAuthorName = c.userName;
+                                    });
+                                    _commentFocus.requestFocus();
+                                  },
+                                  onEdit: (newText) => widget.service
+                                      .editComment(r.id, c.id, newText),
+                                  onDelete: () => _deleteComment(c.id),
+                                );
+                              },
+                            );
+                          }),
+                        ],
                         const SizedBox(height: 16),
                       ],
                     );
@@ -1271,43 +1238,85 @@ class _BuyRequestDetailPageState extends State<_BuyRequestDetailPage> {
             ),
             child: SafeArea(
               top: false,
-              child: Row(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _commentCtrl,
-                      focusNode: _commentFocus,
-                      minLines: 1,
-                      maxLines: 4,
-                      decoration: InputDecoration(
-                        hintText: 'اكتب تعليقاً أو اعرض سلعتك...',
-                        hintStyle: const TextStyle(fontSize: 12.5),
-                        isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 10),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(22),
-                          borderSide: BorderSide(
-                              color: theme.colorScheme.outlineVariant),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(22),
-                          borderSide: BorderSide(
-                              color: theme.colorScheme.outlineVariant
-                                  .withValues(alpha: 0.5)),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(22),
-                          borderSide:
-                              const BorderSide(color: _buyAccent, width: 1.5),
-                        ),
+                  if (_replyToCommentId != null)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: _buyAccent.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.reply_rounded,
+                              size: 16, color: _buyAccent),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'الرد على ${_replyToAuthorName ?? "التعليق"}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: _buyAccent,
+                              ),
+                            ),
+                          ),
+                          InkWell(
+                            onTap: () => setState(() {
+                              _replyToCommentId = null;
+                              _replyToAuthorName = null;
+                            }),
+                            child: const Icon(Icons.close_rounded,
+                                size: 17, color: _buyAccent),
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton.filled(
-                    onPressed: _isSending ? null : _submitComment,
-                    style: IconButton.styleFrom(
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _commentCtrl,
+                          focusNode: _commentFocus,
+                          minLines: 1,
+                          maxLines: 4,
+                          decoration: InputDecoration(
+                            hintText: _replyToCommentId != null
+                                ? 'اكتب ردّك هنا...'
+                                : 'اكتب تعليقاً أو اعرض سلعتك...',
+                            hintStyle: const TextStyle(fontSize: 12.5),
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 10),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(22),
+                              borderSide: BorderSide(
+                                  color: theme.colorScheme.outlineVariant),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(22),
+                              borderSide: BorderSide(
+                                  color: theme.colorScheme.outlineVariant
+                                      .withValues(alpha: 0.5)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(22),
+                              borderSide:
+                                  const BorderSide(color: _buyAccent, width: 1.5),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton.filled(
+                        onPressed: _isSending ? null : _submitComment,
+                        style: IconButton.styleFrom(
                         backgroundColor: _buyAccent,
                         foregroundColor: Colors.white),
                     icon: _isSending
@@ -1320,6 +1329,8 @@ class _BuyRequestDetailPageState extends State<_BuyRequestDetailPage> {
                             ),
                           )
                         : const Icon(Icons.send_rounded, size: 18),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -1493,8 +1504,9 @@ class _DonationsTabState extends State<_DonationsTab> {
                                     color: _donateInk)),
                             if (d.imageUrls.length > 1) ...[
                               const SizedBox(width: 8),
-                              const Icon(Icons.collections_rounded,
-                                  size: 12, color: Colors.black38),
+                              Icon(Icons.collections_rounded,
+                                  size: 12,
+                                  color: theme.colorScheme.onSurfaceVariant),
                               const SizedBox(width: 2),
                               Text('${d.imageUrls.length}',
                                   style: const TextStyle(
@@ -1573,8 +1585,9 @@ class _DonationsTabState extends State<_DonationsTab> {
                                     color: theme.colorScheme
                                         .onSurfaceVariant)),
                             const Spacer(),
-                            const Icon(Icons.keyboard_arrow_down_rounded,
-                                size: 18, color: Colors.black38),
+                            Icon(Icons.keyboard_arrow_down_rounded,
+                                size: 18,
+                                color: theme.colorScheme.onSurfaceVariant),
                           ],
                         ),
                       ],
@@ -1834,7 +1847,7 @@ class _DonationDetailPageState extends State<_DonationDetailPage> {
                       icon: Icons.schedule_rounded,
                       label: 'التاريخ',
                       value: _agoLabel(d.createdAt),
-                      color: Colors.black45),
+                      color: theme.colorScheme.onSurfaceVariant),
                   if (d.contactPhone.isNotEmpty)
                     _DetailRow(
                         icon: Icons.phone_rounded,

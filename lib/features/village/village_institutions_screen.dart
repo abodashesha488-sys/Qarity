@@ -235,18 +235,25 @@ class _InstitutionCard extends StatelessWidget {
                           const SizedBox(width: 8),
                         ],
                         if (item.workingHours.isNotEmpty) ...[
-                          const Icon(Icons.schedule_rounded,
-                              size: 12, color: Colors.black45),
+                          Icon(Icons.schedule_rounded,
+                              size: 12,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant),
                           const SizedBox(width: 3),
                           Text(item.workingHours,
-                              style: const TextStyle(
+                              style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w700,
-                                  color: Colors.black54)),
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant)),
                         ],
                         const Spacer(),
-                        const Icon(Icons.keyboard_arrow_down_rounded,
-                            size: 16, color: Colors.black38),
+                        Icon(Icons.keyboard_arrow_down_rounded,
+                            size: 16,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant),
                       ],
                     ),
                   ],
@@ -347,11 +354,15 @@ class _InstitutionCard extends StatelessWidget {
             const SizedBox(width: 8),
             SizedBox(
                 width: 72,
-                child: Text('$label:',
-                    style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.black54))),
+                child: Builder(
+                  builder: (context) => Text('$label:',
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurfaceVariant)),
+                )),
             Expanded(
                 child: Text(value,
                     style: const TextStyle(

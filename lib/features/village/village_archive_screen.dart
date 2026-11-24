@@ -406,10 +406,10 @@ class _FigureCard extends StatelessWidget {
                 if (figure.era.isNotEmpty) ...[
                   const SizedBox(height: 6),
                   Text(figure.era,
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 11.5,
                           fontWeight: FontWeight.w700,
-                          color: Colors.black54)),
+                          color: Theme.of(ctx).colorScheme.onSurfaceVariant)),
                 ],
                 const SizedBox(height: 10),
                 const OrnamentDivider(),
@@ -489,14 +489,14 @@ class _ArchivePhotoCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Row(
                       children: [
-                        const Icon(Icons.calendar_month_rounded,
-                            size: 11, color: Colors.black45),
+                        Icon(Icons.calendar_month_rounded,
+                            size: 11, color: theme.colorScheme.onSurfaceVariant),
                         const SizedBox(width: 3),
                         Text(photo.year,
-                            style: const TextStyle(
+                            style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w700,
-                                color: Colors.black54)),
+                                color: theme.colorScheme.onSurfaceVariant)),
                       ],
                     ),
                   ],

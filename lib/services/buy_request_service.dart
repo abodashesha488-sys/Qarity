@@ -150,6 +150,8 @@ class BuyRequestService {
     String userPhotoUrl = '',
     String? userRole,
     String? userSellerType,
+    String? parentId,
+    String? replyToUser,
   }) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty) return '';
@@ -162,9 +164,34 @@ class BuyRequestService {
       userRole: userRole,
       userSellerType: userSellerType,
       text: trimmed,
+      parentId: parentId,
+      replyToUser: replyToUser,
     );
     final ref = await _comments(requestId).add(comment.toJson());
     return ref.id;
+  }
+
+  Future<void> toggleCommentLike(
+      String requestId, String commentId, String userId) async {
+    if (requestId.isEmpty || commentId.isEmpty || userId.isEmpty) return;
+    final ref = _comments(requestId).doc(commentId);
+    await _firestore.runTransaction((tx) async {
+      final snap = await tx.get(ref);
+      if (!snap.exists) return;
+      final data = snap.data() ?? <String, dynamic>{};
+      final likedBy =
+          (data['likedBy'] as List?)?.map((e) => e.toString()).toList() ??
+              <String>[];
+      if (likedBy.contains(userId)) {
+        likedBy.remove(userId);
+      } else {
+        likedBy.add(userId);
+      }
+      tx.update(ref, {
+        'likedBy': likedBy,
+        'likes': likedBy.length,
+      });
+    });
   }
 
   Future<void> deleteComment(String requestId, String commentId) async {

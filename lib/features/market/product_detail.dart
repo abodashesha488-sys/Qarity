@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/app_image_cache.dart';
 import '../../core/utils/comment_style.dart';
+import '../../core/utils/comment_thread_helper.dart';
 import '../../core/utils/helpers.dart';
 import '../../core/utils/launch_link.dart';
 import '../../core/utils/role_style.dart';
@@ -1425,13 +1426,15 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 );
               }
 
+              final threadedComments = CommentThreadHelper.orderMaps(comments);
+
               return ListView.separated(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                itemCount: comments.length,
+                itemCount: threadedComments.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 6),
                 itemBuilder: (context, index) {
-                  final c = comments[index];
+                  final c = threadedComments[index];
                   final commentId = c['id'] as String? ?? '';
                   final name = c['userName'] as String? ?? 'مستخدم';
                   final text = c['text'] as String? ?? '';
