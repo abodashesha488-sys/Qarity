@@ -182,6 +182,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
         final snap = await fs
             .collection('phone_directory')
             .where('isApproved', isEqualTo: true)
+            .limit(150)
             .get();
         _phoneEntries = snap.docs
             .map((d) => PhoneDirectoryEntry.fromJson(d.data(), d.id))
@@ -200,6 +201,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
         final snap = await fs
             .collection('market_products')
             .where('isApproved', isEqualTo: true)
+            .limit(150)
             .get();
         _products = snap.docs
             .map((d) => MarketProduct.fromJson(d.data(), d.id))
@@ -217,6 +219,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
       final snap = await fs
           .collection('donations')
           .where('isApproved', isEqualTo: true)
+          .limit(80)
           .get();
       _donations = snap.docs
           .map((d) => Donation.fromJson(d.data(), d.id))
@@ -228,6 +231,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
       final snap = await fs
           .collection('buy_requests')
           .where('isApproved', isEqualTo: true)
+          .limit(80)
           .get();
       _buyRequests = snap.docs
           .map((d) => BuyRequest.fromJson(d.data(), d.id))
@@ -244,6 +248,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
         final snap = await fs
             .collection('news')
             .where('isApproved', isEqualTo: true)
+            .limit(100)
             .get();
         _news = snap.docs
             .map((d) => NewsItem.fromJson(d.data(), d.id))
@@ -273,6 +278,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
       final snap = await fs
           .collection('blood_requests')
           .where('isApproved', isEqualTo: true)
+          .limit(60)
           .get();
       _bloodRequests = snap.docs
           .map((d) => BloodRequest.fromJson(d.data(), d.id))
@@ -296,6 +302,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
       final snap = await fs
           .collection('occasions')
           .where('isApproved', isEqualTo: true)
+          .limit(80)
           .get();
       _occasions = snap.docs
           .map((d) => Occasion.fromJson(d.data(), d.id))
@@ -307,6 +314,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
       final snap = await fs
           .collection('obituaries')
           .where('isApproved', isEqualTo: true)
+          .limit(80)
           .get();
       _obituaries = snap.docs
           .map((d) => Obituary.fromJson(d.data(), d.id))
@@ -324,6 +332,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
         final snap = await fs
             .collection('forum_posts')
             .where('isApproved', isEqualTo: true)
+            .limit(120)
             .get();
         _forumPosts = snap.docs
             .map((d) => ForumPost.fromJson(d.data(), d.id))
@@ -336,6 +345,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
       final snap = await fs
           .collection('lost_items')
           .where('isApproved', isEqualTo: true)
+          .limit(80)
           .get();
       _lostItems = snap.docs
           .map((d) => LostItem.fromJson(d.data(), d.id))
@@ -347,6 +357,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
       final snap = await fs
           .collection('village_ads')
           .where('isApproved', isEqualTo: true)
+          .limit(80)
           .get();
       _villageAds = snap.docs
           .map((d) => VillageAd.fromJson(d.data(), d.id))
@@ -358,6 +369,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
       final snap = await fs
           .collection('lawyers')
           .where('isApproved', isEqualTo: true)
+          .limit(60)
           .get();
       _lawyers = snap.docs
           .map((d) => Lawyer.fromJson(d.data(), d.id))
@@ -367,6 +379,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
       final snap = await fs
           .collection('legal_consultations')
           .where('isApproved', isEqualTo: true)
+          .limit(80)
           .get();
       _legalConsultations = snap.docs
           .map((d) => LegalConsultation.fromJson(d.data(), d.id))
@@ -375,7 +388,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
 
     // 13. أرقام الطوارئ
     try {
-      final snap = await fs.collection('emergency_contacts').get();
+      final snap = await fs.collection('emergency_contacts').limit(60).get();
       _emergencyContacts = snap.docs
           .map((d) => EmergencyContact.fromJson(d.data(), d.id))
           .toList();

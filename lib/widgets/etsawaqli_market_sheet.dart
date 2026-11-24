@@ -8,6 +8,7 @@ import '../models/etsawaqli_model.dart';
 import '../services/etsawaqli_service.dart';
 import '../services/user_service.dart';
 import 'commercial_receipt_dialog.dart';
+import 'order_progress_stepper.dart';
 
 /// 🧺 نافذة خدمة «إتسوقلي» للمستخدم
 ///
@@ -2043,59 +2044,21 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
   }
 
   Widget _buildOrderStepper(EtsawaqliOrder order) {
-    int step = 1;
+    var step = 1;
     if (order.status == 'shopping') step = 2;
     if (order.status == 'delivering') step = 3;
     if (order.status == 'completed') step = 4;
 
-    return Row(
-      children: [
-        _buildStepNode(1, 'استلام الطلب 📝', true),
-        _buildStepDivider(step >= 2),
-        _buildStepNode(2, 'جاري التسوق 🧺', step >= 2),
-        _buildStepDivider(step >= 3),
-        _buildStepNode(3, 'في الطريق 🚚', step >= 3),
-        _buildStepDivider(step >= 4),
-        _buildStepNode(4, 'تم التسليم ✅', step >= 4),
+    return OrderProgressStepper(
+      nodeRadius: 11,
+      dividerWidth: 16,
+      fontSize: 9,
+      steps: [
+        const OrderProgressStep(label: 'استلام الطلب 📝', isDone: true),
+        OrderProgressStep(label: 'جاري التسوق 🧺', isDone: step >= 2),
+        OrderProgressStep(label: 'في الطريق 🚚', isDone: step >= 3),
+        OrderProgressStep(label: 'تم التسليم ✅', isDone: step >= 4),
       ],
-    );
-  }
-
-  Widget _buildStepNode(int index, String label, bool isDone) {
-    return Expanded(
-      child: Column(
-        children: [
-          CircleAvatar(
-            radius: 11,
-            backgroundColor: isDone ? const Color(0xFF16A34A) : Colors.grey.shade300,
-            child: Icon(
-              isDone ? Icons.check : Icons.circle,
-              color: Colors.white,
-              size: 13,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 9,
-              fontWeight: isDone ? FontWeight.bold : FontWeight.normal,
-              color: isDone ? const Color(0xFF16A34A) : Colors.grey,
-              fontFamily: 'Cairo',
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStepDivider(bool isDone) {
-    return Container(
-      width: 16,
-      height: 2,
-      margin: const EdgeInsets.only(bottom: 16),
-      color: isDone ? const Color(0xFF16A34A) : Colors.grey.shade300,
     );
   }
 
