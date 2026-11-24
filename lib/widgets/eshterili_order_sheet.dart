@@ -328,16 +328,14 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 15.5,
-                        fontFamily: 'Cairo',
-                      ),
+                        ),
                     ),
                     Text(
                       'اطلب أي حاجة من أي مكان والدفع عند الاستلام',
                       style: TextStyle(
                         fontSize: 11,
                         color: Colors.grey,
-                        fontFamily: 'Cairo',
-                      ),
+                        ),
                     ),
                   ],
                 ),
@@ -435,15 +433,13 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                                       Text(
                                         'مندوب قرية أبودشيشة للشراء والتوصيل',
                                         style: TextStyle(
-                                          fontFamily: 'Cairo',
                                           fontWeight: FontWeight.w900,
                                           fontSize: 13.5,
                                         ),
                                       ),
                                       Text(
-                                        'خدمتك الخاصة لشراء وتوصيل كافة الاحتياجات',
+                                        'مشوارك الفوري الآن — أي غرض أو روشتة في أي وقت',
                                         style: TextStyle(
-                                          fontFamily: 'Cairo',
                                           fontSize: 10.5,
                                           color: Color(0xFF2563EB),
                                           fontWeight: FontWeight.w700,
@@ -469,7 +465,6 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                                       Text(
                                         _isIntroExpanded ? 'طي' : 'تفاصيل',
                                         style: const TextStyle(
-                                          fontFamily: 'Cairo',
                                           fontSize: 10,
                                           fontWeight: FontWeight.w900,
                                           color: Color(0xFF2563EB),
@@ -506,7 +501,6 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                                   Text(
                                     'خدمة مجتمعية مخصصة لأهالي قرية أبودشيشة لشراء أي مستلزمات أو طلبات من داخل القرية أو من الصيدليات والمحلات والأسواق بالقرى والمراكز المجاورة (بلقاس، المعصرة، الستاموني...). ينطلق المندوب لشرائها فوراً وتوصيلها حتى باب منزلك مع إرفاق فاتورة المحل الورقية الأصلية، والدفع كاش عند المعاينة والاستلام حسب سعر البائع الفعلي دون أي زيادة.',
                                     style: TextStyle(
-                                      fontFamily: 'Cairo',
                                       fontSize: 11.5,
                                       height: 1.5,
                                       color: isDark
@@ -589,7 +583,6 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                       Text(
                         'طلب شراء جديد ➕',
                         style: TextStyle(
-                          fontFamily: 'Cairo',
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
                         ),
@@ -637,7 +630,6 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                                     ? 'متابعة طلباتي ($ordersCount)'
                                     : 'متابعة طلباتي 📦'),
                             style: const TextStyle(
-                              fontFamily: 'Cairo',
                               fontSize: 14.5,
                               fontWeight: FontWeight.bold,
                             ),
@@ -686,7 +678,6 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontFamily: 'Cairo',
                     fontSize: 10.5,
                     fontWeight: FontWeight.bold,
                     color: color,
@@ -697,7 +688,6 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontFamily: 'Cairo',
                     fontSize: 9.5,
                     color: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
                   ),
@@ -728,7 +718,6 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                 child: Text(
                   'طلب شراء جديد 📝',
                   style: TextStyle(
-                    fontFamily: 'Cairo',
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
@@ -750,7 +739,7 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // رسالة توجيهية بسيطة ومريحة
+                // بطاقة وضوح التكلفة والضمان لراحة وطمأنينة العميل قبل الطلب
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -759,21 +748,35 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                     border: Border.all(
                         color: const Color(0xFF2563EB).withValues(alpha: 0.25)),
                   ),
-                  child: const Row(
+                  child: const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.edit_note_rounded,
-                          color: Color(0xFF2563EB), size: 24),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'اكتب ما تحتاجه ببساطة كما تطلب من صديقك، ومندوبنا سينطلق لشرائه وتوصيله لباب بيتك مع فاتورة المحل 🛵',
-                          style: TextStyle(
-                            fontFamily: 'Cairo',
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF1D4ED8),
-                            height: 1.45,
+                      Row(
+                        children: [
+                          Icon(Icons.verified_user_rounded,
+                              color: Color(0xFF2563EB), size: 20),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'وضوح التكلفة والضمان قبل أن تطلب 🛡️',
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFF1D4ED8),
+                              ),
+                            ),
                           ),
+                        ],
+                      ),
+                      SizedBox(height: 6),
+                      Text(
+                        '• رسوم التوصيل التقريبية: داخل القرية 10 ج · القرى المجاورة 20 ج · بلقاس/المدينة 30 ج.\n'
+                        '• المندوب يحضر لك فاتورة المحل الورقية الأصلية وتدفع عند الاستلام فقط.',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1E40AF),
+                          height: 1.5,
                         ),
                       ),
                     ],
@@ -792,11 +795,10 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                     hintText:
                         'مثال: 2 كيلو طماطم، علبة دواء بنادول أزرق، 3 زجاجات عصير، كيس مسحوق غسيل...',
                     labelStyle: const TextStyle(
-                        fontFamily: 'Cairo',
                         fontSize: 13,
                         fontWeight: FontWeight.bold),
                     hintStyle: const TextStyle(
-                        fontFamily: 'Cairo', fontSize: 11, color: Colors.grey),
+                        fontSize: 11, color: Colors.grey),
                     alignLabelWithHint: true,
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12)),
@@ -834,7 +836,6 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                         ? 'تم إرفاق صورة الطلب / الروشتة (تغيير الصورة)'
                         : '📸 أو صوّر ورقة الطلبات / الروشتة (اختياري)',
                     style: TextStyle(
-                      fontFamily: 'Cairo',
                       fontSize: 11.5,
                       fontWeight: FontWeight.bold,
                       color: _uploadedImageUrl != null
@@ -862,7 +863,6 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                         child: Text(
                           'الصورة مرفقة ومجهزة لتسليمها للمندوب ✅',
                           style: TextStyle(
-                              fontFamily: 'Cairo',
                               fontSize: 10.5,
                               color: Color(0xFF16A34A),
                               fontWeight: FontWeight.bold),
@@ -887,7 +887,7 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                   decoration: InputDecoration(
                     labelText: 'اسم صاحب الطلب *',
                     labelStyle:
-                        const TextStyle(fontFamily: 'Cairo', fontSize: 13),
+                        const TextStyle(fontSize: 13),
                     prefixIcon: const Icon(Icons.person_outline, size: 20),
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12)),
@@ -903,7 +903,7 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                   decoration: InputDecoration(
                     labelText: 'رقم الهاتف للتواصل *',
                     labelStyle:
-                        const TextStyle(fontFamily: 'Cairo', fontSize: 13),
+                        const TextStyle(fontSize: 13),
                     prefixIcon: const Icon(Icons.phone_outlined, size: 20),
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12)),
@@ -920,9 +920,9 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                     hintText:
                         'مثال: بجوار المسجد الكبير، منزل فلان، شارع كذا...',
                     labelStyle:
-                        const TextStyle(fontFamily: 'Cairo', fontSize: 13),
+                        const TextStyle(fontSize: 13),
                     hintStyle: const TextStyle(
-                        fontFamily: 'Cairo', fontSize: 11, color: Colors.grey),
+                        fontSize: 11, color: Colors.grey),
                     prefixIcon:
                         const Icon(Icons.location_on_outlined, size: 20),
                     border: OutlineInputBorder(
@@ -953,7 +953,6 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                   label: const Text(
                     'إرسال الطلب للمندوب الآن 🛵',
                     style: TextStyle(
-                      fontFamily: 'Cairo',
                       fontWeight: FontWeight.bold,
                       fontSize: 14.5,
                     ),
@@ -979,7 +978,7 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
             const SizedBox(height: 12),
             const Text('يرجى تسجيل الدخول أولاً لمتابعة طلباتك',
                 style: TextStyle(
-                    fontFamily: 'Cairo', fontWeight: FontWeight.bold)),
+                    fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             FilledButton.tonal(
               onPressed: () => setState(() => _currentView = 0),
@@ -1007,7 +1006,6 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                 child: Text(
                   'متابعة طلباتي 📦',
                   style: TextStyle(
-                    fontFamily: 'Cairo',
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
@@ -1019,7 +1017,6 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                 label: const Text(
                   'طلب جديد',
                   style: TextStyle(
-                      fontFamily: 'Cairo',
                       fontSize: 11.5,
                       fontWeight: FontWeight.bold),
                 ),
@@ -1056,7 +1053,6 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                         const Text(
                           'ليس لديك أي طلبات سابقة في إشتريلي',
                           style: TextStyle(
-                              fontFamily: 'Cairo',
                               fontWeight: FontWeight.bold,
                               fontSize: 13),
                         ),
@@ -1065,7 +1061,6 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                           'اطلب أي مشتريات وسيقوم مندوب القرية بتلبيتها فوراً.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                              fontFamily: 'Cairo',
                               fontSize: 11,
                               color: Colors.grey),
                         ),
@@ -1149,7 +1144,6 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                       Text(
                         order.orderNumber,
                         style: const TextStyle(
-                          fontFamily: 'Cairo',
                           fontWeight: FontWeight.w900,
                           fontSize: 13,
                         ),
@@ -1166,7 +1160,6 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                     child: Text(
                       statusLabel,
                       style: TextStyle(
-                        fontFamily: 'Cairo',
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
                         color: statusColor,
@@ -1190,7 +1183,6 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                       Text(
                         _formatDate(order.createdAt),
                         style: const TextStyle(
-                          fontFamily: 'Cairo',
                           fontSize: 11,
                           color: Colors.grey,
                         ),
@@ -1205,7 +1197,6 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                       Text(
                         priceText,
                         style: TextStyle(
-                          fontFamily: 'Cairo',
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
                           color: order.totalAmount > 0
@@ -1231,7 +1222,6 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontFamily: 'Cairo',
                         fontSize: 11,
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -1261,7 +1251,6 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                               Text(
                                 'إعادة الطلب 🔄',
                                 style: TextStyle(
-                                  fontFamily: 'Cairo',
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
                                   color: Color(0xFF2563EB),
@@ -1277,7 +1266,6 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                           Text(
                             'تفاصيل العملية 👈',
                             style: TextStyle(
-                              fontFamily: 'Cairo',
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
                               color: Color(0xFF2563EB),
@@ -1343,7 +1331,6 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                       child: Text(
                         'تفاصيل العملية (${order.orderNumber})',
                         style: const TextStyle(
-                          fontFamily: 'Cairo',
                           fontWeight: FontWeight.bold,
                           fontSize: 14.5,
                         ),
@@ -1390,7 +1377,6 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                                 Text(
                                   'الطلبات والكميات المطلوبة:',
                                   style: TextStyle(
-                                      fontFamily: 'Cairo',
                                       fontWeight: FontWeight.bold,
                                       fontSize: 12),
                                 ),
@@ -1400,7 +1386,6 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                             Text(
                               order.itemsDescription,
                               style: const TextStyle(
-                                  fontFamily: 'Cairo',
                                   fontSize: 13,
                                   height: 1.4),
                             ),
@@ -1415,7 +1400,6 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                                     child: Text(
                                       'التوصيل إلى: ${order.deliveryAddress}',
                                       style: const TextStyle(
-                                          fontFamily: 'Cairo',
                                           fontSize: 11,
                                           color: Colors.grey),
                                     ),
@@ -1458,7 +1442,6 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                                   child: Text(
                                     'معاينة صورة الطلب أو الروشتة المرفقة 📸',
                                     style: TextStyle(
-                                        fontFamily: 'Cairo',
                                         fontSize: 11.5,
                                         fontWeight: FontWeight.bold),
                                   ),
@@ -1508,7 +1491,6 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                                       Text(
                                         'فاتورة المحل الورقية الأصلية 🧾',
                                         style: TextStyle(
-                                          fontFamily: 'Cairo',
                                           fontWeight: FontWeight.bold,
                                           fontSize: 11.5,
                                           color: Color(0xFF1D4ED8),
@@ -1517,7 +1499,6 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                                       Text(
                                         'انقر لمعاينة صورة فاتورة المشتريات ومطابقة الأسعار',
                                         style: TextStyle(
-                                            fontFamily: 'Cairo',
                                             fontSize: 10,
                                             color: Colors.grey),
                                       ),
@@ -1558,8 +1539,7 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                                       'كود استلامك للمندوب عند التوصيل:',
                                       style: TextStyle(
                                           fontSize: 10.5,
-                                          color: Color(0xFF92400E),
-                                          fontFamily: 'Cairo'),
+                                          color: Color(0xFF92400E)),
                                     ),
                                     Text(
                                       order.claimCode,
@@ -1578,8 +1558,7 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                                   label: Text('مُستلم ✅',
                                       style: TextStyle(
                                           fontSize: 10,
-                                          color: Colors.green,
-                                          fontFamily: 'Cairo')),
+                                          color: Colors.green)),
                                   backgroundColor: Color(0xFFDCFCE7),
                                 ),
                             ],
@@ -1619,8 +1598,7 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                                       'المندوب: ${order.assignedAgentName.isNotEmpty ? order.assignedAgentName : 'مندوب القرية'}',
                                       style: const TextStyle(
                                           fontWeight: FontWeight.bold,
-                                          fontSize: 11.5,
-                                          fontFamily: 'Cairo'),
+                                          fontSize: 11.5),
                                     ),
                                     Text(order.assignedAgentPhone,
                                         style: const TextStyle(
@@ -1671,12 +1649,11 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                                 children: [
                                   const Text('قيمة المشتريات الفعلية:',
                                       style: TextStyle(
-                                          fontSize: 11.5, fontFamily: 'Cairo')),
+                                          fontSize: 11.5)),
                                   Text('${order.itemCost.toStringAsFixed(0)} ج',
                                       style: const TextStyle(
                                           fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                          fontFamily: 'Cairo')),
+                                          fontWeight: FontWeight.bold)),
                                 ],
                               ),
                               const SizedBox(height: 4),
@@ -1686,13 +1663,12 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                                 children: [
                                   const Text('أجرة التوصيل:',
                                       style: TextStyle(
-                                          fontSize: 11.5, fontFamily: 'Cairo')),
+                                          fontSize: 11.5)),
                                   Text(
                                       '${(order.deliveryFee + order.serviceFee).toStringAsFixed(0)} ج',
                                       style: const TextStyle(
                                           fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                          fontFamily: 'Cairo')),
+                                          fontWeight: FontWeight.bold)),
                                 ],
                               ),
                               const Divider(height: 12),
@@ -1703,15 +1679,13 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                                   const Text('الإجمالي عند الاستلام:',
                                       style: TextStyle(
                                           fontSize: 12.5,
-                                          fontWeight: FontWeight.bold,
-                                          fontFamily: 'Cairo')),
+                                          fontWeight: FontWeight.bold)),
                                   Text(
                                     '${order.totalAmount.toStringAsFixed(0)} ج',
                                     style: const TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w900,
-                                        color: Color(0xFF16A34A),
-                                        fontFamily: 'Cairo'),
+                                        color: Color(0xFF16A34A)),
                                   ),
                                 ],
                               ),
@@ -1736,8 +1710,7 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                                   'الدفع كاش عند الاستلام والمعاينة حسب فاتورة المحل الورقية + رسوم التوصيل 🧾',
                                   style: TextStyle(
                                       fontSize: 11,
-                                      color: Colors.blue,
-                                      fontFamily: 'Cairo'),
+                                      color: Colors.blue),
                                 ),
                               ),
                             ],
@@ -1763,7 +1736,6 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                         label: const Text(
                           'إعادة طلب نفس الاحتياجات بنقرة واحدة 🔄',
                           style: TextStyle(
-                              fontFamily: 'Cairo',
                               fontSize: 12.5,
                               fontWeight: FontWeight.bold),
                         ),
@@ -1797,7 +1769,6 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                               ? 'محادثة المندوب (${order.assignedAgentName.isNotEmpty ? order.assignedAgentName : 'مندوب القرية'}) واتساب 💬'
                               : 'تواصل واتساب مع إدارة التوصيل 💬',
                           style: const TextStyle(
-                              fontFamily: 'Cairo',
                               fontSize: 12,
                               fontWeight: FontWeight.bold),
                         ),
@@ -1822,7 +1793,6 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                         label: const Text(
                           'طباعة ومشاركة فاتورة الطلب 🖨️',
                           style: TextStyle(
-                              fontFamily: 'Cairo',
                               fontSize: 12,
                               fontWeight: FontWeight.bold),
                         ),
@@ -1837,7 +1807,7 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                             icon: const Icon(Icons.cancel_outlined, size: 16),
                             label: const Text('إلغاء الطلب',
                                 style: TextStyle(
-                                    fontFamily: 'Cairo', fontSize: 11.5)),
+                                    fontSize: 11.5)),
                             onPressed: () async {
                               Navigator.pop(ctx);
                               await _confirmCancelOrder(order);
@@ -1921,7 +1891,6 @@ class _EshteriliOrderSheetState extends State<EshteriliOrderSheet> {
                   Text(title,
                       style: const TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontFamily: 'Cairo',
                           fontSize: 13)),
                   IconButton(
                     icon: const Icon(Icons.close_rounded, size: 20),

@@ -422,16 +422,14 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 15.5,
-                        fontFamily: 'Cairo',
-                      ),
+                        ),
                     ),
                     Text(
                       'تسوق سوق الجمعة والأسواق المجاورة حتى باب منزلك',
                       style: TextStyle(
                         fontSize: 11,
                         color: Colors.grey,
-                        fontFamily: 'Cairo',
-                      ),
+                        ),
                     ),
                   ],
                 ),
@@ -526,15 +524,13 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                                       Text(
                                         'خدمة إتسوقلي — تسوق أسواق القرية والمراكز',
                                         style: TextStyle(
-                                          fontFamily: 'Cairo',
                                           fontWeight: FontWeight.w900,
                                           fontSize: 13.5,
                                         ),
                                       ),
                                       Text(
-                                        'خضار، فواكه، لحوم، أسماك وتموين طازج لباب بيتك',
+                                        'خزين بيتك الأسبوعي بسعر السوق وتوصيل موفّر لباب بيتك',
                                         style: TextStyle(
-                                          fontFamily: 'Cairo',
                                           fontSize: 10.5,
                                           color: Color(0xFF16A34A),
                                           fontWeight: FontWeight.w700,
@@ -560,7 +556,6 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                                       Text(
                                         _isIntroExpanded ? 'طي' : 'تفاصيل',
                                         style: const TextStyle(
-                                          fontFamily: 'Cairo',
                                           fontSize: 10,
                                           fontWeight: FontWeight.w900,
                                           color: Color(0xFF16A34A),
@@ -597,7 +592,6 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                                   Text(
                                     'خدمتك المخصصة لتسوق الخضار والفواكه واللحوم والأسماك والدواجن والتموين الطازج من سوق الجمعة بأبودشيشة وأسواق المراكز المجاورة (بلقاس، المعصرة، الستاموني...). نوفر عليك عناء وتعب ومصاريف المشوار، مع انتقاء أجود البضائع الطازجة وتوصيلها حتى باب منزلك في مواعيد الأسواق أو فوراً، والدفع عند المعاينة والاستلام.',
                                     style: TextStyle(
-                                      fontFamily: 'Cairo',
                                       fontSize: 11.5,
                                       height: 1.5,
                                       color: isDark ? Colors.grey.shade300 : const Color(0xFF14532D),
@@ -677,7 +671,6 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                       Text(
                         'قائمة المشتريات 🧺',
                         style: TextStyle(
-                          fontFamily: 'Cairo',
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
                         ),
@@ -715,7 +708,6 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                                 ? 'سجل العمليات ($activeCount جاري 🧺)'
                                 : (ordersCount > 0 ? 'سجل العمليات ($ordersCount)' : 'سجل العمليات 📜'),
                             style: const TextStyle(
-                              fontFamily: 'Cairo',
                               fontSize: 14.5,
                               fontWeight: FontWeight.bold,
                             ),
@@ -764,7 +756,6 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontFamily: 'Cairo',
                     fontSize: 10.5,
                     fontWeight: FontWeight.bold,
                     color: color,
@@ -775,7 +766,6 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontFamily: 'Cairo',
                     fontSize: 9.5,
                     color: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
                   ),
@@ -830,7 +820,6 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                         child: Text(
                           'قائمة المشتريات 🧺',
                           style: TextStyle(
-                            fontFamily: 'Cairo',
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
                           ),
@@ -845,7 +834,7 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                           ),
                           child: Text(
                             '$cartCount صنف بالسلة',
-                            style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold),
+                            style: const TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold),
                           ),
                         ),
                       IconButton(
@@ -862,6 +851,35 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(14, 10, 14, 30),
                     children: [
+                      // 0. شريط ضمان الشفافية والثقة
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        margin: const EdgeInsets.only(bottom: 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF16A34A).withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: const Color(0xFF16A34A).withValues(alpha: 0.25),
+                          ),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.verified_rounded, size: 18, color: Color(0xFF16A34A)),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'أسعار السوق الفعلية يوم الشراء · انتقاء يدوي طازج · الدفع عند الاستلام',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF15803D),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
                       // 1. اختيار السوق المستهدف
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -876,7 +894,7 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                             const SizedBox(width: 8),
                             const Text(
                               'سوق التسوق:',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, fontFamily: 'Cairo'),
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                             ),
                             const SizedBox(width: 8),
                             Expanded(
@@ -890,7 +908,7 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                                       value: m.id,
                                       child: Text(
                                         '${m.name} (${m.dayOfWeek})',
-                                        style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, fontFamily: 'Cairo'),
+                                        style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold),
                                       ),
                                     );
                                   }).toList(),
@@ -920,7 +938,7 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                         onChanged: (q) => setState(() => _searchQuery = q.trim()),
                         decoration: InputDecoration(
                           hintText: 'ابحث عن سلعة (طماطم، خيار، لحم، فراخ، سمك...)...',
-                          hintStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 11.5, color: Colors.grey),
+                          hintStyle: const TextStyle(fontSize: 11.5, color: Colors.grey),
                           prefixIcon: const Icon(Icons.search_rounded, size: 20, color: Color(0xFF16A34A)),
                           suffixIcon: _searchQuery.isNotEmpty
                               ? IconButton(
@@ -953,7 +971,7 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                             return Padding(
                               padding: const EdgeInsets.only(left: 6),
                               child: FilterChip(
-                                label: Text(cat, style: const TextStyle(fontFamily: 'Cairo', fontSize: 11)),
+                                label: Text(cat, style: const TextStyle(fontSize: 11)),
                                 selected: isSel,
                                 onSelected: (_) => setState(() => _selectedCategory = cat),
                                 selectedColor: const Color(0xFF16A34A).withValues(alpha: 0.18),
@@ -974,7 +992,7 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                             SizedBox(width: 4),
                             Text(
                               'أصنافي الخاصة المضافة (تعامل كبنود التطبيق):',
-                              style: TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFFD97706)),
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFFD97706)),
                             ),
                           ],
                         ),
@@ -993,12 +1011,12 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                         children: [
                           const Text(
                             'سلع السوق المقترحة:',
-                            style: TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.bold),
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                           ),
                           if (_searchQuery.isNotEmpty)
                             Text(
                               'نتائج البحث: ${filteredProducts.length}',
-                              style: const TextStyle(fontFamily: 'Cairo', fontSize: 10.5, color: Color(0xFF16A34A), fontWeight: FontWeight.bold),
+                              style: const TextStyle(fontSize: 10.5, color: Color(0xFF16A34A), fontWeight: FontWeight.bold),
                             ),
                         ],
                       ),
@@ -1016,7 +1034,7 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                                 ? 'لم يتم العثور على سلع تطابق "$_searchQuery" — يمكنك إضافتها مباشرة كصنف خاص بالأعلى ☝️'
                                 : 'لا توجد سلع مسجلة في هذا التصنيف حالياً',
                             textAlign: TextAlign.center,
-                            style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, color: Colors.grey),
+                            style: const TextStyle(fontSize: 11, color: Colors.grey),
                           ),
                         )
                       else
@@ -1049,12 +1067,11 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                                 children: [
                                   Text(
                                     'إجمالي السلع التقديري ($cartCount صنف):',
-                                    style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 12.5),
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5),
                                   ),
                                   Text(
                                     subtotal > 0 ? '${subtotal.toStringAsFixed(0)} ج' : 'حسب سعر السوق الفعلي',
                                     style: const TextStyle(
-                                      fontFamily: 'Cairo',
                                       fontWeight: FontWeight.w900,
                                       fontSize: 14,
                                       color: Color(0xFF16A34A),
@@ -1065,7 +1082,7 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                               const SizedBox(height: 4),
                               Text(
                                 'رسوم التسوق: ${_selectedMarket?.serviceFee.toStringAsFixed(0) ?? '25'} ج • التوصيل: ${_selectedMarket?.deliveryFee.toStringAsFixed(0) ?? '15'} ج',
-                                style: const TextStyle(fontFamily: 'Cairo', fontSize: 10.5, color: Colors.grey),
+                                style: const TextStyle(fontSize: 10.5, color: Colors.grey),
                               ),
                             ],
                           ),
@@ -1076,14 +1093,14 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                       // 7. بيانات التوصيل الأساسية
                       const Text(
                         'بيانات التوصيل:',
-                        style: TextStyle(fontFamily: 'Cairo', fontSize: 13, fontWeight: FontWeight.bold),
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 8),
                       TextField(
                         controller: _nameCtrl,
                         decoration: InputDecoration(
                           labelText: 'اسم صاحب الطلب *',
-                          labelStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 12.5),
+                          labelStyle: const TextStyle(fontSize: 12.5),
                           prefixIcon: const Icon(Icons.person_outline, size: 20),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         ),
@@ -1094,7 +1111,7 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                         keyboardType: TextInputType.phone,
                         decoration: InputDecoration(
                           labelText: 'رقم الهاتف للتواصل *',
-                          labelStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 12.5),
+                          labelStyle: const TextStyle(fontSize: 12.5),
                           prefixIcon: const Icon(Icons.phone_outlined, size: 20),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         ),
@@ -1105,8 +1122,8 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                         decoration: InputDecoration(
                           labelText: 'عنوان أو مكان التوصيل بالقرية *',
                           hintText: 'مثال: بجوار المسجد، منزل فلان...',
-                          labelStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 12.5),
-                          hintStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 11, color: Colors.grey),
+                          labelStyle: const TextStyle(fontSize: 12.5),
+                          hintStyle: const TextStyle(fontSize: 11, color: Colors.grey),
                           prefixIcon: const Icon(Icons.location_on_outlined, size: 20),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         ),
@@ -1117,8 +1134,8 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                         decoration: InputDecoration(
                           labelText: 'أي ملاحظات خاصة أو تفضيل للجودة (اختياري)',
                           hintText: 'مثال: الطماطم جامدة للسلطة، الموز مستوي...',
-                          labelStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 12),
-                          hintStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 11, color: Colors.grey),
+                          labelStyle: const TextStyle(fontSize: 12),
+                          hintStyle: const TextStyle(fontSize: 11, color: Colors.grey),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                       ),
@@ -1144,7 +1161,6 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                         label: const Text(
                           'تأكيد وإرسال طلب التسوق 🧺',
                           style: TextStyle(
-                            fontFamily: 'Cairo',
                             fontWeight: FontWeight.bold,
                             fontSize: 14.5,
                           ),
@@ -1180,7 +1196,6 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
               Text(
                 'إضافة صنف خاص ليس بالقوائم (يُعامل كبنود التطبيق):',
                 style: TextStyle(
-                  fontFamily: 'Cairo',
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
                   color: Color(0xFF16A34A),
@@ -1197,7 +1212,7 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                   controller: _customItemNameCtrl,
                   decoration: InputDecoration(
                     hintText: 'اسم الصنف (مثال: نعناع، ملوخية، ليمون...)',
-                    hintStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 11, color: Colors.grey),
+                    hintStyle: const TextStyle(fontSize: 11, color: Colors.grey),
                     isDense: true,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
@@ -1219,7 +1234,7 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                     items: _units.map((u) {
                       return DropdownMenuItem(
                         value: u,
-                        child: Text(u, style: const TextStyle(fontFamily: 'Cairo', fontSize: 11)),
+                        child: Text(u, style: const TextStyle(fontSize: 11)),
                       );
                     }).toList(),
                     onChanged: (u) {
@@ -1233,7 +1248,7 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
           const SizedBox(height: 8),
           Row(
             children: [
-              const Text('الكمية:', style: TextStyle(fontFamily: 'Cairo', fontSize: 11.5)),
+              const Text('الكمية:', style: TextStyle(fontSize: 11.5)),
               const SizedBox(width: 8),
               IconButton(
                 icon: const Icon(Icons.remove_circle_outline, color: Colors.red, size: 22),
@@ -1245,7 +1260,7 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
               ),
               Text(
                 _customItemQty.toStringAsFixed(1),
-                style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
               ),
               IconButton(
                 icon: const Icon(Icons.add_circle_outline, color: Color(0xFF16A34A), size: 22),
@@ -1263,7 +1278,7 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                 icon: const Icon(Icons.add, size: 16),
                 label: const Text(
                   'إضافة للقائمة ➕',
-                  style: TextStyle(fontFamily: 'Cairo', fontSize: 11.5, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
                 ),
               ),
             ],
@@ -1300,11 +1315,11 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
               children: [
                 Text(
                   item.productName,
-                  style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 12.5),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5),
                 ),
                 Text(
                   'صنف خاص • ${item.quantity} ${item.unit} (سعر السوق الفعلي)',
-                  style: const TextStyle(fontFamily: 'Cairo', fontSize: 10, color: Colors.grey),
+                  style: const TextStyle(fontSize: 10, color: Colors.grey),
                 ),
               ],
             ),
@@ -1333,7 +1348,7 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
               ),
               Text(
                 item.quantity.toStringAsFixed(1),
-                style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 12),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
               ),
               IconButton(
                 icon: const Icon(Icons.add_circle_outline, size: 20, color: Color(0xFF16A34A)),
@@ -1394,11 +1409,11 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
               children: [
                 Text(
                   product.name,
-                  style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 12.5),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5),
                 ),
                 Text(
                   'تقريباً ${product.estimatedPrice.toStringAsFixed(0)} ج / ${product.unit}',
-                  style: const TextStyle(fontFamily: 'Cairo', fontSize: 10.5, color: Colors.grey),
+                  style: const TextStyle(fontSize: 10.5, color: Colors.grey),
                 ),
               ],
             ),
@@ -1420,7 +1435,7 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                 ),
                 Text(
                   qty.toStringAsFixed(qty.truncateToDouble() == qty ? 0 : 1),
-                  style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                 ),
               ],
               IconButton(
@@ -1447,7 +1462,7 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
           children: [
             const Icon(Icons.lock_outline_rounded, size: 48, color: Colors.grey),
             const SizedBox(height: 12),
-            const Text('يرجى تسجيل الدخول أولاً لعرض سجل العمليات', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold)),
+            const Text('يرجى تسجيل الدخول أولاً لعرض سجل العمليات', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             FilledButton.tonal(
               onPressed: () => setState(() => _currentView = 0),
@@ -1474,7 +1489,6 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                 child: Text(
                   'سجل العمليات 📜',
                   style: TextStyle(
-                    fontFamily: 'Cairo',
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
@@ -1485,7 +1499,7 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                 icon: const Icon(Icons.add, size: 16),
                 label: const Text(
                   'تسوق جديد',
-                  style: TextStyle(fontFamily: 'Cairo', fontSize: 11.5, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
                 ),
               ),
               IconButton(
@@ -1518,13 +1532,13 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                         const SizedBox(height: 12),
                         const Text(
                           'ليس لديك أي عمليات تسوق سابقة',
-                          style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13),
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                         ),
                         const SizedBox(height: 6),
                         const Text(
                           'اختر الأصناف والسلع التي ترغب بها ومندوبة القرية ستتسوق لك يوم السوق.',
                           textAlign: TextAlign.center,
-                          style: TextStyle(fontFamily: 'Cairo', fontSize: 11, color: Colors.grey),
+                          style: TextStyle(fontSize: 11, color: Colors.grey),
                         ),
                         const SizedBox(height: 16),
                         FilledButton.icon(
@@ -1611,7 +1625,6 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                       Text(
                         order.invoiceNumber,
                         style: const TextStyle(
-                          fontFamily: 'Cairo',
                           fontWeight: FontWeight.w900,
                           fontSize: 13,
                         ),
@@ -1627,7 +1640,6 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                     child: Text(
                       statusLabel,
                       style: TextStyle(
-                        fontFamily: 'Cairo',
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
                         color: statusColor,
@@ -1650,7 +1662,6 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                       Text(
                         _formatDate(order.createdAt),
                         style: const TextStyle(
-                          fontFamily: 'Cairo',
                           fontSize: 11,
                           color: Colors.grey,
                         ),
@@ -1664,7 +1675,6 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                       Text(
                         priceText,
                         style: TextStyle(
-                          fontFamily: 'Cairo',
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
                           color: order.totalAmount > 0 ? const Color(0xFF16A34A) : Colors.blue.shade700,
@@ -1688,7 +1698,6 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontFamily: 'Cairo',
                         fontSize: 11,
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -1715,7 +1724,6 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                               Text(
                                 'إعادة الشروة 🔄',
                                 style: TextStyle(
-                                  fontFamily: 'Cairo',
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
                                   color: Color(0xFF16A34A),
@@ -1731,7 +1739,6 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                           Text(
                             'تفاصيل العملية 👈',
                             style: TextStyle(
-                              fontFamily: 'Cairo',
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
                               color: Color(0xFF16A34A),
@@ -1793,7 +1800,6 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                       child: Text(
                         'تفاصيل العملية (${order.invoiceNumber})',
                         style: const TextStyle(
-                          fontFamily: 'Cairo',
                           fontWeight: FontWeight.bold,
                           fontSize: 14.5,
                         ),
@@ -1836,7 +1842,7 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                             Expanded(
                               child: Text(
                                 '${order.marketName} • يوم ${order.marketDay}',
-                                style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 12),
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                               ),
                             ),
                           ],
@@ -1848,7 +1854,7 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                       // قائمة الأصناف المشتراة
                       const Text(
                         'الأصناف والسلع المطلوبة:',
-                        style: TextStyle(fontFamily: 'Cairo', fontSize: 12.5, fontWeight: FontWeight.bold),
+                        style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 6),
                       Container(
@@ -1868,12 +1874,12 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                                     Expanded(
                                       child: Text(
                                         '• ${item.productName} (${item.quantity} ${item.unit})',
-                                        style: const TextStyle(fontFamily: 'Cairo', fontSize: 11.5),
+                                        style: const TextStyle(fontSize: 11.5),
                                       ),
                                     ),
                                     Text(
                                       item.totalPrice > 0 ? '${item.totalPrice.toStringAsFixed(0)} ج' : 'سعر السوق',
-                                      style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, fontWeight: FontWeight.bold),
+                                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                                     ),
                                   ],
                                 ),
@@ -1906,7 +1912,7 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                                   children: [
                                     Text(
                                       'المندوبة: ${order.shopperName.isNotEmpty ? order.shopperName : 'مندوبة القرية'}',
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11.5, fontFamily: 'Cairo'),
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11.5),
                                     ),
                                     Text(order.shopperPhone, style: const TextStyle(fontSize: 10.5, color: Colors.grey)),
                                   ],
@@ -1944,34 +1950,34 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text('إجمالي السلع التقديري:', style: TextStyle(fontSize: 11.5, fontFamily: 'Cairo')),
-                                Text('${order.itemsSubtotal.toStringAsFixed(0)} ج', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, fontFamily: 'Cairo')),
+                                const Text('إجمالي السلع التقديري:', style: TextStyle(fontSize: 11.5)),
+                                Text('${order.itemsSubtotal.toStringAsFixed(0)} ج', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                               ],
                             ),
                             const SizedBox(height: 4),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text('رسوم التسوق:', style: TextStyle(fontSize: 11.5, fontFamily: 'Cairo')),
-                                Text('${order.serviceFee.toStringAsFixed(0)} ج', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, fontFamily: 'Cairo')),
+                                const Text('رسوم التسوق:', style: TextStyle(fontSize: 11.5)),
+                                Text('${order.serviceFee.toStringAsFixed(0)} ج', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                               ],
                             ),
                             const SizedBox(height: 4),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text('مصاريف التوصيل:', style: TextStyle(fontSize: 11.5, fontFamily: 'Cairo')),
-                                Text('${order.deliveryFee.toStringAsFixed(0)} ج', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, fontFamily: 'Cairo')),
+                                const Text('مصاريف التوصيل:', style: TextStyle(fontSize: 11.5)),
+                                Text('${order.deliveryFee.toStringAsFixed(0)} ج', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                               ],
                             ),
                             const Divider(height: 12),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text('الإجمالي المستحق عند الاستلام:', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, fontFamily: 'Cairo')),
+                                const Text('الإجمالي المستحق عند الاستلام:', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold)),
                                 Text(
                                   '${order.totalAmount.toStringAsFixed(0)} ج',
-                                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF16A34A), fontFamily: 'Cairo'),
+                                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF16A34A)),
                                 ),
                               ],
                             ),
@@ -1995,7 +2001,7 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                         icon: const Icon(Icons.replay_rounded, size: 19),
                         label: const Text(
                           'إعادة طلب نفس الشروة 🔄',
-                          style: TextStyle(fontFamily: 'Cairo', fontSize: 13, fontWeight: FontWeight.bold),
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                         ),
                       ),
 
@@ -2014,7 +2020,7 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                         icon: const Icon(Icons.print_rounded, size: 18, color: Color(0xFF16A34A)),
                         label: const Text(
                           'طباعة ومشاركة فاتورة الكاشير 🖨️',
-                          style: TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.bold),
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                         ),
                       ),
 
@@ -2024,7 +2030,7 @@ class _EtsawaqliMarketSheetState extends State<EtsawaqliMarketSheet> {
                           child: TextButton.icon(
                             style: TextButton.styleFrom(foregroundColor: Colors.red),
                             icon: const Icon(Icons.cancel_outlined, size: 16),
-                            label: const Text('إلغاء الطلب', style: TextStyle(fontFamily: 'Cairo', fontSize: 11.5)),
+                            label: const Text('إلغاء الطلب', style: TextStyle(fontSize: 11.5)),
                             onPressed: () async {
                               Navigator.pop(ctx);
                               await _confirmCancelOrder(order);

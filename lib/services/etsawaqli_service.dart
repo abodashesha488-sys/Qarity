@@ -378,6 +378,7 @@ class EtsawaqliService {
   Stream<List<EtsawaqliOrder>> watchMyOrders(String userId) {
     return _ordersCol
         .where('userId', isEqualTo: userId)
+        .limit(30)
         .snapshots()
         .map((snap) {
       final list = snap.docs
@@ -390,7 +391,7 @@ class EtsawaqliService {
 
   /// متابعة كل فواتير التسوق للوحة الإدارة والمندوبات
   Stream<List<EtsawaqliOrder>> watchAllOrders() {
-    return _ordersCol.snapshots().map((snap) {
+    return _ordersCol.limit(60).snapshots().map((snap) {
       final list = snap.docs
           .map((d) => EtsawaqliOrder.fromJson(d.data(), d.id))
           .toList();

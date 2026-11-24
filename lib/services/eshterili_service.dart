@@ -145,6 +145,7 @@ class EshteriliService {
   Stream<List<EshteriliOrder>> watchMyOrders(String userId) {
     return _ordersCol
         .where('userId', isEqualTo: userId)
+        .limit(30)
         .snapshots()
         .map((snap) {
       final list = snap.docs
@@ -157,7 +158,7 @@ class EshteriliService {
 
   /// متابعة كل طلبات إشتريلي للوحة الإدارة
   Stream<List<EshteriliOrder>> watchAllOrders() {
-    return _ordersCol.snapshots().map((snap) {
+    return _ordersCol.limit(60).snapshots().map((snap) {
       final list = snap.docs
           .map((d) => EshteriliOrder.fromJson(d.data(), d.id))
           .toList();
