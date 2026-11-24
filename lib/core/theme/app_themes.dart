@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../constants/app_colors.dart';
+import 'app_design_tokens.dart';
 
 /// الثيمات الثلاثة المتاحة للمستخدم، وهي **مصدر قيم المظهر الواحد** في التطبيق.
 ///
@@ -431,6 +432,16 @@ class AppThemes {
         hintStyle: _fontStyle(f.fontFamily, color: f.textTertiary, fontSize: 14),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
+      extensions: [
+        AppThemeTokens(
+          accentSoft: f.mint,
+          cardBorder: f.divider,
+          shimmerBase: _mix(f.surfaceVariant, f.divider, 0.4),
+          shimmerHighlight: _mix(f.surface, f.mint, 0.25),
+          navBarBackground: f.primary,
+          navBarActivePill: f.primaryLight,
+        ),
+      ],
     );
   }
 
@@ -578,6 +589,16 @@ class AppThemes {
             color: f.darkTextSecondary, fontSize: 14),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
+      extensions: [
+        AppThemeTokens(
+          accentSoft: f.darkPrimaryContainer,
+          cardBorder: f.darkHairline,
+          shimmerBase: f.darkInputFill,
+          shimmerHighlight: _mix(f.darkInputFill, f.darkAccent, 0.14),
+          navBarBackground: f.darkPrimary,
+          navBarActivePill: f.darkPrimaryContainer,
+        ),
+      ],
     );
   }
 

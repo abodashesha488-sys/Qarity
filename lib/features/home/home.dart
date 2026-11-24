@@ -29,7 +29,9 @@ import '../../widgets/common_appbar_actions.dart';
 import '../../widgets/eshterili_order_sheet.dart';
 import '../../widgets/etsawaqli_market_sheet.dart';
 import '../../widgets/group_deal_home_card.dart';
+import '../../widgets/home_floating_nav_bar.dart';
 import '../../widgets/offline_stream_builder.dart';
+import '../../widgets/qarity_shimmer.dart';
 import '../../widgets/qurity_logo.dart';
 import '../../widgets/update_flow.dart';
 import '../../widgets/village_prayer_dialog.dart';
@@ -42,6 +44,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  final ScrollController _homeScrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
@@ -65,13 +69,26 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   @override
+  void dispose() {
+    _homeScrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      endDrawer: HomeDrawer(),
-      body: HomeContent(),
-      bottomNavigationBar: Padding(
-        padding: EdgeInsets.fromLTRB(10, 2, 10, 10),
-        child: HomeIdentityBar(),
+    return Scaffold(
+      endDrawer: const HomeDrawer(),
+      body: HomeContent(scrollController: _homeScrollController),
+      bottomNavigationBar: HomeFloatingNavBar(
+        onHomeTap: () {
+          if (_homeScrollController.hasClients) {
+            _homeScrollController.animateTo(
+              0,
+              duration: const Duration(milliseconds: 420),
+              curve: Curves.easeOutCubic,
+            );
+          }
+        },
       ),
     );
   }
@@ -379,7 +396,9 @@ class HomeDrawer extends StatelessWidget {
 }
 
 class HomeContent extends StatefulWidget {
-  const HomeContent({super.key});
+  const HomeContent({super.key, this.scrollController});
+
+  final ScrollController? scrollController;
 
   static String greeting() {
     final hour = DateTime.now().hour;
@@ -446,6 +465,13 @@ class _HomeContentState extends State<HomeContent> {
     } catch (_) {}
   }
 
+  Future<void> _handleRefresh() async {
+    HapticFeedback.mediumImpact();
+    await _checkAndSendSeasonalGreeting();
+    await Future.delayed(const Duration(milliseconds: 450));
+    if (mounted) setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final now = WeatherService.villageNow();
@@ -459,51 +485,54 @@ class _HomeContentState extends State<HomeContent> {
       );
     }
 
-    return Column(
-      children: [
-        const _HeroHeader(),
-        const _VillagePrayerAlertSection(),
-        if (greetingBanner != null) greetingBanner,
-        const AlertWisdomBar(),
-        const GroupDealHomeCard(),
-        Expanded(
-          child: RefreshIndicator(
-            onRefresh: () async {},
-            child: CustomScrollView(
-              physics: const AlwaysScrollableScrollPhysics(
-                  parent: BouncingScrollPhysics()),
-              slivers: [
-                const SliverToBoxAdapter(
-                    child: Padding(
-                        padding: EdgeInsets.only(top: 10),
-                        child: ModernServiceGrid())),
-                const SliverToBoxAdapter(
-                    child: _SectionHead(
-                        title: 'آخر المنتجات',
-                        subtitle: 'أحدث ما عرضه بائعو القرية',
-                        icon: Icons.bolt_rounded,
-                        actionRoute: AppRoutes.marketProducts)),
-                SliverToBoxAdapter(child: _buildLatestProducts(context)),
-                const SliverToBoxAdapter(
-                    child: _SectionHead(
-                        title: 'أخبار القرية',
-                        subtitle: 'مستجدات أبوديشيشة أولاً بأول',
-                        icon: Icons.newspaper_rounded,
-                        actionRoute: AppRoutes.newsList)),
-                SliverToBoxAdapter(child: _buildLiveNews(context)),
-                const SliverToBoxAdapter(
-                    child: _SectionHead(
-                        title: 'حوارات المندرة',
-                        subtitle: 'نقاشات أهل القرية وآخر المنشورات',
-                        icon: Icons.forum_rounded,
-                        actionRoute: AppRoutes.forumPosts)),
-                SliverToBoxAdapter(child: _buildLivePosts(context)),
-                const SliverToBoxAdapter(child: _HomeFooter()),
-              ],
+    return RefreshIndicator(
+      onRefresh: _handleRefresh,
+      child: CustomScrollView(
+        controller: widget.scrollController,
+        physics: const AlwaysScrollableScrollPhysics(
+            parent: BouncingScrollPhysics()),
+        slivers: [
+          const SliverToBoxAdapter(child: _HeroHeader()),
+          const SliverToBoxAdapter(child: _VillagePrayerAlertSection()),
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(12, 8, 12, 2),
+              child: HomeIdentityBar(),
             ),
           ),
-        ),
-      ],
+          if (greetingBanner != null) SliverToBoxAdapter(child: greetingBanner),
+          const SliverToBoxAdapter(child: AlertWisdomBar()),
+          const SliverToBoxAdapter(
+            child: RepaintBoundary(child: GroupDealHomeCard()),
+          ),
+          const SliverToBoxAdapter(
+              child: Padding(
+                  padding: EdgeInsets.only(top: 10),
+                  child: ModernServiceGrid())),
+          const SliverToBoxAdapter(
+              child: _SectionHead(
+                  title: 'آخر المنتجات',
+                  subtitle: 'أحدث ما عرضه بائعو القرية',
+                  icon: Icons.bolt_rounded,
+                  actionRoute: AppRoutes.marketProducts)),
+          SliverToBoxAdapter(child: _buildLatestProducts(context)),
+          const SliverToBoxAdapter(
+              child: _SectionHead(
+                  title: 'أخبار القرية',
+                  subtitle: 'مستجدات أبوديشيشة أولاً بأول',
+                  icon: Icons.newspaper_rounded,
+                  actionRoute: AppRoutes.newsList)),
+          SliverToBoxAdapter(child: _buildLiveNews(context)),
+          const SliverToBoxAdapter(
+              child: _SectionHead(
+                  title: 'حوارات المندرة',
+                  subtitle: 'نقاشات أهل القرية وآخر المنشورات',
+                  icon: Icons.forum_rounded,
+                  actionRoute: AppRoutes.forumPosts)),
+          SliverToBoxAdapter(child: _buildLivePosts(context)),
+          const SliverToBoxAdapter(child: _HomeFooter()),
+        ],
+      ),
     );
   }
 
@@ -528,11 +557,27 @@ class _HomeContentState extends State<HomeContent> {
 
     return OfflineStreamBuilder<List<MarketProduct>>(
       stream: _productsStream,
-      onlineBuilder: (context, snapshot) => list(snapshot.data ?? []),
+      onlineBuilder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData) {
+          return const QarityHorizontalShimmerList(
+            height: 152,
+            itemWidth: 136,
+            imageHeight: 74,
+          );
+        }
+        return list(snapshot.data ?? []);
+      },
       cacheBuilder: (context) => FutureBuilder(
         future: CacheService.getProducts(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) return const SizedBox(height: 170);
+          if (!snapshot.hasData) {
+            return const QarityHorizontalShimmerList(
+              height: 152,
+              itemWidth: 136,
+              imageHeight: 74,
+            );
+          }
           final all = (snapshot.data ?? [])
               .map((j) => MarketProduct.fromJson(j, 'cache'))
               .toList();
@@ -612,11 +657,27 @@ class _HomeContentState extends State<HomeContent> {
 
     return OfflineStreamBuilder<List<NewsItem>>(
       stream: _newsStream,
-      onlineBuilder: (context, snapshot) => list(snapshot.data ?? []),
+      onlineBuilder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData) {
+          return const QarityHorizontalShimmerList(
+            height: 128,
+            itemWidth: 150,
+            imageHeight: 58,
+          );
+        }
+        return list(snapshot.data ?? []);
+      },
       cacheBuilder: (context) => FutureBuilder(
         future: CacheService.getNews(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) return const SizedBox(height: 150);
+          if (!snapshot.hasData) {
+            return const QarityHorizontalShimmerList(
+              height: 128,
+              itemWidth: 150,
+              imageHeight: 58,
+            );
+          }
           final all = (snapshot.data ?? [])
               .map((j) => NewsItem.fromJson(j, 'cache'))
               .toList();
@@ -699,11 +760,27 @@ class _HomeContentState extends State<HomeContent> {
 
     return OfflineStreamBuilder<List<ForumPost>>(
       stream: _postsStream,
-      onlineBuilder: (context, snapshot) => list(snapshot.data ?? []),
+      onlineBuilder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData) {
+          return const QarityHorizontalShimmerList(
+            height: 128,
+            itemWidth: 152,
+            imageHeight: 58,
+          );
+        }
+        return list(snapshot.data ?? []);
+      },
       cacheBuilder: (context) => FutureBuilder(
         future: CacheService.getForumPosts(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) return const SizedBox(height: 185);
+          if (!snapshot.hasData) {
+            return const QarityHorizontalShimmerList(
+              height: 128,
+              itemWidth: 152,
+              imageHeight: 58,
+            );
+          }
           final all = (snapshot.data ?? [])
               .map((j) => ForumPost.fromJson(j, 'cache'))
               .toList();
