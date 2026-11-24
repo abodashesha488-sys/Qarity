@@ -22,33 +22,184 @@ import crypto from 'node:crypto';
 
 const ALLOWED_ROLES = ['admin', 'assistant_admin'];
 
-// أنواع الطلبات التي تستدعي موافقة الأدمن — النصوص تُبنى هنا حصراً
-// (لا يقبل الخادم نصاً من العميل في وضع admin_notify، فلا حقن أو سبام).
+// أنواع الطلبات التي تستدعي موافقة أو متابعة الإدارة — النصوص والأدوار تُبنى هنا حصراً
+// القاعدة الذهبية: المدير العام (admin) والأدمن المساعد (assistant_admin) يصلهم إشعار
+// بكل شيء في التطبيق، بينما الأدمن التخصصي أو المندوب يصله فقط ما يخص نطاق صلاحيته.
 const PENDING_KINDS = {
-  news: { t: '📰 خبر جديد بانتظار المراجعة', b: 'أرسل أحد الأهالي خبراً جديداً للوحة التحكم.' },
-  market_products: { t: '🛒 منتج جديد بانتظار المراجعة', b: 'أضاف بائع منتجاً جديداً للسوق.' },
-  obituaries: { t: '⚰️ نعي جديد بانتظار المراجعة', b: 'تم إرسال نعي جديد لسجل العزاء.' },
-  occasions: { t: '🎉 مناسبة جديدة بانتظار المراجعة', b: 'أضاف أحد الأهالي مناسبة جديدة.' },
-  forum_posts: { t: '💬 منشور جديد بانتظار المراجعة', b: 'منشور جديد في المنتدى.' },
-  shops: { t: '🏬 طلب إنشاء محل بانتظار المراجعة', b: 'أنشأ أحد الأهالي محلاً جديداً في السوق.' },
-  buy_requests: { t: '📥 طلب سلعة جديد بانتظار المراجعة', b: 'طلب أحد الأهالي سلعة جديدة.' },
-  donations: { t: '🎁 عرض تبرع جديد بانتظار المراجعة', b: 'أضاف أحد الأهالي عرض تبرع.' },
-  phone_directory: { t: '📞 جهة اتصال جديدة بانتظار المراجعة', b: 'طلب إضافة جديد لدليل الهاتف.' },
-  service_providers: { t: '🧰 إضافة جديدة بدليل الخدمات', b: 'إضافة جديدة في دليل الخدمات بانتظار المراجعة.' },
-  lost_items: { t: '🔎 إعلان مفقودات جديد', b: 'أضاف أحد الأهالي إعلاناً في المفقودات بانتظار المراجعة.' },
-  village_ads: { t: '📢 إعلان جديد في القرية', b: 'أضاف أحد الأهالي إعلاناً تجارياً أو خدمياً بانتظار المراجعة.' },
-  lawyers: { t: '⚖️ تسجيل محامٍ جديد', b: 'طلب أحد الأهالي تسجيل نفسه في سجل المحامين بانتظار المراجعة.' },
-  legal_consultations: { t: '⚖️ استشارة قانونية جديدة', b: 'أرسل أحد الأهالي سؤالاً قانونياً بانتظار المراجعة والرد.' },
-  seller_requests: { t: '🏪 طلب بائعية جديد', b: 'قدّم أحد الأهالي طلباً لفتح متجر.' },
-  village_clinics: { t: '🏥 عيادة جديدة بانتظار المراجعة', b: 'إضافة جديدة لعيادات القرية.' },
-  pharmacies: { t: '💊 صيدلية جديدة بانتظار المراجعة', b: 'إضافة جديدة لصيدليات القرية.' },
-  medical_labs: { t: '🧪 معمل تحاليل جديد بانتظار المراجعة', b: 'إضافة جديدة لمعامل التحاليل.' },
-  optical_shops: { t: '👓 محل نظارات جديد بانتظار المراجعة', b: 'إضافة جديدة لقسم النظارات الطبية.' },
-  blood_requests: { t: '🩸 طلب تبرع دم جديد', b: 'طلب تبرع دم جديد يحتاج موافقتك.' },
-  blood_donors: { t: '❤️ تسجيل متبرع جديد', b: 'متبرع جديد بانتظار الموافقة.' },
-  medical_center_clinics: { t: '🏥 عيادة مركزية جديدة بانتظار موافقتك', b: 'مدير المركز الطبي أضاف عيادة جديدة للمركز الخيري.' },
-  village_contributions: { t: '🗄️ مساهمة جديدة في أرشيف القرية', b: 'أرسل أحد الأهالي مادة (صورة/وثيقة/تسجيل) لمرجع القرية بانتظار المراجعة.' },
-  reports: { t: '🚨 بلاغ جديد عن محتوى مسيء', b: 'أرسل أحد المستخدمين بلاغاً عن محتوى لمراجعته فوراً واتخاذ الإجراء اللازم.' },
+  news: {
+    t: '📰 خبر جديد بانتظار المراجعة',
+    b: 'أرسل أحد الأهالي خبراً جديداً للوحة التحكم.',
+    roles: ['admin', 'assistant_admin'],
+    route: '/admin',
+  },
+  market_products: {
+    t: '🛒 منتج جديد بانتظار المراجعة',
+    b: 'أضاف بائع منتجاً جديداً للسوق.',
+    roles: ['admin', 'assistant_admin', 'commercial_admin'],
+    route: '/admin',
+  },
+  obituaries: {
+    t: '⚰️ نعي جديد بانتظار المراجعة',
+    b: 'تم إرسال نعي جديد لسجل العزاء.',
+    roles: ['admin', 'assistant_admin'],
+    route: '/admin',
+  },
+  occasions: {
+    t: '🎉 مناسبة جديدة بانتظار المراجعة',
+    b: 'أضاف أحد الأهالي مناسبة جديدة.',
+    roles: ['admin', 'assistant_admin'],
+    route: '/admin',
+  },
+  forum_posts: {
+    t: '💬 منشور جديد بانتظار المراجعة',
+    b: 'منشور جديد في المنتدى.',
+    roles: ['admin', 'assistant_admin'],
+    route: '/admin',
+  },
+  shops: {
+    t: '🏬 طلب إنشاء محل بانتظار المراجعة',
+    b: 'أنشأ أحد الأهالي محلاً جديداً في السوق.',
+    roles: ['admin', 'assistant_admin', 'commercial_admin'],
+    route: '/admin',
+  },
+  buy_requests: {
+    t: '📥 طلب سلعة جديد بانتظار المراجعة',
+    b: 'طلب أحد الأهالي سلعة جديدة.',
+    roles: ['admin', 'assistant_admin', 'commercial_admin'],
+    route: '/admin',
+  },
+  donations: {
+    t: '🎁 عرض تبرع جديد بانتظار المراجعة',
+    b: 'أضاف أحد الأهالي عرض تبرع.',
+    roles: ['admin', 'assistant_admin', 'commercial_admin'],
+    route: '/admin',
+  },
+  phone_directory: {
+    t: '📞 جهة اتصال جديدة بانتظار المراجعة',
+    b: 'طلب إضافة جديد لدليل الهاتف.',
+    roles: ['admin', 'assistant_admin'],
+    route: '/admin',
+  },
+  service_providers: {
+    t: '🧰 إضافة جديدة بدليل الخدمات',
+    b: 'إضافة جديدة في دليل الخدمات بانتظار المراجعة.',
+    roles: ['admin', 'assistant_admin', 'agricultural_admin'],
+    route: '/admin',
+  },
+  lost_items: {
+    t: '🔎 إعلان مفقودات جديد',
+    b: 'أضاف أحد الأهالي إعلاناً في المفقودات بانتظار المراجعة.',
+    roles: ['admin', 'assistant_admin'],
+    route: '/admin',
+  },
+  village_ads: {
+    t: '📢 إعلان جديد في القرية',
+    b: 'أضاف أحد الأهالي إعلاناً تجارياً أو خدمياً بانتظار المراجعة.',
+    roles: ['admin', 'assistant_admin'],
+    route: '/admin',
+  },
+  lawyers: {
+    t: '⚖️ تسجيل محامٍ جديد',
+    b: 'طلب أحد الأهالي تسجيل نفسه في سجل المحامين بانتظار المراجعة.',
+    roles: ['admin', 'assistant_admin'],
+    route: '/admin',
+  },
+  legal_consultations: {
+    t: '⚖️ استشارة قانونية جديدة',
+    b: 'أرسل أحد الأهالي سؤالاً قانونياً بانتظار المراجعة والرد.',
+    roles: ['admin', 'assistant_admin'],
+    route: '/admin',
+  },
+  agriculture_consultations: {
+    t: '🌱 استشارة زراعية جديدة',
+    b: 'أرسل أحد المزارعين استشارة زراعية بانتظار المراجعة والرد.',
+    roles: ['admin', 'assistant_admin', 'agricultural_admin'],
+    route: '/admin',
+  },
+  seller_requests: {
+    t: '🏪 طلب بائعية جديد',
+    b: 'قدّم أحد الأهالي طلباً لفتح متجر.',
+    roles: ['admin', 'assistant_admin'],
+    route: '/admin',
+  },
+  upgrade_requests: {
+    t: '⬆️ طلب ترقية حساب جديد',
+    b: 'قدّم أحد الأعضاء طلباً لترقية صلاحيات حسابه.',
+    roles: ['admin', 'assistant_admin'],
+    route: '/admin',
+  },
+  village_clinics: {
+    t: '🏥 عيادة جديدة بانتظار المراجعة',
+    b: 'إضافة جديدة لعيادات القرية.',
+    roles: ['admin', 'assistant_admin'],
+    route: '/admin',
+  },
+  pharmacies: {
+    t: '💊 صيدلية جديدة بانتظار المراجعة',
+    b: 'إضافة جديدة لصيدليات القرية.',
+    roles: ['admin', 'assistant_admin'],
+    route: '/admin',
+  },
+  medical_labs: {
+    t: '🧪 معمل تحاليل جديد بانتظار المراجعة',
+    b: 'إضافة جديدة لمعامل التحاليل.',
+    roles: ['admin', 'assistant_admin'],
+    route: '/admin',
+  },
+  optical_shops: {
+    t: '👓 محل نظارات جديد بانتظار المراجعة',
+    b: 'إضافة جديدة لقسم النظارات الطبية.',
+    roles: ['admin', 'assistant_admin'],
+    route: '/admin',
+  },
+  blood_requests: {
+    t: '🩸 طلب تبرع دم جديد',
+    b: 'طلب تبرع دم جديد يحتاج موافقتك.',
+    roles: ['admin', 'assistant_admin'],
+    route: '/admin',
+  },
+  blood_donors: {
+    t: '❤️ تسجيل متبرع جديد',
+    b: 'متبرع جديد بانتظار الموافقة.',
+    roles: ['admin', 'assistant_admin'],
+    route: '/admin',
+  },
+  medical_center_clinics: {
+    t: '🏥 عيادة مركزية جديدة بانتظار موافقتك',
+    b: 'تحديث أو إضافة جديدة في عيادات المركز الطبي الخيري.',
+    roles: ['admin', 'assistant_admin', 'medical_admin'],
+    route: '/admin',
+  },
+  village_contributions: {
+    t: '🗄️ مساهمة جديدة في أرشيف القرية',
+    b: 'أرسل أحد الأهالي مادة (صورة/وثيقة/تسجيل) لمرجع القرية بانتظار المراجعة.',
+    roles: ['admin', 'assistant_admin'],
+    route: '/village/contributions-review',
+  },
+  group_deals: {
+    t: '🔥 تحديث في صفقات اليوم',
+    b: 'حجز أو طلب جديد في مبادرة الشراء الجماعي بسعر التكلفة.',
+    roles: ['admin', 'assistant_admin', 'commercial_admin'],
+    route: '/admin/group-deals',
+  },
+  eshterili_orders: {
+    t: '🛵 طلب شراء وتوصيل جديد (إشتريلي)',
+    b: 'أرسل أحد الأهالي طلب إشتريلي جديداً ويحتاج متابعة المندوب والإدارة.',
+    roles: ['admin', 'assistant_admin', 'commercial_admin', 'delivery_agent'],
+    route: '/admin/group-deals',
+  },
+  etsawaqli_orders: {
+    t: '🧺 طلب تسوق أسواق جديد (إتسوقلي)',
+    b: 'تم تسجيل فاتورة تسوق جديدة في إتسوقلي وتحتاج المتابعة والتجهيز.',
+    roles: ['admin', 'assistant_admin', 'commercial_admin', 'delivery_agent'],
+    route: '/admin/group-deals',
+  },
+  reports: {
+    t: '🚨 بلاغ جديد عن محتوى مسيء',
+    b: 'أرسل أحد المستخدمين بلاغاً عن محتوى لمراجعته فوراً واتخاذ الإجراء اللازم.',
+    roles: ['admin', 'assistant_admin'],
+    route: '/admin',
+  },
 };
 
 function extractCloudinaryPublicId(url) {
@@ -180,39 +331,74 @@ export default async function handler(req, res) {
       }
       await rlRef.set({ at: now, by: decoded.uid }, { merge: true });
 
-      // المراجعة هنا للمدير العام وحده: مدير المركز الطبي صلاحيته محصورة في
-      // عيادات المركز الخيري، فلا يُبلَّغ بمحتوى طبي لا يستطيع اعتماده.
+      // توجيه الإشعار حسب الصلاحيات: المدير العام والأدمن المساعد دائماً،
+      // بالإضافة للأدمن التخصصي أو المندوب حسب نطاق الخدمة.
+      const targetRoles = Array.from(
+        new Set(['admin', 'assistant_admin', ...(kind.roles || [])])
+      );
       const usersSnap = await admin
         .firestore()
         .collection('users')
-        .where('role', '==', 'admin')
+        .where('role', 'in', targetRoles)
         .get();
 
       const seen = new Set();
       const messages = [];
+      const inboxBatch = admin.firestore().batch();
+      let inboxWrites = 0;
+
       for (const d of usersSnap.docs) {
-        const tok = d.data()?.fcmToken;
+        const userData = d.data() || {};
+        if (userData.isActive === false) continue;
+
+        // كتابة إشعار في صندوق التطبيق الداخلي لكل مسؤول مستحق
+        const notifRef = admin.firestore().collection('notifications').doc();
+        inboxBatch.set(notifRef, {
+          userId: d.id,
+          title: kind.t,
+          body: kind.b,
+          kind: 'admin_alert',
+          collection: String(body.collection || ''),
+          route: kind.route || '/admin',
+          isRead: false,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        inboxWrites++;
+
+        const tok = userData.fcmToken;
         if (!tok || seen.has(tok)) continue;
         seen.add(tok);
         messages.push({
           token: tok,
           notification: { title: kind.t, body: kind.b },
-          data: { route: '/admin' },
+          data: {
+            route: kind.route || '/admin',
+            collection: String(body.collection || ''),
+          },
           android: {
             priority: 'high',
             notification: { channelId: 'qarity_channel', color: '#1565C0' },
           },
         });
       }
+
+      if (inboxWrites > 0) {
+        await inboxBatch.commit().catch(() => {});
+      }
+
       if (messages.length === 0) {
         return res
           .status(200)
-          .json({ ok: true, sent: 0, reason: 'no_admin_tokens' });
+          .json({ ok: true, sent: 0, inbox: inboxWrites, reason: 'no_admin_tokens' });
       }
       const resp = await admin.messaging().sendEach(messages);
-      return res
-        .status(200)
-        .json({ ok: true, sent: resp.successCount, failed: resp.failureCount });
+      return res.status(200).json({
+        ok: true,
+        sent: resp.successCount,
+        failed: resp.failureCount,
+        inbox: inboxWrites,
+        roles: targetRoles,
+      });
     } catch (e) {
       return res
         .status(500)

@@ -480,6 +480,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
               setState(() => _selectedTool = 0);
               _tabController.animateTo(3);
             },
+            onOpenPromos: () {
+              setState(() => _selectedTool = 2);
+              _tabController.animateTo(3);
+            },
+            onOpenCommerce: () {
+              setState(() => _selectedTool = 4);
+              _tabController.animateTo(3);
+            },
           ),
           _ReviewPage(
             key: ValueKey('review_$_reviewNav'),

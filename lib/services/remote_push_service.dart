@@ -323,6 +323,7 @@ const Set<String> kAdminNotifyCollections = {
   'legal_consultations',
   'agriculture_consultations',
   'seller_requests',
+  'upgrade_requests',
   'village_clinics',
   'pharmacies',
   'medical_labs',
@@ -334,6 +335,7 @@ const Set<String> kAdminNotifyCollections = {
   'group_deals',
   'eshterili_orders',
   'etsawaqli_orders',
+  'reports',
 };
 
 /// المجموعات التي يدعمها إجراء `user_notify` (إخطار صاحب المحتوى بالإعجاب).

@@ -15,6 +15,8 @@ class _OverviewPage extends StatefulWidget {
     required this.onOpenReports,
     required this.onOpenAlerts,
     required this.onOpenBroadcast,
+    required this.onOpenPromos,
+    required this.onOpenCommerce,
   });
 
   final Map<String, int> stats;
@@ -32,6 +34,8 @@ class _OverviewPage extends StatefulWidget {
   final VoidCallback onOpenReports;
   final VoidCallback onOpenAlerts;
   final VoidCallback onOpenBroadcast;
+  final VoidCallback onOpenPromos;
+  final VoidCallback onOpenCommerce;
 
   @override
   State<_OverviewPage> createState() => _OverviewPageState();
@@ -83,6 +87,14 @@ class _OverviewPageState extends State<_OverviewPage> {
           ),
           const SizedBox(height: 20),
 
+          // بوابات التحكم الشاملة على كافة قطاعات التطبيق
+          _FullControlModulesSection(
+            onOpenCommerce: widget.onOpenCommerce,
+            onOpenPromos: widget.onOpenPromos,
+            onOpenReview: () => widget.onOpenReview(kAllPending),
+          ),
+          const SizedBox(height: 20),
+
           // نشاط حديث
           _RecentActivitySection(),
           const SizedBox(height: 24),
@@ -119,10 +131,10 @@ class _QuickStatsGrid extends StatelessWidget {
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 4,
-      mainAxisSpacing: 10,
-      crossAxisSpacing: 10,
-      mainAxisExtent: 88,
+      crossAxisCount: 2,
+      mainAxisSpacing: 12,
+      crossAxisSpacing: 12,
+      mainAxisExtent: 92,
       children: [
         _StatCellOverview(
             label: 'مستخدمون',
@@ -462,6 +474,167 @@ class _QuickActionCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// قسم بوابات التحكم الشاملة — يمنح المدير سيطرة فورية بنقرة واحدة
+/// على كافة قطاعات التطبيق التجارية والطبية والمجتمعية.
+class _FullControlModulesSection extends StatelessWidget {
+  const _FullControlModulesSection({
+    required this.onOpenCommerce,
+    required this.onOpenPromos,
+    required this.onOpenReview,
+  });
+
+  final VoidCallback onOpenCommerce;
+  final VoidCallback onOpenPromos;
+  final VoidCallback onOpenReview;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final modules = [
+      (
+        title: 'التجارة والصفقات',
+        subtitle: 'صفقات اليوم · إشتريلي · إتسوقلي',
+        icon: Icons.storefront_rounded,
+        color: const Color(0xFF16A34A),
+        onTap: onOpenCommerce,
+      ),
+      (
+        title: 'سجل الأعضاء الشامل',
+        subtitle: 'فرز، بحث، وتصدير كافة الأعضاء',
+        icon: Icons.badge_rounded,
+        color: Colors.teal,
+        onTap: () => Navigator.pushNamed(context, AppRoutes.adminAllUsers),
+      ),
+      (
+        title: 'الإعلانات الترويجية',
+        subtitle: 'إدارة البوب-أب والبنرات الدعائية',
+        icon: Icons.campaign_rounded,
+        color: Colors.deepPurple,
+        onTap: onOpenPromos,
+      ),
+      (
+        title: 'أرشيف ومساهمات القرية',
+        subtitle: 'اعتماد الوثائق والصور التاريخية',
+        icon: Icons.history_edu_rounded,
+        color: const Color(0xFF5D4037),
+        onTap: () => Navigator.pushNamed(
+            context, AppRoutes.villageContributionsReview),
+      ),
+      (
+        title: 'إدارة المركز الطبي',
+        subtitle: 'العيادات الخيرية، الصيدليات، والدم',
+        icon: Icons.local_hospital_rounded,
+        color: const Color(0xFF00897B),
+        onTap: () => Navigator.pushNamed(context, AppRoutes.medical),
+      ),
+      (
+        title: 'بوابة المراجعة الموحدة',
+        subtitle: 'فحص كل المعلّقات والاعتماد الفوري',
+        icon: Icons.fact_check_rounded,
+        color: AppColors.primary,
+        onTap: onOpenReview,
+      ),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Text(
+            'بوابات التحكم الشاملة',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: modules.length,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            mainAxisSpacing: 10,
+            crossAxisSpacing: 10,
+            mainAxisExtent: 84,
+          ),
+          itemBuilder: (context, index) {
+            final m = modules[index];
+            final ink = AppColors.readableInk(m.color, theme.brightness);
+            return Material(
+              color: theme.colorScheme.surface,
+              borderRadius: BorderRadius.circular(16),
+              child: InkWell(
+                onTap: m.onTap,
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: m.color.withValues(alpha: 0.25),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: m.color.withValues(alpha: 0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: m.color.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(11),
+                        ),
+                        child: Icon(m.icon, color: ink, size: 20),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              m.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.labelLarge?.copyWith(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              m.subtitle,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                fontSize: 10,
+                                height: 1.25,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 }
