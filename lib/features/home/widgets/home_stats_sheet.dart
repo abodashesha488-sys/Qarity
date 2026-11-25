@@ -299,246 +299,252 @@ Future<void> _handleOnlineHeaderTap(BuildContext context, int count) async {
   }
 }
 
-void _showOnlineUsersAdminSheet(BuildContext context) {
+/// نافذة المتواجدين الآن الخاصة بالأدمن — تعمل عند الطلب فقط (بدون بث حي مستمر)
+/// لتوفير استهلاك قراءات قاعدة البيانات.
+void showOnlineUsersAdminSheetOnDemand(
+  BuildContext context, {
+  OnlinePresenceSnapshot? initialSnapshot,
+}) {
   HapticFeedback.lightImpact();
   showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (ctx) {
-      final theme = Theme.of(ctx);
-      final isDark = theme.brightness == Brightness.dark;
-      final maxSheetHeight = MediaQuery.of(ctx).size.height * 0.82;
+    builder: (ctx) => _OnlineUsersOnDemandSheet(
+      initialSnapshot: initialSnapshot,
+    ),
+  );
+}
 
-      return Container(
-        constraints: BoxConstraints(maxHeight: maxSheetHeight),
-        padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1B1E26) : Colors.white,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.35),
-              blurRadius: 24,
-              offset: const Offset(0, -6),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // شريط السحب العلوي
-            Center(
-              child: Container(
-                width: 44,
-                height: 4.5,
-                decoration: BoxDecoration(
-                  color: isDark ? Colors.white24 : Colors.black12,
-                  borderRadius: BorderRadius.circular(3),
-                ),
+class _OnlineUsersOnDemandSheet extends StatefulWidget {
+  const _OnlineUsersOnDemandSheet({this.initialSnapshot});
+
+  final OnlinePresenceSnapshot? initialSnapshot;
+
+  @override
+  State<_OnlineUsersOnDemandSheet> createState() =>
+      _OnlineUsersOnDemandSheetState();
+}
+
+class _OnlineUsersOnDemandSheetState extends State<_OnlineUsersOnDemandSheet> {
+  OnlinePresenceSnapshot? _snapshot;
+  bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _snapshot = widget.initialSnapshot;
+    if (_snapshot == null) {
+      _refreshNow();
+    }
+  }
+
+  Future<void> _refreshNow() async {
+    if (_loading) return;
+    setState(() => _loading = true);
+    final res = await UserPresenceService.instance.fetchOnlineUsersOnDemand();
+    if (!mounted) return;
+    setState(() {
+      _snapshot = res;
+      _loading = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final maxSheetHeight = MediaQuery.of(context).size.height * 0.82;
+    final snap = _snapshot;
+    final users = snap?.users ?? const <OnlineUserInfo>[];
+
+    return Container(
+      constraints: BoxConstraints(maxHeight: maxSheetHeight),
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1B1E26) : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.35),
+            blurRadius: 24,
+            offset: const Offset(0, -6),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Center(
+            child: Container(
+              width: 44,
+              height: 4.5,
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white24 : Colors.black12,
+                borderRadius: BorderRadius.circular(3),
               ),
             ),
-            const SizedBox(height: 14),
-
-            // رأس اللوحة: العنوان + شارة الأدمن العام
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(9),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2ECC71).withValues(alpha: 0.16),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.sensors_rounded,
-                    color: Color(0xFF2ECC71),
-                    size: 24,
-                  ),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(9),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2ECC71).withValues(alpha: 0.16),
+                  shape: BoxShape.circle,
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'المتواجدون الآن بالتطبيق',
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        'قائمة حية للمتصلين لحظة بلحظة',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDark ? Colors.white60 : Colors.black54,
-                        ),
-                      ),
-                    ],
-                  ),
+                child: const Icon(
+                  Icons.sensors_rounded,
+                  color: Color(0xFF2ECC71),
+                  size: 24,
                 ),
-                // شارة الأدمن العام الحصرية
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF1C40F).withValues(alpha: 0.18),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: const Color(0xFFF1C40F).withValues(alpha: 0.6),
-                      width: 0.9,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'المتواجدون الآن بالتطبيق',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.shield_rounded,
-                        color: Color(0xFFF1C40F),
-                        size: 14,
+                    Text(
+                      'تحديث يدوي عند الطلب فقط لتوفير استهلاك البيانات',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: isDark ? Colors.white60 : Colors.black54,
                       ),
-                      SizedBox(width: 4),
-                      Text(
-                        'المدير العام',
-                        style: TextStyle(
-                          color: Color(0xFFF1C40F),
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            const SizedBox(height: 14),
-
-            // قائمة المستخدمين الحية المتصلين الآن
-            Expanded(
-              child: StreamBuilder<List<OnlineUserInfo>>(
-                stream: UserPresenceService.instance.onlineUsersListStream,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting &&
-                      !snapshot.hasData) {
-                    return const Center(
-                      child: CircularProgressIndicator(),
-                    );
-                  }
-
-                  final users = snapshot.data ?? [];
-                  if (users.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
+              ),
+              IconButton(
+                tooltip: 'تحديث القائمة الآن',
+                onPressed: _loading ? null : _refreshNow,
+                icon: _loading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh_rounded),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Expanded(
+            child: _loading && snap == null
+                ? const Center(child: CircularProgressIndicator())
+                : users.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.wifi_off_rounded,
+                              size: 48,
+                              color: isDark ? Colors.white38 : Colors.black26,
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              'لا يوجد مستخدمون متواجدون حالياً',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: isDark ? Colors.white60 : Colors.black54,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : Column(
                         children: [
-                          Icon(
-                            Icons.wifi_off_rounded,
-                            size: 48,
-                            color: isDark ? Colors.white38 : Colors.black26,
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? Colors.white.withValues(alpha: 0.05)
+                                  : const Color(0xFFF4F6F9),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isDark
+                                    ? Colors.white.withValues(alpha: 0.08)
+                                    : Colors.black.withValues(alpha: 0.06),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceAround,
+                              children: [
+                                _buildOnlineStatMiniBadge(
+                                  label: 'الإجمالي',
+                                  count: snap?.totalOnline ?? users.length,
+                                  color: const Color(0xFF2ECC71),
+                                  icon: Icons.people_alt_rounded,
+                                ),
+                                Container(
+                                  width: 1,
+                                  height: 18,
+                                  color: Colors.grey.withValues(alpha: 0.3),
+                                ),
+                                _buildOnlineStatMiniBadge(
+                                  label: 'أعضاء مسجلون',
+                                  count: snap?.membersCount ?? 0,
+                                  color: const Color(0xFF3498DB),
+                                  icon: Icons.person_rounded,
+                                ),
+                                Container(
+                                  width: 1,
+                                  height: 18,
+                                  color: Colors.grey.withValues(alpha: 0.3),
+                                ),
+                                _buildOnlineStatMiniBadge(
+                                  label: 'زوار',
+                                  count: snap?.guestsCount ?? 0,
+                                  color: const Color(0xFF95A5A6),
+                                  icon: Icons.devices_rounded,
+                                ),
+                              ],
+                            ),
                           ),
                           const SizedBox(height: 10),
-                          Text(
-                            'لا يوجد مستخدمون متواجدون حالياً',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: isDark ? Colors.white60 : Colors.black54,
+                          Expanded(
+                            child: ListView.separated(
+                              itemCount: users.length,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: 8),
+                              itemBuilder: (context, index) {
+                                return _OnlineUserItemCard(
+                                  user: users[index],
+                                  isDark: isDark,
+                                );
+                              },
                             ),
                           ),
                         ],
                       ),
-                    );
-                  }
-
-                  final memberCount = users.where((u) => !u.isGuest).length;
-                  final guestCount = users.where((u) => u.isGuest).length;
-
-                  return Column(
-                    children: [
-                      // شريط إحصائي مصغر للأعضاء والزوار
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? Colors.white.withValues(alpha: 0.05)
-                              : const Color(0xFFF4F6F9),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: isDark
-                                ? Colors.white.withValues(alpha: 0.08)
-                                : Colors.black.withValues(alpha: 0.06),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            _buildOnlineStatMiniBadge(
-                              label: 'الإجمالي',
-                              count: users.length,
-                              color: const Color(0xFF2ECC71),
-                              icon: Icons.people_alt_rounded,
-                            ),
-                            Container(
-                                width: 1,
-                                height: 18,
-                                color: Colors.grey.withValues(alpha: 0.3)),
-                            _buildOnlineStatMiniBadge(
-                              label: 'أعضاء مسجلون',
-                              count: memberCount,
-                              color: const Color(0xFF3498DB),
-                              icon: Icons.person_rounded,
-                            ),
-                            Container(
-                                width: 1,
-                                height: 18,
-                                color: Colors.grey.withValues(alpha: 0.3)),
-                            _buildOnlineStatMiniBadge(
-                              label: 'زوار',
-                              count: guestCount,
-                              color: const Color(0xFF95A5A6),
-                              icon: Icons.devices_rounded,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-
-                      // قائمة كروت المستخدمين
-                      Expanded(
-                        child: ListView.separated(
-                          itemCount: users.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(height: 8),
-                          itemBuilder: (context, index) {
-                            final u = users[index];
-                            return _OnlineUserItemCard(
-                              user: u,
-                              isDark: isDark,
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'لا يتم استهلاك قراءات مستمرة — تُحدّث هذه القائمة فقط عند ضغطك على التحديث.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 11,
+              color: isDark ? Colors.white38 : Colors.black38,
             ),
-            const SizedBox(height: 8),
-            Text(
-              'تُحدث هذه القائمة لحظياً وتلقائياً فور فتح التطبيق أو إغلاقه.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 11,
-                color: isDark ? Colors.white38 : Colors.black38,
-              ),
-            ),
-          ],
-        ),
-      );
-    },
-  );
+          ),
+        ],
+      ),
+    );
+  }
 }
+
+void _showOnlineUsersAdminSheet(BuildContext context) =>
+    showOnlineUsersAdminSheetOnDemand(context);
 
 Widget _buildOnlineStatMiniBadge({
   required String label,

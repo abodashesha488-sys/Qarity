@@ -640,6 +640,16 @@ class _AboutScreenState extends State<AboutScreen> {
   Widget _changelogCard(ThemeData theme) {
     final additions = <(IconData, String, Color)>[
       (
+        Icons.navigation_rounded,
+        'الشريط السفلي الدائم: بقاء شريط التنقل السفلي ظاهراً في كافة صفحات التطبيق لسرعة التنقل والوصول المباشر.',
+        const Color(0xFF0EA5E9)
+      ),
+      (
+        Icons.data_saver_on_rounded,
+        'رصد المتصلين والأعضاء في لوحة الإدارة: نقل إحصائيات المتواجدين والمسجلين إلى لوحة التحكم مع تحديث يدوي عند الطلب لتوفير استهلاك البيانات.',
+        const Color(0xFF10B981)
+      ),
+      (
         Icons.local_taxi_rounded,
         'خدمة «وصّلني» (سيارة خاصة أو توك توك): اطلب توصيلة فورية أو لموعد مسبق داخل القرية وللمدن المجاورة مع متابعة حية وبيانات السائق.',
         const Color(0xFF7C3AED)

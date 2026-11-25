@@ -68,6 +68,10 @@ class _OverviewPageState extends State<_OverviewPage> {
           ),
           const SizedBox(height: 16),
 
+          // رصد المتصلين حالياً والأعضاء المسجلين (بطلب الأدمن فقط)
+          const _OnDemandPresenceStatsCard(),
+          const SizedBox(height: 16),
+
           // عناصر تحتاج مراجعة
           if (widget.totalPending > 0) ...[
             _PendingReviewSection(
@@ -497,7 +501,7 @@ class _FullControlModulesSection extends StatelessWidget {
     final modules = [
       (
         title: 'التجارة والصفقات',
-        subtitle: 'صفقات اليوم · إشتريلي · إتسوقلي',
+        subtitle: 'صفقات اليوم · إشتريلي · إتسوقلي · وصّلني',
         icon: Icons.storefront_rounded,
         color: const Color(0xFF16A34A),
         onTap: onOpenCommerce,
@@ -814,6 +818,268 @@ class _ActivityTile extends StatelessWidget {
     if (diff.inDays < 1) return 'منذ ${diff.inHours} ساعة';
     if (diff.inDays < 30) return 'منذ ${diff.inDays} يوم';
     return '${dt.day}/${dt.month}/${dt.year}';
+  }
+}
+
+/// بطاقة رصد المتصلين حالياً والأعضاء المسجلين داخل لوحة تحكم الإدارة.
+/// لا تُجري أي قراءة تلقائية أو بث حي مستمر لتوفير الأرصدة المجانية لـ Firestore؛
+/// ولا يتم جلب البيانات إلا عند ضغط الأدمن على «تحديث الآن» أو «عرض المتصلين».
+class _OnDemandPresenceStatsCard extends StatefulWidget {
+  const _OnDemandPresenceStatsCard();
+
+  @override
+  State<_OnDemandPresenceStatsCard> createState() =>
+      _OnDemandPresenceStatsCardState();
+}
+
+class _OnDemandPresenceStatsCardState
+    extends State<_OnDemandPresenceStatsCard> {
+  bool _loading = false;
+  OnlinePresenceSnapshot? _presence;
+  int? _registeredUsers;
+  DateTime? _lastFetchedAt;
+
+  Future<void> _fetchNow() async {
+    if (_loading) return;
+    setState(() => _loading = true);
+    try {
+      final results = await Future.wait<dynamic>([
+        UserPresenceService.instance.fetchOnlineUsersOnDemand(),
+        UserPresenceService.instance
+            .fetchTotalRegisteredUsersOnDemand(syncFromUsersCount: true),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _presence = results[0] as OnlinePresenceSnapshot;
+        _registeredUsers = results[1] as int;
+        _lastFetchedAt = DateTime.now();
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+    }
+  }
+
+  String _formatTime(DateTime dt) {
+    final hh = dt.hour.toString().padLeft(2, '0');
+    final mm = dt.minute.toString().padLeft(2, '0');
+    final ss = dt.second.toString().padLeft(2, '0');
+    return '$hh:$mm:$ss';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final onlineText = _presence != null ? '${_presence!.totalOnline}' : '—';
+    final registeredText =
+        _registeredUsers != null ? '$_registeredUsers' : '—';
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(
+          color: const Color(0xFF10B981).withValues(alpha: 0.35),
+          width: 1.3,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.sensors_rounded,
+                    color: Color(0xFF10B981),
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'رصد المتصلين والأعضاء المسجلين',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      Text(
+                        _lastFetchedAt == null
+                            ? 'تحديث يدوي عند الطلب فقط لتوفير استهلاك قاعدة البيانات'
+                            : 'آخر تحديث يدوي: ${_formatTime(_lastFetchedAt!)}',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          fontSize: 11,
+                          color: isDark ? Colors.white60 : Colors.black54,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withValues(alpha: 0.09),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: const Color(0xFF10B981).withValues(alpha: 0.28),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.circle,
+                                size: 9, color: Color(0xFF10B981)),
+                            const SizedBox(width: 6),
+                            Text(
+                              'المتصلون حالياً',
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          onlineText,
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w900,
+                            color: AppColors.readableInk(
+                              const Color(0xFF10B981),
+                              theme.brightness,
+                              minRatio: 3.0,
+                            ),
+                          ),
+                        ),
+                        if (_presence != null)
+                          Text(
+                            'أعضاء: ${_presence!.membersCount} · زوار: ${_presence!.guestsCount}',
+                            style: theme.textTheme.bodySmall
+                                ?.copyWith(fontSize: 10.5),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEF4444).withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: const Color(0xFFEF4444).withValues(alpha: 0.25),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.groups_rounded,
+                                size: 13, color: Color(0xFFEF4444)),
+                            const SizedBox(width: 5),
+                            Text(
+                              'الأعضاء المسجلون',
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          registeredText,
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w900,
+                            color: AppColors.readableInk(
+                              const Color(0xFFEF4444),
+                              theme.brightness,
+                              minRatio: 3.0,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          'إجمالي حسابات القرية',
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(fontSize: 10.5),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: _loading ? null : _fetchNow,
+                    icon: _loading
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.refresh_rounded, size: 18),
+                    label: Text(_loading ? 'جاري التحديث...' : 'تحديث الآن'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF10B981),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    showOnlineUsersAdminSheetOnDemand(
+                      context,
+                      initialSnapshot: _presence,
+                    );
+                  },
+                  icon: const Icon(Icons.visibility_rounded, size: 18),
+                  label: const Text('عرض المتصلين'),
+                  style: OutlinedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

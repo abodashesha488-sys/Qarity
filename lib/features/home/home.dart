@@ -35,7 +35,6 @@ import '../../widgets/qurity_logo.dart';
 import '../../widgets/update_flow.dart';
 import '../../widgets/village_prayer_dialog.dart';
 import '../../widgets/wassalni_ride_sheet.dart';
-import 'widgets/home_stats_sheet.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -901,11 +900,6 @@ class _HeroHeader extends StatelessWidget {
                 height: kHeroBodyHeight,
                 child: Stack(
                   children: [
-                    // الزران المتقابلان: رصد المتواجدين الآن 🟢 وإجمالي المسجلين 🔴
-                    Align(
-                      alignment: Alignment.topLeft,
-                      child: HeaderStatsButtons(),
-                    ),
                     // زرّا الإشعارات والبحث في أقصى اليمين
                     Align(
                       alignment: Alignment.topRight,

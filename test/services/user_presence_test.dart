@@ -61,5 +61,16 @@ void main() {
       final users = await service.onlineUsersListStream.first;
       expect(users, isA<List<OnlineUserInfo>>());
     });
+
+    test('on-demand fetch methods return safe defaults when Firebase is uninitialized',
+        () async {
+      final service = UserPresenceService.instance;
+      final snapshot = await service.fetchOnlineUsersOnDemand();
+      expect(snapshot.totalOnline, greaterThanOrEqualTo(1));
+      expect(snapshot.users, isA<List<OnlineUserInfo>>());
+
+      final total = await service.fetchTotalRegisteredUsersOnDemand();
+      expect(total, greaterThanOrEqualTo(19));
+    });
   });
 }

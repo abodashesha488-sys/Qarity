@@ -44,7 +44,7 @@ class UserPresenceService with WidgetsBindingObserver {
 
   static const String _prefGuestKey = 'app_guest_presence_id';
   static const String _statsDocId = 'users_stats';
-  static const int _onlineTimeoutMinutes = 5;
+  static const int _onlineTimeoutMinutes = 10;
 
   String? _sessionId;
   Timer? _heartbeatTimer;
@@ -165,8 +165,8 @@ class UserPresenceService with WidgetsBindingObserver {
 
   void _startHeartbeatTimer() {
     _heartbeatTimer?.cancel();
-    // إرسال نبضة خفيفة كل 3 دقائق طالما التطبيق نشط لترشيد عمليات الكتابة في Firestore
-    _heartbeatTimer = Timer.periodic(const Duration(minutes: 3), (_) {
+    // إرسال نبضة خفيفة كل 8 دقائق طالما التطبيق نشط لترشيد عمليات الكتابة في Firestore
+    _heartbeatTimer = Timer.periodic(const Duration(minutes: 8), (_) {
       if (_isOnline) {
         _writePresence(isOnline: true);
       }
@@ -178,8 +178,7 @@ class UserPresenceService with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       markOnline();
     } else if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.detached ||
-        state == AppLifecycleState.inactive) {
+        state == AppLifecycleState.detached) {
       markOffline();
     }
   }
@@ -428,6 +427,108 @@ class UserPresenceService with WidgetsBindingObserver {
     }
   }
 
+  /// جلب المتصلين حالياً لمرة واحدة فقط بطلب الأدمن (دون فتح بث حي مستمر لتوفير الأرصدة)
+  Future<OnlinePresenceSnapshot> fetchOnlineUsersOnDemand() async {
+    try {
+      final snapshot = await _firestore
+          .collection('app_presence')
+          .where('isOnline', isEqualTo: true)
+          .get();
+
+      final now = DateTime.now();
+      final List<OnlineUserInfo> users = [];
+      final Set<String> seenUserIds = {};
+
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        if (data['isOnline'] != true) continue;
+
+        final lastActiveTs = data['lastActive'] as Timestamp?;
+        if (lastActiveTs != null) {
+          final diffMinutes = now.difference(lastActiveTs.toDate()).inMinutes;
+          if (diffMinutes >= _onlineTimeoutMinutes) {
+            continue;
+          }
+        }
+
+        final info = OnlineUserInfo.fromMap(doc.id, data);
+        if (!info.isGuest && info.userId != null) {
+          if (seenUserIds.contains(info.userId)) continue;
+          seenUserIds.add(info.userId!);
+        }
+        users.add(info);
+      }
+
+      users.sort((a, b) {
+        if (!a.isGuest && b.isGuest) return -1;
+        if (a.isGuest && !b.isGuest) return 1;
+
+        if (!a.isGuest && !b.isGuest) {
+          final aIsAdmin = a.isAdmin;
+          final bIsAdmin = b.isAdmin;
+          if (aIsAdmin && !bIsAdmin) return -1;
+          if (!aIsAdmin && bIsAdmin) return 1;
+        }
+
+        final aTime = a.lastActive ?? DateTime.fromMillisecondsSinceEpoch(0);
+        final bTime = b.lastActive ?? DateTime.fromMillisecondsSinceEpoch(0);
+        return bTime.compareTo(aTime);
+      });
+
+      final membersCount = users.where((u) => !u.isGuest).length;
+      final guestsCount = users.where((u) => u.isGuest).length;
+
+      return OnlinePresenceSnapshot(
+        users: users,
+        totalOnline: users.isNotEmpty ? users.length : 1,
+        membersCount: membersCount,
+        guestsCount: guestsCount,
+        fetchedAt: now,
+      );
+    } catch (e) {
+      debugPrint('fetchOnlineUsersOnDemand error: $e');
+      return OnlinePresenceSnapshot(
+        users: const [],
+        totalOnline: 1,
+        membersCount: 0,
+        guestsCount: 0,
+        fetchedAt: DateTime.now(),
+      );
+    }
+  }
+
+  /// جلب إجمالي الأعضاء المسجلين لمرة واحدة فقط بطلب الأدمن (دون بث حي مستمر)
+  Future<int> fetchTotalRegisteredUsersOnDemand({
+    bool syncFromUsersCount = false,
+  }) async {
+    try {
+      if (syncFromUsersCount) {
+        final snap = await _firestore.collection('users').count().get();
+        final count = snap.count;
+        if (count != null && count > 0) {
+          await _firestore.collection('app_stats').doc(_statsDocId).set({
+            'totalUsers': count,
+            'updatedAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+          return count;
+        }
+      }
+
+      final doc =
+          await _firestore.collection('app_stats').doc(_statsDocId).get();
+      if (doc.exists) {
+        final count = (doc.data()?['totalUsers'] as num?)?.toInt();
+        if (count != null && count > 0) return count;
+      }
+
+      final fallbackSnap = await _firestore.collection('users').count().get();
+      return fallbackSnap.count ?? 19;
+    } catch (e) {
+      debugPrint('fetchTotalRegisteredUsersOnDemand error: $e');
+      return 19;
+    }
+  }
+
   /// تنظيف الموارد عند الإغلاق
   void dispose() {
     _heartbeatTimer?.cancel();
@@ -437,6 +538,23 @@ class UserPresenceService with WidgetsBindingObserver {
     } catch (_) {}
     _initialized = false;
   }
+}
+
+/// لقطة فورية للمستخدمين المتصلين حالياً يتم جلبها عند طلب الأدمن فقط
+class OnlinePresenceSnapshot {
+  const OnlinePresenceSnapshot({
+    required this.users,
+    required this.totalOnline,
+    required this.membersCount,
+    required this.guestsCount,
+    required this.fetchedAt,
+  });
+
+  final List<OnlineUserInfo> users;
+  final int totalOnline;
+  final int membersCount;
+  final int guestsCount;
+  final DateTime fetchedAt;
 }
 
 /// نموذج بيانات المستخدم المتواجد لحظياً بالتطبيق
