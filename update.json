@@ -1,7 +1,7 @@
 {
-    "versionCode":  28,
-    "versionName":  "1.2.8",
-    "apkUrl":  "https://github.com/abodashesha488-sys/Qarity/releases/latest/download/Qarity.apk",
-    "forceUpdate":  false,
-    "releaseNotes":  "feat: إضافة ميزة جديدة"
+  "versionCode": 28,
+  "versionName": "1.2.8",
+  "apkUrl": "https://github.com/abodashesha488-sys/Qarity/releases/latest/download/Qarity.apk",
+  "forceUpdate": false,
+  "releaseNotes": "feat: إضافة ميزة جديدة"
 }
