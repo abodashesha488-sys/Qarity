@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     نشر كامل للمشروع في خطوة واحدة: فحص الجودة + رفع الكود + بناء وإصدار APK + نسخة الويب ونشر Hosting + نشر قواعد Firestore + تحديث إصدار التطبيق.
 
@@ -347,19 +347,37 @@ if (-not $SkipTests) {
 Write-Host ""
 Write-Host "[Stage 1b] الالتزام ورفع الكود..." -ForegroundColor Cyan
 
-# قراءة رقم البناء الحالي
+# مزامنة رقم البناء مع البعيد والمحلي لضمان عدم التراجع أبدًا عند الرفع
+git fetch origin $currentBranch --quiet 2>$null | Out-Null
+
 $currentBuildNo = 0
 if (Test-Path "build_number.txt") {
     [int]::TryParse(((Get-Content "build_number.txt" -ErrorAction SilentlyContinue) -replace '\s', ''), [ref]$currentBuildNo) | Out-Null
 }
+$remoteBuildRaw = git show "origin/${currentBranch}:build_number.txt" 2>$null
+if ($LASTEXITCODE -eq 0 -and $remoteBuildRaw) {
+    $remoteBuildNo = 0
+    if ([int]::TryParse(($remoteBuildRaw -replace '\s', ''), [ref]$remoteBuildNo) -and $remoteBuildNo -gt $currentBuildNo) {
+        $currentBuildNo = $remoteBuildNo
+    }
+}
+if (Test-Path "pubspec.yaml") {
+    $pubspecCheck = Get-Content "pubspec.yaml" -Raw
+    if ($pubspecCheck -match '(?m)^version:\s*[^+\s]+\+(\d+)') {
+        $pubspecBuildNo = 0
+        if ([int]::TryParse($Matches[1], [ref]$pubspecBuildNo) -and $pubspecBuildNo -gt $currentBuildNo) {
+            $currentBuildNo = $pubspecBuildNo
+        }
+    }
+}
 
 $localChanges = @(git status --short 2>$null)
+$hadLocalChangesBeforeBump = ($localChanges.Count -gt 0)
 
-# إذا كانت هناك تغييرات غير ملتزمة أو تم تحديد إصدار صراحةً، نحدث رقم الإصدار محليًا تلقائيًا ليتطابق دائمًا مع النشر
-if ($localChanges.Count -gt 0 -or -not [string]::IsNullOrWhiteSpace($Version)) {
-    # إذا كانت التغييرات تشمل كوداً برمجياً فنرقي رقم الإصدار تلقائياً
+# عند الرفع الكامل (بدون -SkipRelease) أو وجود تعديلات/إصدار محدد: نرفع رقم الإصدار دائماً تلقائياً
+if (-not $SkipRelease -or $localChanges.Count -gt 0 -or -not [string]::IsNullOrWhiteSpace($Version)) {
     $codeChanges = @($localChanges | Where-Object { $_ -notmatch 'build_number\.txt|pubspec\.yaml|update\.json' })
-    if ($codeChanges.Count -gt 0 -or $currentBuildNo -le 0 -or -not [string]::IsNullOrWhiteSpace($Version)) {
+    if (-not $SkipRelease -or $codeChanges.Count -gt 0 -or $currentBuildNo -le 0 -or -not [string]::IsNullOrWhiteSpace($Version)) {
         $nextBuildNo = $currentBuildNo + 1
         $major = 1 + [Math]::Floor($nextBuildNo / 100)
         $minor = [Math]::Floor(($nextBuildNo / 10) % 10)
@@ -393,6 +411,10 @@ if ($localChanges.Count -gt 0 -or -not [string]::IsNullOrWhiteSpace($Version)) {
             } catch {
                 Write-Host "تعذر تحديث update.json محليًا: $_" -ForegroundColor DarkGray
             }
+        }
+
+        if (-not $hadLocalChangesBeforeBump -and $Message -eq "sync: update") {
+            $Message = "chore: release $fullVersion"
         }
     }
 
