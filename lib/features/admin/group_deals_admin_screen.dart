@@ -8,10 +8,12 @@ import '../../core/utils/launch_link.dart';
 import '../../models/eshterili_model.dart';
 import '../../models/etsawaqli_model.dart';
 import '../../models/group_deal_model.dart';
+import '../../models/wassalni_model.dart';
 import '../../services/eshterili_service.dart';
 import '../../services/etsawaqli_service.dart';
 import '../../services/group_deal_service.dart';
 import '../../services/share_service.dart';
+import '../../services/wassalni_service.dart';
 import '../../widgets/commercial_receipt_dialog.dart';
 import '../../widgets/delivery_agent_dashboard.dart';
 import '../../widgets/group_deal_delivery_screen.dart';
@@ -34,6 +36,7 @@ class _GroupDealsAdminScreenState extends State<GroupDealsAdminScreen> {
   final GroupDealService _dealService = GroupDealService();
   final EshteriliService _eshteriliService = EshteriliService();
   final EtsawaqliService _etsawaqliService = EtsawaqliService();
+  final WassalniService _wassalniService = WassalniService();
 
   // صفقات الجملة
   String? _selectedDealId;
@@ -56,12 +59,13 @@ class _GroupDealsAdminScreenState extends State<GroupDealsAdminScreen> {
         _buildGroupDealsTab(theme),
         _buildEshteriliTab(theme),
         _buildEtsawaqliTab(theme),
+        _buildWassalniTab(theme),
       ],
     );
 
     if (widget.isEmbedded) {
       return DefaultTabController(
-        length: 3,
+        length: 4,
         child: Column(
           children: [
             // شريط تبويبات أنيق بدون خلفية خضراء تعلو أو تغطي على تبويبات مركز الأدوات
@@ -78,15 +82,18 @@ class _GroupDealsAdminScreenState extends State<GroupDealsAdminScreen> {
                 children: [
                   Expanded(
                     child: TabBar(
+                      isScrollable: true,
+                      tabAlignment: TabAlignment.start,
                       labelColor: const Color(0xFF16A34A),
                       unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
                       indicatorColor: const Color(0xFF16A34A),
                       indicatorWeight: 3,
-                      labelStyle: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 12.5),
+                      labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5),
                       tabs: const [
                         Tab(icon: Icon(Icons.local_fire_department_rounded, size: 18), text: 'صفقات الجملة 🔥'),
                         Tab(icon: Icon(Icons.two_wheeler_rounded, size: 18), text: 'إشتريلي 🛵'),
                         Tab(icon: Icon(Icons.shopping_basket_rounded, size: 18), text: 'إتسوقلي 🧺'),
+                        Tab(icon: Icon(Icons.local_taxi_rounded, size: 18), text: 'وصّلني 🚖'),
                       ],
                     ),
                   ),
@@ -118,7 +125,7 @@ class _GroupDealsAdminScreenState extends State<GroupDealsAdminScreen> {
     }
 
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Scaffold(
         appBar: AppBar(
           backgroundColor: theme.colorScheme.surface,
@@ -126,14 +133,17 @@ class _GroupDealsAdminScreenState extends State<GroupDealsAdminScreen> {
           elevation: 0,
           title: const Text(
             'إدارة الخدمات التجارية والتسوق',
-            style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+            style: TextStyle(fontWeight: FontWeight.bold),
           ),
           bottom: const TabBar(
-            labelStyle: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13),
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
+            labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
             tabs: [
               Tab(icon: Icon(Icons.local_fire_department_rounded, size: 20), text: 'صفقات الجملة 🔥'),
               Tab(icon: Icon(Icons.two_wheeler_rounded, size: 20), text: 'إشتريلي 🛵'),
               Tab(icon: Icon(Icons.shopping_basket_rounded, size: 20), text: 'إتسوقلي 🧺'),
+              Tab(icon: Icon(Icons.local_taxi_rounded, size: 20), text: 'وصّلني 🚖'),
             ],
           ),
           actions: [
@@ -2859,5 +2869,215 @@ class _GroupDealsAdminScreenState extends State<GroupDealsAdminScreen> {
         ],
       ),
     );
+  }
+
+  // =========================================================================
+  // 4. تبويب «وصّلني» 🚖 (سيارة ملاكي خاصة أو توك توك)
+  // =========================================================================
+  Widget _buildWassalniTab(ThemeData theme) {
+    return StreamBuilder<List<WassalniRide>>(
+      stream: _wassalniService.watchAllRides(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final rides = snapshot.data ?? [];
+        if (rides.isEmpty) {
+          return const Center(
+            child: Text('لا توجد رحلات «وصّلني» حالياً 🚖'),
+          );
+        }
+
+        return ListView.separated(
+          padding: const EdgeInsets.all(14),
+          itemCount: rides.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 10),
+          itemBuilder: (context, index) {
+            final r = rides[index];
+            final color = r.status == WassalniStatus.cancelled
+                ? Colors.red
+                : r.status == WassalniStatus.completed
+                    ? const Color(0xFF16A34A)
+                    : const Color(0xFF7C3AED);
+
+            return Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: color.withValues(alpha: 0.3)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: color.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            r.status.labelArabic,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: color,
+                            ),
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          r.rideNumber,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '${r.vehicleType.labelArabic} · ${r.pickupLocation} ← ${r.dropoffLocation}',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w900, fontSize: 13.5),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'العميل: ${r.userName} (${r.userPhone}) · الركاب: ${r.passengersCount} · الموعد: ${r.scheduledTimeText}',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    if (r.driverName.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'السائق: ${r.driverName} (${r.driverPhone})${r.effectiveFare > 0 ? ' · الأجرة: ${r.effectiveFare.toStringAsFixed(0)} ج.م' : ''}',
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF16A34A),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        FilledButton.icon(
+                          onPressed: () => _openAssignWassalniDriverDialog(r),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF7C3AED),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                          icon: const Icon(Icons.person_pin_rounded, size: 16),
+                          label: const Text('تعيين سائق وأجرة'),
+                        ),
+                        if (r.status == WassalniStatus.accepted ||
+                            r.status == WassalniStatus.arrived)
+                          OutlinedButton(
+                            onPressed: () => _wassalniService.updateStatus(
+                                r.id, WassalniStatus.onTrip),
+                            child: const Text('بدء الرحلة 🛣️'),
+                          ),
+                        if (r.status == WassalniStatus.onTrip ||
+                            r.status == WassalniStatus.accepted)
+                          OutlinedButton(
+                            onPressed: () => _wassalniService.updateStatus(
+                                r.id, WassalniStatus.completed),
+                            child: const Text('إتمام الوصول ✅'),
+                          ),
+                        IconButton(
+                          tooltip: 'اتصال بالعميل',
+                          onPressed: () => launchContactUrl(
+                            Uri(scheme: 'tel', path: r.userPhone).toString(),
+                            unavailable: 'لا يمكن الاتصال على هذا الجهاز.',
+                            failed: 'تعذّر بدء المكالمة.',
+                          ),
+                          icon: const Icon(Icons.call_rounded,
+                              size: 19, color: Color(0xFF16A34A)),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _openAssignWassalniDriverDialog(WassalniRide ride) async {
+    final nameCtrl = TextEditingController(text: ride.driverName);
+    final phoneCtrl = TextEditingController(text: ride.driverPhone);
+    final infoCtrl = TextEditingController(text: ride.vehicleInfo);
+    final fareCtrl = TextEditingController(
+      text: ride.effectiveFare > 0 ? ride.effectiveFare.toStringAsFixed(0) : '',
+    );
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('تعيين سائق للرحلة ${ride.rideNumber}'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(labelText: 'اسم السائق *'),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: phoneCtrl,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(labelText: 'هاتف السائق *'),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: infoCtrl,
+                decoration: const InputDecoration(
+                    labelText: 'بيانات المركبة (اختياري)'),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: fareCtrl,
+                keyboardType: TextInputType.number,
+                decoration:
+                    const InputDecoration(labelText: 'الأجرة المتفق عليها (ج.م)'),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('حفظ وتعيين'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && nameCtrl.text.trim().isNotEmpty) {
+      await _wassalniService.assignDriver(
+        rideId: ride.id,
+        driverName: nameCtrl.text.trim(),
+        driverPhone: phoneCtrl.text.trim(),
+        vehicleInfo: infoCtrl.text.trim(),
+        finalFare: double.tryParse(fareCtrl.text.trim()) ?? 0.0,
+      );
+    }
   }
 }

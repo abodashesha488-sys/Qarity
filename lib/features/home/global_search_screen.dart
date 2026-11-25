@@ -22,6 +22,7 @@ import '../../services/service_provider_service.dart';
 import '../../services/shop_service.dart';
 import '../../widgets/eshterili_order_sheet.dart';
 import '../../widgets/etsawaqli_market_sheet.dart';
+import '../../widgets/wassalni_ride_sheet.dart';
 import '../market/market_tabs_screen.dart';
 import 'widgets/voice_search_bottom_sheet.dart';
 
@@ -117,6 +118,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
     'صفقة اليوم',
     'إشتريلي',
     'إتسوقلي',
+    'وصّلني',
     'دكتور أطفال',
     'صيدلية',
     'عمال ومعدات',
@@ -509,6 +511,23 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
               isScrollControlled: true,
               backgroundColor: Colors.transparent,
               builder: (_) => const EtsawaqliMarketSheet(),
+            );
+          },
+        ));
+      }
+      if (_matches('وصلني وصّلني توك توك تكتوك سياره سيارة توصيل مشوار رحلة سائق', q)) {
+        list.add(GlobalSearchResultItem(
+          title: 'خدمة وصّلني (سيارة خاصة أو توك توك)',
+          subtitle: 'احجز توصيلة فورية أو لموعد مسبق داخل القرية وللمدن المجاورة',
+          category: 'خدمات التوصيل',
+          icon: Icons.local_taxi_rounded,
+          accentColor: const Color(0xFF7C3AED),
+          onTapCustom: () {
+            showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: Colors.transparent,
+              builder: (_) => const WassalniRideSheet(),
             );
           },
         ));

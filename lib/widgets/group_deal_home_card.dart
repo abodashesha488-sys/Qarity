@@ -11,11 +11,12 @@ import '../services/alert_sound_service.dart';
 import '../services/group_deal_service.dart';
 import 'eshterili_order_sheet.dart';
 import 'etsawaqli_market_sheet.dart';
+import 'wassalni_ride_sheet.dart';
 
-/// كارت خدمات الشراء والتسوق في الشاشة الرئيسية
+/// كارت خدمات الشراء والتسوق والتوصيل في الشاشة الرئيسية
 /// بتصميم عالمي جذاب وتفاعلي مع خلفيات مخصصة لكل خدمة
 /// وتكبير خطوط التبويبات وأزرار الإجراءات السريعة:
-/// (صفقة اليوم 🔥 - إشتريلي 🛵 - إتسوقلي 🧺)
+/// (صفقة اليوم 🔥 - إشتريلي 🛵 - إتسوقلي 🧺 - وصّلني 🚖)
 class GroupDealHomeCard extends StatefulWidget {
   const GroupDealHomeCard({super.key});
 
@@ -27,7 +28,7 @@ class _GroupDealHomeCardState extends State<GroupDealHomeCard> {
   final AlertService _alerts = AlertService();
   final GroupDealService _dealService = GroupDealService();
 
-  int _selectedTab = 0; // 0: صفقة اليوم, 1: إشتريلي, 2: إتسوقلي
+  int _selectedTab = 0; // 0: صفقة اليوم, 1: إشتريلي, 2: إتسوقلي, 3: وصّلني
   int _currentDealIndex = 0;
   int _activeDealsCount = 0;
   Timer? _countdownTimer;
@@ -113,6 +114,8 @@ class _GroupDealHomeCardState extends State<GroupDealHomeCard> {
         return const Color(0xFF2563EB); // أزرق ملوكي كهربائي لإشتريلي
       case 2:
         return const Color(0xFF16A34A); // أخضر زمردي نضر لإتسوقلي
+      case 3:
+        return const Color(0xFF7C3AED); // بنفسجي ملكي لوصّلني
       default:
         return const Color(0xFFD97706);
     }
@@ -135,6 +138,11 @@ class _GroupDealHomeCardState extends State<GroupDealHomeCard> {
         return isDark
             ? const [Color(0xFF052713), Color(0xFF02140A)]
             : const [Color(0xFFF0FDF4), Color(0xFFDCFCE7)];
+      case 3:
+        // وصّلني: بنفسجي ملكي عصري
+        return isDark
+            ? const [Color(0xFF230B4D), Color(0xFF12052B)]
+            : const [Color(0xFFF5F3FF), Color(0xFFEDE9FE)];
       default:
         return isDark
             ? const [Color(0xFF1F2937), Color(0xFF111827)]
@@ -156,6 +164,10 @@ class _GroupDealHomeCardState extends State<GroupDealHomeCard> {
         return isDark
             ? const Color(0xFF22C55E)
             : const Color(0xFF22C55E).withValues(alpha: 0.55);
+      case 3:
+        return isDark
+            ? const Color(0xFF8B5CF6)
+            : const Color(0xFF8B5CF6).withValues(alpha: 0.55);
       default:
         return Colors.transparent;
     }
@@ -169,6 +181,8 @@ class _GroupDealHomeCardState extends State<GroupDealHomeCard> {
         return Icons.delivery_dining_rounded;
       case 2:
         return Icons.shopping_basket_rounded;
+      case 3:
+        return Icons.local_taxi_rounded;
       default:
         return Icons.local_fire_department_rounded;
     }
@@ -305,6 +319,14 @@ class _GroupDealHomeCardState extends State<GroupDealHomeCard> {
             activeColor: const Color(0xFF16A34A),
             isDark: isDark,
           ),
+          const SizedBox(width: 4),
+          _buildTabPill(
+            index: 3,
+            icon: Icons.local_taxi_rounded,
+            title: 'وصّلني',
+            activeColor: const Color(0xFF7C3AED),
+            isDark: isDark,
+          ),
         ],
       ),
     );
@@ -350,33 +372,35 @@ class _GroupDealHomeCardState extends State<GroupDealHomeCard> {
                     ]
                   : null,
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  icon,
-                  size: 16.5,
-                  color: isSel
-                      ? activeColor
-                      : (isDark ? Colors.white60 : Colors.grey.shade600),
-                ),
-                const SizedBox(width: 5),
-                Flexible(
-                  child: Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: isSel ? FontWeight.w900 : FontWeight.w700,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      icon,
+                      size: 15.5,
                       color: isSel
                           ? activeColor
-                          : (isDark ? Colors.white70 : Colors.grey.shade700),
-                      fontFamily: 'Cairo',
+                          : (isDark ? Colors.white60 : Colors.grey.shade600),
                     ),
-                  ),
+                    const SizedBox(width: 4),
+                    Text(
+                      title,
+                      maxLines: 1,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: isSel ? FontWeight.w900 : FontWeight.w700,
+                        color: isSel
+                            ? activeColor
+                            : (isDark ? Colors.white70 : Colors.grey.shade700),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
@@ -394,6 +418,8 @@ class _GroupDealHomeCardState extends State<GroupDealHomeCard> {
         return _buildEshteriliTabContent(context, theme, isDark);
       case 2:
         return _buildEtsawaqliTabContent(context, theme, isDark);
+      case 3:
+        return _buildWassalniTabContent(context, theme, isDark);
       default:
         return const SizedBox.shrink();
     }
@@ -1081,6 +1107,169 @@ class _GroupDealHomeCardState extends State<GroupDealHomeCard> {
                                 fontWeight: FontWeight.w900,
                                 color: Color(0xFF16A34A),
                                 fontFamily: 'Cairo',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 4. محتوى تبويب «وصّلني» (سيارة خاصة أو توك توك)
+  Widget _buildWassalniTabContent(
+      BuildContext context, ThemeData theme, bool isDark) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () {
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (_) => const WassalniRideSheet(),
+        );
+      },
+      child: Row(
+        children: [
+          Container(
+            width: 58,
+            height: 58,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF7C3AED), Color(0xFF5B21B6)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(15),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF7C3AED).withValues(alpha: 0.35),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: const Icon(Icons.local_taxi_rounded,
+                color: Colors.white, size: 30),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'وصّلني — سيارة خاصة أو توك توك 🚖',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  'اطلب توصيلة فورية أو لموعد مسبق داخل القرية وللمدن المجاورة مع سائقين موثوقين.',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: isDark
+                        ? Colors.white70
+                        : Colors.black87.withValues(alpha: 0.75),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    InkWell(
+                      onTap: () {
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (_) =>
+                              const WassalniRideSheet(initialView: 1),
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3.5),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF7C3AED), Color(0xFF5B21B6)],
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF7C3AED)
+                                  .withValues(alpha: 0.3),
+                              blurRadius: 4,
+                              offset: const Offset(0, 1),
+                            ),
+                          ],
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.add_location_alt_rounded,
+                                size: 12, color: Colors.white),
+                            SizedBox(width: 4),
+                            Text(
+                              'اطلب رحلة 🚖',
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    InkWell(
+                      onTap: () {
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (_) =>
+                              const WassalniRideSheet(initialView: 2),
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3.5),
+                        decoration: BoxDecoration(
+                          color:
+                              const Color(0xFF7C3AED).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color:
+                                const Color(0xFF7C3AED).withValues(alpha: 0.4),
+                          ),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.route_rounded,
+                                size: 12, color: Color(0xFF7C3AED)),
+                            SizedBox(width: 4),
+                            Text(
+                              'رحلاتي 📍',
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFF7C3AED),
                               ),
                             ),
                           ],

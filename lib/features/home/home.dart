@@ -34,6 +34,7 @@ import '../../widgets/qarity_shimmer.dart';
 import '../../widgets/qurity_logo.dart';
 import '../../widgets/update_flow.dart';
 import '../../widgets/village_prayer_dialog.dart';
+import '../../widgets/wassalni_ride_sheet.dart';
 import 'widgets/home_stats_sheet.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -302,6 +303,23 @@ class HomeDrawer extends StatelessWidget {
                   isScrollControlled: true,
                   backgroundColor: Colors.transparent,
                   builder: (_) => const EtsawaqliMarketSheet(),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.local_taxi_rounded,
+                  color: Color(0xFF7C3AED)),
+              title: const Text('وصّلني (سيارة أو توك توك)',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              onTap: () {
+                Navigator.pop(context);
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (_) => const WassalniRideSheet(),
                 );
               },
             ),

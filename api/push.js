@@ -194,6 +194,12 @@ const PENDING_KINDS = {
     roles: ['admin', 'assistant_admin', 'commercial_admin', 'delivery_agent'],
     route: '/admin/group-deals',
   },
+  wassalni_rides: {
+    t: '🚖 طلب رحلة جديد (وصّلني)',
+    b: 'طلب أحد الأهالي سيارة خاصة أو توك توك للتوصيل ويحتاج تأكيد السائق.',
+    roles: ['admin', 'assistant_admin', 'commercial_admin', 'delivery_agent'],
+    route: '/admin/group-deals',
+  },
   reports: {
     t: '🚨 بلاغ جديد عن محتوى مسيء',
     b: 'أرسل أحد المستخدمين بلاغاً عن محتوى لمراجعته فوراً واتخاذ الإجراء اللازم.',

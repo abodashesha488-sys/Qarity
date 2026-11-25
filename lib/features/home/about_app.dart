@@ -10,6 +10,7 @@ import '../../routes/app_routes.dart';
 import '../../widgets/eshterili_order_sheet.dart';
 import '../../widgets/etsawaqli_market_sheet.dart';
 import '../../widgets/qurity_app_bar.dart';
+import '../../widgets/wassalni_ride_sheet.dart';
 import '../../widgets/whatsapp_mark.dart';
 
 /// أزرق فيسبوك الرسمي — لا يوجد في الثيم، فلا يُكرَّر نصيًا في الموضعين.
@@ -516,6 +517,8 @@ class _AboutScreenState extends State<AboutScreen> {
           Icons.delivery_dining_rounded, Color(0xFF2563EB)),
       _AppSection(AppRoutes.etsawaqli, 'خدمة إتسوقلي',
           Icons.shopping_basket_rounded, Color(0xFF16A34A)),
+      _AppSection(AppRoutes.wassalni, 'خدمة وصّلني',
+          Icons.local_taxi_rounded, Color(0xFF7C3AED)),
       _AppSection(AppRoutes.techniciansDirectory, 'فنيين القرية',
           Icons.plumbing_rounded, Color(0xFF455A64)),
       _AppSection(AppRoutes.legalAdvisor, 'مستشار القرية', Icons.gavel_rounded,
@@ -574,6 +577,13 @@ class _AboutScreenState extends State<AboutScreen> {
                 backgroundColor: Colors.transparent,
                 builder: (_) => const EtsawaqliMarketSheet(),
               );
+            } else if (section.route == AppRoutes.wassalni) {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (_) => const WassalniRideSheet(),
+              );
             } else {
               Navigator.pushNamed(context, section.route);
             }
@@ -629,6 +639,11 @@ class _AboutScreenState extends State<AboutScreen> {
 
   Widget _changelogCard(ThemeData theme) {
     final additions = <(IconData, String, Color)>[
+      (
+        Icons.local_taxi_rounded,
+        'خدمة «وصّلني» (سيارة خاصة أو توك توك): اطلب توصيلة فورية أو لموعد مسبق داخل القرية وللمدن المجاورة مع متابعة حية وبيانات السائق.',
+        const Color(0xFF7C3AED)
+      ),
       (
         Icons.local_fire_department_rounded,
         'صفقات اليوم بسعر الجملة: مبادرة الشراء الجماعي لأهالي القرية بأسعار التكلفة بدون أي هامش ربحي، مع حجز فوري واختيار الاستلام من المقر مجاناً أو التوصيل المنزلي.',

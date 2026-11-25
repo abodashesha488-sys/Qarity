@@ -89,6 +89,7 @@ import '../models/service_provider_model.dart';
 import '../services/admin_service.dart';
 import '../widgets/eshterili_order_sheet.dart';
 import '../widgets/etsawaqli_market_sheet.dart';
+import '../widgets/wassalni_ride_sheet.dart';
 
 /// 🛣️ Qarity App Routes
 /// 
@@ -142,6 +143,7 @@ class AppRoutes {
   static const String groupDeals = '/group-deals';
   static const String eshterili = '/eshterili';
   static const String etsawaqli = '/etsawaqli';
+  static const String wassalni = '/wassalni';
   static const String marketProducts = '/market';
   static const String marketAdd = '/market/add';
   static const String marketProductDetail = '/market/product';
@@ -294,6 +296,9 @@ obituariesAdd: (_) => const AddObituaryScreen(),
     etsawaqli: (_) => const Scaffold(
       body: SafeArea(child: EtsawaqliMarketSheet()),
     ),
+    wassalni: (_) => const Scaffold(
+      body: SafeArea(child: WassalniRideSheet()),
+    ),
   };
 
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
@@ -352,6 +357,14 @@ obituariesAdd: (_) => const AddObituaryScreen(),
       return _buildSlideRoute(
         (_) => const Scaffold(
           body: SafeArea(child: EtsawaqliMarketSheet()),
+        ),
+        settings,
+      );
+    }
+    if (settings.name == wassalni) {
+      return _buildSlideRoute(
+        (_) => const Scaffold(
+          body: SafeArea(child: WassalniRideSheet()),
         ),
         settings,
       );

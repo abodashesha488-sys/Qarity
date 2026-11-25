@@ -678,6 +678,18 @@ service cloud.firestore {
       allow delete: if isCommercialAdmin();
     }
 
+    // خدمة وصّلني (سيارة ملاكي خاصة أو توك توك)
+    match /wassalni_rides/{docId} {
+      allow list, get: if isCommercialAdmin() || isDeliveryAgent() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if accountActive() && request.resource.data.userId == request.auth.uid;
+      allow update: if isCommercialAdmin()
+                    || isDeliveryAgent()
+                    || (accountActive() && resource.data.userId == request.auth.uid
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+                        && request.resource.data.status in ['cancelled', 'searching']);
+      allow delete: if isCommercialAdmin();
+    }
+
     // خدمة إتسوقلي (أسواق الخضار والسلع الأسبوعية)
     match /etsawaqli_markets/{docId} {
       allow list, get: if true;

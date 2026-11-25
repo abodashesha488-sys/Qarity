@@ -335,6 +335,7 @@ const Set<String> kAdminNotifyCollections = {
   'group_deals',
   'eshterili_orders',
   'etsawaqli_orders',
+  'wassalni_rides',
   'reports',
 };
 
