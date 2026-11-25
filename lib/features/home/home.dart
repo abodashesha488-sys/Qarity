@@ -27,8 +27,8 @@ import '../../widgets/alert_wisdom_bar.dart';
 import '../../widgets/common_appbar_actions.dart';
 import '../../widgets/eshterili_order_sheet.dart';
 import '../../widgets/etsawaqli_market_sheet.dart';
+import '../../widgets/global_nav_shell.dart';
 import '../../widgets/group_deal_home_card.dart';
-import '../../widgets/home_floating_nav_bar.dart';
 import '../../widgets/offline_stream_builder.dart';
 import '../../widgets/qarity_shimmer.dart';
 import '../../widgets/qurity_logo.dart';
@@ -50,6 +50,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    GlobalNavShell.homeScrollToTopCallback = _scrollHomeToTop;
     unawaited(UserPresenceService.instance.initialize());
     // اشتراك بقنوات البث الجماعي عند كل فتح — مع احترام إيقاف المستخدم
     // لها من «إعدادات الإشعارات» (يُعاد الاشتراك فقط إن كانت مفعّلة).
@@ -69,8 +70,21 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  void _scrollHomeToTop() {
+    if (_homeScrollController.hasClients) {
+      _homeScrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 420),
+        curve: Curves.easeOutCubic,
+      );
+    }
+  }
+
   @override
   void dispose() {
+    if (GlobalNavShell.homeScrollToTopCallback == _scrollHomeToTop) {
+      GlobalNavShell.homeScrollToTopCallback = null;
+    }
     _homeScrollController.dispose();
     super.dispose();
   }
@@ -80,17 +94,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       endDrawer: const HomeDrawer(),
       body: HomeContent(scrollController: _homeScrollController),
-      bottomNavigationBar: HomeFloatingNavBar(
-        onHomeTap: () {
-          if (_homeScrollController.hasClients) {
-            _homeScrollController.animateTo(
-              0,
-              duration: const Duration(milliseconds: 420),
-              curve: Curves.easeOutCubic,
-            );
-          }
-        },
-      ),
     );
   }
 }

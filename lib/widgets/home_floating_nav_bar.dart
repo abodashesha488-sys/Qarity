@@ -13,10 +13,18 @@ class HomeFloatingNavBar extends StatelessWidget {
     super.key,
     required this.onHomeTap,
     this.selectedIndex = 0,
+    this.onMarketTap,
+    this.onDealsTap,
+    this.onForumTap,
+    this.onProfileTap,
   });
 
   final VoidCallback onHomeTap;
   final int selectedIndex;
+  final VoidCallback? onMarketTap;
+  final VoidCallback? onDealsTap;
+  final VoidCallback? onForumTap;
+  final VoidCallback? onProfileTap;
 
   @override
   Widget build(BuildContext context) {
@@ -56,13 +64,21 @@ class HomeFloatingNavBar extends StatelessWidget {
                 selected: selectedIndex == 1,
                 onTap: () {
                   HapticFeedback.selectionClick();
-                  Navigator.pushNamed(context, AppRoutes.marketTabs);
+                  if (onMarketTap != null) {
+                    onMarketTap!();
+                  } else {
+                    Navigator.pushNamed(context, AppRoutes.marketTabs);
+                  }
                 },
               ),
               _CenterDealNavItem(
                 onTap: () {
                   HapticFeedback.lightImpact();
-                  Navigator.pushNamed(context, AppRoutes.groupDeals);
+                  if (onDealsTap != null) {
+                    onDealsTap!();
+                  } else {
+                    Navigator.pushNamed(context, AppRoutes.groupDeals);
+                  }
                 },
               ),
               _NavItem(
@@ -71,7 +87,11 @@ class HomeFloatingNavBar extends StatelessWidget {
                 selected: selectedIndex == 3,
                 onTap: () {
                   HapticFeedback.selectionClick();
-                  Navigator.pushNamed(context, AppRoutes.forumPosts);
+                  if (onForumTap != null) {
+                    onForumTap!();
+                  } else {
+                    Navigator.pushNamed(context, AppRoutes.forumPosts);
+                  }
                 },
               ),
               _NavItem(
@@ -80,7 +100,11 @@ class HomeFloatingNavBar extends StatelessWidget {
                 selected: selectedIndex == 4,
                 onTap: () {
                   HapticFeedback.selectionClick();
-                  Navigator.pushNamed(context, AppRoutes.profileMain);
+                  if (onProfileTap != null) {
+                    onProfileTap!();
+                  } else {
+                    Navigator.pushNamed(context, AppRoutes.profileMain);
+                  }
                 },
               ),
             ],

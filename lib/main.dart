@@ -18,6 +18,7 @@ import 'services/notification_service.dart';
 import 'services/promo_service.dart';
 import 'services/theme_service.dart';
 import 'widgets/connectivity_overlay.dart';
+import 'widgets/global_nav_shell.dart';
 import 'widgets/promo_host.dart';
 
 void main() async {
@@ -116,11 +117,14 @@ class QarityApp extends StatelessWidget {
               style: GoogleFonts.tajawal(),
               child: PromoHost(
                 child: ConnectivityOverlay(
-                    child: child ?? const SizedBox.shrink()),
+                  child: GlobalNavShell(
+                    child: child ?? const SizedBox.shrink(),
+                  ),
+                ),
               ),
             ),
           ),
-          navigatorObservers: [promoRouteObserver],
+          navigatorObservers: [promoRouteObserver, appRouteTracker],
           initialRoute: AppRoutes.splash,
           onGenerateRoute: AppRoutes.onGenerateRoute,
         );

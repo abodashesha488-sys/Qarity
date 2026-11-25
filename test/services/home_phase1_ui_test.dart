@@ -3,6 +3,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:qurity/core/theme/app_design_tokens.dart';
 import 'package:qurity/core/theme/app_theme.dart';
+import 'package:qurity/routes/app_routes.dart';
+import 'package:qurity/widgets/global_nav_shell.dart';
 import 'package:qurity/widgets/home_floating_nav_bar.dart';
 import 'package:qurity/widgets/qarity_shimmer.dart';
 
@@ -61,5 +63,67 @@ void main() {
       );
       expect(find.byType(QarityHorizontalShimmerList), findsOneWidget);
     }
+  });
+
+  testWidgets(
+      'GlobalNavShell hides bar on auth/splash routes and shows it across app routes',
+      (tester) async {
+    final tracker = AppRouteTracker(initialRoute: AppRoutes.splash);
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('ar', 'EG'),
+        supportedLocales: const [Locale('ar', 'EG')],
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        theme: AppTheme.lightTheme,
+        home: GlobalNavShell(
+          tracker: tracker,
+          child: const Scaffold(body: SizedBox.shrink()),
+        ),
+      ),
+    );
+
+    expect(find.byType(HomeFloatingNavBar), findsNothing);
+
+    for (final hidden in [AppRoutes.login, AppRoutes.completeProfile]) {
+      tracker.currentRoute.value = hidden;
+      await tester.pump();
+      expect(find.byType(HomeFloatingNavBar), findsNothing);
+    }
+
+    tracker.currentRoute.value = AppRoutes.home;
+    await tester.pump();
+    expect(find.byType(HomeFloatingNavBar), findsOneWidget);
+    expect(
+      tester.widget<HomeFloatingNavBar>(find.byType(HomeFloatingNavBar)).selectedIndex,
+      0,
+    );
+
+    tracker.currentRoute.value = AppRoutes.marketTabs;
+    await tester.pump();
+    expect(find.byType(HomeFloatingNavBar), findsOneWidget);
+    expect(
+      tester.widget<HomeFloatingNavBar>(find.byType(HomeFloatingNavBar)).selectedIndex,
+      1,
+    );
+
+    tracker.currentRoute.value = AppRoutes.forumPosts;
+    await tester.pump();
+    expect(find.byType(HomeFloatingNavBar), findsOneWidget);
+    expect(
+      tester.widget<HomeFloatingNavBar>(find.byType(HomeFloatingNavBar)).selectedIndex,
+      3,
+    );
+
+    tracker.currentRoute.value = AppRoutes.newsList;
+    await tester.pump();
+    expect(find.byType(HomeFloatingNavBar), findsOneWidget);
+    expect(
+      tester.widget<HomeFloatingNavBar>(find.byType(HomeFloatingNavBar)).selectedIndex,
+      0,
+    );
   });
 }
