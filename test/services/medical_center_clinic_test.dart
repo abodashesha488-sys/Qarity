@@ -299,8 +299,12 @@ void main() {
           worker.contains("const ALLOWED_ROLES = ['admin', 'assistant_admin'];"),
           isTrue);
       expect(worker.contains('medical: true'), isFalse,
-          reason: 'لا نوع مراجعة يُبلَّغ له مدير المركز');
-      expect(worker.contains(".where('role', '==', 'admin')"), isTrue);
+          reason: 'لا نوع مراجعة عام يُبلَّغ له مدير المركز');
+      expect(worker.contains(".where('role', 'in', targetRoles)"), isTrue);
+      expect(
+          worker.contains(
+              "new Set(['admin', 'assistant_admin', ...(kind.roles || [])])"),
+          isTrue);
     });
 
     test('بوابة الواجهة محصورة في تبويب المركز (الفهرس صفر)', () {
